@@ -1,0 +1,11 @@
+<RCC>
+  <qresource prefix="icons">
+    <file>qneurolots.ico</file>
+    <file>wireframe.png</file>
+    <file>open_swc.png</file>
+    <file>close.png</file>
+    <file>open_xml.png</file>
+    <file>open_bc.png</file>
+    <file>colorpicker.png</file>
+  </qresource>
+</RCC>

@@ -1,0 +1,26 @@
+src/*~
+*~
+doc/html
+doc/latex
+*Makefile*
+*.orig
+CMake/common
+.ciscript
+ci.*
+jambs*
+
+# Eclipse project generated
+.cproject
+.project
+.metadata/
+
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
