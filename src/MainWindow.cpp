@@ -84,11 +84,12 @@ void MainWindow::showStatusBarMessage ( const QString& message )
 }
 
 void MainWindow::openBlueConfig( const std::string& fileName,
-                                 const std::string& targetLabel )
+                                 const std::string& targetLabel,
+                                 const std::string& reportLabel)
 {
   _openGLWidget->loadData( fileName,
-                           OpenGLWidget::TDataFileType::BlueConfig,
-                           targetLabel );
+                           OpenGLWidget::TDataFileType::tBlueConfig,
+                           targetLabel, reportLabel );
 
 }
 
@@ -103,17 +104,24 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
   if (path != QString( "" ))
   {
-    bool ok;
+    bool ok1, ok2;
     QString text = QInputDialog::getText(
       this, tr( "Please select target" ),
       tr( "Cell target:" ), QLineEdit::Normal,
-      "Column", &ok );
-    if ( ok && !text.isEmpty( ))
+      "Layer1", &ok1 );
+
+    QString text2 = QInputDialog::getText(
+          this, tr( "Please select report" ),
+          tr( "Cell report:" ), QLineEdit::Normal,
+          "voltage", &ok2 );
+
+    if ( ok1 && ok2 && !text.isEmpty( ) && !text2.isEmpty( ))
     {
       std::string targetLabel = text.toStdString( );
+      std::string reportLabel = text.toStdString( );
       _lastOpenedFileName = QFileInfo(path).path( );
       std::string fileName = path.toStdString( );
-      openBlueConfig( fileName, targetLabel );
+      openBlueConfig( fileName, targetLabel, reportLabel );
     }
 
 

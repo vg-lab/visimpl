@@ -20,7 +20,9 @@ public:
   void showStatusBarMessage ( const QString& message );
 
   void openBlueConfig( const std::string& fileName,
-                       const std::string& target);
+                       const std::string& target,
+                       const std::string& report);
+
   void openXMLScene( const std::string& fileName );
   void openSWCFile( const std::string& fileName );
 
@@ -38,8 +40,8 @@ protected:
 
 private:
 
-    Ui::MainWindow* _ui;
-    OpenGLWidget* _openGLWidget;
+  Ui::MainWindow* _ui;
+  OpenGLWidget* _openGLWidget;
 
 
 };

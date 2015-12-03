@@ -14,6 +14,12 @@
 #include "CShader.h"
 
 #include <neurolots/nlrender/nlrender.h>
+#include <nsol/nsol.h>
+#include <brion/brion.h>
+#include <brain/brain.h>
+
+#include "SimulationPlayer.h"
+#include "prefr/ColorEmissionNode.h"
 
 class OpenGLWidget
   : public QOpenGLWidget
@@ -26,7 +32,7 @@ public:
 
   typedef enum
   {
-    BlueConfig,
+    tBlueConfig,
     SWC,
     NsolScene
   } TDataFileType;
@@ -40,8 +46,9 @@ public:
   void createNeuronsCollection( void );
   void createParticleSystem( void );
   void loadData( const std::string& fileName,
-                 const TDataFileType fileType = TDataFileType::BlueConfig,
-                 const std::string& target = std::string( "" ));
+                 const TDataFileType fileType = TDataFileType::tBlueConfig,
+                 const std::string& target = std::string( "" ),
+                 const std::string& report = std::string( "" ));
 
   void idleUpdate( bool idleUpdate_ = true )
   {
@@ -69,6 +76,8 @@ protected:
   virtual void mouseMoveEvent( QMouseEvent* event );
   virtual void keyPressEvent( QKeyEvent* event );
 
+  void configureSimulation( void );
+  void updateSimulation( void );
   void paintParticles( void );
 
   QLabel _fpsLabel;
@@ -77,7 +86,7 @@ protected:
   bool _wireframe;
 
   neurolots::Camera* _camera;
-  neurolots::NeuronsCollection* _neuronsCollection;
+//  neurolots::NeuronsCollection* _neuronsCollection;
   bool _paintNeurons;
 
   unsigned int _frameCount;
@@ -95,6 +104,24 @@ protected:
   CShader* _particlesShader;
   prefr::ParticleSystem* _ps;
 
+//  nsol::BBPSDKReader _bbpReader;
+  nsol::Columns _columns;
+  nsol::SimulationData _simulationData;
+//  nsol::NeuronsMap _neurons;
+
+//  float currentTime;
+  bbp::CompartmentReportReader* reader;
+
+  visimpl::SpikesPlayer* _player;
+  float _deltaTime;
+
+//  brion::BlueConfig* _blueConfig;
+//  brion::SpikeReport* _spikeReport;
+//  brain::Circuit* _circuit;
+//  brion::GIDSet _neuronGIDs;
+//  brion::Spikes* _spikes;
+
+  std::unordered_map< uint32_t, prefr::ColorEmissionNode* > gidNodesMap;
 };
 
 #endif // __QNEUROLOTS__OPENGLWIDGET__

@@ -35,8 +35,13 @@ set(VISIMPL_SOURCES
   viewer.cpp
   MainWindow.cpp
   OpenGLWidget.cpp
-  CShader.cpp
+  CShader.cpp  
   CMakeSetup.rc
+  SimulationPlayer.cpp
+  prefr/ColorEmissionNode.cpp
+  prefr/ColorOperationPrototype.cpp
+  prefr/CompositeColorEmitter.cpp
+  prefr/CompositeColorUpdater.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -44,6 +49,11 @@ set(VISIMPL_HEADERS
   CShader.h
   OpenGLWidget.h
   MainWindow.h
+  SimulationPlayer.h
+  prefr/ColorEmissionNode.h
+  prefr/ColorOperationPrototype.h
+  prefr/CompositeColorEmitter.h
+  prefr/CompositeColorUpdater.h
 )
 
 set(VISIMPL_MOC_HEADERS
@@ -71,7 +81,8 @@ set(VISIMPL_LINK_LIBRARIES
   nlfem
   nlgenerator
   nlrender
-  prefr
+  prefr  
+  Brion
 )
 
 if ( NOT DEFAULT_CONTEXT_OPENGL_MAJOR )
@@ -94,6 +105,10 @@ endif()
 
 if (DEFLECT_FOUND)
   list(APPEND VISIMPL_LINK_LIBRARIES Deflect)
+endif()
+
+if (BRION_FOUND)
+  list(APPEND VISIMPL_LINK_LIBRARIES Brion Brain)
 endif()
 
 common_application( visimpl )

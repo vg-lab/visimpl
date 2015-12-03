@@ -7,8 +7,17 @@
 #include <iostream>
 #include <glm/glm.hpp>
 
+#include <map>
+
 #include "MainWindow.h"
 #include <neurolots/nlrender/Config.h>
+
+#include "prefr/ColorOperationPrototype.h"
+#include "prefr/ColorEmissionNode.h"
+#include "prefr/CompositeColorEmitter.h"
+#include "prefr/CompositeColorUpdater.h"
+
+using namespace visimpl;
 
 OpenGLWidget::OpenGLWidget( QWidget* parent_,
                             Qt::WindowFlags windowsFlags_,
@@ -22,7 +31,6 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _fpsLabel( this )
   , _showFps( false )
   , _wireframe( false )
-  , _neuronsCollection( nullptr )
   , _paintNeurons( paintNeurons_ )
   , _frameCount( 0 )
   , _mouseX( 0 )
@@ -61,152 +69,33 @@ OpenGLWidget::~OpenGLWidget( void )
   delete _camera;
 }
 
-void OpenGLWidget::createNeuronsCollection( void )
-{
-  makeCurrent( );
-  neurolots::nlrender::Config::init( );
-  _neuronsCollection = new neurolots::NeuronsCollection( _camera );
-}
 
-void OpenGLWidget::createParticleSystem( void )
-{
-  makeCurrent( );
-  prefr::Config::init( );
-
-  unsigned int maxParticles = 10000;
-  unsigned int maxEmitters = 1;
-
-  _ps = new prefr::ParticleSystem(10, maxParticles, true);
-
-  std::string prefrShadersPath;
-
-  if ( getenv( "PREFR_SHADERS_PATH" ) == nullptr )
-  {
-    std::cerr << "Environment Variable PREFR_SHADERS_PATH not defined"
-              << std::endl;
-    exit(-1);
-  }
-  else
-    prefrShadersPath = std::string( getenv( "PREFR_SHADERS_PATH" ));
-
-  std::string vertPath, fragPath;
-  fragPath = vertPath = std::string( prefrShadersPath );
-  vertPath.append( "/shd/GL-vert.glsl" );
-  fragPath.append( "/shd/GL-frag.glsl" );
-  _particlesShader = new CShader( false, false,
-                                 vertPath.c_str( ) ,
-                                 fragPath.c_str( ));
-
-  std::cout << "Loading shaders: " << std::endl;
-  std::cout << "- Vertex: " << vertPath.c_str( ) << std::endl;
-  std::cout << "- Fragments: " << fragPath.c_str( ) << std::endl;
-
-  prefr::ParticlePrototype* prototype =
-    new prefr::ParticlePrototype(
-      3.0f, 5.0f,
-      prefr::ParticleCollection( _ps->particles, 0, maxParticles));
-
-  prototype->color.Insert( 0.0f, ( glm::vec4(0, 0, 1, 0.2 )));
-  prototype->color.Insert( 0.65f, ( glm::vec4(1, 1, 0, 0.2 )));
-  prototype->color.Insert( 0.35f, ( glm::vec4(0, 1, 0, 0.2 )));
-  prototype->color.Insert( 1.0f, ( glm::vec4(0, 0.5, 0.5, 0 )));
-  prototype->color.Remove( 3 );
-  prototype->color.Insert( 1.0f, ( glm::vec4(0, 0.5, 0.5, 0 )));
-  prototype->color.Insert( 1.0f, ( glm::vec4(0, 0.5, 0.5, .5 )));
-
-  prototype->velocity.Insert( 0.0f, 3.0f );
-  prototype->velocity.Insert( 1.0f, 5.0f );
-
-  prototype->size.Insert( 0.0f, 1.0f );
-
-  _ps->AddPrototype( prototype );
-
-  prefr::PointEmissionNode* emissionNode;
-
-  int particlesPerEmitter = maxParticles / maxEmitters;
-
-  std::cout << "Creating " << maxEmitters << " emitters with "
-            << particlesPerEmitter << std::endl;
-
-  glm::vec3 origin ( _camera->Pivot( )[0],
-                     _camera->Pivot( )[1],
-                     _camera->Pivot( )[2]
-                    );
-
-  std::cout << "Using center: " << std::endl;
-  std::cout << origin.x << ", "
-            << origin.y << ", "
-            << origin.z << std::endl;
-
-  for ( unsigned int i = 0; i < maxEmitters; i++ )
-  {
-    std::cout << "Creating emission node " << i << " from "
-              << i * particlesPerEmitter << " to "
-              << i * particlesPerEmitter + particlesPerEmitter << std::endl;
-    emissionNode =
-        new prefr::PointEmissionNode(
-          prefr::ParticleCollection(
-            _ps->particles,
-            i * particlesPerEmitter,
-            i * particlesPerEmitter + particlesPerEmitter ),
-          origin + glm::vec3(i * 10, 0, 0));
-    _ps->AddEmissionNode(emissionNode);
-  }
-
-  prefr::ParticleEmitter* emitter =
-    new prefr::ParticleEmitter( *_ps->particles, 0.3f, true );
-  _ps->AddEmitter( emitter );
-
-  std::cout << "Created emitter" << std::endl;
-  prefr::ParticleUpdater* updater =
-    new prefr::ParticleUpdater( *_ps->particles );
-  std::cout << "Created updater" << std::endl;
-
-  prefr::ParticleSorter* sorter;
-
-  #if (PREFR_USE_CUDA)
-  std::cout << "CUDA sorter" << std::endl;
-  sorter = new prefr::ThrustParticleSorter( *_ps->particles );
-  #else
-  sorter = new prefr::ParticleSorter( *_ps->particles );
-  #endif
-
-  std::cout << "Created sorter" << std::endl;
-
-  prefr::GLDefaultParticleRenderer* renderer =
-    new prefr::GLDefaultParticleRenderer( *_ps->particles );
-
-  std::cout << "Created systems" << std::endl;
-
-  _ps->AddUpdater( updater );
-  _ps->SetSorter( sorter );
-  _ps->SetRenderer( renderer );
-
-  _ps->Start();
-
-
-}
 
 
 void OpenGLWidget::loadData( const std::string& fileName,
                              const TDataFileType fileType,
-                             const std::string& target )
+                             const std::string& /*target*/,
+                             const std::string& /*report*/)
 {
 
   makeCurrent( );
 
   switch( fileType )
   {
-  case TDataFileType::BlueConfig:
-    _neuronsCollection->loadBlueConfig( fileName, target );
-    break;
+  case TDataFileType::tBlueConfig:
 
-  case TDataFileType::SWC:
-    _neuronsCollection->loadSwc( fileName );
-    break;
+//    _blueConfig = new brion::BlueConfig( fileName );
+////    std::cout << _blueConfig->getCircuitSource( ).getPath( ) << std::endl;
+//    _circuit = new brain::Circuit( *_blueConfig );
+//    std::cout << _blueConfig->getSpikeSource( ).getPath( ) << std::endl;
+//    _spikeReport = new brion::SpikeReport( _blueConfig->getSpikeSource( ),
+//                                            brion::AccessMode::MODE_READ );
 
-  case TDataFileType::NsolScene:
-    _neuronsCollection->loadScene( fileName );
+    _deltaTime = 0.5f;
+    _player = new SpikesPlayer( fileName, true );
+    _player->loop( true );
+    _player->Play( _deltaTime );
+
     break;
 
   default:
@@ -244,6 +133,170 @@ void OpenGLWidget::initializeGL( void )
 
 }
 
+void OpenGLWidget::configureSimulation( void )
+{
+  _player->Frame( );
+  SpikesCRange spikes = _player->spikesNow( );
+
+  for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
+  {
+    auto res = gidNodesMap.find( (*spike).second );
+    if( res != gidNodesMap.end( ))
+    {
+      ( *res ).second->killParticles( );
+    }
+  }
+}
+
+void OpenGLWidget::createNeuronsCollection( void )
+{
+  makeCurrent( );
+  neurolots::nlrender::Config::init( );
+//  _neuronsCollection = new neurolots::NeuronsCollection( _camera );
+}
+
+void OpenGLWidget::createParticleSystem( void )
+{
+  makeCurrent( );
+  prefr::Config::init( );
+
+  unsigned int maxParticles = _player->gids( ).size( );
+  unsigned int maxEmitters = maxParticles;
+
+  _ps = new prefr::ParticleSystem(0, maxParticles, true);
+  _ps->renderDeadParticles = true;
+
+  const brion::Vector3fs& positions = _player->positions( );
+
+  std::string prefrShadersPath;
+
+  if ( getenv( "PREFR_SHADERS_PATH" ) == nullptr )
+  {
+    std::cerr << "Environment Variable PREFR_SHADERS_PATH not defined"
+              << std::endl;
+    exit(-1);
+  }
+  else
+    prefrShadersPath = std::string( getenv( "PREFR_SHADERS_PATH" ));
+
+  std::string vertPath, fragPath;
+  fragPath = vertPath = std::string( prefrShadersPath );
+  vertPath.append( "/GL-vert.glsl" );
+  fragPath.append( "/GL-frag.glsl" );
+  _particlesShader = new CShader( false, false,
+                                 vertPath.c_str( ) ,
+                                 fragPath.c_str( ));
+
+  std::cout << "Loading shaders: " << std::endl;
+  std::cout << "- Vertex: " << vertPath.c_str( ) << std::endl;
+  std::cout << "- Fragments: " << fragPath.c_str( ) << std::endl;
+
+  prefr::ColorOperationPrototype* prototype =
+    new prefr::ColorOperationPrototype(
+      10.0f, 10.0f,
+      prefr::ParticleCollection( _ps->particles, 0, maxParticles));
+
+  prototype->color.Insert( 0.0f, ( glm::vec4(0.5, 0.5, 0, 0.1)));
+  prototype->color.Insert( 0.3f, ( glm::vec4(0, 1, 1, 0.5 )));
+  prototype->color.Insert( 1.0f, ( glm::vec4(0.5, 0.5, 0, 0.1 )));
+
+  prototype->velocity.Insert( 0.0f, 0.0f );
+
+  prototype->size.Insert( 0.0f, 30.0f );
+  prototype->size.Insert( 0.0f, 10.0f );
+
+  _ps->AddPrototype( prototype );
+
+  prefr::ColorEmissionNode* emissionNode;
+
+  int partPerEmitter = 1;
+
+  std::cout << "Creating " << maxEmitters << " emitters with "
+            << partPerEmitter << std::endl;
+
+  unsigned int i = 0;
+  glm::vec3 cameraPivot;
+  brion::GIDSetCIter gid = _player->gids( ).begin();
+  for ( auto brionPos : positions )
+  {
+
+//    nsol::Matrix4_4f m = it.second->transform( );
+//    vmml::Vector3f t = it.second->morphology( )->soma( )->center( );
+//    glm::vec3 position ( t.x( ), t.y( ), t.z( ));
+//    glm::vec3 position ( m.at( 0, 3 ), m.at( 1, 3 ), m.at( 2, 3 ));
+
+//    std::cout << position.x << ", "
+//              << position.y << ", "
+//              << position.z << std::endl;
+
+
+
+    glm::vec3 position( brionPos.x( ), brionPos.y( ), brionPos.z( ));
+
+    cameraPivot += position;
+
+    emissionNode =
+        new prefr::ColorEmissionNode( prefr::ParticleCollection(
+                                      _ps->particles,
+                                      i * partPerEmitter,
+                                      i * partPerEmitter + partPerEmitter ),
+                                      position,
+                                      glm::vec4( 0, 0, 0, 0 ),
+                                      true );
+
+    _ps->AddEmissionNode( emissionNode );
+//    emissionNode->active = false;
+//    emissionNode->killParticlesIfInactive = true;
+    emissionNode->maxEmissionCycles = 1;
+
+    gidNodesMap.insert( std::pair< uint32_t,
+                        prefr::ColorEmissionNode* >(( *gid ), emissionNode ));
+
+    i++;
+    gid++;
+  }
+
+  cameraPivot /= i;
+
+  _camera->Pivot( Eigen::Vector3f( cameraPivot.x,
+                                         cameraPivot.y,
+                                         cameraPivot.z ));
+
+  prefr::CompositeColorEmitter* emitter =
+    new prefr::CompositeColorEmitter( *_ps->particles, 1.f, true );
+  _ps->AddEmitter( emitter );
+
+  std::cout << "Created emitter" << std::endl;
+  prefr::CompositeColorUpdater* updater =
+    new prefr::CompositeColorUpdater( *_ps->particles );
+  std::cout << "Created updater" << std::endl;
+
+  prefr::ParticleSorter* sorter;
+
+  #if (PREFR_USE_CUDA)
+  std::cout << "CUDA sorter" << std::endl;
+  sorter = new prefr::ThrustParticleSorter( *_ps->particles );
+  #else
+  sorter = new prefr::ParticleSorter( *_ps->particles );
+  #endif
+
+  std::cout << "Created sorter" << std::endl;
+
+  prefr::GLDefaultParticleRenderer* renderer =
+    new prefr::GLDefaultParticleRenderer( *_ps->particles );
+
+  std::cout << "Created systems" << std::endl;
+
+  _ps->AddUpdater( updater );
+  _ps->SetSorter( sorter );
+  _ps->SetRenderer( renderer );
+
+  _ps->Start();
+
+
+}
+
+
 void OpenGLWidget::paintParticles( void )
 {
   glDepthMask(GL_FALSE);
@@ -276,7 +329,7 @@ void OpenGLWidget::paintParticles( void )
   glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
 
 
-  _ps->UpdateUnified( 0.1f );
+  _ps->UpdateUnified( _deltaTime );
   _ps->UpdateCameraDistances( glm::vec3( _camera->Position()[0],
                                          _camera->Position()[1],
                                          _camera->Position()[2]));
@@ -301,12 +354,14 @@ void OpenGLWidget::paintGL( void )
   {
     _camera->Anim( );
 
-    if ( _neuronsCollection && _paintNeurons )
-      _neuronsCollection->Paint( );
+//    if ( _neuronsCollection && _paintNeurons )
+//      _neuronsCollection->Paint( );
 
     if ( _ps )
+    {
+      configureSimulation( );
       paintParticles( );
-
+    }
     glUseProgram( 0 );
     glFlush( );
 
@@ -453,35 +508,35 @@ void OpenGLWidget::keyPressEvent( QKeyEvent* event_ )
     update( );
     break;
 
-  case Qt::Key_W:
-    _neuronsCollection->AddLod( 1.0f );
-    update( );
-    break;
-
-  case Qt::Key_S:
-    _neuronsCollection->AddLod( -1.0f );
-    update( );
-    break;
-
-  case Qt::Key_E:
-    _neuronsCollection->AddTng( 0.1f );
-    update( );
-    break;
-
-  case Qt::Key_D:
-    _neuronsCollection->AddTng( -0.1f );
-    update( );
-    break;
-
-  case Qt::Key_R:
-    _neuronsCollection->AddMaxDist( 1 );
-    update( );
-    break;
-
-  case Qt::Key_F:
-    _neuronsCollection->AddMaxDist( -1 );
-    update( );
-    break;
+//  case Qt::Key_W:
+//    _neuronsCollection->AddLod( 1.0f );
+//    update( );
+//    break;
+//
+//  case Qt::Key_S:
+//    _neuronsCollection->AddLod( -1.0f );
+//    update( );
+//    break;
+//
+//  case Qt::Key_E:
+//    _neuronsCollection->AddTng( 0.1f );
+//    update( );
+//    break;
+//
+//  case Qt::Key_D:
+//    _neuronsCollection->AddTng( -0.1f );
+//    update( );
+//    break;
+//
+//  case Qt::Key_R:
+//    _neuronsCollection->AddMaxDist( 1 );
+//    update( );
+//    break;
+//
+//  case Qt::Key_F:
+//    _neuronsCollection->AddMaxDist( -1 );
+//    update( );
+//    break;
   }
 }
 

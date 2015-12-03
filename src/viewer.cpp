@@ -19,6 +19,7 @@ int main( int argc, char** argv )
   std::string sceneFile;
   std::string zeqUri;
   std::string target = std::string( "" );
+  std::string report = std::string( "" );
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
   int initWindowWidth, initWindowHeight;
 
@@ -85,8 +86,17 @@ int main( int argc, char** argv )
       }
       else
         usageMessage( argv[0] );
-
     }
+    if( std::strcmp( argv[ i ], "-report" ) == 0 )
+    {
+      if(++i < argc )
+      {
+        report = std::string( argv[ i ]);
+      }
+      else
+        usageMessage( argv[0] );
+    }
+
     if ( strcmp( argv[i], "--fullscreen" ) == 0 ||
          strcmp( argv[i],"-fs") == 0 )
     {
@@ -107,8 +117,8 @@ int main( int argc, char** argv )
       initWindowHeight = atoi( argv[ ++i ] );
 
     }
-
   }
+
 
 
 
@@ -137,7 +147,7 @@ int main( int argc, char** argv )
   }
 
   if ( blueConfig != "" )
-    mainWindow.openBlueConfig( blueConfig, target );
+    mainWindow.openBlueConfig( blueConfig, target, report );
 
   if ( swcFile != "" )
     mainWindow.openSWCFile( swcFile );
@@ -158,6 +168,8 @@ void usageMessage( char* progName )
             << " | -xml scene_xml ] "
             << std::endl
             << "\t[ -target target_label ] "
+            << std::endl
+            << "\t[ -report report_label ] "
             << std::endl
             << "\t[ -zeq schema* ]"
             << std::endl
