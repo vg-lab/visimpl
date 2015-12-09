@@ -23,7 +23,7 @@ namespace prefr
                        bool still = false);
     virtual ~ColorEmissionNode();
 
-    virtual void killParticles( void );
+    virtual void killParticles( bool changeState = true );
 
     virtual void Color(glm::vec4 color);
     virtual const glm::vec4& Color();

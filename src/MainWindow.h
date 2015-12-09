@@ -1,5 +1,12 @@
 #include <QMainWindow>
+#include <QDockWidget>
+#include <QPushButton>
+#include <QSlider>
+#include <QTimer>
+
 #include "OpenGLWidget.h"
+
+
 
 namespace Ui
 {
@@ -33,15 +40,36 @@ public slots:
   void openXMLSceneThroughDialog( void );
   void openSWCFileThroughDialog( void );
 
+  void Play( void );
+  void Stop( void );
+  void Repeat( bool repeat );
+  void PlayAt( int );
+  void Restart( void );
+  void GoToEnd( void );
+
+  void UpdateSimulationSlider( void );
+
 protected:
 
   QString _lastOpenedFileName;
-
+  QIcon playIcon;
+  QIcon pauseIcon;
 
 private:
+
+  void initSimulationDock( void );
+  void initSimColorDock( void );
 
   Ui::MainWindow* _ui;
   OpenGLWidget* _openGLWidget;
 
+//  visimpl::SimulationPlayer* _player;
+  QDockWidget* _simulationDock;
+  QDockWidget* _simConfigurationDock;
+  QSlider* _simulationSlider;
+  QPushButton* _playButton;
+  QTimer _updateSimStateTimer;
+  QLabel* _startTimeLabel;
+  QLabel* _endTimeLabel;
 
 };

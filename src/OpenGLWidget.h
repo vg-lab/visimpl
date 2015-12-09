@@ -37,6 +37,13 @@ public:
     NsolScene
   } TDataFileType;
 
+  typedef enum
+  {
+    TUndefined = 0,
+    TSpikes,
+    TVoltages
+  } TSimulationType;
+
   OpenGLWidget( QWidget* parent = 0,
                 Qt::WindowFlags windowFlags = 0,
                 bool paintNeurons = true,
@@ -55,6 +62,9 @@ public:
     _idleUpdate = idleUpdate_;
   }
 
+  visimpl::SimulationPlayer* player( );
+  void resetParticles( void );
+
 public slots:
 
   void togglePaintNeurons( void );
@@ -63,6 +73,14 @@ public slots:
   void toggleShowFPS( void );
   void toggleWireframe( void );
 
+  void Play( void );
+  void Pause( void );
+  void PlayPause( void );
+  void Stop( void );
+  void Repeat( bool repeat );
+  void PlayAt( unsigned int );
+  void Restart( void );
+  void GoToEnd( void );
 
 protected:
 
@@ -79,6 +97,7 @@ protected:
   void configureSimulation( void );
   void updateSimulation( void );
   void paintParticles( void );
+
 
   QLabel _fpsLabel;
   bool _showFps;
@@ -105,15 +124,18 @@ protected:
   prefr::ParticleSystem* _ps;
 
 //  nsol::BBPSDKReader _bbpReader;
-  nsol::Columns _columns;
-  nsol::SimulationData _simulationData;
+//  nsol::Columns _columns;
+//  nsol::SimulationData _simulationData;
 //  nsol::NeuronsMap _neurons;
 
 //  float currentTime;
-  bbp::CompartmentReportReader* reader;
+//  bbp::CompartmentReportReader* reader;
 
-  visimpl::SpikesPlayer* _player;
+  TSimulationType _simulationType;
+  visimpl::SimulationPlayer* _player;
+  float _maxLife;
   float _deltaTime;
+  bool _firstFrame;
 
 //  brion::BlueConfig* _blueConfig;
 //  brion::SpikeReport* _spikeReport;

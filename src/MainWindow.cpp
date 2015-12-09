@@ -3,6 +3,8 @@
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QGridLayout>
+
 
 MainWindow::MainWindow( QWidget* parent_,
                         bool updateOnIdle )
@@ -70,6 +72,8 @@ void MainWindow::init( const std::string& zeqUri )
   connect( _ui->actionOpenSWCFile, SIGNAL( triggered( )),
            this, SLOT( openSWCFileThroughDialog( )));
 
+
+  initSimulationDock( );
 }
 
 MainWindow::~MainWindow( void )
@@ -90,6 +94,18 @@ void MainWindow::openBlueConfig( const std::string& fileName,
   _openGLWidget->loadData( fileName,
                            OpenGLWidget::TDataFileType::tBlueConfig,
                            targetLabel, reportLabel );
+
+  _updateSimStateTimer.setInterval( 200 );
+  connect( &_updateSimStateTimer, SIGNAL( timeout( void )),
+           this, SLOT( UpdateSimulationSlider( void )));
+
+  _updateSimStateTimer.start( );
+
+  _startTimeLabel->setText(
+      QString::number( (double)_openGLWidget->player( )->startTime( )));
+
+  _endTimeLabel->setText(
+        QString::number( (double)_openGLWidget->player( )->endTime( )));
 
 }
 
@@ -176,4 +192,186 @@ void MainWindow::openSWCFileThroughDialog( void )
     openSWCFile( fileName );
   }
 
+}
+
+void MainWindow::initSimulationDock( void )
+{
+  _simulationDock = new QDockWidget( );
+  _simulationDock->setMinimumHeight( 100 );
+  _simulationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
+                                  QSizePolicy::MinimumExpanding );
+
+  unsigned int totalHSpan = 20;
+
+  QWidget* content = new QWidget( );
+  QGridLayout* dockLayout = new QGridLayout( );
+  content->setLayout( dockLayout );
+
+  _simulationSlider = new QSlider( Qt::Horizontal );
+  _simulationSlider->setMinimum( 0 );
+  _simulationSlider->setMaximum( 10000 );
+
+//  QPushButton* playButton = new QPushButton( );
+  _playButton = new QPushButton( );
+  _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
+                             QSizePolicy::MinimumExpanding );
+  QPushButton* stopButton = new QPushButton( );
+  QPushButton* nextButton = new QPushButton( );
+  QPushButton* prevButton = new QPushButton( );
+  QPushButton* repeatButton = new QPushButton( );
+  repeatButton->setCheckable( true );
+  repeatButton->setChecked( false );
+
+//  QIcon playIcon;
+//  QIcon pauseIcon;
+  QIcon stopIcon;
+  QIcon nextIcon;
+  QIcon prevIcon;
+  QIcon repeatIcon;
+
+  playIcon.addFile( QStringLiteral( ":/icons/play.png" ), QSize( ),
+                    QIcon::Normal, QIcon::Off );
+  pauseIcon.addFile( QStringLiteral( ":/icons/pause.png" ), QSize( ),
+                     QIcon::Normal, QIcon::Off) ;
+  stopIcon.addFile( QStringLiteral( ":/icons/stop.png" ), QSize( ),
+                    QIcon::Normal, QIcon::Off );
+  nextIcon.addFile( QStringLiteral( ":/icons/next.png" ), QSize( ),
+                    QIcon::Normal, QIcon::Off );
+  prevIcon.addFile( QStringLiteral( ":/icons/previous.png" ), QSize( ),
+                    QIcon::Normal, QIcon::Off );
+  repeatIcon.addFile( QStringLiteral( ":/icons/repeat.png" ), QSize( ),
+                      QIcon::Normal, QIcon::Off );
+
+  _playButton->setIcon( playIcon );
+  stopButton->setIcon( stopIcon );
+  nextButton->setIcon( nextIcon );
+  prevButton->setIcon( prevIcon );
+  repeatButton->setIcon( repeatIcon );
+
+  _startTimeLabel = new QLabel( "" );
+  _endTimeLabel = new QLabel( "" );
+
+  dockLayout->addWidget( _startTimeLabel, 0, 0, 1, 1 );
+  dockLayout->addWidget( _simulationSlider, 0, 1, 1, totalHSpan - 2 );
+  dockLayout->addWidget( _endTimeLabel, 0, totalHSpan - 1, 1, 1 );
+  dockLayout->addWidget( repeatButton, 1, 7, 1, 1 );
+  dockLayout->addWidget( prevButton, 1, 8, 1, 1 );
+  dockLayout->addWidget( _playButton, 1, 9, 2, 2 );
+  dockLayout->addWidget( stopButton, 1, 11, 1, 1 );
+  dockLayout->addWidget( nextButton, 1, 12, 1, 1 );
+
+  connect( _playButton, SIGNAL( clicked( )),
+           this, SLOT( Play( )));
+
+  connect( stopButton, SIGNAL( clicked( )),
+             this, SLOT( Stop( )));
+
+  connect( nextButton, SIGNAL( clicked( )),
+             this, SLOT( GoToEnd( )));
+
+  connect( prevButton, SIGNAL( clicked( )),
+             this, SLOT( Restart( )));
+
+  connect( repeatButton, SIGNAL( toggled( bool )),
+             this, SLOT( Repeat( bool )));
+
+  connect( _simulationSlider, SIGNAL( sliderMoved( int )),
+           this, SLOT( PlayAt( int )));
+
+
+  _simulationDock->setWidget( content );
+  this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/BottomDockWidgetArea,
+                       _simulationDock );
+}
+
+void MainWindow::initSimColorDock( void )
+{
+
+}
+
+void MainWindow::Play( void )
+{
+//  playIcon.swap( pauseIcon );
+
+  if( _openGLWidget )
+  {
+    _openGLWidget->PlayPause( );
+
+    if( _openGLWidget->player( )->isPlaying( ))
+    {
+      _playButton->setIcon( pauseIcon );
+    }
+    else
+    {
+      _playButton->setIcon( playIcon );
+    }
+  }
+}
+
+void MainWindow::Stop( void )
+{
+  if( _openGLWidget )
+  {
+    _openGLWidget->Stop( );
+    _playButton->setIcon( playIcon );
+    _startTimeLabel->setText(
+          QString::number( (double)_openGLWidget->player( )->startTime( )));
+  }
+}
+
+void MainWindow::Repeat( bool repeat )
+{
+  if( _openGLWidget )
+  {
+    _openGLWidget->Repeat( repeat );
+  }
+}
+
+void MainWindow::PlayAt( int sliderPosition )
+{
+  if( _openGLWidget )
+  {
+    _openGLWidget->PlayAt( sliderPosition );
+  }
+}
+
+void MainWindow::Restart( void )
+{
+  if( _openGLWidget )
+  {
+    _openGLWidget->Restart( );
+
+    if( _openGLWidget->player( )->isPlaying( ))
+      _playButton->setIcon( pauseIcon );
+    else
+      _playButton->setIcon( playIcon );
+  }
+}
+
+void MainWindow::GoToEnd( void )
+{
+  if( _openGLWidget )
+  {
+    _openGLWidget->GoToEnd( );
+  }
+}
+
+void MainWindow::UpdateSimulationSlider( void )
+{
+  if( _openGLWidget->player( )->isPlaying( ))
+  {
+
+    _startTimeLabel->setText(
+          QString::number( (double)_openGLWidget->player( )->currentTime( )));
+
+    float percentage = _openGLWidget->player( )->GetRelativeTime( );
+
+    int total = _simulationSlider->maximum( ) - _simulationSlider->minimum( );
+
+    int position = percentage * total;
+//    std::cout << "Timer: " << percentage << " * "
+//              << total << " = " << position << std::endl;
+
+    _simulationSlider->setSliderPosition( position );
+  }
 }

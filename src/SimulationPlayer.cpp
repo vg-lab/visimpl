@@ -102,6 +102,29 @@ namespace visimpl
 
   }
 
+  void SimulationPlayer::PlayAt( float percentage )
+  {
+    assert( percentage >= 0.0f && percentage <= 1.0f );
+
+    float timeStamp = percentage * ( endTime( ) - startTime( )) + startTime( );
+
+    int aux = timeStamp / _deltaTime;
+
+    _currentTime = aux * _deltaTime;
+    _previousTime = std::max( _currentTime - _deltaTime, _startTime );
+
+  }
+
+  float SimulationPlayer::GetRelativeTime( void )
+  {
+    return (( _currentTime - startTime( )) / (endTime( ) - startTime( )));
+  }
+
+  bool SimulationPlayer::isPlaying( void )
+  {
+    return _playing;
+  }
+
   void SimulationPlayer::deltaTime( float deltaTime_ )
   {
     _deltaTime = deltaTime_;
@@ -130,6 +153,11 @@ namespace visimpl
   float SimulationPlayer::endTime( void )
   {
     return _endTime;
+  }
+
+  float SimulationPlayer::currentTime( void )
+  {
+    return _currentTime;
   }
 
   void SimulationPlayer::loop( bool loop_ )
@@ -163,6 +191,7 @@ namespace visimpl
 
   void SimulationPlayer::Finished( void )
   {
+    std::cout << "Finished simulation." << std::endl;
     if( _loop )
     {
       Stop( );
@@ -198,6 +227,11 @@ namespace visimpl
 
     _currentSpike = _spikeReport->getSpikes( ).begin( );
     _previousSpike = _currentSpike;
+
+    _startTime = _spikeReport->getStartTime( );
+    _endTime = _spikeReport->getEndTime( );
+
+    _currentTime = _startTime;
   }
 
   void SpikesPlayer::Clear( void )

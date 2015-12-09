@@ -37,6 +37,12 @@ namespace visimpl
 
     virtual void GoTo( float timeStamp );
 
+    virtual void PlayAt( float percentage );
+
+    virtual float GetRelativeTime( void );
+
+    bool isPlaying( void );
+
     void deltaTime( float deltaTime );
     float deltaTime( void );
 
@@ -45,6 +51,8 @@ namespace visimpl
 
   //  void endTime( float endTime );
     float endTime( void );
+
+    float currentTime( void );
 
     void loop( bool loop );
     bool loop( void );
@@ -90,7 +98,7 @@ namespace visimpl
   public:
 
     SpikesPlayer( const std::string& blueConfigFilePath,
-                     bool loadData = true );
+                  bool loadData = true );
 
     virtual void LoadData( void );
     virtual void Clear( void );

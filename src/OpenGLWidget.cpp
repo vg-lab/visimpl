@@ -40,6 +40,9 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _idleUpdate( true )
   , _paint( false )
   , _currentClearColor( 20, 20, 20, 0 )
+  , _simulationType( TSimulationType::TUndefined )
+  , _player( nullptr )
+  , _firstFrame( true )
 {
 #ifdef NEUROLOTS_USE_ZEQ
   if ( zeqUri != "" )
@@ -93,8 +96,12 @@ void OpenGLWidget::loadData( const std::string& fileName,
 
     _deltaTime = 0.5f;
     _player = new SpikesPlayer( fileName, true );
-    _player->loop( true );
-    _player->Play( _deltaTime );
+    _player->deltaTime( _deltaTime );
+    _simulationType = TSimulationType::TSpikes;
+//    _player->loop( true );
+//    _player->Play( _deltaTime );
+
+    createParticleSystem( );
 
     break;
 
@@ -102,8 +109,6 @@ void OpenGLWidget::loadData( const std::string& fileName,
     throw std::runtime_error( "Data file type not supported" );
 
   }
-
-  createParticleSystem( );
 
   this->_paint = true;
   update( );
@@ -135,17 +140,26 @@ void OpenGLWidget::initializeGL( void )
 
 void OpenGLWidget::configureSimulation( void )
 {
-  _player->Frame( );
-  SpikesCRange spikes = _player->spikesNow( );
+  if( !_player || !_player->isPlaying( ))
+    return;
 
-  for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
+  _player->Frame( );
+
+  if( _simulationType == TSimulationType::TSpikes )
   {
-    auto res = gidNodesMap.find( (*spike).second );
-    if( res != gidNodesMap.end( ))
+    SpikesCRange spikes =
+        dynamic_cast< visimpl::SpikesPlayer* >( _player )->spikesNow( );
+
+    for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
     {
-      ( *res ).second->killParticles( );
+      auto res = gidNodesMap.find( (*spike).second );
+      if( res != gidNodesMap.end( ))
+      {
+        ( *res ).second->killParticles( );
+      }
     }
   }
+
 }
 
 void OpenGLWidget::createNeuronsCollection( void )
@@ -163,7 +177,7 @@ void OpenGLWidget::createParticleSystem( void )
   unsigned int maxParticles = _player->gids( ).size( );
   unsigned int maxEmitters = maxParticles;
 
-  _ps = new prefr::ParticleSystem(0, maxParticles, true);
+  _ps = new prefr::ParticleSystem( maxParticles, maxParticles, true );
   _ps->renderDeadParticles = true;
 
   const brion::Vector3fs& positions = _player->positions( );
@@ -191,14 +205,21 @@ void OpenGLWidget::createParticleSystem( void )
   std::cout << "- Vertex: " << vertPath.c_str( ) << std::endl;
   std::cout << "- Fragments: " << fragPath.c_str( ) << std::endl;
 
+  _maxLife = 20.0f;
+
   prefr::ColorOperationPrototype* prototype =
     new prefr::ColorOperationPrototype(
-      10.0f, 10.0f,
+      _maxLife, _maxLife,
       prefr::ParticleCollection( _ps->particles, 0, maxParticles));
 
-  prototype->color.Insert( 0.0f, ( glm::vec4(0.5, 0.5, 0, 0.1)));
-  prototype->color.Insert( 0.3f, ( glm::vec4(0, 1, 1, 0.5 )));
-  prototype->color.Insert( 1.0f, ( glm::vec4(0.5, 0.5, 0, 0.1 )));
+//  prototype->color.Insert( 0.0f, ( glm::vec4(0.2, 0.2, 0.2, 0.05)));
+//  prototype->color.Insert( 0.1f, ( glm::vec4(0, 1, 1, 0.5 )));
+//  prototype->color.Insert( 1.0f, ( glm::vec4(0.2, 0.2, 0.2, 0.05 )));
+
+  prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
+  prototype->color.Insert( 0.1f, ( glm::vec4(1, 0, 0, 0.2 )));
+  prototype->color.Insert( 0.7f, ( glm::vec4(1, 0.5, 0, 0.2 )));
+  prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 0.3, 0.05 )));
 
   prototype->velocity.Insert( 0.0f, 0.0f );
 
@@ -293,12 +314,27 @@ void OpenGLWidget::createParticleSystem( void )
 
   _ps->Start();
 
+  resetParticles( );
 
 }
 
+void OpenGLWidget::resetParticles( void )
+{
+  for( auto node = _ps->emissionNodes->begin( );
+         node != _ps->emissionNodes->end( );
+         node++ )
+  {
+    dynamic_cast< prefr::ColorEmissionNode* >( *node )->killParticles( false );
+    (*node)->Restart( );
+  }
+//  _ps->UpdateUnified( _deltaTime );
+}
 
 void OpenGLWidget::paintParticles( void )
 {
+  if( !_ps )
+    return;
+
   glDepthMask(GL_FALSE);
   glEnable(GL_BLEND);
 
@@ -329,7 +365,13 @@ void OpenGLWidget::paintParticles( void )
   glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
 
 
-  _ps->UpdateUnified( _deltaTime );
+  if( _player->isPlaying( ) || _firstFrame )
+  {
+
+    _ps->UpdateUnified( _deltaTime );
+    _firstFrame = false;
+  }
+
   _ps->UpdateCameraDistances( glm::vec3( _camera->Position()[0],
                                          _camera->Position()[1],
                                          _camera->Position()[2]));
@@ -368,7 +410,7 @@ void OpenGLWidget::paintGL( void )
   }
 
   #define FRAMES_PAINTED_TO_MEASURE_FPS 10
-  if ( _frameCount % FRAMES_PAINTED_TO_MEASURE_FPS  == 0 )
+  if ( _frameCount == FRAMES_PAINTED_TO_MEASURE_FPS )
   {
 
     std::chrono::time_point< std::chrono::system_clock > now =
@@ -400,6 +442,7 @@ void OpenGLWidget::paintGL( void )
         _fpsLabel.setVisible( false );
     }
 
+    _frameCount = 0;
   }
 
   if ( _idleUpdate )
@@ -602,3 +645,79 @@ void OpenGLWidget::togglePaintNeurons( void )
   _paintNeurons = !_paintNeurons;
   update( );
 }
+
+
+visimpl::SimulationPlayer* OpenGLWidget::player( )
+{
+  return _player;
+}
+
+void OpenGLWidget::Play( void )
+{
+  if( _player )
+  {
+    _player->Play( _player->deltaTime( ));
+  }
+}
+
+void OpenGLWidget::Pause( void )
+{
+  if( _player )
+  {
+    _player->Pause( );
+  }
+}
+
+void OpenGLWidget::PlayPause( void )
+{
+
+  if( _player )
+  {
+    if( !_player->isPlaying( ))
+      _player->Play( _player->deltaTime( ));
+    else
+      _player->Pause( );
+  }
+}
+
+void OpenGLWidget::Stop( void )
+{
+  if( _player )
+  {
+    _player->Stop( );
+    resetParticles( );
+    _firstFrame = true;
+  }
+}
+
+void OpenGLWidget::Repeat( bool repeat )
+{
+  if( _player )
+  {
+    _player->loop( repeat );
+  }
+}
+
+void OpenGLWidget::PlayAt( unsigned int )
+{
+
+}
+
+void OpenGLWidget::Restart( void )
+{
+  if( _player )
+  {
+    bool playing = _player->isPlaying( );
+    _player->Stop( );
+    if( playing )
+      _player->Play( _player->deltaTime( ));
+    resetParticles( );
+    _firstFrame = true;
+  }
+}
+
+void OpenGLWidget::GoToEnd( void )
+{
+
+}
+

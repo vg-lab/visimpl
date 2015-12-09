@@ -5,6 +5,7 @@
 
 #include <visimpl/version.h>
 
+
 void setFormat( void );
 void usageMessage(  char* progName );
 void dumpVersion( void );
@@ -12,6 +13,11 @@ bool atLeastTwo( bool a, bool b, bool c );
 
 int main( int argc, char** argv )
 {
+  // Linux osg obj importer has a bug with non english lang.
+#ifndef Win32
+  setenv("LANG", "C", 1);
+#endif
+
   QApplication application(argc,argv);
 
   std::string blueConfig;

@@ -54,15 +54,17 @@ namespace prefr
     return size_;
   }
 
-  void ColorEmissionNode::killParticles( void )
+  void ColorEmissionNode::killParticles( bool changeState )
   {
-
-
     for( tparticleContainer::iterator it = particles->start;
          it != particles->end; it++ )
     {
-      (*it)->life = 0;
-      (*it)->alive = false;
+      ( *it )->life = 0.0f;
+
+      if( changeState )
+        ( *it )->alive = false;
+      else
+        ( *it )->alive = true;
     }
   }
 

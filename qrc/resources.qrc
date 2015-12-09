@@ -7,5 +7,11 @@
     <file>open_xml.png</file>
     <file>open_bc.png</file>
     <file>colorpicker.png</file>
+    <file>play.png</file>
+    <file>pause.png</file>
+    <file>stop.png</file>
+    <file>repeat.png</file>
+    <file>previous.png</file>
+    <file>next.png</file>
   </qresource>
 </RCC>
