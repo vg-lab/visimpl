@@ -54,7 +54,7 @@ public:
   void createParticleSystem( void );
   void loadData( const std::string& fileName,
                  const TDataFileType fileType = TDataFileType::tBlueConfig,
-                 const std::string& target = std::string( "" ),
+                 TSimulationType simulationType = TSpikes,
                  const std::string& report = std::string( "" ));
 
   void idleUpdate( bool idleUpdate_ = true )
@@ -143,7 +143,7 @@ protected:
 //  brion::GIDSet _neuronGIDs;
 //  brion::Spikes* _spikes;
 
-  std::unordered_map< uint32_t, prefr::ColorEmissionNode* > gidNodesMap;
+  std::unordered_map< uint32_t, prefr::EmissionNode* > gidNodesMap;
 };
 
 #endif // __QNEUROLOTS__OPENGLWIDGET__

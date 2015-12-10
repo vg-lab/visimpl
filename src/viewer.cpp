@@ -20,12 +20,15 @@ int main( int argc, char** argv )
 
   QApplication application(argc,argv);
 
+  OpenGLWidget::TSimulationType simType = OpenGLWidget::TSpikes;
+
   std::string blueConfig;
   std::string swcFile;
   std::string sceneFile;
   std::string zeqUri;
   std::string target = std::string( "" );
   std::string report = std::string( "" );
+
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
   int initWindowWidth, initWindowHeight;
 
@@ -64,39 +67,44 @@ int main( int argc, char** argv )
         usageMessage( argv[0] );
 
     }
-    if( std::strcmp( argv[ i ], "-swc" ) == 0 )
+//    if( std::strcmp( argv[ i ], "-swc" ) == 0 )
+//    {
+//      if( ++i < argc )
+//      {
+//        swcFile = std::string( argv[ i ]);
+//      }
+//      else
+//        usageMessage( argv[0] );
+//
+//    }
+//    if( std::strcmp( argv[ i ], "-xml" ) == 0 )
+//    {
+//      if( ++i < argc )
+//      {
+//        sceneFile = std::string( argv[ i ]);
+//      }
+//      else
+//        usageMessage( argv[0] );
+//
+//    }
+//    if( std::strcmp( argv[ i ], "-target" ) == 0 )
+//    {
+//      if(++i < argc )
+//      {
+//        target = std::string( argv[ i ]);
+//      }
+//      else
+//        usageMessage( argv[0] );
+//    }
+    if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
-      if( ++i < argc )
-      {
-        swcFile = std::string( argv[ i ]);
-      }
-      else
-        usageMessage( argv[0] );
-
+      simType = OpenGLWidget::TSimulationType::TSpikes;
     }
-    if( std::strcmp( argv[ i ], "-xml" ) == 0 )
-    {
-      if( ++i < argc )
-      {
-        sceneFile = std::string( argv[ i ]);
-      }
-      else
-        usageMessage( argv[0] );
-
-    }
-    if( std::strcmp( argv[ i ], "-target" ) == 0 )
+    else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
     {
       if(++i < argc )
       {
-        target = std::string( argv[ i ]);
-      }
-      else
-        usageMessage( argv[0] );
-    }
-    if( std::strcmp( argv[ i ], "-report" ) == 0 )
-    {
-      if(++i < argc )
-      {
+        simType = OpenGLWidget::TSimulationType::TVoltages;
         report = std::string( argv[ i ]);
       }
       else
@@ -153,13 +161,13 @@ int main( int argc, char** argv )
   }
 
   if ( blueConfig != "" )
-    mainWindow.openBlueConfig( blueConfig, target, report );
+    mainWindow.openBlueConfig( blueConfig, simType, report );
 
-  if ( swcFile != "" )
-    mainWindow.openSWCFile( swcFile );
-
-  if ( sceneFile != "" )
-    mainWindow.openXMLScene( sceneFile );
+//  if ( swcFile != "" )
+//    mainWindow.openSWCFile( swcFile );
+//
+//  if ( sceneFile != "" )
+//    mainWindow.openXMLScene( sceneFile );
 
   return application.exec();
 
@@ -173,9 +181,9 @@ void usageMessage( char* progName )
             << "\t[ -bc blue_config_path | -swc swc_file_list "
             << " | -xml scene_xml ] "
             << std::endl
-            << "\t[ -target target_label ] "
+            << "\t[ -spikes ] "
             << std::endl
-            << "\t[ -report report_label ] "
+            << "\t[ -voltage report_label ] "
             << std::endl
             << "\t[ -zeq schema* ]"
             << std::endl

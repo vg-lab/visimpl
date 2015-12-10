@@ -88,12 +88,12 @@ void MainWindow::showStatusBarMessage ( const QString& message )
 }
 
 void MainWindow::openBlueConfig( const std::string& fileName,
-                                 const std::string& targetLabel,
+                                 OpenGLWidget::TSimulationType simulationType,
                                  const std::string& reportLabel)
 {
   _openGLWidget->loadData( fileName,
                            OpenGLWidget::TDataFileType::tBlueConfig,
-                           targetLabel, reportLabel );
+                           simulationType, reportLabel );
 
   _updateSimStateTimer.setInterval( 200 );
   connect( &_updateSimStateTimer, SIGNAL( timeout( void )),
@@ -121,23 +121,39 @@ void MainWindow::openBlueConfigThroughDialog( void )
   if (path != QString( "" ))
   {
     bool ok1, ok2;
-    QString text = QInputDialog::getText(
-      this, tr( "Please select target" ),
-      tr( "Cell target:" ), QLineEdit::Normal,
-      "Layer1", &ok1 );
+    QInputDialog simTypeDialog;
+    OpenGLWidget::TSimulationType simType;
+    QStringList items = {"Spikes", "Voltages"};
 
-    QString text2 = QInputDialog::getText(
-          this, tr( "Please select report" ),
-          tr( "Cell report:" ), QLineEdit::Normal,
-          "voltage", &ok2 );
+    QString text = QInputDialog::getItem(
+      this, tr( "Please select simulation type" ),
+      tr( "Type:" ), items, 0, false, &ok1 );
 
-    if ( ok1 && ok2 && !text.isEmpty( ) && !text2.isEmpty( ))
+    if( !ok1 )
+      return;
+
+    if( text == items[0] )
     {
-      std::string targetLabel = text.toStdString( );
+      simType = OpenGLWidget::TSpikes;
+      ok2 = true;
+    }
+    else
+    {
+      simType = OpenGLWidget::TVoltages;
+
+      text = QInputDialog::getText(
+          this, tr( "Please select report" ),
+          tr( "Report:" ), QLineEdit::Normal,
+          "soma", &ok2 );
+    }
+
+    if ( ok1 && ok2 && !text.isEmpty( ))
+    {
+//      std::string targetLabel = text.toStdString( );
       std::string reportLabel = text.toStdString( );
       _lastOpenedFileName = QFileInfo(path).path( );
       std::string fileName = path.toStdString( );
-      openBlueConfig( fileName, targetLabel, reportLabel );
+      openBlueConfig( fileName, simType, reportLabel );
     }
 
 

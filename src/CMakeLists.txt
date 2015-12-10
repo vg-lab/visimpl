@@ -42,6 +42,9 @@ set(VISIMPL_SOURCES
   prefr/ColorOperationPrototype.cpp
   prefr/CompositeColorEmitter.cpp
   prefr/CompositeColorUpdater.cpp
+  prefr/DirectValuedEmissionNode.cpp
+  prefr/DirectValuedUpdater.cpp
+  prefr/DirectValuedEmitter.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -54,6 +57,10 @@ set(VISIMPL_HEADERS
   prefr/ColorOperationPrototype.h
   prefr/CompositeColorEmitter.h
   prefr/CompositeColorUpdater.h
+  prefr/DirectValuedEmissionNode.h
+  prefr/DirectValuedUpdater.h
+  prefr/DirectValuedEmitter.h
+  log.h
 )
 
 set(VISIMPL_MOC_HEADERS

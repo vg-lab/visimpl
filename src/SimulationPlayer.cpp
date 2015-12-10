@@ -5,6 +5,7 @@
  *      Author: sgalindo
  */
 #include "SimulationPlayer.h"
+#include "log.h"
 
 namespace visimpl
 {
@@ -42,13 +43,16 @@ namespace visimpl
 
     _blueConfig = new brion::BlueConfig( _blueConfigPath );
 
-    std::cout << " Loading Circuit: " << _blueConfig->getCircuitTarget( )
-              << " -> " << _blueConfig->getCircuitSource( ).getPath( ).c_str( )
-              << std::endl;
+//    brion::URI circuitSource = _blueConfig->getCircuitSource( );
+//    std::cout << " Loading Circuit: " << _blueConfig->getCircuitSource( )
+//              << " -> " << circuitSource.getPath( )
+//              << std::endl;
 
     _circuit = new brain::Circuit( *_blueConfig );
 
     _gids = _circuit->getGIDs( );
+
+    std::cout << "GID Set size: " << _gids.size( ) << std::endl;
   }
 
   void SimulationPlayer::Clear( void )
@@ -75,10 +79,10 @@ namespace visimpl
   }
 
 
-  void SimulationPlayer::Play( float deltaTime_ )
+  void SimulationPlayer::Play( void )
   {
     _playing = true;
-    _deltaTime = deltaTime_;
+//    _deltaTime = deltaTime_;
   }
 
   void SimulationPlayer::Pause( void )
@@ -238,7 +242,8 @@ namespace visimpl
   {
     SimulationPlayer::Clear( );
 
-    delete _spikeReport;
+    if( _spikeReport )
+      delete _spikeReport;
   }
 
   void SpikesPlayer::Stop( void )
@@ -335,6 +340,205 @@ namespace visimpl
   SpikesCRange SpikesPlayer::spikesNow( void )
   {
     return std::make_pair( _previousSpike, _currentSpike );
+  }
+
+
+
+//*************************************************************************
+//************************ VOLTAGES SIMULATION PLAYER ***********************
+//*************************************************************************
+
+  VoltagesPlayer::VoltagesPlayer( const std::string& blueConfigFilePath,
+                                  const std::string& report,
+                                  bool loadData,
+                                  const std::pair< float, float>* range )
+  : SimulationPlayer( blueConfigFilePath, false)
+  , _report( report )
+  , _voltReport( nullptr )
+  {
+
+    if( loadData)
+      LoadData( range );
+  }
+
+  void VoltagesPlayer::LoadData( const std::pair< float, float>* range )
+  {
+    SimulationPlayer::LoadData( );
+
+    brion::GIDSet old = _gids;
+    brion::GIDSet gidsNew;
+    _voltReport = new brion::CompartmentReport(
+        _blueConfig->getReportSource( _report ),
+        brion::MODE_READ,
+        gidsNew );
+    brion::GIDSet other = _voltReport->getGIDs( );
+    std::cout << "GID Set size: " << gidsNew.size( ) << std::endl;
+    std::cout << "GID Set size: " << other.size( ) << std::endl;
+
+    _deltaTime = _voltReport->getTimestep( );
+    _startTime = _voltReport->getStartTime( );
+    _endTime = _voltReport->getEndTime( );
+
+    std::cout << "Offsets: " << _voltReport->getOffsets( ).size( ) << std::endl;
+//
+//    std::cout << "Looking for mismatches..." << std::endl;
+//    for( auto gid : _gids )
+//    {
+//      if( other.find( gid ) == other.end( ))
+//      {
+//        std::cout << "GID :" << gid << " not found!" << std::endl;
+//        _gids.erase( gid );
+//      }
+//    }
+
+    _gids = other;
+
+    std::cout << "GID Set size: " << _gids.size( ) << std::endl;
+
+    unsigned int counter = 0;
+    for( auto gid : _gids )
+    {
+      _gidRef[ gid ] = counter;
+      counter++;
+    }
+
+
+
+    std::cout << "Start time: " << _startTime << std::endl;
+    std::cout << "End time: " << _endTime << std::endl;
+    std::cout << "Delta time: " << _deltaTime << std::endl;
+    if( range == nullptr )
+    {
+//      _minVoltage = std::numeric_limits< float >::max( );
+//      _maxVoltage = std::numeric_limits< float >::min( );
+//      for( float dt = _startTime; dt < _endTime; dt += _deltaTime )
+//      {
+//        std::cout << "\rdt: " << dt;
+//        brion::floatsPtr frame = _voltReport->loadFrame( dt );
+//        for( unsigned int i = 0; i < _gids.size( ); i++ )
+//        {
+//          float voltage = (* frame )[ i ];
+//          if( voltage < _minVoltage )
+//            _minVoltage = voltage;
+//          if( voltage > _maxVoltage )
+//            _maxVoltage = voltage;
+//        }
+//      }
+//      std::cout << std::endl;
+      _minVoltage = -87.6816f;
+      _maxVoltage = 47.5082f;
+
+      Stop( );
+    }
+    else
+    {
+      _minVoltage = range->first;
+      _maxVoltage = range->second;
+    }
+
+    std::cout << "Min Voltage: " << _minVoltage << std::endl;
+    std::cout << "Max Voltage: " << _maxVoltage << std::endl;
+
+    _normalizedVoltageFactor = 1.0f / std::abs( _maxVoltage - _minVoltage );
+    std::cout << "Norm factor: " << _normalizedVoltageFactor << std::endl;
+  }
+
+  void VoltagesPlayer::Clear( void )
+  {
+    SimulationPlayer::Clear( );
+
+    if( _voltReport )
+      delete _voltReport;
+
+    _gidRef.clear( );
+  }
+
+  void VoltagesPlayer::Stop( void )
+  {
+    SimulationPlayer::Stop( );
+    _voltReport->loadFrame( _startTime );
+
+  }
+
+  void deltaTime( float /*deltaTime*/ )
+  {
+    std::cerr << "Err: Delta time cannot be modified in voltage simulations."
+              << std::endl;
+  }
+
+  float VoltagesPlayer::getVoltage( uint32_t gid )
+  {
+    unsigned int i = _gidRef[ gid ];
+    return (*_currentFrame)[ i ];
+  }
+
+  float VoltagesPlayer::minVoltage( void )
+  {
+    return _minVoltage;
+  }
+
+  float VoltagesPlayer::maxVoltage( void )
+  {
+    return _maxVoltage;
+  }
+
+  float VoltagesPlayer::getNormVoltageFactor( void )
+  {
+    return _normalizedVoltageFactor;
+  }
+
+
+  VoltIter VoltagesPlayer::begin( void )
+  {
+    iterator it( &(*_currentFrame)[ 0 ]);
+    return it;
+  }
+
+  VoltIter VoltagesPlayer::end( void )
+  {
+    iterator it( &(*_currentFrame)[ _gids.size( )] );
+    return it;
+  }
+
+  VoltIter VoltagesPlayer::find( uint32_t gid )
+  {
+    iterator it( &(*_currentFrame)[ _gidRef[ gid ]]);
+    return it;
+  }
+
+
+  VoltCIter VoltagesPlayer::begin( void ) const
+  {
+    const_iterator it( &(*_currentFrame)[ 0 ]);
+    return it;
+  }
+
+  VoltCIter VoltagesPlayer::end( void ) const
+  {
+    const_iterator it( &(*_currentFrame)[ _gids.size( )] );
+    return it;
+  }
+
+  VoltCIter VoltagesPlayer::find( uint32_t gid ) const
+  {
+    std::unordered_map< uint32_t, unsigned int >::const_iterator res =
+        _gidRef.find( gid );
+
+    if( res == _gidRef.end( ))
+      return end( );
+
+    const_iterator it( &(*_currentFrame)[ res->second ]);
+    return it;
+  }
+
+//  VoltagesCRange VoltagesPlayer::voltagesNow( void ) const
+//  {
+////    return std::pair< VoltCIter, VoltCIter >( begin( ), end( ));
+//  }
+
+  void VoltagesPlayer::FrameProcess( void )
+  {
+    _currentFrame = _voltReport->loadFrame( _currentTime );
   }
 
 }

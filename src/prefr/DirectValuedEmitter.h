@@ -5,25 +5,25 @@
  *      Author: sgalindo
  */
 
-#ifndef __CompositeColorEmitter__
-#define __CompositeColorEmitter__
+#ifndef __DirectValuedEmitter__
+#define __DirectValuedEmitter__
 
 #include <prefr/prefr.h>
 
-#include "ColorEmissionNode.h"
+#include "DirectValuedEmissionNode.h"
 #include "ColorOperationPrototype.h"
 
 namespace prefr
 {
 
-  class CompositeColorEmitter : public ParticleEmitter
+  class DirectValuedEmitter : public ParticleEmitter
   {
   public:
 
-    CompositeColorEmitter( const ParticleCollection& particlesArray,
+    DirectValuedEmitter( const ParticleCollection& particlesArray,
                            float _emissionRate, bool _loop);
 
-    virtual ~CompositeColorEmitter();
+    virtual ~DirectValuedEmitter();
 
     virtual void EmitFunction(const tparticle_ptr current,
                               bool override = false);

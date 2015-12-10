@@ -27,7 +27,7 @@ public:
   void showStatusBarMessage ( const QString& message );
 
   void openBlueConfig( const std::string& fileName,
-                       const std::string& target,
+                       OpenGLWidget::TSimulationType simulationType,
                        const std::string& report);
 
   void openXMLScene( const std::string& fileName );

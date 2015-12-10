@@ -5,56 +5,67 @@
  *      Author: sgalindo
  */
 
-#include "ColorEmissionNode.h"
+#include "DirectValuedEmissionNode.h"
 
 namespace prefr
 {
 
-  ColorEmissionNode::ColorEmissionNode(const ParticleCollection& arrayParticles,
+  DirectValuedEmissionNode::DirectValuedEmissionNode(const ParticleCollection& arrayParticles,
                                        glm::vec3 _position, glm::vec4 color,
                                        bool still)
   : PointEmissionNode( arrayParticles, _position )
   , color_( color )
   , size_ ( 0.0f )
   , still_( still )
+  , _particlesLife( 0.0f )
   {}
 
-  ColorEmissionNode::~ColorEmissionNode()
+  DirectValuedEmissionNode::~DirectValuedEmissionNode()
   {}
 
-  void ColorEmissionNode::Color(glm::vec4 color)
+  void DirectValuedEmissionNode::Color(glm::vec4 color)
   {
     color_ = color;
 //    color_.a = 0.0f;
   }
 
-  const glm::vec4& ColorEmissionNode::Color()
+  const glm::vec4& DirectValuedEmissionNode::Color()
   {
     return color_;
   }
 
-  void ColorEmissionNode::Still(bool still)
+  void DirectValuedEmissionNode::Still(bool still)
   {
     still_ = still;
   }
 
-  bool ColorEmissionNode::Still()
+  bool DirectValuedEmissionNode::Still()
   {
     return still_;
   }
 
 
-  void ColorEmissionNode::Size(float size)
+  void DirectValuedEmissionNode::Size(float size)
   {
     size_ = size;
   }
 
-  float ColorEmissionNode::Size()
+  float DirectValuedEmissionNode::Size()
   {
     return size_;
   }
 
-  void ColorEmissionNode::killParticles( bool changeState )
+  void DirectValuedEmissionNode::particlesLife( float life )
+  {
+    _particlesLife = life;
+  }
+
+  float DirectValuedEmissionNode::particlesLife( void )
+  {
+    return _particlesLife;
+  }
+
+  void DirectValuedEmissionNode::killParticles( bool changeState )
   {
     for( tparticleContainer::iterator it = particles->start;
          it != particles->end; it++ )

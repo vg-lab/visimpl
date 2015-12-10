@@ -10,12 +10,18 @@
 #include <map>
 
 #include "MainWindow.h"
+#include "log.h"
+
 #include <neurolots/nlrender/Config.h>
 
 #include "prefr/ColorOperationPrototype.h"
 #include "prefr/ColorEmissionNode.h"
 #include "prefr/CompositeColorEmitter.h"
 #include "prefr/CompositeColorUpdater.h"
+
+#include "prefr/DirectValuedEmissionNode.h"
+#include "prefr/DirectValuedEmitter.h"
+#include "prefr/DirectValuedUpdater.h"
 
 using namespace visimpl;
 
@@ -70,6 +76,16 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
 OpenGLWidget::~OpenGLWidget( void )
 {
   delete _camera;
+
+  if( _particlesShader )
+    delete _particlesShader;
+
+  if( _ps )
+    delete _ps;
+
+  if( _player )
+    delete _player;
+
 }
 
 
@@ -77,8 +93,8 @@ OpenGLWidget::~OpenGLWidget( void )
 
 void OpenGLWidget::loadData( const std::string& fileName,
                              const TDataFileType fileType,
-                             const std::string& /*target*/,
-                             const std::string& /*report*/)
+                             TSimulationType simulationType,
+                             const std::string& report)
 {
 
   makeCurrent( );
@@ -87,19 +103,25 @@ void OpenGLWidget::loadData( const std::string& fileName,
   {
   case TDataFileType::tBlueConfig:
 
-//    _blueConfig = new brion::BlueConfig( fileName );
-////    std::cout << _blueConfig->getCircuitSource( ).getPath( ) << std::endl;
-//    _circuit = new brain::Circuit( *_blueConfig );
-//    std::cout << _blueConfig->getSpikeSource( ).getPath( ) << std::endl;
-//    _spikeReport = new brion::SpikeReport( _blueConfig->getSpikeSource( ),
-//                                            brion::AccessMode::MODE_READ );
+    _simulationType = simulationType;
 
-    _deltaTime = 0.5f;
-    _player = new SpikesPlayer( fileName, true );
-    _player->deltaTime( _deltaTime );
-    _simulationType = TSimulationType::TSpikes;
-//    _player->loop( true );
-//    _player->Play( _deltaTime );
+    switch( _simulationType )
+    {
+      case TSpikes:
+        _deltaTime = 0.5f;
+        _player = new SpikesPlayer( fileName, true );
+        _player->deltaTime( _deltaTime );
+        break;
+
+      case TVoltages:
+        _player = new VoltagesPlayer( fileName, report, true);
+        _deltaTime = _player->deltaTime( );
+        break;
+
+      default:
+        VISIMPL_THROW("Cannot load an undefined simulation type.");
+
+    }
 
     createParticleSystem( );
 
@@ -145,20 +167,70 @@ void OpenGLWidget::configureSimulation( void )
 
   _player->Frame( );
 
-  if( _simulationType == TSimulationType::TSpikes )
+  switch( _simulationType )
   {
-    SpikesCRange spikes =
-        dynamic_cast< visimpl::SpikesPlayer* >( _player )->spikesNow( );
-
-    for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
+    case TSpikes:
     {
-      auto res = gidNodesMap.find( (*spike).second );
-      if( res != gidNodesMap.end( ))
+      SpikesCRange spikes =
+          dynamic_cast< visimpl::SpikesPlayer* >( _player )->spikesNow( );
+
+      for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
       {
-        ( *res ).second->killParticles( );
+        auto res = gidNodesMap.find( (*spike).second );
+        if( res != gidNodesMap.end( ))
+        {
+          dynamic_cast< prefr::ColorEmissionNode* >(( *res ).second )->
+              killParticles( );
+        }
       }
+      break;
     }
+    case TVoltages:
+    {
+      visimpl::VoltagesPlayer* vplayer =
+          dynamic_cast< visimpl::VoltagesPlayer* >(_player);
+//      VoltCIter begin = vplayer->begin( );
+//      VoltCIter end = vplayer->end( );
+
+      float normFactor = vplayer->getNormVoltageFactor( );
+
+//      std::cout << "Current time: " << vplayer->currentTime() << std::endl;
+
+//      brion::GIDSetCIter gid = _player->gids( ).begin( );
+      unsigned int counter = 0;
+      for( auto gid : vplayer->gids( ))
+      {
+        auto res = gidNodesMap.find( gid );
+        if( res == gidNodesMap.end( ))
+        {
+          std::cerr << "Err: Node not found " << gid << std::endl;
+          continue;
+        }
+
+        float volt = vplayer->getVoltage( gid );
+        float relVal = volt + std::abs( vplayer->minVoltage( ));
+        relVal *= normFactor;
+
+//        std::cout << "GID: " << gid
+//                  << " voltage: " << volt
+//                  << " -> value: " << relVal
+//                  << " num: " << counter
+//                  << std::endl;
+
+        dynamic_cast< prefr::DirectValuedEmissionNode* >( res->second )->
+            particlesLife( relVal );
+
+//        gid++;
+
+        counter++;
+      }
+
+      break;
+    }
+    default:
+      break;
   }
+
 
 }
 
@@ -216,24 +288,17 @@ void OpenGLWidget::createParticleSystem( void )
 //  prototype->color.Insert( 0.1f, ( glm::vec4(0, 1, 1, 0.5 )));
 //  prototype->color.Insert( 1.0f, ( glm::vec4(0.2, 0.2, 0.2, 0.05 )));
 
-  prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
-  prototype->color.Insert( 0.1f, ( glm::vec4(1, 0, 0, 0.2 )));
-  prototype->color.Insert( 0.7f, ( glm::vec4(1, 0.5, 0, 0.2 )));
-  prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 0.3, 0.05 )));
-
-  prototype->velocity.Insert( 0.0f, 0.0f );
-
-  prototype->size.Insert( 0.0f, 30.0f );
-  prototype->size.Insert( 0.0f, 10.0f );
-
   _ps->AddPrototype( prototype );
 
-  prefr::ColorEmissionNode* emissionNode;
+  prefr::EmissionNode* emissionNode;
 
   int partPerEmitter = 1;
 
   std::cout << "Creating " << maxEmitters << " emitters with "
             << partPerEmitter << std::endl;
+
+  unsigned int start;
+  unsigned int end;
 
   unsigned int i = 0;
   glm::vec3 cameraPivot;
@@ -256,22 +321,35 @@ void OpenGLWidget::createParticleSystem( void )
 
     cameraPivot += position;
 
-    emissionNode =
-        new prefr::ColorEmissionNode( prefr::ParticleCollection(
-                                      _ps->particles,
-                                      i * partPerEmitter,
-                                      i * partPerEmitter + partPerEmitter ),
-                                      position,
-                                      glm::vec4( 0, 0, 0, 0 ),
-                                      true );
+    start = i * partPerEmitter;
+    end = start + partPerEmitter;
+
+    prefr::ParticleCollection collection ( _ps->particles, start, end );
+
+    switch( _simulationType )
+    {
+    case TSpikes:
+      emissionNode = new prefr::ColorEmissionNode( collection, position,
+                                                   glm::vec4( 0, 0, 0, 0 ),
+                                                   true );
+      break;
+    case TVoltages:
+      emissionNode = new prefr::DirectValuedEmissionNode(
+          collection, position, glm::vec4( 0, 0, 0, 0 ), true );
+
+      break;
+    default:
+      emissionNode = nullptr;
+      VISIMPL_THROW("Node type undefined");
+      break;
+    }
 
     _ps->AddEmissionNode( emissionNode );
 //    emissionNode->active = false;
 //    emissionNode->killParticlesIfInactive = true;
     emissionNode->maxEmissionCycles = 1;
 
-    gidNodesMap.insert( std::pair< uint32_t,
-                        prefr::ColorEmissionNode* >(( *gid ), emissionNode ));
+    gidNodesMap.insert( std::make_pair(( *gid ), emissionNode ));
 
     i++;
     gid++;
@@ -283,14 +361,54 @@ void OpenGLWidget::createParticleSystem( void )
                                          cameraPivot.y,
                                          cameraPivot.z ));
 
-  prefr::CompositeColorEmitter* emitter =
-    new prefr::CompositeColorEmitter( *_ps->particles, 1.f, true );
-  _ps->AddEmitter( emitter );
+  prefr::ParticleEmitter* emitter;
+  prefr::ParticleUpdater* updater;
 
-  std::cout << "Created emitter" << std::endl;
-  prefr::CompositeColorUpdater* updater =
-    new prefr::CompositeColorUpdater( *_ps->particles );
-  std::cout << "Created updater" << std::endl;
+  switch( _simulationType )
+  {
+    case TSpikes:
+      emitter = new prefr::CompositeColorEmitter( *_ps->particles, 1.f, true );
+      std::cout << "Created Spikes Emitter" << std::endl;
+      updater = new prefr::CompositeColorUpdater( *_ps->particles );
+      std::cout << "Created Spikes Updater" << std::endl;
+
+      prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
+      prototype->color.Insert( 0.1f, ( glm::vec4(1, 0, 0, 0.2 )));
+      prototype->color.Insert( 0.7f, ( glm::vec4(1, 0.5, 0, 0.2 )));
+      prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 0.3, 0.05 )));
+
+      prototype->velocity.Insert( 0.0f, 0.0f );
+
+      prototype->size.Insert( 0.0f, 30.0f );
+      prototype->size.Insert( 1.0f, 10.0f );
+
+      break;
+    case TVoltages:
+
+      emitter = new prefr::DirectValuedEmitter( *_ps->particles, 1.f, true );
+      std::cout << "Created Voltages Emitter" << std::endl;
+      updater = new prefr::DirectValuedUpdater( *_ps->particles );
+      std::cout << "Created Voltages Updater" << std::endl;
+
+      prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
+      prototype->color.Insert( 0.25f, ( glm::vec4(0.2, 0.2, 0.3, 0.07 )));
+      prototype->color.Insert( 0.5f, ( glm::vec4(0, 0.5, 0, 0.10 )));
+      prototype->color.Insert( 0.75f, ( glm::vec4(0.3, 0.3, 0.1, 0.15 )));
+      prototype->color.Insert( 1.0f, ( glm::vec4(1, 0.1, 0.1, 0.2 )));
+
+      prototype->velocity.Insert( 0.0f, 0.0f );
+
+      prototype->size.Insert( 0.0f, 5.0f );
+      prototype->size.Insert( 1.0f, 30.0f );
+
+
+      break;
+    default:
+      VISIMPL_THROW("Simulation type undefined.");
+      break;
+  }
+
+
 
   prefr::ParticleSorter* sorter;
 
@@ -308,6 +426,7 @@ void OpenGLWidget::createParticleSystem( void )
 
   std::cout << "Created systems" << std::endl;
 
+  _ps->AddEmitter( emitter );
   _ps->AddUpdater( updater );
   _ps->SetSorter( sorter );
   _ps->SetRenderer( renderer );
@@ -324,7 +443,17 @@ void OpenGLWidget::resetParticles( void )
          node != _ps->emissionNodes->end( );
          node++ )
   {
-    dynamic_cast< prefr::ColorEmissionNode* >( *node )->killParticles( false );
+    switch( _simulationType )
+    {
+      case TSpikes:
+        dynamic_cast< prefr::ColorEmissionNode* >( *node )->killParticles( false );
+      break;
+      case TVoltages:
+        dynamic_cast< prefr::DirectValuedEmissionNode* >( *node )->killParticles( false );
+      break;
+      default:
+      break;
+    }
     (*node)->Restart( );
   }
 //  _ps->UpdateUnified( _deltaTime );
@@ -656,7 +785,7 @@ void OpenGLWidget::Play( void )
 {
   if( _player )
   {
-    _player->Play( _player->deltaTime( ));
+    _player->Play( );
   }
 }
 
@@ -674,7 +803,7 @@ void OpenGLWidget::PlayPause( void )
   if( _player )
   {
     if( !_player->isPlaying( ))
-      _player->Play( _player->deltaTime( ));
+      _player->Play( );
     else
       _player->Pause( );
   }
@@ -710,7 +839,7 @@ void OpenGLWidget::Restart( void )
     bool playing = _player->isPlaying( );
     _player->Stop( );
     if( playing )
-      _player->Play( _player->deltaTime( ));
+      _player->Play( );
     resetParticles( );
     _firstFrame = true;
   }
