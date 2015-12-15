@@ -4,7 +4,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
-
+#include "qt/CustomSlider.h"
 
 MainWindow::MainWindow( QWidget* parent_,
                         bool updateOnIdle )
@@ -95,11 +95,10 @@ void MainWindow::openBlueConfig( const std::string& fileName,
                            OpenGLWidget::TDataFileType::tBlueConfig,
                            simulationType, reportLabel );
 
-  _updateSimStateTimer.setInterval( 200 );
-  connect( &_updateSimStateTimer, SIGNAL( timeout( void )),
-           this, SLOT( UpdateSimulationSlider( void )));
 
-  _updateSimStateTimer.start( );
+  connect( _openGLWidget, SIGNAL( updateSlider( float )),
+           this, SLOT( UpdateSimulationSlider( float )));
+
 
   _startTimeLabel->setText(
       QString::number( (double)_openGLWidget->player( )->startTime( )));
@@ -223,9 +222,11 @@ void MainWindow::initSimulationDock( void )
   QGridLayout* dockLayout = new QGridLayout( );
   content->setLayout( dockLayout );
 
-  _simulationSlider = new QSlider( Qt::Horizontal );
-  _simulationSlider->setMinimum( 0 );
-  _simulationSlider->setMaximum( 10000 );
+  _simSlider = new CustomSlider( Qt::Horizontal );
+  _simSlider->setMinimum( 0 );
+  _simSlider->setMaximum( 1000 );
+  _simSlider->setSizePolicy( QSizePolicy::Preferred,
+                             QSizePolicy::Preferred );
 
 //  QPushButton* playButton = new QPushButton( );
   _playButton = new QPushButton( );
@@ -265,11 +266,15 @@ void MainWindow::initSimulationDock( void )
   repeatButton->setIcon( repeatIcon );
 
   _startTimeLabel = new QLabel( "" );
+  _startTimeLabel->setSizePolicy( QSizePolicy::MinimumExpanding,
+                                  QSizePolicy::Preferred );
   _endTimeLabel = new QLabel( "" );
+  _endTimeLabel->setSizePolicy( QSizePolicy::Preferred,
+                                  QSizePolicy::Preferred );
 
-  dockLayout->addWidget( _startTimeLabel, 0, 0, 1, 1 );
-  dockLayout->addWidget( _simulationSlider, 0, 1, 1, totalHSpan - 2 );
-  dockLayout->addWidget( _endTimeLabel, 0, totalHSpan - 1, 1, 1 );
+  dockLayout->addWidget( _startTimeLabel, 0, 0, 1, 2 );
+  dockLayout->addWidget( _simSlider, 0, 1, 1, totalHSpan - 3 );
+  dockLayout->addWidget( _endTimeLabel, 0, totalHSpan - 2, 1, 1, Qt::AlignRight );
   dockLayout->addWidget( repeatButton, 1, 7, 1, 1 );
   dockLayout->addWidget( prevButton, 1, 8, 1, 1 );
   dockLayout->addWidget( _playButton, 1, 9, 2, 2 );
@@ -291,9 +296,11 @@ void MainWindow::initSimulationDock( void )
   connect( repeatButton, SIGNAL( toggled( bool )),
              this, SLOT( Repeat( bool )));
 
-  connect( _simulationSlider, SIGNAL( sliderMoved( int )),
-           this, SLOT( PlayAt( int )));
+  connect( _simSlider, SIGNAL( sliderPressed( )),
+           this, SLOT( PlayAt( )));
 
+//  connect( _simSlider, SIGNAL( sliderMoved( )),
+//             this, SLOT( PlayAt( )));
 
   _simulationDock->setWidget( content );
   this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/BottomDockWidgetArea,
@@ -343,11 +350,29 @@ void MainWindow::Repeat( bool repeat )
   }
 }
 
+void MainWindow::PlayAt( void )
+{
+  if( _openGLWidget )
+  {
+    PlayAt( _simSlider->sliderPosition( ));
+  }
+}
+
 void MainWindow::PlayAt( int sliderPosition )
 {
   if( _openGLWidget )
   {
-    _openGLWidget->PlayAt( sliderPosition );
+
+    _openGLWidget->Pause( );
+    _openGLWidget->resetParticles( );
+
+    int value = _simSlider->value( );
+    float percentage = float( value - _simSlider->minimum( )) /
+                       float( _simSlider->maximum( ) - _simSlider->minimum( ));
+    _simSlider->setSliderPosition( sliderPosition );
+
+    _openGLWidget->PlayAt( percentage );
+
   }
 }
 
@@ -372,22 +397,22 @@ void MainWindow::GoToEnd( void )
   }
 }
 
-void MainWindow::UpdateSimulationSlider( void )
+void MainWindow::UpdateSimulationSlider( float percentage )
 {
-  if( _openGLWidget->player( )->isPlaying( ))
+//  if( _openGLWidget->player( )->isPlaying( ))
   {
 
     _startTimeLabel->setText(
           QString::number( (double)_openGLWidget->player( )->currentTime( )));
 
-    float percentage = _openGLWidget->player( )->GetRelativeTime( );
+//    float percentage = _openGLWidget->player( )->GetRelativeTime( );
 
-    int total = _simulationSlider->maximum( ) - _simulationSlider->minimum( );
+    int total = _simSlider->maximum( ) - _simSlider->minimum( );
 
     int position = percentage * total;
 //    std::cout << "Timer: " << percentage << " * "
 //              << total << " = " << position << std::endl;
 
-    _simulationSlider->setSliderPosition( position );
+    _simSlider->setSliderPosition( position );
   }
 }

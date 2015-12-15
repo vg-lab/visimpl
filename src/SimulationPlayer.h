@@ -104,6 +104,7 @@ namespace visimpl
 
     virtual void LoadData( void );
     virtual void Clear( void );
+    virtual void PlayAt( float percentage );
     virtual void Stop( void );
 
     virtual const brion::Spikes& Spikes( void );
@@ -137,6 +138,7 @@ namespace visimpl
     virtual void LoadData( const std::pair< float, float>* range = nullptr );
     virtual void Clear( void );
     virtual void Stop( void );
+    virtual void PlayAt( float percentage );
 
     void deltaTime( float deltaTime );
 

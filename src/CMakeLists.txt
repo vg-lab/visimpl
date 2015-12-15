@@ -60,6 +60,7 @@ set(VISIMPL_HEADERS
   prefr/DirectValuedEmissionNode.h
   prefr/DirectValuedUpdater.h
   prefr/DirectValuedEmitter.h
+  qt/CustomSlider.h
   log.h
 )
 

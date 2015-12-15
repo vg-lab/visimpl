@@ -137,6 +137,9 @@
     <iconset resource="../qrc/resources.qrc">
      <normaloff>:/icons/open_xml.png</normaloff>:/icons/open_xml.png</iconset>
    </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Open XML Scene</string>
    </property>
@@ -175,6 +178,9 @@
    <property name="icon">
     <iconset resource="../qrc/resources.qrc">
      <normaloff>:/icons/open_swc.png</normaloff>:/icons/open_swc.png</iconset>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>Open SWC</string>

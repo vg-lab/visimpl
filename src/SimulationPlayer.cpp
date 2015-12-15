@@ -117,6 +117,8 @@ namespace visimpl
     _currentTime = aux * _deltaTime;
     _previousTime = std::max( _currentTime - _deltaTime, _startTime );
 
+    Play( );
+
   }
 
   float SimulationPlayer::GetRelativeTime( void )
@@ -251,6 +253,30 @@ namespace visimpl
     SimulationPlayer::Stop( );
     _currentSpike = Spikes( ).begin( );
     _previousSpike = _currentSpike;
+  }
+
+  void SpikesPlayer::PlayAt( float percentage )
+  {
+    SimulationPlayer::PlayAt( percentage );
+
+    const brion::Spikes& spikes = Spikes( );
+
+    _currentSpike = Spikes( ).begin( );
+    _previousSpike = _currentSpike;
+
+    SpikesCIter last, last2 = _currentSpike;
+    for( SpikesCIter spike = _currentSpike ; spike != spikes.end( ); spike++ )
+    {
+      if( ( *spike ).first  >= _currentTime )
+      {
+        _currentSpike = last;
+        _previousSpike = last2;
+        break;
+      }
+      last2 = last;
+      last = spike;
+    }
+
   }
 
   void SpikesPlayer::FrameProcess( void )
@@ -460,7 +486,14 @@ namespace visimpl
 
   }
 
-  void deltaTime( float /*deltaTime*/ )
+  void VoltagesPlayer::PlayAt( float percentage )
+  {
+    SimulationPlayer::PlayAt( percentage );
+
+
+  }
+
+  void VoltagesPlayer::deltaTime( float /*deltaTime*/ )
   {
     std::cerr << "Err: Delta time cannot be modified in voltage simulations."
               << std::endl;

@@ -20,7 +20,7 @@ class MainWindow
 
 public:
   explicit MainWindow( QWidget* parent = 0,
-                       bool updateOnIdle = false );
+                       bool updateOnIdle = true );
   ~MainWindow( void );
 
   void init( const std::string& zeqUri = "" );
@@ -43,11 +43,12 @@ public slots:
   void Play( void );
   void Stop( void );
   void Repeat( bool repeat );
+  void PlayAt( void );
   void PlayAt( int );
   void Restart( void );
   void GoToEnd( void );
 
-  void UpdateSimulationSlider( void );
+  void UpdateSimulationSlider( float percentage );
 
 protected:
 
@@ -66,9 +67,8 @@ private:
 //  visimpl::SimulationPlayer* _player;
   QDockWidget* _simulationDock;
   QDockWidget* _simConfigurationDock;
-  QSlider* _simulationSlider;
+  QSlider* _simSlider;
   QPushButton* _playButton;
-  QTimer _updateSimStateTimer;
   QLabel* _startTimeLabel;
   QLabel* _endTimeLabel;
 

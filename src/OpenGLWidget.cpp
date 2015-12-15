@@ -49,6 +49,7 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _simulationType( TSimulationType::TUndefined )
   , _player( nullptr )
   , _firstFrame( true )
+  , _elapsedTimeAcc( 0.0f )
 {
 #ifdef NEUROLOTS_USE_ZEQ
   if ( zeqUri != "" )
@@ -231,6 +232,15 @@ void OpenGLWidget::configureSimulation( void )
       break;
   }
 
+  _elapsedTimeAcc += _player->deltaTime( );
+
+  if( _elapsedTimeAcc > SIM_SLIDER_UPDATE_PERIOD )
+  {
+    _elapsedTimeAcc = 0.0f;
+    emit updateSlider( _player->GetRelativeTime( ));
+  }
+
+
 
 }
 
@@ -399,7 +409,7 @@ void OpenGLWidget::createParticleSystem( void )
       prototype->velocity.Insert( 0.0f, 0.0f );
 
       prototype->size.Insert( 0.0f, 5.0f );
-      prototype->size.Insert( 1.0f, 30.0f );
+      prototype->size.Insert( 1.0f, 20.0f );
 
 
       break;
@@ -456,7 +466,7 @@ void OpenGLWidget::resetParticles( void )
     }
     (*node)->Restart( );
   }
-//  _ps->UpdateUnified( _deltaTime );
+  _ps->UpdateUnified( 0.0f  );
 }
 
 void OpenGLWidget::paintParticles( void )
@@ -827,9 +837,12 @@ void OpenGLWidget::Repeat( bool repeat )
   }
 }
 
-void OpenGLWidget::PlayAt( unsigned int )
+void OpenGLWidget::PlayAt( float percentage )
 {
-
+  if( _player )
+  {
+    _player->PlayAt( percentage );
+  }
 }
 
 void OpenGLWidget::Restart( void )

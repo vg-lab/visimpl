@@ -9,6 +9,9 @@
 #define NEUROLOTS_SKIP_GLEW_INCLUDE 1
 
 #define PREFR_SKIP_GLEW_INCLUDE 1
+
+#define SIM_SLIDER_UPDATE_PERIOD 1
+
 #include <prefr/prefr.h>
 
 #include "CShader.h"
@@ -65,6 +68,10 @@ public:
   visimpl::SimulationPlayer* player( );
   void resetParticles( void );
 
+signals:
+
+  void updateSlider( float );
+
 public slots:
 
   void togglePaintNeurons( void );
@@ -78,7 +85,7 @@ public slots:
   void PlayPause( void );
   void Stop( void );
   void Repeat( bool repeat );
-  void PlayAt( unsigned int );
+  void PlayAt( float percentage );
   void Restart( void );
   void GoToEnd( void );
 
@@ -144,6 +151,11 @@ protected:
 //  brion::Spikes* _spikes;
 
   std::unordered_map< uint32_t, prefr::EmissionNode* > gidNodesMap;
+
+private:
+
+  float _elapsedTimeAcc;
+
 };
 
 #endif // __QNEUROLOTS__OPENGLWIDGET__
