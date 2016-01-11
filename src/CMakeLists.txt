@@ -45,6 +45,9 @@ set(VISIMPL_SOURCES
   prefr/DirectValuedEmissionNode.cpp
   prefr/DirectValuedUpdater.cpp
   prefr/DirectValuedEmitter.cpp
+  EditorTF/Gradient.cpp
+  EditorTF/ColorPoints.cpp
+  EditorTF/TransferFunctionEditor.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -62,11 +65,17 @@ set(VISIMPL_HEADERS
   prefr/DirectValuedEmitter.h
   qt/CustomSlider.h
   log.h
+  EditorTF/Gradient.h
+  EditorTF/ColorPoints.h
+  EditorTF/TransferFunctionEditor.h
 )
 
 set(VISIMPL_MOC_HEADERS
   MainWindow.h
-  OpenGLWidget.h)
+  OpenGLWidget.h
+  EditorTF/TransferFunctionEditor.h    
+  EditorTF/ColorPoints.h
+)
 
 set(VISIMPL_UI_FORMS
   ${UIDIR}/mainwindow.ui

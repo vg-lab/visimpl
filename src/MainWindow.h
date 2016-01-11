@@ -6,6 +6,7 @@
 
 #include "OpenGLWidget.h"
 
+#include "EditorTF/TransferFunctionEditor.h"
 
 
 namespace Ui
@@ -50,6 +51,8 @@ public slots:
 
   void UpdateSimulationSlider( float percentage );
 
+  void UpdateColorMapping( void );
+
 protected:
 
   QString _lastOpenedFileName;
@@ -66,10 +69,12 @@ private:
 
 //  visimpl::SimulationPlayer* _player;
   QDockWidget* _simulationDock;
-  QDockWidget* _simConfigurationDock;
   QSlider* _simSlider;
   QPushButton* _playButton;
   QLabel* _startTimeLabel;
   QLabel* _endTimeLabel;
+
+  QDockWidget* _simConfigurationDock;
+  TransferFunctionEditor* _tfEditor;
 
 };

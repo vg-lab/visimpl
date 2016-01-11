@@ -74,6 +74,7 @@ void MainWindow::init( const std::string& zeqUri )
 
 
   initSimulationDock( );
+  initSimColorDock( );
 }
 
 MainWindow::~MainWindow( void )
@@ -309,6 +310,30 @@ void MainWindow::initSimulationDock( void )
 
 void MainWindow::initSimColorDock( void )
 {
+  _simConfigurationDock = new QDockWidget( );
+  _simConfigurationDock->setMinimumHeight( 100 );
+  _simConfigurationDock->setMinimumWidth( 600 );
+  _simConfigurationDock->setMaximumHeight( 400 );
+  _simConfigurationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
+                                  QSizePolicy::MinimumExpanding );
+
+  _tfEditor = new TransferFunctionEditor( );
+
+  QWidget* container = new QWidget( );
+  QVBoxLayout* verticalLayout = new QVBoxLayout( );
+  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
+
+  verticalLayout->addWidget( _tfEditor );
+  verticalLayout->addWidget( applyColorButton );
+
+  container->setLayout( verticalLayout );
+  _simConfigurationDock->setWidget( container );
+
+  this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/RightDockWidgetArea,
+                       _simConfigurationDock );
+
+  connect( applyColorButton, SIGNAL( clicked( )),
+             this, SLOT( UpdateColorMapping( )));
 
 }
 
@@ -415,4 +440,11 @@ void MainWindow::UpdateSimulationSlider( float percentage )
 
     _simSlider->setSliderPosition( position );
   }
+}
+
+void MainWindow::UpdateColorMapping( void )
+{
+//  TTransferFunction& colors = _tfEditor->getColorPoints( );
+
+  _openGLWidget->changeColorMapping( _tfEditor->getColorPoints( ));
 }

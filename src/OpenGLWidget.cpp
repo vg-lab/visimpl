@@ -14,7 +14,7 @@
 
 #include <neurolots/nlrender/Config.h>
 
-#include "prefr/ColorOperationPrototype.h"
+
 #include "prefr/ColorEmissionNode.h"
 #include "prefr/CompositeColorEmitter.h"
 #include "prefr/CompositeColorUpdater.h"
@@ -46,6 +46,7 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _idleUpdate( true )
   , _paint( false )
   , _currentClearColor( 20, 20, 20, 0 )
+  , _ps( nullptr )
   , _simulationType( TSimulationType::TUndefined )
   , _player( nullptr )
   , _firstFrame( true )
@@ -289,7 +290,8 @@ void OpenGLWidget::createParticleSystem( void )
 
   _maxLife = 20.0f;
 
-  prefr::ColorOperationPrototype* prototype =
+//  prefr::ColorOperationPrototype* prototype =
+  _prototype =
     new prefr::ColorOperationPrototype(
       _maxLife, _maxLife,
       prefr::ParticleCollection( _ps->particles, 0, maxParticles));
@@ -298,7 +300,7 @@ void OpenGLWidget::createParticleSystem( void )
 //  prototype->color.Insert( 0.1f, ( glm::vec4(0, 1, 1, 0.5 )));
 //  prototype->color.Insert( 1.0f, ( glm::vec4(0.2, 0.2, 0.2, 0.05 )));
 
-  _ps->AddPrototype( prototype );
+  _ps->AddPrototype( _prototype );
 
   prefr::EmissionNode* emissionNode;
 
@@ -382,15 +384,15 @@ void OpenGLWidget::createParticleSystem( void )
       updater = new prefr::CompositeColorUpdater( *_ps->particles );
       std::cout << "Created Spikes Updater" << std::endl;
 
-      prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
-      prototype->color.Insert( 0.1f, ( glm::vec4(1, 0, 0, 0.2 )));
-      prototype->color.Insert( 0.7f, ( glm::vec4(1, 0.5, 0, 0.2 )));
-      prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 0.3, 0.05 )));
+      _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
+      _prototype->color.Insert( 0.1f, ( glm::vec4(1, 0, 0, 0.2 )));
+      _prototype->color.Insert( 0.7f, ( glm::vec4(1, 0.5, 0, 0.2 )));
+      _prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 0.3, 0.05 )));
 
-      prototype->velocity.Insert( 0.0f, 0.0f );
+      _prototype->velocity.Insert( 0.0f, 0.0f );
 
-      prototype->size.Insert( 0.0f, 30.0f );
-      prototype->size.Insert( 1.0f, 10.0f );
+      _prototype->size.Insert( 0.0f, 30.0f );
+      _prototype->size.Insert( 1.0f, 10.0f );
 
       break;
     case TVoltages:
@@ -400,16 +402,16 @@ void OpenGLWidget::createParticleSystem( void )
       updater = new prefr::DirectValuedUpdater( *_ps->particles );
       std::cout << "Created Voltages Updater" << std::endl;
 
-      prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
-      prototype->color.Insert( 0.25f, ( glm::vec4(0.2, 0.2, 0.3, 0.07 )));
-      prototype->color.Insert( 0.5f, ( glm::vec4(0, 0.5, 0, 0.10 )));
-      prototype->color.Insert( 0.75f, ( glm::vec4(0.3, 0.3, 0.1, 0.15 )));
-      prototype->color.Insert( 1.0f, ( glm::vec4(1, 0.1, 0.1, 0.2 )));
+      _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
+      _prototype->color.Insert( 0.25f, ( glm::vec4(0.2, 0.2, 0.3, 0.07 )));
+      _prototype->color.Insert( 0.5f, ( glm::vec4(0, 0.5, 0, 0.10 )));
+      _prototype->color.Insert( 0.75f, ( glm::vec4(0.3, 0.3, 0.1, 0.15 )));
+      _prototype->color.Insert( 1.0f, ( glm::vec4(1, 0.1, 0.1, 0.2 )));
 
-      prototype->velocity.Insert( 0.0f, 0.0f );
+      _prototype->velocity.Insert( 0.0f, 0.0f );
 
-      prototype->size.Insert( 0.0f, 5.0f );
-      prototype->size.Insert( 1.0f, 20.0f );
+      _prototype->size.Insert( 0.0f, 5.0f );
+      _prototype->size.Insert( 1.0f, 20.0f );
 
 
       break;
@@ -468,6 +470,48 @@ void OpenGLWidget::resetParticles( void )
   }
   _ps->UpdateUnified( 0.0f  );
 }
+
+void OpenGLWidget::changeColorMapping( const TTransferFunction& colors )
+{
+
+  if( _ps )
+  {
+
+    prefr::vectortvec4 gcolors;
+
+    for( auto c : colors )
+    {
+      glm::vec4 gColor( c.second.red( ) / 255.0f,
+                        c.second.green( ) / 255.0f,
+                        c.second.blue( ) / 255.0f,
+                        c.second.alpha( ) / 255.0f );
+      gcolors.Insert( c.first, gColor );
+    }
+
+    _prototype->color = gcolors;
+
+    _ps->UpdateUnified( 0.0f );
+  }
+}
+
+//TTransferFunction OpenGLWidget::getColorMapping( void )
+//{
+//  TTransferFunction result;
+//
+//  if( _ps )
+//  {
+//    prefr::vectortvec4 colors = _prototype->color;
+//
+//    for( unsigned int i = 0; i < colors.size; i++ )
+//    {
+//      glm::vec4 c = colors.values[ i ];
+//      QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
+//      result.push_back( std::make_pair( colors.times[ i ], color ));
+//    }
+//  }
+//
+//  return result;
+//}
 
 void OpenGLWidget::paintParticles( void )
 {

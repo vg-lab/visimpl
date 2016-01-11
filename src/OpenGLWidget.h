@@ -23,6 +23,8 @@
 
 #include "SimulationPlayer.h"
 #include "prefr/ColorEmissionNode.h"
+#include "prefr/ColorOperationPrototype.h"
+#include "EditorTF/TransferFunctionEditor.h"
 
 class OpenGLWidget
   : public QOpenGLWidget
@@ -89,6 +91,9 @@ public slots:
   void Restart( void );
   void GoToEnd( void );
 
+  void changeColorMapping( const TTransferFunction& colors );
+//  TTransferFunction getColorMapping( void );
+
 protected:
 
   virtual void initializeGL( void );
@@ -143,6 +148,8 @@ protected:
   float _maxLife;
   float _deltaTime;
   bool _firstFrame;
+
+  prefr::ColorOperationPrototype* _prototype;
 
 //  brion::BlueConfig* _blueConfig;
 //  brion::SpikeReport* _spikeReport;
