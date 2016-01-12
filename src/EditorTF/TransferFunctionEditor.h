@@ -22,6 +22,7 @@ public:
    ~TransferFunctionEditor( void );
 
    TTransferFunction getColorPoints( );
+   void setColorPoints( const TTransferFunction& colors );
 
 protected:
     void applyColorMap();

@@ -107,6 +107,8 @@ void MainWindow::openBlueConfig( const std::string& fileName,
   _endTimeLabel->setText(
         QString::number( (double)_openGLWidget->player( )->endTime( )));
 
+
+  changeEditorColorMapping( );
 }
 
 void MainWindow::openBlueConfigThroughDialog( void )
@@ -332,8 +334,8 @@ void MainWindow::initSimColorDock( void )
   this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/RightDockWidgetArea,
                        _simConfigurationDock );
 
-  connect( applyColorButton, SIGNAL( clicked( )),
-             this, SLOT( UpdateColorMapping( )));
+  connect( applyColorButton, SIGNAL( clicked( void )),
+             this, SLOT( UpdateSimulationColorMapping( void )));
 
 }
 
@@ -442,9 +444,14 @@ void MainWindow::UpdateSimulationSlider( float percentage )
   }
 }
 
-void MainWindow::UpdateColorMapping( void )
+void MainWindow::UpdateSimulationColorMapping( void )
 {
 //  TTransferFunction& colors = _tfEditor->getColorPoints( );
 
-  _openGLWidget->changeColorMapping( _tfEditor->getColorPoints( ));
+  _openGLWidget->changeSimulationColorMapping( _tfEditor->getColorPoints( ));
+}
+
+void MainWindow::changeEditorColorMapping( void )
+{
+  _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
 }

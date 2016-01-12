@@ -240,6 +240,41 @@ void TransferFunctionEditor::colorPointsChanged
     noTransparencyGradientFrame->setGradientStops( ntStops );
 }
 
+void TransferFunctionEditor::setColorPoints( const TTransferFunction& colors )
+{
+//  QGradientStops gradientColors;
+//  QGradientStops ntGradientColors;
+  QPolygonF redPoints;
+  QPolygonF greenPoints;
+  QPolygonF bluePoints;
+  QPolygonF alphaPoints;
+
+  for( auto c : colors )
+  {
+//    QGradientStop stop ( qreal( c.first ), c.second );
+//    gradientColors.push_back( stop );
+//
+//    QGradientStop aux( stop );
+//    aux.second.setAlphaF( 1.0 );
+//    ntGradientColors.push_back( aux );
+
+    redPoints.append( QPointF( c.first, c.second.redF( )));
+    greenPoints.append( QPointF( c.first, c.second.greenF( )));
+    bluePoints.append( QPointF( c.first, c.second.blueF( )));
+    alphaPoints.append( QPointF( c.first, c.second.alphaF( )));
+
+  }
+
+//  gradientFrame->setGradientStops( gradientColors );
+//
+//  noTransparencyGradientFrame->setGradientStops( ntGradientColors );
+
+  _redPoints->setPoints( redPoints, true );
+  _greenPoints->setPoints( greenPoints, true );
+  _bluePoints->setPoints( bluePoints, true );
+  _alphaPoints->setPoints( alphaPoints, true );
+}
+
 void TransferFunctionEditor::buttonClicked(QAbstractButton* /*button*/)
 {
 //    switch (buttonBox->standardButton(button))

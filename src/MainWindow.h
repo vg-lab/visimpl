@@ -51,7 +51,8 @@ public slots:
 
   void UpdateSimulationSlider( float percentage );
 
-  void UpdateColorMapping( void );
+  void UpdateSimulationColorMapping( void );
+  void changeEditorColorMapping( void );
 
 protected:
 

@@ -91,8 +91,8 @@ public slots:
   void Restart( void );
   void GoToEnd( void );
 
-  void changeColorMapping( const TTransferFunction& colors );
-//  TTransferFunction getColorMapping( void );
+  void changeSimulationColorMapping( const TTransferFunction& colors );
+  TTransferFunction getSimulationColorMapping( void );
 
 protected:
 

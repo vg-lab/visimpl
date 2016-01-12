@@ -471,7 +471,7 @@ void OpenGLWidget::resetParticles( void )
   _ps->UpdateUnified( 0.0f  );
 }
 
-void OpenGLWidget::changeColorMapping( const TTransferFunction& colors )
+void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
 {
 
   if( _ps )
@@ -494,24 +494,25 @@ void OpenGLWidget::changeColorMapping( const TTransferFunction& colors )
   }
 }
 
-//TTransferFunction OpenGLWidget::getColorMapping( void )
-//{
-//  TTransferFunction result;
-//
-//  if( _ps )
-//  {
-//    prefr::vectortvec4 colors = _prototype->color;
-//
-//    for( unsigned int i = 0; i < colors.size; i++ )
-//    {
-//      glm::vec4 c = colors.values[ i ];
-//      QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
-//      result.push_back( std::make_pair( colors.times[ i ], color ));
-//    }
-//  }
-//
-//  return result;
-//}
+TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
+{
+  TTransferFunction result;
+
+  if( _ps )
+  {
+    prefr::vectortvec4 colors = _prototype->color;
+
+    for( unsigned int i = 0; i < colors.size; i++ )
+    {
+      glm::vec4 c = colors.values[ i ];
+      QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
+      result.push_back( std::make_pair( colors.times[ i ], color ));
+    }
+  }
+
+  return result;
+}
+
 
 void OpenGLWidget::paintParticles( void )
 {
