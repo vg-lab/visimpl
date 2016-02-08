@@ -12,7 +12,7 @@
 #include "MainWindow.h"
 #include "log.h"
 
-#include <neurolots/nlrender/Config.h>
+#include <nlrender/Config.h>
 
 
 #include "prefr/ColorEmissionNode.h"
@@ -56,11 +56,11 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   if ( zeqUri != "" )
   {
     std::cout << zeqUri << std::endl;
-    _camera = new neurolots::Camera( zeqUri );
+    _camera = new nlrender::Camera( zeqUri );
   }
   else
 #endif
-    _camera = new neurolots::Camera( );
+    _camera = new nlrender::Camera( );
 
   _fpsLabel.setStyleSheet(
     "QLabel { background-color : #333;"
@@ -248,7 +248,7 @@ void OpenGLWidget::configureSimulation( void )
 void OpenGLWidget::createNeuronsCollection( void )
 {
   makeCurrent( );
-  neurolots::nlrender::Config::init( );
+  nlrender::Config::init( );
 //  _neuronsCollection = new neurolots::NeuronsCollection( _camera );
 }
 

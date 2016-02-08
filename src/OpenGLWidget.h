@@ -16,7 +16,7 @@
 
 #include "CShader.h"
 
-#include <neurolots/nlrender/nlrender.h>
+#include <nlrender/nlrender.h>
 #include <nsol/nsol.h>
 #include <brion/brion.h>
 #include <brain/brain.h>
@@ -116,7 +116,7 @@ protected:
 
   bool _wireframe;
 
-  neurolots::Camera* _camera;
+  nlrender::Camera* _camera;
 //  neurolots::NeuronsCollection* _neuronsCollection;
   bool _paintNeurons;
 

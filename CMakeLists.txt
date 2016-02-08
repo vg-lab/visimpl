@@ -1,7 +1,7 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#   PFM 
-#   2015 (c) MIGJRVI / Universidad Rey Juan Carlos
-#   r.jarillo@alumnos.urjc.es
+#   DemoSimPrefr
+#   2015 (c) demoSimPrefr / Universidad Rey Juan Carlos
+#   sergio.galindo@urjc.es
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
