@@ -34,6 +34,8 @@ set(COMMON_PROJECT_DOMAIN gmrv.es)
 
 include(Common)
 
+option(VISIMPL_WITH_ZEQ "VISIMPL_WITH_ZEQ" ON)
+
 common_package( Qt5Core 5.4 REQUIRED )
 common_package( Qt5Gui 5.4 REQUIRED )
 common_package( Qt5Widgets 5.4 REQUIRED )
@@ -46,8 +48,23 @@ common_package( nsol REQUIRED )
 common_package( neurolots REQUIRED )
 common_package( prefr REQUIRED )
 common_package( Brion REQUIRED )
-# common_package( zeq REQUIRED)
-# common_package( gmrvzeq REQUIRED)
+
+#if(VISIMPL_WITH_ZEQ)
+#  common_package(zeq)
+#  if ( ZEQ_FOUND )
+#    list(APPEND VISIMPL_DEPENDENT_LIBRARIES zeq)
+#    common_package(Threads REQUIRED)
+#    list(APPEND VISIMPL_DEPENDENT_LIBRARIES Threads)
+#  endif( )
+#endif( )
+
+#if(VISIMPL_WITH_GMRVZEQ)
+#  common_package(gmrvzeq)
+#  if ( GMRVZEQ_FOUND )
+#    list(APPEND VISIMPL_DEPENDENT_LIBRARIES gmrvzeq)
+#  endif( )
+#endif( )
+
 common_package_post()
 
 add_subdirectory(src)
