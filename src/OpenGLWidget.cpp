@@ -241,8 +241,6 @@ void OpenGLWidget::configureSimulation( void )
     emit updateSlider( _player->GetRelativeTime( ));
   }
 
-
-
 }
 
 void OpenGLWidget::createNeuronsCollection( void )
@@ -565,6 +563,39 @@ void OpenGLWidget::paintParticles( void )
 
 }
 
+#ifdef VISIMPL_USE_ZEQ
+void OpenGLWidget::_setZeqUri( const std::string&
+                                   uri_
+  )
+{
+  _zeqConnection = true;
+  _uri =  servus::URI( uri_ );
+  _subscriber = new zeq::Subscriber( _uri );
+
+  _subscriber->registerHandler( zeq::hbp::EVENT_SELECTEDIDS,
+      boost::bind( &OpenGLWidget::_onSelectionEvent , this, _1 ));
+
+  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
+
+}
+
+void* OpenGLWidget::_Subscriber( void* subs )
+{
+//  std::cout << "Waiting Selection Events..." << std::endl;
+  zeq::Subscriber* subscriber = dynamic_cast< zeq::Subscriber* >( subs );
+  while ( true )
+  {
+    subscriber->receive( 10000 );
+  }
+  pthread_exit( NULL );
+}
+
+void OpenGLWidget::_onSelectionEvent( const zeq::Event& event_ )
+{
+
+}
+
+#endif
 
 void OpenGLWidget::paintGL( void )
 {

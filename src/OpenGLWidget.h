@@ -26,6 +26,15 @@
 #include "prefr/ColorOperationPrototype.h"
 #include "EditorTF/TransferFunctionEditor.h"
 
+#ifdef VISIMPL_USE_ZEQ
+  #include <zeq/zeq.h>
+//  #include <zeq/hbp/hbp.h>
+  #include <servus/uri.h>
+
+  #include <pthread.h>
+  #include <mutex>
+#endif
+
 class OpenGLWidget
   : public QOpenGLWidget
   , public QOpenGLFunctions
@@ -110,6 +119,22 @@ protected:
   void updateSimulation( void );
   void paintParticles( void );
 
+
+#ifdef VISIMPL_USE_ZEQ
+
+  void _onSelectionEvent( const zeq::Event& event_ );
+  void _setZeqUri( const std::string& );
+  static void* _Subscriber( void* subscriber );
+
+  bool _zeqConnection;
+
+  servus::URI _uri;
+  zeq::Subscriber* _subscriber;
+
+  pthread_t _subscriberThread;
+
+
+#endif
 
   QLabel _fpsLabel;
   bool _showFps;

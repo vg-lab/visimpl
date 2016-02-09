@@ -34,7 +34,7 @@ set(COMMON_PROJECT_DOMAIN gmrv.es)
 
 include(Common)
 
-option(VISIMPL_WITH_ZEQ "VISIMPL_WITH_ZEQ" ON)
+option(VISIMPL_USE_ZEQ "VISIMPL_USE_ZEQ" ON)
 
 common_package( Qt5Core 5.4 REQUIRED )
 common_package( Qt5Gui 5.4 REQUIRED )
