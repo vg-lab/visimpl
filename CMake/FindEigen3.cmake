@@ -32,7 +32,7 @@ endif(NOT Eigen3_FIND_VERSION)
 macro(_eigen3_check_version)
   file(READ "${EIGEN3_INCLUDE_DIR}/Eigen/src/Core/util/Macros.h" _eigen3_version_header)
 
-string(REGEX MATCH "define[ \t]+EIGEN_WORLD_VERSION[ \t]+([0-9]+)" _eigen3_world_version_match "${_eigen3_version_header}")
+  string(REGEX MATCH "define[ \t]+EIGEN_WORLD_VERSION[ \t]+([0-9]+)" _eigen3_world_version_match "${_eigen3_version_header}")
   set(EIGEN3_WORLD_VERSION "${CMAKE_MATCH_1}")
   string(REGEX MATCH "define[ \t]+EIGEN_MAJOR_VERSION[ \t]+([0-9]+)" _eigen3_major_version_match "${_eigen3_version_header}")
   set(EIGEN3_MAJOR_VERSION "${CMAKE_MATCH_1}")
@@ -53,6 +53,13 @@ string(REGEX MATCH "define[ \t]+EIGEN_WORLD_VERSION[ \t]+([0-9]+)" _eigen3_world
   endif(NOT EIGEN3_VERSION_OK)
 endmacro(_eigen3_check_version)
 
+# If include dir not set, try to get it from env
+if ( NOT EIGEN3_INCLUDE_DIR)
+  if ( NOT $ENV{EIGEN3_INCLUDE_DIR} STREQUAL "" )
+    set( EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR} )
+  endif( )
+endif( )
+
 if (EIGEN3_INCLUDE_DIR)
 
   # in cache already
@@ -72,7 +79,7 @@ else (EIGEN3_INCLUDE_DIR)
     _eigen3_check_version()
   endif(EIGEN3_INCLUDE_DIR)
 
-include(FindPackageHandleStandardArgs)
+  include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(Eigen3 DEFAULT_MSG EIGEN3_INCLUDE_DIR EIGEN3_VERSION_OK)
 
   mark_as_advanced(EIGEN3_INCLUDE_DIR)
