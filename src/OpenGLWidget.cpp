@@ -593,6 +593,36 @@ void* OpenGLWidget::_Subscriber( void* subs )
 void OpenGLWidget::_onSelectionEvent( const zeq::Event& event_ )
 {
 
+  std::vector< unsigned int > selected =
+      zeq::hbp::deserializeSelectedIDs( event_ );
+
+  for( prefr::EmissionNode* node : ps->emissionNodes )
+  {
+    node->active = false;
+    switch( _simulationType )
+    {
+      case TSpikes:
+        dynamic_cast< prefr::ColorEmissionNode* >( *node )->killParticles( true );
+      break;
+      case TVoltages:
+        dynamic_cast< prefr::DirectValuedEmissionNode* >( *node )->killParticles( true );
+      break;
+      default:
+      break;
+    }
+  }
+
+  for( auto id : selected )
+  {
+    auto it = gidNodesMap.find( id );
+    if( it != gidNodesMap.end( ))
+    {
+      it->second->active = true;
+    }
+  }
+
+
+
 }
 
 #endif

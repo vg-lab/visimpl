@@ -17,7 +17,7 @@
 #include "CShader.h"
 
 #include <nlrender/nlrender.h>
-#include <nsol/nsol.h>
+//#include <nsol/nsol.h>
 #include <brion/brion.h>
 #include <brain/brain.h>
 
@@ -28,7 +28,7 @@
 
 #ifdef VISIMPL_USE_ZEQ
   #include <zeq/zeq.h>
-//  #include <zeq/hbp/hbp.h>
+  #include <zeq/hbp/hbp.h>
   #include <servus/uri.h>
 
   #include <pthread.h>

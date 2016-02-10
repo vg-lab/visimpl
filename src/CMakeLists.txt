@@ -94,7 +94,6 @@ set(VISIMPL_LINK_LIBRARIES
   Qt5::Core
   Qt5::Widgets
   Qt5::OpenGL
-  nsol
   nlfem
   nlgenerator
   nlrender
@@ -126,6 +125,10 @@ endif()
 
 if (BRION_FOUND)
   list(APPEND VISIMPL_LINK_LIBRARIES Brion Brain)
+endif()
+
+if (NEUROLOTS_FOUND)
+  list(APPEND VISIMPL_LINK_LIBRARIES nlrender nlgenerator nlfem )
 endif()
 
 common_application( visimpl )
