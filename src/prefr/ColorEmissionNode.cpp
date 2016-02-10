@@ -63,8 +63,8 @@ namespace prefr
 
       if( changeState )
         ( *it )->alive = false;
-      else
-        ( *it )->alive = true;
+//      else
+//        ( *it )->alive = true;
     }
   }
 

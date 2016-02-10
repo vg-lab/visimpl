@@ -47,7 +47,7 @@ int main( int argc, char** argv )
     }
     if( std::strcmp( argv[ i ], "-zeq" ) == 0 )
     {
-#ifdef NEUROLOTS_USE_ZEQ
+#ifdef VISIMPL_USE_ZEQ
       if( ++i < argc )
       {
         zeqUri = std::string( argv[ i ]);

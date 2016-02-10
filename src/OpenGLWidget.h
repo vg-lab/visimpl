@@ -183,6 +183,7 @@ protected:
 //  brion::Spikes* _spikes;
 
   std::unordered_map< uint32_t, prefr::EmissionNode* > gidNodesMap;
+  std::unordered_map< prefr::EmissionNode*, uint32_t > nodesGIDMap;
 
 private:
 

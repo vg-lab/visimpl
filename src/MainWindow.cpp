@@ -398,6 +398,8 @@ void MainWindow::PlayAt( int sliderPosition )
                        float( _simSlider->maximum( ) - _simSlider->minimum( ));
     _simSlider->setSliderPosition( sliderPosition );
 
+    _playButton->setIcon( pauseIcon );
+
     _openGLWidget->PlayAt( percentage );
 
   }

@@ -29,7 +29,7 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
                             Qt::WindowFlags windowsFlags_,
                             bool paintNeurons_,
                             const std::string&
-#ifdef NEUROLOTS_USE_ZEQ
+#ifdef VISIMPL_USE_ZEQ
                             zeqUri
 #endif
   )
@@ -52,11 +52,14 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _firstFrame( true )
   , _elapsedTimeAcc( 0.0f )
 {
-#ifdef NEUROLOTS_USE_ZEQ
+#ifdef VISIMPL_USE_ZEQ
   if ( zeqUri != "" )
   {
-    std::cout << zeqUri << std::endl;
+    std::cout << ".......... ZEQ URI " << zeqUri << std::endl;
     _camera = new nlrender::Camera( zeqUri );
+
+    if( !zeqUri.empty( ))
+      _setZeqUri( zeqUri );
   }
   else
 #endif
@@ -356,10 +359,11 @@ void OpenGLWidget::createParticleSystem( void )
 
     _ps->AddEmissionNode( emissionNode );
 //    emissionNode->active = false;
-//    emissionNode->killParticlesIfInactive = true;
+    emissionNode->killParticlesIfInactive = true;
     emissionNode->maxEmissionCycles = 1;
 
     gidNodesMap.insert( std::make_pair(( *gid ), emissionNode ));
+    nodesGIDMap.insert( std::make_pair( emissionNode, ( *gid )));
 
     i++;
     gid++;
@@ -581,8 +585,8 @@ void OpenGLWidget::_setZeqUri( const std::string&
 
 void* OpenGLWidget::_Subscriber( void* subs )
 {
-//  std::cout << "Waiting Selection Events..." << std::endl;
-  zeq::Subscriber* subscriber = dynamic_cast< zeq::Subscriber* >( subs );
+  std::cout << "------------Waiting Selection Events..." << std::endl;
+  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
   while ( true )
   {
     subscriber->receive( 10000 );
@@ -596,32 +600,49 @@ void OpenGLWidget::_onSelectionEvent( const zeq::Event& event_ )
   std::vector< unsigned int > selected =
       zeq::hbp::deserializeSelectedIDs( event_ );
 
-  for( prefr::EmissionNode* node : ps->emissionNodes )
+  std::set< unsigned int > selectedSet( selected.begin( ), selected.end( ));
+  std::cout << "Received " << selected.size( ) << " ids" << std::endl;
+
+  _ps->Run( false );
+
+  for( auto node : *_ps->emissionNodes )
   {
-    node->active = false;
-    switch( _simulationType )
+    auto it = nodesGIDMap.find( node );
+    unsigned int id = it->second;
+
+    auto res = selectedSet.find( id );
+
+    if( res != selectedSet.end( ))
+      node->active = true;
+    else
     {
-      case TSpikes:
-        dynamic_cast< prefr::ColorEmissionNode* >( *node )->killParticles( true );
-      break;
-      case TVoltages:
-        dynamic_cast< prefr::DirectValuedEmissionNode* >( *node )->killParticles( true );
-      break;
-      default:
-      break;
+      node->active = false;
+
+//      switch( _simulationType )
+//      {
+//        case TSpikes:
+//          dynamic_cast< prefr::ColorEmissionNode* >( node )->killParticles( true );
+//        break;
+//        case TVoltages:
+//          dynamic_cast< prefr::DirectValuedEmissionNode* >( node )->killParticles( true );
+//        break;
+//        default:
+//        break;
+//      }
     }
   }
 
-  for( auto id : selected )
-  {
-    auto it = gidNodesMap.find( id );
-    if( it != gidNodesMap.end( ))
-    {
-      it->second->active = true;
-    }
-  }
+//  for( auto id : selected )
+//  {
+//    auto it = gidNodesMap.find( id );
+//    if( it != gidNodesMap.end( ))
+//    {
+//      it->second->active = true;
+//    }
+//  }
 
-
+  _ps->Run( true );
+  _ps->UpdateUnified( 0.0f  );
 
 }
 
