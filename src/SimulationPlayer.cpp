@@ -82,6 +82,7 @@ namespace visimpl
   void SimulationPlayer::Play( void )
   {
     _playing = true;
+    _finished = false;
 //    _deltaTime = deltaTime_;
   }
 
@@ -197,10 +198,10 @@ namespace visimpl
 
   void SimulationPlayer::Finished( void )
   {
+    Stop( );
     std::cout << "Finished simulation." << std::endl;
     if( _loop )
     {
-      Stop( );
       Play( );
     }
   }
@@ -283,24 +284,41 @@ namespace visimpl
   {
     const brion::Spikes& spikes = Spikes( );
     _previousSpike = _currentSpike;
-
-    if( _currentSpike == spikes.end( ))
-    {
-        _finished = true;
-        return;
-    }
-
     SpikesCIter last;
-    for( SpikesCIter spike = _currentSpike ; spike != spikes.end( ); spike++ )
+
+//    SpikesCIter aux = _currentSpike;
+//    aux++;
+//    if( aux  == spikes.end( ) )
+//    {
+//        _finished = true;
+//        Finished( );
+//        return;
+//    }
+//
+
+//    for( SpikesCIter spike = _currentSpike ; spike != spikes.end( ); spike++ )
+//    {
+//      if( ( *spike ).first  >= _currentTime )
+//      {
+//        _currentSpike = spike;
+//        break;
+//      }
+//      last = spike;
+//    }
+
+    SpikesCIter spike = _currentSpike;
+    while( ( *spike ).first  < _currentTime )
     {
-      if( ( *spike ).first  >= _currentTime )
+      if( spike == spikes.end( ))
       {
-        _currentSpike = spike;
-        break;
+        _finished = true;
+        Finished( );
+        return;
       }
       last = spike;
+      spike++;
     }
-
+    _currentSpike = spike;
   }
 
   const brion::Spikes& SpikesPlayer::Spikes( void )
@@ -572,6 +590,14 @@ namespace visimpl
   void VoltagesPlayer::FrameProcess( void )
   {
     _currentFrame = _voltReport->loadFrame( _currentTime );
+
+    if( _currentFrame == 0)
+    {
+      std::cout << "Last frame loaded at time " << _currentTime << std::endl;
+      _finished = true;
+      Finished( );
+      return;
+    }
   }
 
 }

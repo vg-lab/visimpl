@@ -208,16 +208,24 @@ namespace visimpl
 
     inline iterator operator ++ ( )
     {
-      iterator temp(* this);
+//      iterator temp(* this);
       ++_current;
-      return temp;
+//      return temp;
+      return *this;
+    }
+
+    inline iterator operator+( int inc )
+    {
+      _current += inc;
+      return *this;
     }
 
     inline iterator operator -- ( )
     {
-      iterator temp(* this);
+//      iterator temp(* this);
       --_current;
-      return temp;
+//      return temp;
+      return *this;
     }
 
     inline float& operator *( )
@@ -267,16 +275,24 @@ namespace visimpl
 
     inline const_iterator operator ++ ( )
     {
-      const_iterator temp(* this);
+//      const_iterator temp(* this);
       ++_current;
-      return temp;
+//      return temp;
+      return *this;
+    }
+
+    inline const_iterator operator+( int inc )
+    {
+      _current += inc;
+      return *this;
     }
 
     inline const_iterator operator -- ( )
     {
-      const_iterator temp(* this);
+//      const_iterator temp(* this);
       --_current;
-      return temp;
+//      return temp;
+      return *this;
     }
 
     inline const float& operator *( )

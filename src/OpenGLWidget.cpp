@@ -968,7 +968,10 @@ void OpenGLWidget::PlayAt( float percentage )
 {
   if( _player )
   {
+    _ps->Run( false );
+    std::cout << "Play at " << percentage << std::endl;
     _player->PlayAt( percentage );
+    _ps->Run( true );
   }
 }
 
