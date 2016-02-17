@@ -15,6 +15,13 @@
 
 namespace visimpl
 {
+  typedef enum
+  {
+    TUndefined = 0,
+    TSpikes,
+    TVoltages
+  } TSimulationType;
+
   class SimulationPlayer
   {
 
@@ -64,6 +71,8 @@ namespace visimpl
     const brion::GIDSet& gids( void );
     brion::Vector3fs positions( void );
 
+    TSimulationType simulationType( void );
+
   protected:
 
     virtual void FrameProcess( void ) = 0;
@@ -80,6 +89,8 @@ namespace visimpl
     bool _playing;
     bool _loop;
     bool _finished;
+
+    TSimulationType _simulationType;
 
     std::string _blueConfigPath;
 
@@ -108,6 +119,7 @@ namespace visimpl
     virtual void Stop( void );
 
     virtual const brion::Spikes& Spikes( void );
+    brion::SpikeReport* spikeReport( void );
 
     SpikesCRange spikesAtTime( float time );
 

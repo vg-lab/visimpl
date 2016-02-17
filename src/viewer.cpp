@@ -20,7 +20,7 @@ int main( int argc, char** argv )
 
   QApplication application(argc,argv);
 
-  OpenGLWidget::TSimulationType simType = OpenGLWidget::TSpikes;
+  visimpl::TSimulationType simType = visimpl::TSpikes;
 
   std::string blueConfig;
   std::string swcFile;
@@ -98,13 +98,13 @@ int main( int argc, char** argv )
 //    }
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
-      simType = OpenGLWidget::TSimulationType::TSpikes;
+      simType = visimpl::TSpikes;
     }
     else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
     {
       if(++i < argc )
       {
-        simType = OpenGLWidget::TSimulationType::TVoltages;
+        simType = visimpl::TVoltages;
         report = std::string( argv[ i ]);
       }
       else

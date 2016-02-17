@@ -51,13 +51,6 @@ public:
     NsolScene
   } TDataFileType;
 
-  typedef enum
-  {
-    TUndefined = 0,
-    TSpikes,
-    TVoltages
-  } TSimulationType;
-
   OpenGLWidget( QWidget* parent = 0,
                 Qt::WindowFlags windowFlags = 0,
                 bool paintNeurons = true,
@@ -68,7 +61,7 @@ public:
   void createParticleSystem( void );
   void loadData( const std::string& fileName,
                  const TDataFileType fileType = TDataFileType::tBlueConfig,
-                 TSimulationType simulationType = TSpikes,
+                 visimpl::TSimulationType simulationType = visimpl::TSpikes,
                  const std::string& report = std::string( "" ));
 
   void idleUpdate( bool idleUpdate_ = true )
@@ -168,7 +161,7 @@ protected:
 //  float currentTime;
 //  bbp::CompartmentReportReader* reader;
 
-  TSimulationType _simulationType;
+  visimpl::TSimulationType _simulationType;
   visimpl::SimulationPlayer* _player;
   float _maxLife;
   float _deltaTime;

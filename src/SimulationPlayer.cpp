@@ -20,6 +20,7 @@ namespace visimpl
   , _playing( false )
   , _loop( false )
   , _finished( false )
+  , _simulationType( TUndefined )
   , _blueConfigPath( blueConfigFilePath )
   , _blueConfig( nullptr )
   , _circuit( nullptr )
@@ -196,6 +197,11 @@ namespace visimpl
     return _circuit->getPositions( _gids );
   }
 
+  TSimulationType SimulationPlayer::simulationType( void )
+  {
+    return _simulationType;
+  }
+
   void SimulationPlayer::Finished( void )
   {
     Stop( );
@@ -218,6 +224,8 @@ namespace visimpl
   {
     if( loadData )
       LoadData( );
+
+    _simulationType = TSpikes;
 
   }
 
@@ -326,6 +334,11 @@ namespace visimpl
     return _spikeReport->getSpikes( );
   }
 
+  brion::SpikeReport* SpikesPlayer::spikeReport( void )
+  {
+    return _spikeReport;
+  }
+
   SpikesCRange
   SpikesPlayer::spikesAtTime( float time )
   {
@@ -403,6 +416,8 @@ namespace visimpl
 
     if( loadData)
       LoadData( range );
+
+    _simulationType = TVoltages;
   }
 
   void VoltagesPlayer::LoadData( const std::pair< float, float>* range )

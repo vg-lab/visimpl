@@ -89,7 +89,7 @@ void MainWindow::showStatusBarMessage ( const QString& message )
 }
 
 void MainWindow::openBlueConfig( const std::string& fileName,
-                                 OpenGLWidget::TSimulationType simulationType,
+                                 visimpl::TSimulationType simulationType,
                                  const std::string& reportLabel)
 {
   _openGLWidget->loadData( fileName,
@@ -109,6 +109,7 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
 
   changeEditorColorMapping( );
+  initSummaryWidget( );
 }
 
 void MainWindow::openBlueConfigThroughDialog( void )
@@ -124,7 +125,7 @@ void MainWindow::openBlueConfigThroughDialog( void )
   {
     bool ok1, ok2;
     QInputDialog simTypeDialog;
-    OpenGLWidget::TSimulationType simType;
+    visimpl::TSimulationType simType;
     QStringList items = {"Spikes", "Voltages"};
 
     QString text = QInputDialog::getItem(
@@ -136,12 +137,12 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
     if( text == items[0] )
     {
-      simType = OpenGLWidget::TSpikes;
+      simType = visimpl::TSpikes;
       ok2 = true;
     }
     else
     {
-      simType = OpenGLWidget::TVoltages;
+      simType = visimpl::TVoltages;
 
       text = QInputDialog::getText(
           this, tr( "Please select report" ),
@@ -275,14 +276,17 @@ void MainWindow::initSimulationDock( void )
   _endTimeLabel->setSizePolicy( QSizePolicy::Preferred,
                                   QSizePolicy::Preferred );
 
-  dockLayout->addWidget( _startTimeLabel, 0, 0, 1, 2 );
-  dockLayout->addWidget( _simSlider, 0, 1, 1, totalHSpan - 3 );
-  dockLayout->addWidget( _endTimeLabel, 0, totalHSpan - 2, 1, 1, Qt::AlignRight );
-  dockLayout->addWidget( repeatButton, 1, 7, 1, 1 );
-  dockLayout->addWidget( prevButton, 1, 8, 1, 1 );
-  dockLayout->addWidget( _playButton, 1, 9, 2, 2 );
-  dockLayout->addWidget( stopButton, 1, 11, 1, 1 );
-  dockLayout->addWidget( nextButton, 1, 12, 1, 1 );
+  unsigned int row = 2;
+  dockLayout->addWidget( _startTimeLabel, row, 0, 1, 2 );
+  dockLayout->addWidget( _simSlider, row, 1, 1, totalHSpan - 3 );
+  dockLayout->addWidget( _endTimeLabel, row, totalHSpan - 2, 1, 1, Qt::AlignRight );
+
+  row++;
+  dockLayout->addWidget( repeatButton, row, 7, 1, 1 );
+  dockLayout->addWidget( prevButton, row, 8, 1, 1 );
+  dockLayout->addWidget( _playButton, row, 9, 2, 2 );
+  dockLayout->addWidget( stopButton, row, 11, 1, 1 );
+  dockLayout->addWidget( nextButton, row, 12, 1, 1 );
 
   connect( _playButton, SIGNAL( clicked( )),
            this, SLOT( Play( )));
@@ -304,6 +308,11 @@ void MainWindow::initSimulationDock( void )
 
 //  connect( _simSlider, SIGNAL( sliderMoved( )),
 //             this, SLOT( PlayAt( )));
+
+  _summary = new SimulationSummaryWidget( nullptr, 1000 );
+//  _summary->setVisible( false );
+  _summary->setMinimumHeight( 50 );
+  dockLayout->addWidget( _summary, 0, 1, 2, totalHSpan - 3 );
 
   _simulationDock->setWidget( content );
   this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/BottomDockWidgetArea,
@@ -337,6 +346,23 @@ void MainWindow::initSimColorDock( void )
   connect( applyColorButton, SIGNAL( clicked( void )),
              this, SLOT( UpdateSimulationColorMapping( void )));
 
+}
+
+void MainWindow::initSummaryWidget( void )
+{
+  visimpl::TSimulationType simType =
+      _openGLWidget->player( )->simulationType( );
+
+  if( simType == visimpl::TSpikes )
+  {
+    visimpl::SpikesPlayer* spikesPlayer =
+        dynamic_cast< visimpl::SpikesPlayer* >( _openGLWidget->player( ));
+
+    std::cout << "Creating summary..." << std::endl;
+    _summary->CreateSummary( spikesPlayer->spikeReport( ));
+//    _summary->setVisible( true );
+
+  }
 }
 
 void MainWindow::Play( void )

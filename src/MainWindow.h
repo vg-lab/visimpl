@@ -5,6 +5,8 @@
 #include <QTimer>
 
 #include "OpenGLWidget.h"
+#include "SimulationPlayer.h"
+#include "SimulationSummaryWidget.h"
 
 #include "EditorTF/TransferFunctionEditor.h"
 
@@ -28,7 +30,7 @@ public:
   void showStatusBarMessage ( const QString& message );
 
   void openBlueConfig( const std::string& fileName,
-                       OpenGLWidget::TSimulationType simulationType,
+                       visimpl::TSimulationType simulationType,
                        const std::string& report);
 
   void openXMLScene( const std::string& fileName );
@@ -64,9 +66,11 @@ private:
 
   void initSimulationDock( void );
   void initSimColorDock( void );
+  void initSummaryWidget( void );
 
   Ui::MainWindow* _ui;
   OpenGLWidget* _openGLWidget;
+  SimulationSummaryWidget* _summary;
 
 //  visimpl::SimulationPlayer* _player;
   QDockWidget* _simulationDock;

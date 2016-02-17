@@ -48,6 +48,7 @@ set(VISIMPL_SOURCES
   EditorTF/Gradient.cpp
   EditorTF/ColorPoints.cpp
   EditorTF/TransferFunctionEditor.cpp
+  SimulationSummaryWidget.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -68,6 +69,7 @@ set(VISIMPL_HEADERS
   EditorTF/Gradient.h
   EditorTF/ColorPoints.h
   EditorTF/TransferFunctionEditor.h
+  SimulationSummaryWidget.h
 )
 
 set(VISIMPL_MOC_HEADERS
@@ -75,6 +77,7 @@ set(VISIMPL_MOC_HEADERS
   OpenGLWidget.h
   EditorTF/TransferFunctionEditor.h    
   EditorTF/ColorPoints.h
+  SimulationSummaryWidget.h
 )
 
 set(VISIMPL_UI_FORMS
