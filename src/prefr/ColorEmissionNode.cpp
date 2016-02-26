@@ -59,7 +59,7 @@ namespace prefr
     for( tparticleContainer::iterator it = particles->start;
          it != particles->end; it++ )
     {
-      ( *it )->life = 0.0f;
+      ( *it )->life = -0.1f;
 
       if( changeState )
         ( *it )->alive = false;

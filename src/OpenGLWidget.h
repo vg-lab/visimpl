@@ -5,12 +5,13 @@
 #include <QOpenGLWidget>
 #include <QLabel>
 #include <chrono>
+#include <unordered_set>
 
 #define NEUROLOTS_SKIP_GLEW_INCLUDE 1
 
 #define PREFR_SKIP_GLEW_INCLUDE 1
 
-#define SIM_SLIDER_UPDATE_PERIOD 1
+#define SIM_SLIDER_UPDATE_PERIOD 0.5f
 
 #include <prefr/prefr.h>
 
@@ -96,6 +97,12 @@ public slots:
   void changeSimulationColorMapping( const TTransferFunction& colors );
   TTransferFunction getSimulationColorMapping( void );
 
+#ifdef VISIMPL_USE_ZEQ
+
+  void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
+
+#endif
+
 protected:
 
   virtual void initializeGL( void );
@@ -112,20 +119,9 @@ protected:
   void updateSimulation( void );
   void paintParticles( void );
 
-
 #ifdef VISIMPL_USE_ZEQ
 
-  void _onSelectionEvent( const zeq::Event& event_ );
-  void _setZeqUri( const std::string& );
-  static void* _Subscriber( void* subscriber );
-
-  bool _zeqConnection;
-
-  servus::URI _uri;
-  zeq::Subscriber* _subscriber;
-
-  pthread_t _subscriberThread;
-
+  std::unordered_set< uint32_t > _selectedGIDs;
 
 #endif
 
@@ -135,6 +131,8 @@ protected:
   bool _wireframe;
 
   nlrender::Camera* _camera;
+  glm::vec3 _lastCameraPosition;
+
 //  neurolots::NeuronsCollection* _neuronsCollection;
   bool _paintNeurons;
 
@@ -149,6 +147,7 @@ protected:
   QColor _currentClearColor;
 
   std::chrono::time_point< std::chrono::system_clock > _then;
+  std::chrono::time_point< std::chrono::system_clock > _lastFrame;
 
   CShader* _particlesShader;
   prefr::ParticleSystem* _ps;
@@ -178,9 +177,13 @@ protected:
   std::unordered_map< uint32_t, prefr::EmissionNode* > gidNodesMap;
   std::unordered_map< prefr::EmissionNode*, uint32_t > nodesGIDMap;
 
-private:
+  float _playbackSpeed;
+  float _maxFPS;
+  float _renderPeriod;
+  float _elapsedTimeRenderAcc;
+  float _elapsedTimeSliderAcc;
 
-  float _elapsedTimeAcc;
+private:
 
 };
 

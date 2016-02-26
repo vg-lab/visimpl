@@ -29,9 +29,9 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
                             Qt::WindowFlags windowsFlags_,
                             bool paintNeurons_,
                             const std::string&
-#ifdef VISIMPL_USE_ZEQ
-                            zeqUri
-#endif
+//#ifdef VISIMPL_USE_ZEQ
+//                            zeqUri
+//#endif
   )
   : QOpenGLWidget( parent_, windowsFlags_ )
   , _fpsLabel( this )
@@ -46,24 +46,27 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _idleUpdate( true )
   , _paint( false )
   , _currentClearColor( 20, 20, 20, 0 )
+  , _particlesShader( nullptr )
   , _ps( nullptr )
   , _simulationType( TSimulationType::TUndefined )
   , _player( nullptr )
   , _firstFrame( true )
-  , _elapsedTimeAcc( 0.0f )
+  , _elapsedTimeRenderAcc( 0.0f )
+  , _elapsedTimeSliderAcc( 0.0f )
 {
-#ifdef VISIMPL_USE_ZEQ
-  if ( zeqUri != "" )
-  {
-    std::cout << ".......... ZEQ URI " << zeqUri << std::endl;
-    _camera = new nlrender::Camera( zeqUri );
-
-    if( !zeqUri.empty( ))
-      _setZeqUri( zeqUri );
-  }
-  else
-#endif
-    _camera = new nlrender::Camera( );
+//#ifdef VISIMPL_USE_ZEQ
+//  if ( zeqUri != "" )
+//  {
+//    std::cout << ".......... ZEQ URI " << zeqUri << std::endl;
+//    _camera = new nlrender::Camera( zeqUri );
+//
+//    if( !zeqUri.empty( ))
+//      _setZeqUri( zeqUri );
+//  }
+//  else
+//#endif
+  _camera = new nlrender::Camera( );
+  _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
   _fpsLabel.setStyleSheet(
     "QLabel { background-color : #333;"
@@ -74,6 +77,11 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
 
   // This is needed to get key evends
   this->setFocusPolicy( Qt::WheelFocus );
+
+  _maxFPS = 20.0f;
+  _renderPeriod = 1.0f / _maxFPS;
+
+  _playbackSpeed = 5.0f;
 
 }
 
@@ -159,6 +167,7 @@ void OpenGLWidget::initializeGL( void )
   glLineWidth( 1.5 );
 
   _then = std::chrono::system_clock::now( );
+  _lastFrame = std::chrono::system_clock::now( );
 
 
   QOpenGLWidget::initializeGL( );
@@ -234,14 +243,6 @@ void OpenGLWidget::configureSimulation( void )
     }
     default:
       break;
-  }
-
-  _elapsedTimeAcc += _player->deltaTime( );
-
-  if( _elapsedTimeAcc > SIM_SLIDER_UPDATE_PERIOD )
-  {
-    _elapsedTimeAcc = 0.0f;
-    emit updateSlider( _player->GetRelativeTime( ));
   }
 
 }
@@ -515,6 +516,60 @@ TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
   return result;
 }
 
+#ifdef VISIMPL_USE_ZEQ
+
+void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
+{
+  _selectedGIDs = gids;
+
+  std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
+
+    _ps->Run( false );
+
+    for( auto node : *_ps->emissionNodes )
+    {
+      auto it = nodesGIDMap.find( node );
+      unsigned int id = it->second;
+
+      auto res = _selectedGIDs.find( id );
+
+      if( res != _selectedGIDs.end( ))
+        node->active = true;
+      else
+      {
+        node->active = false;
+
+  //      switch( _simulationType )
+  //      {
+  //        case TSpikes:
+  //          dynamic_cast< prefr::ColorEmissionNode* >( node )->killParticles( true );
+  //        break;
+  //        case TVoltages:
+  //          dynamic_cast< prefr::DirectValuedEmissionNode* >( node )->killParticles( true );
+  //        break;
+  //        default:
+  //        break;
+  //      }
+      }
+    }
+
+
+    _ps->Run( true );
+    _ps->UpdateUnified( 0.0f  );
+}
+
+#endif
+
+
+void OpenGLWidget::updateSimulation( void )
+{
+  if( _player->isPlaying( ) || _firstFrame )
+  {
+
+    _ps->UpdateUnified( _elapsedTimeRenderAcc );
+    _firstFrame = false;
+  }
+}
 
 void OpenGLWidget::paintParticles( void )
 {
@@ -550,106 +605,128 @@ void OpenGLWidget::paintParticles( void )
   glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
   glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
 
+  glm::vec3 cameraPosition ( _camera->Position( )[ 0 ],
+                             _camera->Position( )[ 1 ],
+                             _camera->Position( )[ 2 ] );
 
-  if( _player->isPlaying( ) || _firstFrame )
+//  bool cameraMoved = ( _lastCameraPosition == cameraPosition );
+
+//  if( cameraMoved )
   {
 
-    _ps->UpdateUnified( _deltaTime );
-    _firstFrame = false;
+//    std::cout << cameraPosition.x << ", "
+//                << cameraPosition.y << ", "
+//                << cameraPosition.z << std::endl;
+//    std::cout << "Camera moved..." << std::endl;
+    _ps->UpdateCameraDistances( cameraPosition );
+    
+
+    _lastCameraPosition = cameraPosition;
   }
 
-  _ps->UpdateCameraDistances( glm::vec3( _camera->Position()[0],
-                                         _camera->Position()[1],
-                                         _camera->Position()[2]));
   _ps->UpdateRender( );
-
   _ps->Render( );
 
 }
 
-#ifdef VISIMPL_USE_ZEQ
-void OpenGLWidget::_setZeqUri( const std::string&
-                                   uri_
-  )
-{
-  _zeqConnection = true;
-  _uri =  servus::URI( uri_ );
-  _subscriber = new zeq::Subscriber( _uri );
-
-  _subscriber->registerHandler( zeq::hbp::EVENT_SELECTEDIDS,
-      boost::bind( &OpenGLWidget::_onSelectionEvent , this, _1 ));
-
-  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
-
-}
-
-void* OpenGLWidget::_Subscriber( void* subs )
-{
-  std::cout << "------------Waiting Selection Events..." << std::endl;
-  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
-  while ( true )
-  {
-    subscriber->receive( 10000 );
-  }
-  pthread_exit( NULL );
-}
-
-void OpenGLWidget::_onSelectionEvent( const zeq::Event& event_ )
-{
-
-  std::vector< unsigned int > selected =
-      zeq::hbp::deserializeSelectedIDs( event_ );
-
-  std::set< unsigned int > selectedSet( selected.begin( ), selected.end( ));
-  std::cout << "Received " << selected.size( ) << " ids" << std::endl;
-
-  _ps->Run( false );
-
-  for( auto node : *_ps->emissionNodes )
-  {
-    auto it = nodesGIDMap.find( node );
-    unsigned int id = it->second;
-
-    auto res = selectedSet.find( id );
-
-    if( res != selectedSet.end( ))
-      node->active = true;
-    else
-    {
-      node->active = false;
-
-//      switch( _simulationType )
-//      {
-//        case TSpikes:
-//          dynamic_cast< prefr::ColorEmissionNode* >( node )->killParticles( true );
-//        break;
-//        case TVoltages:
-//          dynamic_cast< prefr::DirectValuedEmissionNode* >( node )->killParticles( true );
-//        break;
-//        default:
-//        break;
-//      }
-    }
-  }
-
-//  for( auto id : selected )
+//#ifdef VISIMPL_USE_ZEQ
+//void OpenGLWidget::_setZeqUri( const std::string&
+//                                   uri_
+//  )
+//{
+//  _zeqConnection = true;
+//  _uri =  servus::URI( uri_ );
+//  _subscriber = new zeq::Subscriber( _uri );
+//
+//  _subscriber->registerHandler( zeq::hbp::EVENT_SELECTEDIDS,
+//      boost::bind( &OpenGLWidget::_onSelectionEvent , this, _1 ));
+//
+//  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
+//
+//}
+//
+//void* OpenGLWidget::_Subscriber( void* subs )
+//{
+//  std::cout << "------------Waiting Selection Events..." << std::endl;
+//  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
+//  while ( true )
 //  {
-//    auto it = gidNodesMap.find( id );
-//    if( it != gidNodesMap.end( ))
+//    subscriber->receive( 10000 );
+//  }
+//  pthread_exit( NULL );
+//}
+//
+//void OpenGLWidget::_onSelectionEvent( const zeq::Event& event_ )
+//{
+//
+//  std::vector< unsigned int > selected =
+//      zeq::hbp::deserializeSelectedIDs( event_ );
+//
+//  std::set< unsigned int > selectedSet( selected.begin( ), selected.end( ));
+//  std::cout << "Received " << selected.size( ) << " ids" << std::endl;
+//
+//  _ps->Run( false );
+//
+//  for( auto node : *_ps->emissionNodes )
+//  {
+//    auto it = nodesGIDMap.find( node );
+//    unsigned int id = it->second;
+//
+//    auto res = selectedSet.find( id );
+//
+//    if( res != selectedSet.end( ))
+//      node->active = true;
+//    else
 //    {
-//      it->second->active = true;
+//      node->active = false;
+//
+////      switch( _simulationType )
+////      {
+////        case TSpikes:
+////          dynamic_cast< prefr::ColorEmissionNode* >( node )->killParticles( true );
+////        break;
+////        case TVoltages:
+////          dynamic_cast< prefr::DirectValuedEmissionNode* >( node )->killParticles( true );
+////        break;
+////        default:
+////        break;
+////      }
 //    }
 //  }
-
-  _ps->Run( true );
-  _ps->UpdateUnified( 0.0f  );
-
-}
-
-#endif
+//
+////  for( auto id : selected )
+////  {
+////    auto it = gidNodesMap.find( id );
+////    if( it != gidNodesMap.end( ))
+////    {
+////      it->second->active = true;
+////    }
+////  }
+//
+//  _ps->Run( true );
+//  _ps->UpdateUnified( 0.0f  );
+//
+//}
+//
+//#endif
 
 void OpenGLWidget::paintGL( void )
 {
+  std::chrono::time_point< std::chrono::system_clock > now =
+      std::chrono::system_clock::now( );
+
+  unsigned int elapsedMilliseconds =
+      std::chrono::duration_cast< std::chrono::milliseconds >
+        ( now - _lastFrame ).count( );
+
+  _lastFrame = now;
+
+  _deltaTime = elapsedMilliseconds * 0.001f;
+//  std::cout << elapsedMilliseconds << std::endl;
+
+  _elapsedTimeRenderAcc += _deltaTime;
+  _elapsedTimeSliderAcc += _deltaTime;
+
 
   _frameCount++;
   glDepthMask(GL_TRUE);
@@ -667,20 +744,36 @@ void OpenGLWidget::paintGL( void )
 
     if ( _ps )
     {
-      configureSimulation( );
+
+      if( _elapsedTimeRenderAcc >= _renderPeriod )
+      {
+        _elapsedTimeRenderAcc *= _playbackSpeed;
+        _player->deltaTime( _elapsedTimeRenderAcc );
+//        std::cout << _elapsedTimeRenderAcc << std::endl;
+
+        configureSimulation( );
+        updateSimulation( );
+        _elapsedTimeRenderAcc = 0.0f;
+      }
+
       paintParticles( );
+
     }
     glUseProgram( 0 );
     glFlush( );
 
   }
 
+   if( _elapsedTimeSliderAcc > SIM_SLIDER_UPDATE_PERIOD )
+   {
+     _elapsedTimeSliderAcc = 0.0f;
+     emit updateSlider( _player->GetRelativeTime( ));
+   }
+
+
   #define FRAMES_PAINTED_TO_MEASURE_FPS 10
   if ( _frameCount == FRAMES_PAINTED_TO_MEASURE_FPS )
   {
-
-    std::chrono::time_point< std::chrono::system_clock > now =
-      std::chrono::system_clock::now( );
 
     auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>( now - _then );

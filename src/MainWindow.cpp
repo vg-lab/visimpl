@@ -75,6 +75,13 @@ void MainWindow::init( const std::string& zeqUri )
 
   initSimulationDock( );
   initSimColorDock( );
+
+  #ifdef VISIMPL_USE_ZEQ
+  if( !zeqUri.empty( ))
+  {
+      _setZeqUri( zeqUri );
+  }
+  #endif
 }
 
 MainWindow::~MainWindow( void )
@@ -114,7 +121,7 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
 void MainWindow::openBlueConfigThroughDialog( void )
 {
-#ifdef NSOL_USE_BBPSDK
+#ifdef VISIMPL_USE_BRION
 
   QString path = QFileDialog::getOpenFileName(
     this, tr( "Open BlueConfig" ), _lastOpenedFileName,
@@ -309,9 +316,10 @@ void MainWindow::initSimulationDock( void )
 //  connect( _simSlider, SIGNAL( sliderMoved( )),
 //             this, SLOT( PlayAt( )));
 
-  _summary = new SimulationSummaryWidget( nullptr, 1000 );
+  _summary = new SimulationSummaryWidget( nullptr, 250 );
 //  _summary->setVisible( false );
   _summary->setMinimumHeight( 50 );
+
   dockLayout->addWidget( _summary, 0, 1, 2, totalHSpan - 3 );
 
   _simulationDock->setWidget( content );
@@ -359,7 +367,8 @@ void MainWindow::initSummaryWidget( void )
         dynamic_cast< visimpl::SpikesPlayer* >( _openGLWidget->player( ));
 
     std::cout << "Creating summary..." << std::endl;
-    _summary->CreateSummary( spikesPlayer->spikeReport( ));
+    GIDUSet gids;
+    _summary->CreateSummary( spikesPlayer->spikeReport( ), gids );
 //    _summary->setVisible( true );
 
   }
@@ -483,3 +492,48 @@ void MainWindow::changeEditorColorMapping( void )
 {
   _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
 }
+
+#ifdef VISIMPL_USE_ZEQ
+void MainWindow::_setZeqUri( const std::string&
+                                   uri_
+  )
+{
+  _zeqConnection = true;
+  _uri =  servus::URI( uri_ );
+  _subscriber = new zeq::Subscriber( _uri );
+
+  _subscriber->registerHandler( zeq::hbp::EVENT_SELECTEDIDS,
+      boost::bind( &MainWindow::_onSelectionEvent , this, _1 ));
+
+  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
+
+}
+
+void* MainWindow::_Subscriber( void* subs )
+{
+  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
+  while ( true )
+  {
+    subscriber->receive( 10000 );
+  }
+  pthread_exit( NULL );
+}
+
+void MainWindow::_onSelectionEvent( const zeq::Event& event_ )
+{
+
+  std::vector< unsigned int > selected =
+      zeq::hbp::deserializeSelectedIDs( event_ );
+
+  GIDUSet selectedSet( selected.begin( ), selected.end( ));
+
+  _openGLWidget->setSelectedGIDs( selectedSet );
+
+  if( _summary )
+  {
+    _summary->SetSelectionGIDs( selectedSet );
+  }
+
+}
+
+#endif

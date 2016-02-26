@@ -58,6 +58,22 @@ public slots:
 
 protected:
 
+#ifdef VISIMPL_USE_ZEQ
+
+  void _onSelectionEvent( const zeq::Event& event_ );
+  void _setZeqUri( const std::string& );
+  static void* _Subscriber( void* subscriber );
+
+  bool _zeqConnection;
+
+  servus::URI _uri;
+  zeq::Subscriber* _subscriber;
+
+  pthread_t _subscriberThread;
+
+
+#endif
+
   QString _lastOpenedFileName;
   QIcon playIcon;
   QIcon pauseIcon;

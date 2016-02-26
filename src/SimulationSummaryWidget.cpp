@@ -10,41 +10,26 @@
 #include <QPainter>
 #include <QBrush>
 
+
+
 SimulationSummaryWidget::SimulationSummaryWidget( QWidget* parent_ )
 : QFrame( parent_ )
-, _maxValueHistogram( 0 )
-, _histogramDelta( 0.0f )
+, _bins( 1000 )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
-{
-  _colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
-//  _colorMapper.Insert(0.0f, glm::vec4( 128, 128, 255, 255 ));
-  _colorMapper.Insert(0.0f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
-  _colorMapper.Insert(0.0f, glm::vec4( 255, 255, 0.0f, 255 ));
-  _colorMapper.Insert(0.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
-}
+, _mainHistogram( nullptr )
+, _selectionHistogram( nullptr )
+{ }
 
 SimulationSummaryWidget::SimulationSummaryWidget( QWidget* parent_,
                                                   unsigned int bins_ )
 : QFrame( parent_ )
-, _maxValueHistogram( 0 )
-, _histogramDelta( 0.0f )
+, _bins( bins_ )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
+, _mainHistogram( nullptr )
+, _selectionHistogram( nullptr )
 {
-  _histogram.resize( bins_, 0 );
-
-//  _colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
-//  _colorMapper.Insert(0.25f, glm::vec4( 128, 128, 255, 255 ));
-//  _colorMapper.Insert(0.5f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
-//  _colorMapper.Insert(0.75f, glm::vec4( 255, 255, 0.0f, 255 ));
-//  _colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
-
-  _colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
-//  _colorMapper.Insert(0.25f, glm::vec4( 128, 128, 255, 255 ));
-  _colorMapper.Insert(0.33f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
-  _colorMapper.Insert(0.66f, glm::vec4( 255, 255, 0.0f, 255 ));
-  _colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
 
   QPixmap pixmap(20, 20);
   QPainter painter(&pixmap);
@@ -59,13 +44,52 @@ SimulationSummaryWidget::SimulationSummaryWidget( QWidget* parent_,
   setAutoFillBackground(true);
 }
 
-void SimulationSummaryWidget::CreateSummary( brion::SpikeReport* spikes_ )
+void SimulationSummaryWidget::CreateSummary( brion::SpikeReport* spikes_,
+                                             const GIDUSet& gids )
 {
-  _spikeReport = spikes_;
+//  _spikeReport = spikes_;
+//
+//  _filteredGIDs = gids;
+//
+//  CreateSummarySpikes( gids );
+//  UpdateGradientColors( );
 
+  _mainHistogram = new visimpl::Histogram( *spikes_ );
+  _selectionHistogram = new visimpl::Histogram( *spikes_ );
+
+  TColorMapper colorMapper;
+//  colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
+//  colorMapper.Insert(0.25f, glm::vec4( 128, 128, 255, 255 ));
+//  colorMapper.Insert(0.33f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
+//  colorMapper.Insert(0.66f, glm::vec4( 255, 255, 0.0f, 255 ));
+//  colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
+
+//  colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
+//  colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
+//  colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
+//  colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
+//  colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
+
+  colorMapper.Insert(0.0f, glm::vec4( 255, 170, 170, 255 ));
+  colorMapper.Insert(0.25f, glm::vec4( 212, 106, 106, 255 ));
+  colorMapper.Insert(0.50f, glm::vec4( 170, 57, 57, 255 ));
+  colorMapper.Insert(0.75f, glm::vec4( 128, 21, 21, 255 ));
+  colorMapper.Insert(1.0f, glm::vec4( 85, 0, 0, 255 ));
+
+  _mainHistogram->colorMapper( colorMapper );
+  _selectionHistogram->colorMapper( colorMapper );
+
+  SetSelectionGIDs( gids );
+
+}
+
+void SimulationSummaryWidget::SetSelectionGIDs( const GIDUSet& gids )
+{
+  _selectionHistogram->filteredGIDs( gids );
   CreateSummarySpikes( );
   UpdateGradientColors( );
 
+  update( );
 }
 
 //void SimulationSummaryWidget::CreateSummary( brion::CompartmentReport* _voltages )
@@ -75,39 +99,129 @@ void SimulationSummaryWidget::CreateSummary( brion::SpikeReport* spikes_ )
 
 void SimulationSummaryWidget::paintEvent(QPaintEvent* /*e*/)
 {
-  //TODO
-//  std::cout << "Painting..." << std::endl;
-  QPainter painter(this);
-  QLinearGradient gradient(0, 0, width( ),  0 );
-  gradient.setStops( _gradientStops );
+  QPainter painter( this );
+  QLinearGradient gradient( 0, 0, width( ), 0 );
+  gradient.setStops( _mainHistogram->gradientStops( ) );
   QBrush brush( gradient );
-  painter.fillRect(rect(), brush);
+
+  QRect area = rect();
+  area.setHeight( area.height( ) / 2 );
+  painter.fillRect( area, brush );
+
+  assert( _selectionHistogram );
+
+  QGradientStops stops = _selectionHistogram->gradientStops( );
+
+  if( stops.size( ) == 0)
+    stops = _mainHistogram->gradientStops( );
+
+  QLinearGradient grad( 0, 0, width( ), 0 );
+  grad.setStops( stops );
+  QBrush b ( grad );
+  area.setCoords( 0, height( ) / 2, width( ), height( ));
+  painter.fillRect( area, b );
+
 }
 
-void SimulationSummaryWidget::CreateSummarySpikes( void )
+void SimulationSummaryWidget::CreateSummarySpikes( )
 {
-  brion::Spikes spikes = _spikeReport->getSpikes( );
 
-  float startTime = _spikeReport->getStartTime( );
-  float endTime = _spikeReport->getEndTime( );
-  float totalTime = endTime - startTime ;
+  _mainHistogram->CreateHistogram( _bins );
 
-  _histogramDelta = totalTime / float( _histogram.size( ));
+  _selectionHistogram->CreateHistogram( _bins );
 
-  std::cout << "Total Time: " << totalTime << " Histogram delta: " << _histogramDelta << std::endl;
-//  float currentTime = 0.0f;
-//  unsigned int currentBin = 0;
-//    brion::Spikes::const_iterator spike = spikes.begin( );
 
+}
+
+void SimulationSummaryWidget::CreateSummaryVoltages( void )
+{
+
+}
+
+void SimulationSummaryWidget::UpdateGradientColors( void )
+{
+  _mainHistogram->CalculateColors( );
+
+  _selectionHistogram->CalculateColors( );
+
+}
+
+
+void SimulationSummaryWidget::bins( unsigned int bins_ )
+{
+  _bins = bins_;
+
+  CreateSummarySpikes( );
+  UpdateGradientColors( );
+}
+
+unsigned int SimulationSummaryWidget::bins( void )
+{
+  return _bins;
+}
+
+
+/*****************************************************************************/
+/******************************** HISTOGRAM **********************************/
+/*****************************************************************************/
+
+
+visimpl::Histogram::Histogram( const brion::Spikes& spikes,
+                               float startTime,
+                               float endTime )
+: _maxValueHistogram( 0 )
+, _spikes( spikes )
+, _startTime( startTime )
+, _endTime( endTime )
+, _scaleFunc( nullptr )
+, _colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC )
+, _normRule( visimpl::Histogram::T_NORM_MAX )
+{
+  colorScale( _colorScale );
+}
+
+visimpl::Histogram::Histogram( const brion::SpikeReport& spikeReport )
+: _maxValueHistogram( 0 )
+, _spikes( spikeReport.getSpikes( ))
+, _startTime( spikeReport.getStartTime( ))
+, _endTime( spikeReport.getEndTime( ))
+, _scaleFunc( nullptr )
+, _colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC )
+, _normRule( visimpl::Histogram::T_NORM_MAX )
+{
+  colorScale( _colorScale );
+
+}
+
+void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
+{
+
+  _histogram.clear( );
+  _histogram.resize( binsNumber, 0 );
+  _maxValueHistogram = 0;
+
+  float totalTime = _endTime - _startTime ;
+
+  bool filter = _filteredGIDs.size( ) > 0;
+
+  std::cout << "Filtered GIDs: " << _filteredGIDs.size( ) << std::endl;
+
+  unsigned int counter = 0;
   float invTotal = 1.0f / totalTime;
-  for( auto spike : spikes )
+  for( auto spike : _spikes )
   {
-    float perc = ( spike.first - startTime ) * invTotal;
+    if( filter && _filteredGIDs.find( spike.second ) == _filteredGIDs.end( ))
+      continue;
+
+    float perc = ( spike.first - _startTime ) * invTotal;
     unsigned int position =  _histogram.size( ) * perc;
-//    std::cout << "Position: " << position << std::endl;
+
     assert( position < _histogram.size( ));
     _histogram[ position ]++;
+    counter++;
   }
+
+  std::cout << "Total spikes: " << counter << std::endl;
 
   unsigned int cont = 0;
   unsigned int maxPos = 0;
@@ -124,23 +238,60 @@ void SimulationSummaryWidget::CreateSummarySpikes( void )
   std::cout << "Bin with maximum value " << _maxValueHistogram << " at " << maxPos << std::endl;
 }
 
-void SimulationSummaryWidget::CreateSummaryVoltages( void )
+namespace visimpl
 {
+
+  // All these functions consider a maxValue = 1.0f / <calculated_maxValue >
+  float linearFunc( float value, float maxValue )
+  {
+    return value * maxValue;
+  }
+
+  float exponentialFunc( float value, float maxValue )
+  {
+    return ( logf( value) * maxValue );
+  }
+
+  float logarithmicFunc( float value, float maxValue )
+  {
+    return ( log10f( value) * maxValue );
+  }
 
 }
 
-void SimulationSummaryWidget::UpdateGradientColors( void )
+void visimpl::Histogram::CalculateColors( void )
 {
   QGradientStops stops;
-//  float maxValue = _spikeReport->getSpikes( ).size( );
-  float maxValue = _maxValueHistogram;
-  std::cout << "Total spikes: " << int(maxValue) << std::endl;
+
+  float maxValue = 0.0f;
   float relativeTime = 0.0f;
   float delta = 1.0f / _histogram.size( );
   float percentage;
+
+
+  switch( _colorScale )
+  {
+    case visimpl::Histogram::T_COLOR_LINEAR:
+
+      maxValue = 1.0f / _maxValueHistogram;
+
+      break;
+    case visimpl::Histogram::T_COLOR_EXPONENTIAL:
+
+      maxValue = 1.0f / logf( _maxValueHistogram );
+
+      break;
+    case visimpl::Histogram::T_COLOR_LOGARITHMIC:
+
+      maxValue = 1.0f / log10f( _maxValueHistogram );
+
+      break;
+  }
+
   for( auto bin : _histogram )
   {
-    percentage = float( bin ) / maxValue;
+    percentage = _scaleFunc( float( bin ), maxValue );
+    percentage = std::max< float >( std::min< float > (1.0f, percentage ), 0.0f);
 //    std::cout << percentage << std::endl;
     glm::vec4 color = _colorMapper.GetValue( percentage );
     stops << qMakePair( relativeTime, QColor( color.r, color.g, color.b, color.a ));
@@ -151,33 +302,74 @@ void SimulationSummaryWidget::UpdateGradientColors( void )
   _gradientStops = stops;
 }
 
-
-void SimulationSummaryWidget::bins( unsigned int bins_ )
+void visimpl::Histogram::filteredGIDs( const GIDUSet& gids )
 {
-  _histogram.resize( bins_ );
-
-  if( _spikeReport )
-    CreateSummarySpikes( );
-  else if( _voltageReport )
-    CreateSummaryVoltages( );
-  else
-    return;
-
-  UpdateGradientColors( );
+  _filteredGIDs = gids;
 }
 
-unsigned int SimulationSummaryWidget::bins( void )
+const GIDUSet& visimpl::Histogram::filteredGIDs( void )
 {
-  return _histogram.size( );
+  return _filteredGIDs;
 }
 
+void visimpl::Histogram::colorScale( visimpl::Histogram::TColorScale scale )
+{
+  _colorScale = scale;
 
-void SimulationSummaryWidget::colorMapper( const utils::InterpolationSet< glm::vec4 >& colors )
+  switch( _colorScale )
+  {
+    case visimpl::Histogram::T_COLOR_LINEAR:
+
+      _scaleFunc = linearFunc;
+
+      break;
+    case visimpl::Histogram::T_COLOR_EXPONENTIAL:
+
+      _scaleFunc = exponentialFunc;
+
+      break;
+    case visimpl::Histogram::T_COLOR_LOGARITHMIC:
+
+      _scaleFunc = logarithmicFunc;
+
+      break;
+  }
+}
+
+visimpl::Histogram::TColorScale visimpl::Histogram::colorScale( void )
+{
+  return _colorScale;
+}
+
+void visimpl::Histogram::normalizeRule(
+    visimpl::Histogram::TNormalize_Rule normRule )
+{
+  _normRule = normRule;
+}
+
+visimpl::Histogram::TNormalize_Rule visimpl::Histogram::normalizeRule( void )
+{
+  return _normRule;
+}
+
+const std::vector< unsigned int>& visimpl::Histogram::histogram( void )
+{
+  return _histogram;
+}
+
+const utils::InterpolationSet< glm::vec4 >&
+visimpl::Histogram::colorMapper( void )
+{
+  return _colorMapper;
+}
+
+void visimpl::Histogram::colorMapper(
+    const utils::InterpolationSet< glm::vec4 >& colors )
 {
   _colorMapper = colors;
 }
 
-const utils::InterpolationSet< glm::vec4 >& SimulationSummaryWidget::colorMapper( void )
+const QGradientStops& visimpl::Histogram::gradientStops( void )
 {
-  return _colorMapper;
+  return _gradientStops;
 }

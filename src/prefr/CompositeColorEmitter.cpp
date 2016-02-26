@@ -33,8 +33,9 @@ namespace prefr
 
     if (cProto && (!current->Alive() || override))
     {
-     current->life = glm::clamp(rand() * invRandMax, 0.0f, 1.0f) *
-         cProto->lifeInterval + cProto->minLife;
+      if( current->life < 0.0f )
+        current->life = glm::clamp(rand() * invRandMax, 0.0f, 1.0f) *
+           cProto->lifeInterval + cProto->minLife;
 
      current->velocity = node->GetEmissionVelocityDirection();
      current->position = node->GetEmissionPosition();
