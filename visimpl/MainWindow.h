@@ -6,9 +6,11 @@
 
 #include "OpenGLWidget.h"
 #include "SimulationPlayer.h"
-#include "SimulationSummaryWidget.h"
 
-#include "EditorTF/TransferFunctionEditor.h"
+#include <sumrice/sumrice.h>
+// #include "SimulationSummaryWidget.h"
+
+// #include "EditorTF/TransferFunctionEditor.h"
 
 
 namespace Ui

@@ -4,7 +4,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
-#include "qt/CustomSlider.h"
+// #include "qt/CustomSlider.h"
 
 MainWindow::MainWindow( QWidget* parent_,
                         bool updateOnIdle )

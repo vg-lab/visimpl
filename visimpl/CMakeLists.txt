@@ -32,7 +32,7 @@ configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.cpp
 
 set(VISIMPL_SOURCES
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
-  viewer.cpp
+  visimpl.cpp
   MainWindow.cpp
   OpenGLWidget.cpp
   CShader.cpp  
@@ -45,10 +45,6 @@ set(VISIMPL_SOURCES
   prefr/DirectValuedEmissionNode.cpp
   prefr/DirectValuedUpdater.cpp
   prefr/DirectValuedEmitter.cpp
-  EditorTF/Gradient.cpp
-  EditorTF/ColorPoints.cpp
-  EditorTF/TransferFunctionEditor.cpp
-  SimulationSummaryWidget.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -64,24 +60,16 @@ set(VISIMPL_HEADERS
   prefr/DirectValuedEmissionNode.h
   prefr/DirectValuedUpdater.h
   prefr/DirectValuedEmitter.h
-  qt/CustomSlider.h
   log.h
-  EditorTF/Gradient.h
-  EditorTF/ColorPoints.h
-  EditorTF/TransferFunctionEditor.h
-  SimulationSummaryWidget.h
 )
 
 set(VISIMPL_MOC_HEADERS
   MainWindow.h
   OpenGLWidget.h
-  EditorTF/TransferFunctionEditor.h    
-  EditorTF/ColorPoints.h
-  SimulationSummaryWidget.h
 )
 
 set(VISIMPL_UI_FORMS
-  ${UIDIR}/mainwindow.ui
+  ${UIDIR}/visimpl.ui
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -93,7 +81,6 @@ set(VISIMPL_RESOURCES
 
 
 set(VISIMPL_LINK_LIBRARIES
-  ${OPENGL_LIBRARIES}
   Qt5::Core
   Qt5::Widgets
   Qt5::OpenGL
@@ -102,7 +89,15 @@ set(VISIMPL_LINK_LIBRARIES
   nlrender
   prefr  
   Brion
+  sumrice
 )
+
+if ( NVIDIAOPENGL_FOUND )
+  link_directories(${NVIDIA_OPENGL_gl_LIBRARY_PATH})
+  set(VISIMPL_LINK_LIBRARIES ${VISIMPL_LINK_LIBRARIES} ${NVIDIA_OPENGL_gl_LIBRARY}) 
+else( )
+  set(VISIMPL_LINK_LIBRARIES ${VISIMPL_LINK_LIBRARIES} ${OPENGL_LIBRARIES}) 
+endif( )
 
 if ( NOT DEFAULT_CONTEXT_OPENGL_MAJOR )
   set( DEFAULT_CONTEXT_OPENGL_MAJOR 3 )

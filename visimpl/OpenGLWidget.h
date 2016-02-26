@@ -25,7 +25,8 @@
 #include "SimulationPlayer.h"
 #include "prefr/ColorEmissionNode.h"
 #include "prefr/ColorOperationPrototype.h"
-#include "EditorTF/TransferFunctionEditor.h"
+// #include "EditorTF/TransferFunctionEditor.h"
+#include <sumrice/sumrice.h>
 
 #ifdef VISIMPL_USE_ZEQ
   #include <zeq/zeq.h>

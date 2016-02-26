@@ -49,6 +49,28 @@ common_package( neurolots REQUIRED )
 common_package( prefr REQUIRED )
 common_package( Brion REQUIRED )
 
+list( APPEND VISIMPL_DEPENDENT_LIBRARIES 
+  OpenGL 
+  GLEW 
+  Eigen3 
+  nsol 
+  neurolots 
+  prefr 
+  Brion 
+)
+
+if (QT5CORE_FOUND)
+  list(APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5Core)
+endif( )
+
+if (QT5WIDGETS_FOUND)
+  list(APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5Widgets)
+endif( )
+
+if (QT5OPENGL_FOUND)
+  list(APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5OpenGL)
+endif( )
+
 if(VISIMPL_WITH_ZEQ)
   common_package(zeq)
   if ( ZEQ_FOUND )
@@ -67,7 +89,9 @@ endif( )
 
 common_package_post()
 
-add_subdirectory(src)
+add_subdirectory( sumrice )
+add_subdirectory( visimpl )
+add_subdirectory( stackviz )
 
 include(CPackConfig)
 include(DoxygenRule)
