@@ -2,7 +2,7 @@ set(SUMRICE_PUBLIC_HEADERS
   EditorTF/Gradient.h
   EditorTF/ColorPoints.h
   EditorTF/TransferFunctionEditor.h
-  SimulationSummaryWidget.h
+  Summary.h
   qt/CustomSlider.h
 )
 
@@ -13,13 +13,13 @@ set(SUMRICE_SOURCES
   EditorTF/Gradient.cpp
   EditorTF/ColorPoints.cpp
   EditorTF/TransferFunctionEditor.cpp
-  SimulationSummaryWidget.cpp
+  Summary.cpp
 )
 
 set(SUMRICE_MOC_HEADERS
   EditorTF/ColorPoints.h
   EditorTF/TransferFunctionEditor.h
-  SimulationSummaryWidget.h
+  Summary.h
 )
 
 set(SUMRICE_LINK_LIBRARIES

@@ -21,18 +21,25 @@ namespace visimpl
 {
   class Histogram;
 }
-class SimulationSummaryWidget : public QFrame
+class Summary : public QFrame
 {
 
   Q_OBJECT;
 
 public:
 
-  SimulationSummaryWidget( QWidget* parent = 0 );
-  SimulationSummaryWidget( QWidget* parent = 0, unsigned int bins = 1000);
+  typedef enum
+  {
+    T_STACK_FIXED = 0,
+    T_STACK_EXPANDABLE
 
-  void CreateSummary( brion::SpikeReport* _spikes, const GIDUSet& gids );
-  void SetSelectionGIDs( const GIDUSet& gids );
+  } TStackType;
+
+  Summary( QWidget* parent = 0 );
+  Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
+
+  void CreateSummary( brion::SpikeReport* _spikes );
+  void AddGIDSelection( const GIDUSet& gids );
 //  void CreateSummary( brion::CompartmentReport* _voltages );
 
   virtual void paintEvent(QPaintEvent* event);
@@ -40,33 +47,28 @@ public:
   void bins( unsigned int bins_ );
   unsigned int bins( void );
 
-//  void colorMapper( const utils::InterpolationSet< glm::vec4 >& colors );
-//  const utils::InterpolationSet< glm::vec4 >& colorMapper( void );
-//
-//  void filterGIDs( const GIDUSet& gids );
-//  const GIDUSet& filterGIDs( void );
-
 protected:
 
   void CreateSummarySpikes( );
-  void CreateSummaryVoltages( void );
+  void InsertSummarySpikes( const GIDUSet& gids );
+//  void CreateSummaryVoltages( void );
+
   void UpdateGradientColors( void );
 
   unsigned int _bins;
 
-//  std::vector< unsigned int > _histogram;
-//  unsigned int _maxValueHistogram;
-//  QGradientStops _gradientStops;
-//
   brion::SpikeReport* _spikeReport;
   brion::CompartmentReport* _voltageReport;
-//
-//  utils::InterpolationSet< glm::vec4 > _colorMapper;
-//
-//  GIDUSet _filteredGIDs;
 
   visimpl::Histogram* _mainHistogram;
   visimpl::Histogram* _selectionHistogram;
+
+  TStackType _stackType;
+
+  std::vector< visimpl::Histogram* > _histograms;
+
+  unsigned int _heightPerRow;
+
 
 };
 
@@ -93,7 +95,7 @@ namespace visimpl
     Histogram( const brion::Spikes& spikes, float startTime, float endTime );
     Histogram( const brion::SpikeReport& spikeReport );
 
-    void CreateHistogram( unsigned int binsNumber = 10000 );
+    void CreateHistogram( unsigned int binsNumber = 250 );
     void CalculateColors( void );
 
     void filteredGIDs( const GIDUSet& gids );

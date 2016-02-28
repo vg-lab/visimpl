@@ -316,7 +316,7 @@ void MainWindow::initSimulationDock( void )
 //  connect( _simSlider, SIGNAL( sliderMoved( )),
 //             this, SLOT( PlayAt( )));
 
-  _summary = new SimulationSummaryWidget( nullptr, 250 );
+  _summary = new Summary( nullptr, 250 );
 //  _summary->setVisible( false );
   _summary->setMinimumHeight( 50 );
 
@@ -531,7 +531,7 @@ void MainWindow::_onSelectionEvent( const zeq::Event& event_ )
 
   if( _summary )
   {
-    _summary->SetSelectionGIDs( selectedSet );
+    _summary->AddGIDSelection( selectedSet );
   }
 
 }

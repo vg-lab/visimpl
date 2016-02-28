@@ -88,7 +88,7 @@ private:
 
   Ui::MainWindow* _ui;
   OpenGLWidget* _openGLWidget;
-  SimulationSummaryWidget* _summary;
+  Summary* _summary;
 
 //  visimpl::SimulationPlayer* _player;
   QDockWidget* _simulationDock;

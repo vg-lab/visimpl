@@ -5,30 +5,31 @@
  *      Author: sgalindo
  */
 
-#include "SimulationSummaryWidget.h"
+#include "Summary.h"
 
 #include <QPainter>
 #include <QBrush>
 
 
 
-SimulationSummaryWidget::SimulationSummaryWidget( QWidget* parent_ )
+Summary::Summary( QWidget* parent_ )
 : QFrame( parent_ )
-, _bins( 1000 )
+, _bins( 250 )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
 , _mainHistogram( nullptr )
 , _selectionHistogram( nullptr )
 { }
 
-SimulationSummaryWidget::SimulationSummaryWidget( QWidget* parent_,
-                                                  unsigned int bins_ )
+Summary::Summary( QWidget* parent_,
+                  TStackType stackType )
 : QFrame( parent_ )
-, _bins( bins_ )
+, _bins( 250 )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
 , _mainHistogram( nullptr )
 , _selectionHistogram( nullptr )
+, _stackType( stackType )
 {
 
   QPixmap pixmap(20, 20);
@@ -44,8 +45,7 @@ SimulationSummaryWidget::SimulationSummaryWidget( QWidget* parent_,
   setAutoFillBackground(true);
 }
 
-void SimulationSummaryWidget::CreateSummary( brion::SpikeReport* spikes_,
-                                             const GIDUSet& gids )
+void Summary::CreateSummary( brion::SpikeReport* spikes_ )
 {
 //  _spikeReport = spikes_;
 //
@@ -55,39 +55,71 @@ void SimulationSummaryWidget::CreateSummary( brion::SpikeReport* spikes_,
 //  UpdateGradientColors( );
 
   _mainHistogram = new visimpl::Histogram( *spikes_ );
-  _selectionHistogram = new visimpl::Histogram( *spikes_ );
+  _histograms.push_back( _mainHistogram );
 
-  TColorMapper colorMapper;
-//  colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
-//  colorMapper.Insert(0.25f, glm::vec4( 128, 128, 255, 255 ));
-//  colorMapper.Insert(0.33f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
-//  colorMapper.Insert(0.66f, glm::vec4( 255, 255, 0.0f, 255 ));
-//  colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
+  switch( _stackType )
+  {
+    case T_STACK_FIXED:
+    {
+//      _mainHistogram = new visimpl::Histogram( *spikes_ );
+      _selectionHistogram = new visimpl::Histogram( *spikes_ );
+      _histograms.push_back( _selectionHistogram );
 
-//  colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
-//  colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
-//  colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
-//  colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
-//  colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
+      TColorMapper colorMapper;
+    //  colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
+    //  colorMapper.Insert(0.25f, glm::vec4( 128, 128, 255, 255 ));
+    //  colorMapper.Insert(0.33f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
+    //  colorMapper.Insert(0.66f, glm::vec4( 255, 255, 0.0f, 255 ));
+    //  colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
 
-  colorMapper.Insert(0.0f, glm::vec4( 255, 170, 170, 255 ));
-  colorMapper.Insert(0.25f, glm::vec4( 212, 106, 106, 255 ));
-  colorMapper.Insert(0.50f, glm::vec4( 170, 57, 57, 255 ));
-  colorMapper.Insert(0.75f, glm::vec4( 128, 21, 21, 255 ));
-  colorMapper.Insert(1.0f, glm::vec4( 85, 0, 0, 255 ));
+    //  colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
+    //  colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
+    //  colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
+    //  colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
+    //  colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
 
-  _mainHistogram->colorMapper( colorMapper );
-  _selectionHistogram->colorMapper( colorMapper );
+      colorMapper.Insert(0.0f, glm::vec4( 255, 170, 170, 255 ));
+      colorMapper.Insert(0.25f, glm::vec4( 212, 106, 106, 255 ));
+      colorMapper.Insert(0.50f, glm::vec4( 170, 57, 57, 255 ));
+      colorMapper.Insert(0.75f, glm::vec4( 128, 21, 21, 255 ));
+      colorMapper.Insert(1.0f, glm::vec4( 85, 0, 0, 255 ));
 
-  SetSelectionGIDs( gids );
+      _mainHistogram->colorMapper( colorMapper );
+      _selectionHistogram->colorMapper( colorMapper );
 
+      break;
+    }
+    case T_STACK_EXPANDABLE:
+    {
+
+      break;
+    }
+    default:
+      break;
+
+  }
+  //  AddGIDSelection( gids );
 }
 
-void SimulationSummaryWidget::SetSelectionGIDs( const GIDUSet& gids )
+void Summary::AddGIDSelection( const GIDUSet& gids )
 {
-  _selectionHistogram->filteredGIDs( gids );
-  CreateSummarySpikes( );
-  UpdateGradientColors( );
+  if( _stackType == TStackType::T_STACK_FIXED )
+  {
+    _selectionHistogram->filteredGIDs( gids );
+    CreateSummarySpikes( );
+    UpdateGradientColors( );
+
+
+  }else if( _stackType == TStackType::T_STACK_EXPANDABLE )
+  {
+
+
+
+    setFixedHeight( (_histograms.size( ) + 1 ) * _heightPerRow );
+
+
+
+  }
 
   update( );
 }
@@ -97,7 +129,7 @@ void SimulationSummaryWidget::SetSelectionGIDs( const GIDUSet& gids )
 //
 //}
 
-void SimulationSummaryWidget::paintEvent(QPaintEvent* /*e*/)
+void Summary::paintEvent(QPaintEvent* /*e*/)
 {
   QPainter painter( this );
   QLinearGradient gradient( 0, 0, width( ), 0 );
@@ -105,49 +137,85 @@ void SimulationSummaryWidget::paintEvent(QPaintEvent* /*e*/)
   QBrush brush( gradient );
 
   QRect area = rect();
-  area.setHeight( area.height( ) / 2 );
-  painter.fillRect( area, brush );
 
-  assert( _selectionHistogram );
+  switch(_stackType )
+  {
+  case T_STACK_FIXED:
+  {
+    area.setHeight( area.height( ) / 2 );
+    painter.fillRect( area, brush );
 
-  QGradientStops stops = _selectionHistogram->gradientStops( );
+    assert( _selectionHistogram );
 
-  if( stops.size( ) == 0)
-    stops = _mainHistogram->gradientStops( );
+    QGradientStops stops = _selectionHistogram->gradientStops( );
 
-  QLinearGradient grad( 0, 0, width( ), 0 );
-  grad.setStops( stops );
-  QBrush b ( grad );
-  area.setCoords( 0, height( ) / 2, width( ), height( ));
-  painter.fillRect( area, b );
+    if( stops.size( ) == 0)
+      stops = _mainHistogram->gradientStops( );
+
+    QLinearGradient grad( 0, 0, width( ), 0 );
+    grad.setStops( stops );
+    QBrush b ( grad );
+    area.setCoords( 0, height( ) / 2, width( ), height( ));
+    painter.fillRect( area, b );
+
+    break;
+  }
+  case T_STACK_EXPANDABLE:
+  {
+    area.setHeight( _heightPerRow );
+    unsigned int counter = 0;
+    unsigned int currentHeight = 0;
+
+    for( auto histogram : _histograms )
+    {
+      area.setCoords( 0, currentHeight, width( ), currentHeight + _heightPerRow );
+
+      currentHeight += _heightPerRow;
+      counter++;
+      histogram->CalculateColors( );
+    }
+
+    break;
+  }
+  }
 
 }
 
-void SimulationSummaryWidget::CreateSummarySpikes( )
+void Summary::CreateSummarySpikes( )
 {
 
-  _mainHistogram->CreateHistogram( _bins );
+  for( auto histogram : _histograms )
+  {
+    histogram->CreateHistogram( _bins );
+  }
 
-  _selectionHistogram->CreateHistogram( _bins );
+//  _mainHistogram->CreateHistogram( _bins );
+//
+//  _selectionHistogram->CreateHistogram( _bins );
 
 
 }
 
-void SimulationSummaryWidget::CreateSummaryVoltages( void )
+//void Summary::CreateSummaryVoltages( void )
+//{
+//
+//}
+
+void Summary::UpdateGradientColors( void )
 {
+  for( auto histogram : _histograms )
+  {
+    histogram->CalculateColors( );
+  }
+
+//  _mainHistogram->CalculateColors( );
+//
+//  _selectionHistogram->CalculateColors( );
 
 }
 
-void SimulationSummaryWidget::UpdateGradientColors( void )
-{
-  _mainHistogram->CalculateColors( );
 
-  _selectionHistogram->CalculateColors( );
-
-}
-
-
-void SimulationSummaryWidget::bins( unsigned int bins_ )
+void Summary::bins( unsigned int bins_ )
 {
   _bins = bins_;
 
@@ -155,7 +223,7 @@ void SimulationSummaryWidget::bins( unsigned int bins_ )
   UpdateGradientColors( );
 }
 
-unsigned int SimulationSummaryWidget::bins( void )
+unsigned int Summary::bins( void )
 {
   return _bins;
 }
