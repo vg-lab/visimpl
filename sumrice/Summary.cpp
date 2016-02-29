@@ -142,6 +142,8 @@ void Summary::paintEvent(QPaintEvent* /*e*/)
 
   QRect area = rect();
 
+  QGradientStops stops;
+
   switch(_stackType )
   {
   case T_STACK_FIXED:
@@ -151,7 +153,7 @@ void Summary::paintEvent(QPaintEvent* /*e*/)
 
     assert( _selectionHistogram );
 
-    QGradientStops stops = _selectionHistogram->gradientStops( );
+     stops = _selectionHistogram->gradientStops( );
 
     if( stops.size( ) == 0)
       stops = _mainHistogram->gradientStops( );
@@ -174,9 +176,11 @@ void Summary::paintEvent(QPaintEvent* /*e*/)
     {
       area.setCoords( 0, currentHeight, width( ), currentHeight + _heightPerRow );
 
+      stops = histogram->gradientStops( );
+
       currentHeight += _heightPerRow;
       counter++;
-      histogram->CalculateColors( );
+
     }
 
     break;

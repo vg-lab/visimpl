@@ -212,6 +212,51 @@ namespace visimpl
     }
   }
 
+
+#ifdef VISIMPL_USE_ZEQ
+void SimulationPlayer::_setZeqUri( const std::string&
+                                   uri_
+  )
+{
+  _zeqConnection = true;
+  _uri =  servus::URI( uri_ );
+  _subscriber = new zeq::Subscriber( _uri );
+
+  _subscriber->registerHandler( zeq::hbp::EVENT_FRAME,
+      boost::bind( &SimulationPlayer::_onFrameEvent , this, _1 ));
+
+  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
+
+}
+
+void* SimulationPlayer::_Subscriber( void* subs )
+{
+  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
+  while ( true )
+  {
+    subscriber->receive( 10000 );
+  }
+  pthread_exit( NULL );
+}
+
+void SimulationPlayer::_onFrameEvent( const zeq::Event& event_ )
+{
+
+  zeq::hbp::data::Frame frame = zeq::hbp::deserializeFrame( event_ );
+
+  float percentage = (frame.current - frame.start) / (frame.end - frame.start);
+
+  if( playerID == masterID )
+  {
+    playbackPositionAt( percentage );
+  }
+
+
+}
+
+#endif
+
+
   //*************************************************************************
   //************************ SPIKES SIMULATION PLAYER ***********************
   //*************************************************************************

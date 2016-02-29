@@ -3,13 +3,14 @@
 #include <QPushButton>
 #include <QSlider>
 #include <QTimer>
+#include <QLabel>
 
 // #include "SimulationPlayer.h"
-
 #include <sumrice/sumrice.h>
 // #include "SimulationSummaryWidget.h"
 
 // #include "EditorTF/TransferFunctionEditor.h"
+
 
 
 namespace Ui
@@ -30,15 +31,47 @@ public:
   void showStatusBarMessage ( const QString& message );
 
   void openBlueConfig( const std::string& fileName,
-                       // visimpl::TSimulationType simulationType,
+                       visimpl::TSimulationType simulationType,
                        const std::string& report);
 
 public slots:
 
   void openBlueConfigThroughDialog( void );
 
+  void Play( void );
+  void Stop( void );
+  void Repeat( bool repeat );
+  void PlayAt( void );
+  void PlayAt( int );
+  void Restart( void );
+  void GoToEnd( void );
+
+  void UpdateSimulationSlider( float percentage );
+
+protected:
+
+
+  void initPlaybackDock( void );
+
+  Summary* _summary;
+  visimpl::SimulationPlayer* _player;
+
+
+  // Playback Control
+  QDockWidget* _simulationDock;
+  QPushButton* _playButton;
+  CustomSlider* _simSlider;
+
+  QIcon _playIcon;
+  QIcon _pauseIcon;
+
+  QLabel* _startTimeLabel;
+  QLabel* _endTimeLabel;
+
 private:
 
   Ui::MainWindow* _ui;
+
+
 
 };

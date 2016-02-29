@@ -10,7 +10,6 @@
 #include <map>
 
 #include "MainWindow.h"
-#include "log.h"
 
 #include <nlrender/Config.h>
 

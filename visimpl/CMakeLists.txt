@@ -36,8 +36,7 @@ set(VISIMPL_SOURCES
   MainWindow.cpp
   OpenGLWidget.cpp
   CShader.cpp  
-  CMakeSetup.rc
-  SimulationPlayer.cpp
+  CMakeSetup.rc  
   prefr/ColorEmissionNode.cpp
   prefr/ColorOperationPrototype.cpp
   prefr/CompositeColorEmitter.cpp
@@ -51,16 +50,14 @@ set(VISIMPL_HEADERS
   ${PROJECT_BINARY_DIR}/include/visimpl/version.h
   CShader.h
   OpenGLWidget.h
-  MainWindow.h
-  SimulationPlayer.h
+  MainWindow.h  
   prefr/ColorEmissionNode.h
   prefr/ColorOperationPrototype.h
   prefr/CompositeColorEmitter.h
   prefr/CompositeColorUpdater.h
   prefr/DirectValuedEmissionNode.h
   prefr/DirectValuedUpdater.h
-  prefr/DirectValuedEmitter.h
-  log.h
+  prefr/DirectValuedEmitter.h  
 )
 
 set(VISIMPL_MOC_HEADERS

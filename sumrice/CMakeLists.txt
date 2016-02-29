@@ -2,8 +2,10 @@ set(SUMRICE_PUBLIC_HEADERS
   EditorTF/Gradient.h
   EditorTF/ColorPoints.h
   EditorTF/TransferFunctionEditor.h
+  SimulationPlayer.h
   Summary.h
   qt/CustomSlider.h
+  log.h
 )
 
 set(SUMRICE_HEADERS
@@ -14,6 +16,7 @@ set(SUMRICE_SOURCES
   EditorTF/ColorPoints.cpp
   EditorTF/TransferFunctionEditor.cpp
   Summary.cpp
+  SimulationPlayer.cpp
 )
 
 set(SUMRICE_MOC_HEADERS
@@ -28,6 +31,14 @@ set(SUMRICE_LINK_LIBRARIES
   Brion
   prefr
 )
+
+if (ZEQ_FOUND)
+  list(APPEND SUMRICE_LINK_LIBRARIES zeq zeqHBP ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
+if (GMRVZEQ_FOUND)
+  list( APPEND SUMRICE_LINK_LIBRARIES gmrvzeq )
+endif()
 
 set(SUMRICE_INCLUDE_NAME sumrice)
 set(SUMRICE_NAMESPACE sumrice)

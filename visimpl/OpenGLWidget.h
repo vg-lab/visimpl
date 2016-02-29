@@ -22,7 +22,7 @@
 #include <brion/brion.h>
 #include <brain/brain.h>
 
-#include "SimulationPlayer.h"
+//#include "SimulationPlayer.h"
 #include "prefr/ColorEmissionNode.h"
 #include "prefr/ColorOperationPrototype.h"
 // #include "EditorTF/TransferFunctionEditor.h"

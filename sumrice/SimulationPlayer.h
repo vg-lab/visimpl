@@ -13,6 +13,18 @@
 
 #include <unordered_map>
 
+#ifdef VISIMPL_USE_ZEQ
+  #include <zeq/zeq.h>
+  #include <zeq/hbp/hbp.h>
+  #include <servus/uri.h>
+
+  #include <pthread.h>
+  #include <mutex>
+
+  #include <boost/signals2/signal.hpp>
+  #include <boost/bind.hpp>
+#endif
+
 namespace visimpl
 {
   typedef enum
@@ -21,6 +33,17 @@ namespace visimpl
     TSpikes,
     TVoltages
   } TSimulationType;
+
+  typedef enum
+  {
+    T_PLAYBACK_PLAY = 0,
+    T_PLAYBACK_PAUSE,
+    T_PLAYBACK_STOP,
+    T_PLAYBACK_RESTART,
+    T_PLAYBACK_REPEAT,
+    T_PLAYBACK_SINGLE_SHOT
+
+  } TPlaybackOperation;
 
   class SimulationPlayer
   {
@@ -73,6 +96,17 @@ namespace visimpl
 
     TSimulationType simulationType( void );
 
+#ifdef VISIMPL_USE_ZEQ
+
+    // Client side
+    void requestPlaybackAt( float percentage );
+    void receiveCurrentPosition( float percentage );
+
+    // Server side
+    void acceptPlaybackAt( float percentage );
+
+#endif
+
   protected:
 
     virtual void FrameProcess( void ) = 0;
@@ -97,6 +131,29 @@ namespace visimpl
     brion::BlueConfig* _blueConfig;
     brain::Circuit* _circuit;
     brion::GIDSet _gids;
+
+    unsigned int playerID;
+    unsigned int masterID;
+
+    boost::signals2::signal< void ( float x )> playbackPositionAt;
+
+
+#ifdef VISIMPL_USE_ZEQ
+
+  void _onFrameEvent( const zeq::Event& event_ );
+  void _setZeqUri( const std::string& );
+  static void* _Subscriber( void* subscriber );
+
+  bool _zeqConnection;
+
+  servus::URI _uri;
+  zeq::Subscriber* _subscriber;
+  zeq::Publisher* _publisher;
+
+
+  pthread_t _subscriberThread;
+
+#endif
 
   };
 

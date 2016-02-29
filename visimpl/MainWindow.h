@@ -5,7 +5,7 @@
 #include <QTimer>
 
 #include "OpenGLWidget.h"
-#include "SimulationPlayer.h"
+//#include "SimulationPlayer.h"
 
 #include <sumrice/sumrice.h>
 // #include "SimulationSummaryWidget.h"
@@ -77,12 +77,12 @@ protected:
 #endif
 
   QString _lastOpenedFileName;
-  QIcon playIcon;
-  QIcon pauseIcon;
+  QIcon _playIcon;
+  QIcon _pauseIcon;
 
 private:
 
-  void initSimulationDock( void );
+  void initPlaybackDock( void );
   void initSimColorDock( void );
   void initSummaryWidget( void );
 

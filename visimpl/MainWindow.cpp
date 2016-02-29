@@ -73,7 +73,7 @@ void MainWindow::init( const std::string& zeqUri )
            this, SLOT( openSWCFileThroughDialog( )));
 
 
-  initSimulationDock( );
+  initPlaybackDock( );
   initSimColorDock( );
 
   #ifdef VISIMPL_USE_ZEQ
@@ -220,7 +220,7 @@ void MainWindow::openSWCFileThroughDialog( void )
 
 }
 
-void MainWindow::initSimulationDock( void )
+void MainWindow::initPlaybackDock( void )
 {
   _simulationDock = new QDockWidget( );
   _simulationDock->setMinimumHeight( 100 );
@@ -257,9 +257,9 @@ void MainWindow::initSimulationDock( void )
   QIcon prevIcon;
   QIcon repeatIcon;
 
-  playIcon.addFile( QStringLiteral( ":/icons/play.png" ), QSize( ),
+  _playIcon.addFile( QStringLiteral( ":/icons/play.png" ), QSize( ),
                     QIcon::Normal, QIcon::Off );
-  pauseIcon.addFile( QStringLiteral( ":/icons/pause.png" ), QSize( ),
+  _pauseIcon.addFile( QStringLiteral( ":/icons/pause.png" ), QSize( ),
                      QIcon::Normal, QIcon::Off) ;
   stopIcon.addFile( QStringLiteral( ":/icons/stop.png" ), QSize( ),
                     QIcon::Normal, QIcon::Off );
@@ -270,7 +270,7 @@ void MainWindow::initSimulationDock( void )
   repeatIcon.addFile( QStringLiteral( ":/icons/repeat.png" ), QSize( ),
                       QIcon::Normal, QIcon::Off );
 
-  _playButton->setIcon( playIcon );
+  _playButton->setIcon( _playIcon );
   stopButton->setIcon( stopIcon );
   nextButton->setIcon( nextIcon );
   prevButton->setIcon( prevIcon );
@@ -385,11 +385,11 @@ void MainWindow::Play( void )
 
     if( _openGLWidget->player( )->isPlaying( ))
     {
-      _playButton->setIcon( pauseIcon );
+      _playButton->setIcon( _pauseIcon );
     }
     else
     {
-      _playButton->setIcon( playIcon );
+      _playButton->setIcon( _playIcon );
     }
   }
 }
@@ -399,7 +399,7 @@ void MainWindow::Stop( void )
   if( _openGLWidget )
   {
     _openGLWidget->Stop( );
-    _playButton->setIcon( playIcon );
+    _playButton->setIcon( _playIcon );
     _startTimeLabel->setText(
           QString::number( (double)_openGLWidget->player( )->startTime( )));
   }
@@ -434,7 +434,7 @@ void MainWindow::PlayAt( int sliderPosition )
                        float( _simSlider->maximum( ) - _simSlider->minimum( ));
     _simSlider->setSliderPosition( sliderPosition );
 
-    _playButton->setIcon( pauseIcon );
+    _playButton->setIcon( _pauseIcon );
 
     _openGLWidget->PlayAt( percentage );
 
@@ -448,9 +448,9 @@ void MainWindow::Restart( void )
     _openGLWidget->Restart( );
 
     if( _openGLWidget->player( )->isPlaying( ))
-      _playButton->setIcon( pauseIcon );
+      _playButton->setIcon( _pauseIcon );
     else
-      _playButton->setIcon( playIcon );
+      _playButton->setIcon( _playIcon );
   }
 }
 

@@ -4,7 +4,7 @@
 #include <QOpenGLWidget>
 
 #include <stackviz/version.h>
-
+#include <sumrice/sumrice.h>
 
 void setFormat( void );
 void usageMessage(  char* progName );
@@ -24,6 +24,8 @@ int main( int argc, char** argv )
   std::string zeqUri;
   std::string target = std::string( "" );
   std::string report = std::string( "" );
+  visimpl::TSimulationType simType;
+
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
   int initWindowWidth, initWindowHeight;
@@ -65,13 +67,13 @@ int main( int argc, char** argv )
     }
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
-      // simType = visimpl::TSpikes;
+       simType = visimpl::TSpikes;
     }
     else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
     {
       if(++i < argc )
       {
-        // simType = visimpl::TVoltages;
+         simType = visimpl::TVoltages;
         report = std::string( argv[ i ]);
       }
       else
@@ -121,7 +123,7 @@ int main( int argc, char** argv )
 
   if ( !blueConfig.empty( ) )
     mainWindow.openBlueConfig( blueConfig, 
-                               // simType, 
+                                simType,
                                report );
 
   return application.exec();
