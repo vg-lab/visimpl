@@ -1,4 +1,4 @@
-#include "ui_mainwindow.h"
+#include "ui_visimpl.h"
 #include "MainWindow.h"
 #include <QDebug>
 #include <QFileDialog>
@@ -316,7 +316,7 @@ void MainWindow::initSimulationDock( void )
 //  connect( _simSlider, SIGNAL( sliderMoved( )),
 //             this, SLOT( PlayAt( )));
 
-  _summary = new Summary( nullptr, 250 );
+  _summary = new Summary( nullptr, Summary::T_STACK_FIXED );
 //  _summary->setVisible( false );
   _summary->setMinimumHeight( 50 );
 
@@ -367,8 +367,9 @@ void MainWindow::initSummaryWidget( void )
         dynamic_cast< visimpl::SpikesPlayer* >( _openGLWidget->player( ));
 
     std::cout << "Creating summary..." << std::endl;
-    GIDUSet gids;
-    _summary->CreateSummary( spikesPlayer->spikeReport( ), gids );
+//    GIDUSet gids;
+//    _summary->AddGIDSelection( gids );
+    _summary->CreateSummary( spikesPlayer->spikeReport( ));
 //    _summary->setVisible( true );
 
   }

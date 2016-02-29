@@ -99,6 +99,10 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_ )
 
   }
   //  AddGIDSelection( gids );
+
+  CreateSummarySpikes( );
+  UpdateGradientColors( );
+
 }
 
 void Summary::AddGIDSelection( const GIDUSet& gids )
@@ -372,7 +376,8 @@ void visimpl::Histogram::CalculateColors( void )
 
 void visimpl::Histogram::filteredGIDs( const GIDUSet& gids )
 {
-  _filteredGIDs = gids;
+  if( gids.size( ) > 0 )
+    _filteredGIDs = gids;
 }
 
 const GIDUSet& visimpl::Histogram::filteredGIDs( void )
