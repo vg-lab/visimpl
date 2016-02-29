@@ -24,7 +24,7 @@ int main( int argc, char** argv )
   std::string zeqUri;
   std::string target = std::string( "" );
   std::string report = std::string( "" );
-  visimpl::TSimulationType simType;
+  visimpl::TSimulationType simType = visimpl::TSpikes;
 
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
@@ -102,10 +102,6 @@ int main( int argc, char** argv )
     }
   }
 
-
-
-
-  setFormat( );
   MainWindow mainWindow;
   mainWindow.setWindowTitle("StackViz");
 
@@ -194,41 +190,5 @@ void dumpVersion( void )
   std::cerr << std::endl;
 
   std::cerr << std::endl;
-
-}
-
-
-void setFormat( void )
-{
-
-  int ctxOpenGLMajor = DEFAULT_CONTEXT_OPENGL_MAJOR;
-  int ctxOpenGLMinor = DEFAULT_CONTEXT_OPENGL_MINOR;
-  int ctxOpenGLSamples = 0;
-
-  if ( std::getenv("CONTEXT_OPENGL_MAJOR"))
-    ctxOpenGLMajor = std::stoi( std::getenv("CONTEXT_OPENGL_MAJOR"));
-
-  if ( std::getenv("CONTEXT_OPENGL_MINOR"))
-    ctxOpenGLMinor = std::stoi( std::getenv("CONTEXT_OPENGL_MINOR"));
-
-  if ( std::getenv("CONTEXT_OPENGL_SAMPLES"))
-    ctxOpenGLSamples = std::stoi( std::getenv("CONTEXT_OPENGL_SAMPLES"));
-
-  std::cerr << "Setting OpenGL context to "
-            << ctxOpenGLMajor << "." << ctxOpenGLMinor << std::endl;
-
-  QSurfaceFormat format;
-  format.setVersion( ctxOpenGLMajor, ctxOpenGLMinor);
-  format.setProfile( QSurfaceFormat::CoreProfile );
-
-  if ( ctxOpenGLSamples != 0 )
-    format.setSamples( ctxOpenGLSamples );
-
-
-  QSurfaceFormat::setDefaultFormat( format );
-  if ( std::getenv("CONTEXT_OPENGL_COMPATIBILITY_PROFILE"))
-    format.setProfile( QSurfaceFormat::CompatibilityProfile );
-  else
-    format.setProfile( QSurfaceFormat::CoreProfile );
 
 }

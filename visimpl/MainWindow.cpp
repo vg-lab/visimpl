@@ -495,9 +495,7 @@ void MainWindow::changeEditorColorMapping( void )
 }
 
 #ifdef VISIMPL_USE_ZEQ
-void MainWindow::_setZeqUri( const std::string&
-                                   uri_
-  )
+void MainWindow::_setZeqUri( const std::string& uri_ )
 {
   _zeqConnection = true;
   _uri =  servus::URI( uri_ );

@@ -15,7 +15,7 @@ MainWindow::MainWindow( QWidget* parent_ )
 {
   _ui->setupUi( this );
 
-#ifdef VISIMPL_USE_BBPSDK
+#ifdef VISIMPL_USEBRION
   _ui->actionOpenBlueConfig->setEnabled( true );
 #else
   _ui->actionOpenBlueConfig->setEnabled( false );
@@ -23,24 +23,24 @@ MainWindow::MainWindow( QWidget* parent_ )
 
   connect( _ui->actionQuit, SIGNAL( triggered( )),
            QApplication::instance(), SLOT( quit( )));
-
-  init( )
 }
 
-void MainWindow::init( const std::string& /*zeqUri*/ )
+void MainWindow::init( const std::string& zeqUri )
 {
 
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
            this, SLOT( openBlueConfigThroughDialog( )));
 
-  // initSimulationDock( );
+  initPlaybackDock( );
 
-  // #ifdef VISIMPL_USE_ZEQ
-  // if( !zeqUri.empty( ))
-  // {
-  //     _setZeqUri( zeqUri );
-  // }
-  // #endif
+
+  #ifdef VISIMPL_USE_ZEQ
+  if( !zeqUri.empty( ))
+  {
+     _setZeqUri( zeqUri );
+  }
+  #endif
+
 }
 
 MainWindow::~MainWindow( void )
@@ -54,10 +54,30 @@ void MainWindow::showStatusBarMessage ( const QString& message )
   _ui->statusbar->showMessage( message );
 }
 
-void MainWindow::openBlueConfig( const std::string& /*fileName*/,
-                                 visimpl::TSimulationType /*simulationType*/,
-                                 const std::string& /*reportLabel*/)
+void MainWindow::openBlueConfig( const std::string& fileName,
+                                 visimpl::TSimulationType simulationType,
+                                 const std::string& reportLabel )
 {
+  _simulationType = simulationType;
+
+  switch( _simulationType )
+ {
+   case visimpl::TSpikes:
+     _player = new visimpl::SpikesPlayer( fileName, true );
+//     _player->deltaTime( _deltaTime );
+     break;
+
+   case visimpl::TVoltages:
+     _player = new visimpl::VoltagesPlayer( fileName, reportLabel, true);
+//     _deltaTime = _player->deltaTime( );
+     break;
+
+   default:
+     VISIMPL_THROW("Cannot load an undefined simulation type.");
+
+ }
+
+
   // _player->loadData( fileName,
   //                          OpenGLWidget::TDataFileType::tBlueConfig,
   //                          simulationType, reportLabel );
@@ -75,7 +95,7 @@ void MainWindow::openBlueConfig( const std::string& /*fileName*/,
 
 
   // changeEditorColorMapping( );
-  // initSummaryWidget( );
+   initSummaryWidget( );
 }
 
 void MainWindow::openBlueConfigThroughDialog( void )
@@ -238,6 +258,37 @@ void MainWindow::initPlaybackDock( )
                        _simulationDock );
 }
 
+void MainWindow::initSummaryWidget( )
+{
+
+  _summary = new Summary( nullptr, Summary::T_STACK_EXPANDABLE );
+  _summary->setMinimumHeight( 50 );
+
+  if( _simulationType == visimpl::TSpikes )
+  {
+    visimpl::SpikesPlayer* spikesPlayer =
+        dynamic_cast< visimpl::SpikesPlayer* >( _player);
+
+
+//    GIDUSet gids;
+//    _summary->AddGIDSelection( gids );
+    _summary->CreateSummary( spikesPlayer->spikeReport( ));
+//    _summary->setVisible( true );
+  }
+
+  QWidget* contentWidget = new QWidget( );
+//  QScrollArea* scrollArea = new QScrollArea( );
+  QVBoxLayout* centralLayout = new QVBoxLayout( );
+
+  this->setCentralWidget( contentWidget );
+//  scrollArea->setWidget( contentWidget );
+
+  contentWidget->setLayout( centralLayout );
+  centralLayout->addWidget( _summary );
+
+  _stackLayout = new QGridLayout( );
+}
+
 
 void MainWindow::Play( void )
 {
@@ -348,3 +399,44 @@ void MainWindow::UpdateSimulationSlider( float percentage )
   }
 }
 
+
+#ifdef VISIMPL_USE_ZEQ
+void MainWindow::_setZeqUri( const std::string& uri_ )
+{
+  _zeqConnection = true;
+  _uri =  servus::URI( uri_ );
+  _subscriber = new zeq::Subscriber( _uri );
+
+  _subscriber->registerHandler( zeq::hbp::EVENT_SELECTEDIDS,
+      boost::bind( &MainWindow::_onSelectionEvent , this, _1 ));
+
+  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
+
+}
+
+void* MainWindow::_Subscriber( void* subs )
+{
+  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
+  while ( true )
+  {
+    subscriber->receive( 10000 );
+  }
+  pthread_exit( NULL );
+}
+
+void MainWindow::_onSelectionEvent( const zeq::Event& event_ )
+{
+
+  std::vector< unsigned int > selected =
+      zeq::hbp::deserializeSelectedIDs( event_ );
+
+  GIDUSet selectedSet( selected.begin( ), selected.end( ));
+
+  if( _summary )
+  {
+    _summary->AddGIDSelection( selectedSet );
+  }
+
+}
+
+#endif

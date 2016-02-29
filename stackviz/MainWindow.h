@@ -4,6 +4,8 @@
 #include <QSlider>
 #include <QTimer>
 #include <QLabel>
+#include <QGridLayout>
+#include <QScrollArea>
 
 // #include "SimulationPlayer.h"
 #include <sumrice/sumrice.h>
@@ -50,8 +52,25 @@ public slots:
 
 protected:
 
+#ifdef VISIMPL_USE_ZEQ
 
+  void _onSelectionEvent( const zeq::Event& event_ );
+  void _setZeqUri( const std::string& );
+  static void* _Subscriber( void* subscriber );
+
+  bool _zeqConnection;
+
+  servus::URI _uri;
+  zeq::Subscriber* _subscriber;
+
+  pthread_t _subscriberThread;
+
+#endif
+
+  void initSummaryWidget( void );
   void initPlaybackDock( void );
+
+  visimpl::TSimulationType _simulationType;
 
   Summary* _summary;
   visimpl::SimulationPlayer* _player;
@@ -72,6 +91,7 @@ private:
 
   Ui::MainWindow* _ui;
 
+  QGridLayout* _stackLayout;
 
 
 };

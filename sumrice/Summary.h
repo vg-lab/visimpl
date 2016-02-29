@@ -47,6 +47,9 @@ public:
   void bins( unsigned int bins_ );
   unsigned int bins( void );
 
+  void heightPerRow( unsigned int height_ );
+  unsigned int heightPerRow( void );
+
 protected:
 
   void CreateSummarySpikes( );

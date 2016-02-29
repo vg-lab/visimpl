@@ -19,6 +19,8 @@ Summary::Summary( QWidget* parent_ )
 , _voltageReport( nullptr )
 , _mainHistogram( nullptr )
 , _selectionHistogram( nullptr )
+, _stackType( T_STACK_FIXED )
+, _heightPerRow( 50 )
 { }
 
 Summary::Summary( QWidget* parent_,
@@ -30,6 +32,7 @@ Summary::Summary( QWidget* parent_,
 , _mainHistogram( nullptr )
 , _selectionHistogram( nullptr )
 , _stackType( stackType )
+, _heightPerRow( 50 )
 {
 
   QPixmap pixmap(20, 20);
@@ -47,7 +50,7 @@ Summary::Summary( QWidget* parent_,
 
 void Summary::CreateSummary( brion::SpikeReport* spikes_ )
 {
-//  _spikeReport = spikes_;
+  _spikeReport = spikes_;
 //
 //  _filteredGIDs = gids;
 //
@@ -57,6 +60,27 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_ )
   _mainHistogram = new visimpl::Histogram( *spikes_ );
   _histograms.push_back( _mainHistogram );
 
+  TColorMapper colorMapper;
+//  colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
+//  colorMapper.Insert(0.25f, glm::vec4( 128, 128, 255, 255 ));
+//  colorMapper.Insert(0.33f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
+//  colorMapper.Insert(0.66f, glm::vec4( 255, 255, 0.0f, 255 ));
+//  colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
+
+//  colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
+//  colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
+//  colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
+//  colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
+//  colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
+
+  colorMapper.Insert(0.0f, glm::vec4( 255, 170, 170, 255 ));
+  colorMapper.Insert(0.25f, glm::vec4( 212, 106, 106, 255 ));
+  colorMapper.Insert(0.50f, glm::vec4( 170, 57, 57, 255 ));
+  colorMapper.Insert(0.75f, glm::vec4( 128, 21, 21, 255 ));
+  colorMapper.Insert(1.0f, glm::vec4( 85, 0, 0, 255 ));
+
+  _mainHistogram->colorMapper( colorMapper );
+
   switch( _stackType )
   {
     case T_STACK_FIXED:
@@ -65,33 +89,13 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_ )
       _selectionHistogram = new visimpl::Histogram( *spikes_ );
       _histograms.push_back( _selectionHistogram );
 
-      TColorMapper colorMapper;
-    //  colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
-    //  colorMapper.Insert(0.25f, glm::vec4( 128, 128, 255, 255 ));
-    //  colorMapper.Insert(0.33f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
-    //  colorMapper.Insert(0.66f, glm::vec4( 255, 255, 0.0f, 255 ));
-    //  colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
-
-    //  colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
-    //  colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
-    //  colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
-    //  colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
-    //  colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
-
-      colorMapper.Insert(0.0f, glm::vec4( 255, 170, 170, 255 ));
-      colorMapper.Insert(0.25f, glm::vec4( 212, 106, 106, 255 ));
-      colorMapper.Insert(0.50f, glm::vec4( 170, 57, 57, 255 ));
-      colorMapper.Insert(0.75f, glm::vec4( 128, 21, 21, 255 ));
-      colorMapper.Insert(1.0f, glm::vec4( 85, 0, 0, 255 ));
-
-      _mainHistogram->colorMapper( colorMapper );
       _selectionHistogram->colorMapper( colorMapper );
 
       break;
     }
     case T_STACK_EXPANDABLE:
     {
-
+      this->setMinimumHeight( _heightPerRow );
       break;
     }
     default:
@@ -102,7 +106,7 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_ )
 
   CreateSummarySpikes( );
   UpdateGradientColors( );
-
+  update( );
 }
 
 void Summary::AddGIDSelection( const GIDUSet& gids )
@@ -110,20 +114,23 @@ void Summary::AddGIDSelection( const GIDUSet& gids )
   if( _stackType == TStackType::T_STACK_FIXED )
   {
     _selectionHistogram->filteredGIDs( gids );
-    CreateSummarySpikes( );
-    UpdateGradientColors( );
-
 
   }else if( _stackType == TStackType::T_STACK_EXPANDABLE )
   {
 
+    visimpl::Histogram* histogram = new visimpl::Histogram( *_spikeReport );
+    histogram->filteredGIDs( gids );
+    histogram->colorMapper( _mainHistogram->colorMapper( ));
+    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
+    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
+    _histograms.push_back( histogram );
 
-
-    setFixedHeight( (_histograms.size( ) + 1 ) * _heightPerRow );
-
-
+    setMinimumHeight( (_histograms.size( )) * _heightPerRow );
 
   }
+
+  CreateSummarySpikes( );
+  UpdateGradientColors( );
 
   update( );
 }
@@ -135,10 +142,9 @@ void Summary::AddGIDSelection( const GIDUSet& gids )
 
 void Summary::paintEvent(QPaintEvent* /*e*/)
 {
+
   QPainter painter( this );
   QLinearGradient gradient( 0, 0, width( ), 0 );
-  gradient.setStops( _mainHistogram->gradientStops( ) );
-  QBrush brush( gradient );
 
   QRect area = rect();
 
@@ -148,21 +154,23 @@ void Summary::paintEvent(QPaintEvent* /*e*/)
   {
   case T_STACK_FIXED:
   {
+    gradient.setStops( _mainHistogram->gradientStops( ) );
+    QBrush brush( gradient );
+
     area.setHeight( area.height( ) / 2 );
     painter.fillRect( area, brush );
 
     assert( _selectionHistogram );
 
-     stops = _selectionHistogram->gradientStops( );
+    stops = _selectionHistogram->gradientStops( );
 
     if( stops.size( ) == 0)
       stops = _mainHistogram->gradientStops( );
 
-    QLinearGradient grad( 0, 0, width( ), 0 );
-    grad.setStops( stops );
-    QBrush b ( grad );
+    gradient.setStops( stops );
+    brush = QBrush ( gradient );
     area.setCoords( 0, height( ) / 2, width( ), height( ));
-    painter.fillRect( area, b );
+    painter.fillRect( area, brush );
 
     break;
   }
@@ -174,9 +182,13 @@ void Summary::paintEvent(QPaintEvent* /*e*/)
 
     for( auto histogram : _histograms )
     {
+//      std::cout << "Histogram stops: " <<  histogram->gradientStops( ).size( ) << std::endl;
+      gradient.setStops( histogram->gradientStops( ));
+      QBrush brush( gradient );
+
       area.setCoords( 0, currentHeight, width( ), currentHeight + _heightPerRow );
 
-      stops = histogram->gradientStops( );
+      painter.fillRect( area, brush );
 
       currentHeight += _heightPerRow;
       counter++;
@@ -191,7 +203,7 @@ void Summary::paintEvent(QPaintEvent* /*e*/)
 
 void Summary::CreateSummarySpikes( )
 {
-
+  std::cout << "Creating histograms... Number of bins: " << _bins << std::endl;
   for( auto histogram : _histograms )
   {
     histogram->CreateHistogram( _bins );
@@ -234,6 +246,16 @@ void Summary::bins( unsigned int bins_ )
 unsigned int Summary::bins( void )
 {
   return _bins;
+}
+
+void Summary::heightPerRow( unsigned int height_ )
+{
+  _heightPerRow = height_;
+}
+
+unsigned int Summary::heightPerRow( void )
+{
+  return _heightPerRow;
 }
 
 
