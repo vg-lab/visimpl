@@ -92,6 +92,7 @@ private:
   Ui::MainWindow* _ui;
 
   QGridLayout* _stackLayout;
+  unsigned int columnsNumber;
 
 
 };

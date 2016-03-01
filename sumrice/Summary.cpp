@@ -9,6 +9,7 @@
 
 #include <QPainter>
 #include <QBrush>
+#include <QMouseEvent>
 
 
 
@@ -46,11 +47,14 @@ Summary::Summary( QWidget* parent_,
   pal.setBrush(backgroundRole(), QBrush(pixmap));
   setPalette(pal);
   setAutoFillBackground(true);
+
+  setMouseTracking( true );
 }
 
-void Summary::CreateSummary( brion::SpikeReport* spikes_ )
+void Summary::CreateSummary( brion::SpikeReport* spikes_, brion::GIDSet gids )
 {
   _spikeReport = spikes_;
+  _gids = GIDUSet( gids.begin( ), gids.end( ));
 //
 //  _filteredGIDs = gids;
 //
@@ -111,6 +115,10 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_ )
 
 void Summary::AddGIDSelection( const GIDUSet& gids )
 {
+  if( gids.size( ) == _gids.size( ) || gids.size( ) == 0)
+    return;
+
+  std::cout << "Adding new selection with size " << gids.size( ) << std::endl;
   if( _stackType == TStackType::T_STACK_FIXED )
   {
     _selectionHistogram->filteredGIDs( gids );
@@ -125,8 +133,11 @@ void Summary::AddGIDSelection( const GIDUSet& gids )
     histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
     _histograms.push_back( histogram );
 
-    setMinimumHeight( (_histograms.size( )) * _heightPerRow );
 
+    unsigned int newHeight = (_histograms.size( )) * _heightPerRow;
+    setMinimumHeight( newHeight );
+    std::cout << newHeight << std::endl;
+    resize( width( ), newHeight );
   }
 
   CreateSummarySpikes( );
@@ -192,12 +203,67 @@ void Summary::paintEvent(QPaintEvent* /*e*/)
 
       currentHeight += _heightPerRow;
       counter++;
-
     }
 
     break;
   }
   }
+
+  unsigned int currentHeight;
+  for( unsigned int i = 1; i < _histograms.size( ); i++ )
+  {
+    currentHeight = i * _heightPerRow;
+
+    QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
+    painter.drawLine( line );
+  }
+
+
+  if( showMarker )
+  {
+    float percentage = float( _lastMousePosition.x( )) / float( width( ));
+    int positionX = _lastMousePosition.x( );
+    int margin = 5;
+
+    if( width( ) - positionX < 50 )
+      margin = -50;
+
+    QPen pen( QColor( 255, 255, 255 ));
+    painter.setPen( pen );
+
+    currentHeight = _heightPerRow / 2;
+    QPoint position ( positionX + margin, currentHeight );
+    for( auto histogram : _histograms )
+    {
+      painter.drawText( position,
+                        QString::number( histogram->valueAt( percentage )));
+
+      position.setY( position.y( ) + _heightPerRow );
+    }
+
+    QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
+    pen.setColor( QColor( 177, 50, 50 ));
+    painter.setPen( pen );
+    painter.drawLine( marker );
+  }
+}
+
+void Summary::mouseMoveEvent( QMouseEvent* event_ )
+{
+  QFrame::mouseMoveEvent( event_ );
+
+  QPoint position = event_->pos( );
+  if( this->contentsRect().contains( position ))
+  {
+    _lastMousePosition = position;
+    showMarker = true;
+  }
+  else
+  {
+    showMarker = false;
+  }
+
+  update( );
 
 }
 
@@ -206,7 +272,8 @@ void Summary::CreateSummarySpikes( )
   std::cout << "Creating histograms... Number of bins: " << _bins << std::endl;
   for( auto histogram : _histograms )
   {
-    histogram->CreateHistogram( _bins );
+    if( histogram->gradientStops( ).size( ) == 0)
+      histogram->CreateHistogram( _bins );
   }
 
 //  _mainHistogram->CreateHistogram( _bins );
@@ -225,7 +292,8 @@ void Summary::UpdateGradientColors( void )
 {
   for( auto histogram : _histograms )
   {
-    histogram->CalculateColors( );
+    if( histogram->gradientStops( ).size( ) == 0)
+      histogram->CalculateColors( );
   }
 
 //  _mainHistogram->CalculateColors( );
@@ -471,4 +539,12 @@ void visimpl::Histogram::colorMapper(
 const QGradientStops& visimpl::Histogram::gradientStops( void )
 {
   return _gradientStops;
+}
+
+unsigned int visimpl::Histogram::valueAt( float percentage )
+{
+  unsigned int position = percentage * _histogram.size( );
+  assert( position < _histogram.size( ));
+
+  return _histogram[ position ];
 }

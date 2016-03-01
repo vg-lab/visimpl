@@ -23,6 +23,8 @@ MainWindow::MainWindow( QWidget* parent_ )
 
   connect( _ui->actionQuit, SIGNAL( triggered( )),
            QApplication::instance(), SLOT( quit( )));
+
+  columnsNumber = 100;
 }
 
 void MainWindow::init( const std::string& zeqUri )
@@ -261,8 +263,15 @@ void MainWindow::initPlaybackDock( )
 void MainWindow::initSummaryWidget( )
 {
 
+
+  unsigned int widthPerColumn = width( ) / columnsNumber;
+
   _summary = new Summary( nullptr, Summary::T_STACK_EXPANDABLE );
-  _summary->setMinimumHeight( 50 );
+  _summary->setMinimumHeight( _summary->heightPerRow( ));
+  _summary->setMinimumWidth( width( ) - widthPerColumn );
+//  _summary->setSizePolicy( QSizePolicy::Maximum,
+//                           QSizePolicy::Preferred );
+
 
   if( _simulationType == visimpl::TSpikes )
   {
@@ -272,21 +281,27 @@ void MainWindow::initSummaryWidget( )
 
 //    GIDUSet gids;
 //    _summary->AddGIDSelection( gids );
-    _summary->CreateSummary( spikesPlayer->spikeReport( ));
+    _summary->CreateSummary( spikesPlayer->spikeReport( ),
+                             spikesPlayer->gids( ));
 //    _summary->setVisible( true );
   }
 
-  QWidget* contentWidget = new QWidget( );
-//  QScrollArea* scrollArea = new QScrollArea( );
-  QVBoxLayout* centralLayout = new QVBoxLayout( );
-
-  this->setCentralWidget( contentWidget );
-//  scrollArea->setWidget( contentWidget );
-
-  contentWidget->setLayout( centralLayout );
-  centralLayout->addWidget( _summary );
-
   _stackLayout = new QGridLayout( );
+
+  QWidget* contentWidget = new QWidget( );
+//  contentWidget->setSizePolicy( QSizePolicy::Expanding,
+//                                QSizePolicy::Expanding );
+//  contentWidget->setMinimumHeight( 1000 );
+//  contentWidget->setMinimumWidth(  );
+  QScrollArea* scrollArea = new QScrollArea( );
+//  QVBoxLayout* centralLayout = new QVBoxLayout( );
+
+  contentWidget->setLayout( _stackLayout );
+  _stackLayout->addWidget( _summary, 0, 0, 1, columnsNumber - 1 );
+  _stackLayout->addWidget( new QPushButton("Test"), 0, columnsNumber, 1, 1);
+
+  this->setCentralWidget( _summary );
+  scrollArea->setWidget( contentWidget );
 }
 
 

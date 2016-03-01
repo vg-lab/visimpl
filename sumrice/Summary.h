@@ -38,11 +38,12 @@ public:
   Summary( QWidget* parent = 0 );
   Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
 
-  void CreateSummary( brion::SpikeReport* _spikes );
+  void CreateSummary( brion::SpikeReport* _spikes, brion::GIDSet gids );
   void AddGIDSelection( const GIDUSet& gids );
 //  void CreateSummary( brion::CompartmentReport* _voltages );
 
   virtual void paintEvent(QPaintEvent* event);
+  virtual void mouseMoveEvent( QMouseEvent* event_ );
 
   void bins( unsigned int bins_ );
   unsigned int bins( void );
@@ -63,6 +64,8 @@ protected:
   brion::SpikeReport* _spikeReport;
   brion::CompartmentReport* _voltageReport;
 
+  GIDUSet _gids;
+
   visimpl::Histogram* _mainHistogram;
   visimpl::Histogram* _selectionHistogram;
 
@@ -72,6 +75,8 @@ protected:
 
   unsigned int _heightPerRow;
 
+  QPoint _lastMousePosition;
+  bool showMarker;
 
 };
 
@@ -116,6 +121,8 @@ namespace visimpl
     void colorMapper(const utils::InterpolationSet< glm::vec4 >& colors );
 
     const QGradientStops& gradientStops( void );
+
+    unsigned int valueAt( float percentage );
 
   protected:
 

@@ -369,7 +369,8 @@ void MainWindow::initSummaryWidget( void )
     std::cout << "Creating summary..." << std::endl;
 //    GIDUSet gids;
 //    _summary->AddGIDSelection( gids );
-    _summary->CreateSummary( spikesPlayer->spikeReport( ));
+    _summary->CreateSummary( spikesPlayer->spikeReport( ),
+                             spikesPlayer->gids( ));
 //    _summary->setVisible( true );
 
   }
