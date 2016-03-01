@@ -137,7 +137,10 @@ void Summary::AddGIDSelection( const GIDUSet& gids )
     unsigned int newHeight = (_histograms.size( )) * _heightPerRow;
     setMinimumHeight( newHeight );
     std::cout << newHeight << std::endl;
-    resize( width( ), newHeight );
+//    resize( width( ), newHeight );
+
+    this->parentWidget( )->resize( width( ), newHeight + 2 );
+
   }
 
   CreateSummarySpikes( );
@@ -219,7 +222,7 @@ void Summary::paintEvent(QPaintEvent* /*e*/)
   }
 
 
-  if( showMarker )
+  if( _showMarker )
   {
     float percentage = float( _lastMousePosition.x( )) / float( width( ));
     int positionX = _lastMousePosition.x( );
@@ -256,11 +259,11 @@ void Summary::mouseMoveEvent( QMouseEvent* event_ )
   if( this->contentsRect().contains( position ))
   {
     _lastMousePosition = position;
-    showMarker = true;
+    _showMarker = true;
   }
   else
   {
-    showMarker = false;
+    _showMarker = false;
   }
 
   update( );
@@ -302,6 +305,11 @@ void Summary::UpdateGradientColors( void )
 
 }
 
+unsigned int Summary::histogramsNumber( void )
+{
+  return _histograms.size( );
+}
+
 
 void Summary::bins( unsigned int bins_ )
 {
@@ -326,6 +334,10 @@ unsigned int Summary::heightPerRow( void )
   return _heightPerRow;
 }
 
+void Summary::showMarker( bool show_ )
+{
+  _showMarker = show_;
+}
 
 /*****************************************************************************/
 /******************************** HISTOGRAM **********************************/
@@ -544,7 +556,9 @@ const QGradientStops& visimpl::Histogram::gradientStops( void )
 unsigned int visimpl::Histogram::valueAt( float percentage )
 {
   unsigned int position = percentage * _histogram.size( );
-  assert( position < _histogram.size( ));
+
+  if( position >= _histogram.size( ))
+    position = _histogram.size( ) - 1;
 
   return _histogram[ position ];
 }

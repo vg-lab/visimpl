@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QGridLayout>
 #include <QScrollArea>
+#include <QCheckBox>
 
 // #include "SimulationPlayer.h"
 #include <sumrice/sumrice.h>
@@ -50,7 +51,13 @@ public slots:
 
   void UpdateSimulationSlider( float percentage );
 
+protected slots:
+
+  void loadComplete( void );
+
 protected:
+
+  void resizeEvent(QResizeEvent * event);
 
 #ifdef VISIMPL_USE_ZEQ
 
@@ -69,6 +76,7 @@ protected:
 
   void initSummaryWidget( void );
   void initPlaybackDock( void );
+  void updateStackView( void );
 
   visimpl::TSimulationType _simulationType;
 
@@ -91,8 +99,10 @@ private:
 
   Ui::MainWindow* _ui;
 
+  QWidget* _contentWidget;
   QGridLayout* _stackLayout;
-  unsigned int columnsNumber;
-
+  unsigned int _columnsNumber;
+  bool resizingEnabled;
+  std::vector< QCheckBox* > _checkBoxes;
 
 };

@@ -48,8 +48,12 @@ public:
   void bins( unsigned int bins_ );
   unsigned int bins( void );
 
+  unsigned int histogramsNumber( void );
+
   void heightPerRow( unsigned int height_ );
   unsigned int heightPerRow( void );
+
+  void showMarker( bool show_ );
 
 protected:
 
@@ -76,7 +80,7 @@ protected:
   unsigned int _heightPerRow;
 
   QPoint _lastMousePosition;
-  bool showMarker;
+  bool _showMarker;
 
 };
 

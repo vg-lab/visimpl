@@ -24,7 +24,9 @@ MainWindow::MainWindow( QWidget* parent_ )
   connect( _ui->actionQuit, SIGNAL( triggered( )),
            QApplication::instance(), SLOT( quit( )));
 
-  columnsNumber = 100;
+  _columnsNumber = 100;
+  resizingEnabled = false;
+  QTimer::singleShot( 0, this, SLOT( loadComplete( )));
 }
 
 void MainWindow::init( const std::string& zeqUri )
@@ -260,15 +262,17 @@ void MainWindow::initPlaybackDock( )
                        _simulationDock );
 }
 
+
+
 void MainWindow::initSummaryWidget( )
 {
 
 
-  unsigned int widthPerColumn = width( ) / columnsNumber;
+//  unsigned int widthPerColumn = width( ) / _columnsNumber;
 
   _summary = new Summary( nullptr, Summary::T_STACK_EXPANDABLE );
-  _summary->setMinimumHeight( _summary->heightPerRow( ));
-  _summary->setMinimumWidth( width( ) - widthPerColumn );
+//  _summary->setMinimumHeight( _summary->heightPerRow( ));
+//  _summary->setMinimumWidth( width( ) - widthPerColumn );
 //  _summary->setSizePolicy( QSizePolicy::Maximum,
 //                           QSizePolicy::Preferred );
 
@@ -288,20 +292,20 @@ void MainWindow::initSummaryWidget( )
 
   _stackLayout = new QGridLayout( );
 
-  QWidget* contentWidget = new QWidget( );
-//  contentWidget->setSizePolicy( QSizePolicy::Expanding,
+  _contentWidget = new QWidget( );
+//  _contentWidget->setSizePolicy( QSizePolicy::Expanding,
 //                                QSizePolicy::Expanding );
-//  contentWidget->setMinimumHeight( 1000 );
-//  contentWidget->setMinimumWidth(  );
+  _contentWidget->setMinimumHeight( _summary->heightPerRow( ) * _summary->histogramsNumber() );
+  _contentWidget->setMinimumWidth( width( ) - 5 );
   QScrollArea* scrollArea = new QScrollArea( );
 //  QVBoxLayout* centralLayout = new QVBoxLayout( );
 
-  contentWidget->setLayout( _stackLayout );
-  _stackLayout->addWidget( _summary, 0, 0, 1, columnsNumber - 1 );
-  _stackLayout->addWidget( new QPushButton("Test"), 0, columnsNumber, 1, 1);
+  _contentWidget->setLayout( _stackLayout );
+  _stackLayout->addWidget( _summary, 0, 0, 1, _columnsNumber - 1 );
+//  _stackLayout->addWidget( new QPushButton("Test"), 0, _columnsNumber, 1, 1);
 
-  this->setCentralWidget( _summary );
-  scrollArea->setWidget( contentWidget );
+  this->setCentralWidget( scrollArea );
+  scrollArea->setWidget( _contentWidget );
 }
 
 
@@ -450,8 +454,45 @@ void MainWindow::_onSelectionEvent( const zeq::Event& event_ )
   if( _summary )
   {
     _summary->AddGIDSelection( selectedSet );
+    _stackLayout->removeWidget( _summary );
+
+    unsigned int rowsNumber = _summary->histogramsNumber( );
+
+    _stackLayout->addWidget( _summary, 0, 0, rowsNumber,
+                             _columnsNumber - 1 );
+
+    QCheckBox* checkBox = new QCheckBox( );
+    _checkBoxes.push_back( checkBox );
+    _stackLayout->addWidget( checkBox, rowsNumber, _columnsNumber, 1, 1);
   }
 
 }
 
 #endif
+
+void MainWindow::resizeEvent( QResizeEvent * event_ )
+{
+  QMainWindow::resizeEvent( event_ );
+
+  if( resizingEnabled )
+  {
+    unsigned int columnsWidth = width( ) / _columnsNumber;
+    unsigned int currentWidth = width( ) - columnsWidth;
+    unsigned int currentHeight =  _summary->heightPerRow( ) *
+                                  _summary->histogramsNumber( );
+
+    _contentWidget->setMinimumWidth( width( ) );
+    _contentWidget->setMinimumHeight( currentHeight + 2 );
+
+    std::cout << width( ) << " -> " << currentWidth << std::endl;
+//    _summary->setMinimumWidth( currentWidth );
+    _summary->resize( currentWidth, currentHeight );
+  }
+}
+
+void MainWindow::loadComplete( void )
+{
+  resizingEnabled = true;
+  _summary->showMarker( false );
+}
+
