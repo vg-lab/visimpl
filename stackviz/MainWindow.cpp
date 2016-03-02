@@ -271,6 +271,7 @@ void MainWindow::initSummaryWidget( )
 //  unsigned int widthPerColumn = width( ) / _columnsNumber;
 
   _summary = new Summary( nullptr, Summary::T_STACK_EXPANDABLE );
+
 //  _summary->setMinimumHeight( _summary->heightPerRow( ));
 //  _summary->setMinimumWidth( width( ) - widthPerColumn );
 //  _summary->setSizePolicy( QSizePolicy::Maximum,

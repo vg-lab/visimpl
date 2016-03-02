@@ -131,7 +131,8 @@ namespace visimpl
   protected:
 
     std::vector< unsigned int > _histogram;
-    unsigned int _maxValueHistogram;
+    unsigned int _maxValueHistogramLocal;
+    unsigned int _maxValueHistogramGlobal;
     QGradientStops _gradientStops;
 
     brion::Spikes _spikes;

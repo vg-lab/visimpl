@@ -130,7 +130,7 @@ void Summary::AddGIDSelection( const GIDUSet& gids )
     histogram->filteredGIDs( gids );
     histogram->colorMapper( _mainHistogram->colorMapper( ));
     histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
-    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
+    histogram->normalizeRule( visimpl::Histogram::T_NORM_GLOBAL );
     _histograms.push_back( histogram );
 
 
@@ -347,7 +347,7 @@ void Summary::showMarker( bool show_ )
 visimpl::Histogram::Histogram( const brion::Spikes& spikes,
                                float startTime,
                                float endTime )
-: _maxValueHistogram( 0 )
+: _maxValueHistogramLocal( 0 )
 , _spikes( spikes )
 , _startTime( startTime )
 , _endTime( endTime )
@@ -359,7 +359,7 @@ visimpl::Histogram::Histogram( const brion::Spikes& spikes,
 }
 
 visimpl::Histogram::Histogram( const brion::SpikeReport& spikeReport )
-: _maxValueHistogram( 0 )
+: _maxValueHistogramLocal( 0 )
 , _spikes( spikeReport.getSpikes( ))
 , _startTime( spikeReport.getStartTime( ))
 , _endTime( spikeReport.getEndTime( ))
@@ -376,7 +376,11 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
 
   _histogram.clear( );
   _histogram.resize( binsNumber, 0 );
-  _maxValueHistogram = 0;
+  _maxValueHistogramLocal = 0;
+  _maxValueHistogramGlobal = 0;
+
+  std::vector< unsigned int > globalHistogram;
+  globalHistogram.resize( binsNumber, 0 );
 
   float totalTime = _endTime - _startTime ;
 
@@ -388,11 +392,15 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
   float invTotal = 1.0f / totalTime;
   for( auto spike : _spikes )
   {
-    if( filter && _filteredGIDs.find( spike.second ) == _filteredGIDs.end( ))
-      continue;
-
     float perc = ( spike.first - _startTime ) * invTotal;
     unsigned int position =  _histogram.size( ) * perc;
+
+    globalHistogram[ position ]++;
+
+    if( filter && _filteredGIDs.find( spike.second ) == _filteredGIDs.end( ))
+    {
+      continue;
+    }
 
     assert( position < _histogram.size( ));
     _histogram[ position ]++;
@@ -405,15 +413,30 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
   unsigned int maxPos = 0;
   for( auto bin : _histogram )
   {
-    if( bin > _maxValueHistogram )
+    if( bin > _maxValueHistogramLocal )
     {
-      _maxValueHistogram = bin;
+      _maxValueHistogramLocal = bin;
       maxPos = cont;
     }
     cont++;
   }
 
-  std::cout << "Bin with maximum value " << _maxValueHistogram << " at " << maxPos << std::endl;
+  _maxValueHistogramGlobal = _maxValueHistogramLocal;
+
+  if( filter )
+  {
+    for( auto bin : globalHistogram )
+    {
+      if( bin > _maxValueHistogramGlobal )
+      {
+        _maxValueHistogramGlobal = bin;
+      }
+    }
+  }
+
+  std::cout << "Bin with local maximum value " << _maxValueHistogramLocal
+            << " at " << maxPos
+            << std::endl;
 }
 
 namespace visimpl
@@ -446,22 +469,25 @@ void visimpl::Histogram::CalculateColors( void )
   float delta = 1.0f / _histogram.size( );
   float percentage;
 
+  maxValue = _normRule == T_NORM_GLOBAL ?
+             _maxValueHistogramGlobal :
+             _maxValueHistogramLocal;
 
   switch( _colorScale )
   {
     case visimpl::Histogram::T_COLOR_LINEAR:
 
-      maxValue = 1.0f / _maxValueHistogram;
+      maxValue = 1.0f / maxValue;
 
       break;
     case visimpl::Histogram::T_COLOR_EXPONENTIAL:
 
-      maxValue = 1.0f / logf( _maxValueHistogram );
+      maxValue = 1.0f / logf( maxValue );
 
       break;
     case visimpl::Histogram::T_COLOR_LOGARITHMIC:
 
-      maxValue = 1.0f / log10f( _maxValueHistogram );
+      maxValue = 1.0f / log10f( maxValue );
 
       break;
   }
