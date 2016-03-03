@@ -56,6 +56,7 @@ public slots:
   void UpdateSimulationSlider( float percentage );
 
   void UpdateSimulationColorMapping( void );
+  void PreviewSimulationColorMapping( void );
   void changeEditorColorMapping( void );
 
 protected:
@@ -99,5 +100,6 @@ private:
 
   QDockWidget* _simConfigurationDock;
   TransferFunctionEditor* _tfEditor;
+  TransferFunctionWidget* _tfWidget;
 
 };

@@ -164,90 +164,93 @@ void Summary::paintEvent(QPaintEvent* /*e*/)
 
   QGradientStops stops;
 
-  switch(_stackType )
+  if( _mainHistogram)
   {
-  case T_STACK_FIXED:
-  {
-    gradient.setStops( _mainHistogram->gradientStops( ) );
-    QBrush brush( gradient );
-
-    area.setHeight( area.height( ) / 2 );
-    painter.fillRect( area, brush );
-
-    assert( _selectionHistogram );
-
-    stops = _selectionHistogram->gradientStops( );
-
-    if( stops.size( ) == 0)
-      stops = _mainHistogram->gradientStops( );
-
-    gradient.setStops( stops );
-    brush = QBrush ( gradient );
-    area.setCoords( 0, height( ) / 2, width( ), height( ));
-    painter.fillRect( area, brush );
-
-    break;
-  }
-  case T_STACK_EXPANDABLE:
-  {
-    area.setHeight( _heightPerRow );
-    unsigned int counter = 0;
-    unsigned int currentHeight = 0;
-
-    for( auto histogram : _histograms )
+    switch(_stackType )
     {
-//      std::cout << "Histogram stops: " <<  histogram->gradientStops( ).size( ) << std::endl;
-      gradient.setStops( histogram->gradientStops( ));
+    case T_STACK_FIXED:
+    {
+      gradient.setStops( _mainHistogram->gradientStops( ) );
       QBrush brush( gradient );
 
-      area.setCoords( 0, currentHeight, width( ), currentHeight + _heightPerRow );
-
+      area.setHeight( area.height( ) / 2 );
       painter.fillRect( area, brush );
 
-      currentHeight += _heightPerRow;
-      counter++;
+      assert( _selectionHistogram );
+
+      stops = _selectionHistogram->gradientStops( );
+
+      if( stops.size( ) == 0)
+        stops = _mainHistogram->gradientStops( );
+
+      gradient.setStops( stops );
+      brush = QBrush ( gradient );
+      area.setCoords( 0, height( ) / 2, width( ), height( ));
+      painter.fillRect( area, brush );
+
+      break;
     }
-
-    break;
-  }
-  }
-
-  unsigned int currentHeight;
-  for( unsigned int i = 1; i < _histograms.size( ); i++ )
-  {
-    currentHeight = i * _heightPerRow;
-
-    QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
-    painter.drawLine( line );
-  }
-
-
-  if( _showMarker )
-  {
-    float percentage = float( _lastMousePosition.x( )) / float( width( ));
-    int positionX = _lastMousePosition.x( );
-    int margin = 5;
-
-    if( width( ) - positionX < 50 )
-      margin = -50;
-
-    QPen pen( QColor( 255, 255, 255 ));
-    painter.setPen( pen );
-
-    currentHeight = _heightPerRow / 2;
-    QPoint position ( positionX + margin, currentHeight );
-    for( auto histogram : _histograms )
+    case T_STACK_EXPANDABLE:
     {
-      painter.drawText( position,
-                        QString::number( histogram->valueAt( percentage )));
+      area.setHeight( _heightPerRow );
+      unsigned int counter = 0;
+      unsigned int currentHeight = 0;
 
-      position.setY( position.y( ) + _heightPerRow );
+      for( auto histogram : _histograms )
+      {
+  //      std::cout << "Histogram stops: " <<  histogram->gradientStops( ).size( ) << std::endl;
+        gradient.setStops( histogram->gradientStops( ));
+        QBrush brush( gradient );
+
+        area.setCoords( 0, currentHeight, width( ), currentHeight + _heightPerRow );
+
+        painter.fillRect( area, brush );
+
+        currentHeight += _heightPerRow;
+        counter++;
+      }
+
+      break;
+    }
     }
 
-    QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
-    pen.setColor( QColor( 177, 50, 50 ));
-    painter.setPen( pen );
-    painter.drawLine( marker );
+    unsigned int currentHeight;
+    for( unsigned int i = 1; i < _histograms.size( ); i++ )
+    {
+      currentHeight = i * _heightPerRow;
+
+      QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
+      painter.drawLine( line );
+    }
+
+
+    if( _showMarker )
+    {
+      float percentage = float( _lastMousePosition.x( )) / float( width( ));
+      int positionX = _lastMousePosition.x( );
+      int margin = 5;
+
+      if( width( ) - positionX < 50 )
+        margin = -50;
+
+      QPen pen( QColor( 255, 255, 255 ));
+      painter.setPen( pen );
+
+      currentHeight = _heightPerRow / 2;
+      QPoint position ( positionX + margin, currentHeight );
+      for( auto histogram : _histograms )
+      {
+        painter.drawText( position,
+                          QString::number( histogram->valueAt( percentage )));
+
+        position.setY( position.y( ) + _heightPerRow );
+      }
+
+      QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
+      pen.setColor( QColor( 177, 50, 50 ));
+      painter.setPen( pen );
+      painter.drawLine( marker );
+    }
   }
 }
 
@@ -256,17 +259,24 @@ void Summary::mouseMoveEvent( QMouseEvent* event_ )
   QFrame::mouseMoveEvent( event_ );
 
   QPoint position = event_->pos( );
-  if( this->contentsRect().contains( position ))
+  QRect bounds = rect( );
+
+  if( position != _lastMousePosition &&
+      bounds.contains( position ))
   {
     _lastMousePosition = position;
     _showMarker = true;
+    update( );
   }
   else
   {
+    if( _showMarker )
+    {
+      _showMarker = false;
+      update( );
+    }
     _showMarker = false;
   }
-
-  update( );
 
 }
 

@@ -78,6 +78,8 @@ protected:
   void initPlaybackDock( void );
   void updateStackView( void );
 
+  QString _lastOpenedFileName;
+
   visimpl::TSimulationType _simulationType;
 
   Summary* _summary;

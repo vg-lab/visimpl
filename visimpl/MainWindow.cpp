@@ -19,18 +19,11 @@ MainWindow::MainWindow( QWidget* parent_,
   _ui->actionPaintNeurons->setChecked( true );
   _ui->actionShowFPSOnIdleUpdate->setChecked( false );
 
-#ifdef NSOL_USE_BBPSDK
+#ifdef VISIMPL_USE_BRION
   _ui->actionOpenBlueConfig->setEnabled( true );
 #else
   _ui->actionOpenBlueConfig->setEnabled( false );
 #endif
-
-#ifdef NSOL_USE_QT5CORE
-  _ui->actionOpenXMLScene->setEnabled( true );
-#else
-  _ui->actionOpenXMLScene->setEnabled( false );
-#endif
-
 
   connect( _ui->actionQuit, SIGNAL( triggered( )),
            QApplication::instance(), SLOT( quit( )));
@@ -331,19 +324,23 @@ void MainWindow::initSimColorDock( void )
 {
   _simConfigurationDock = new QDockWidget( );
   _simConfigurationDock->setMinimumHeight( 100 );
-  _simConfigurationDock->setMinimumWidth( 600 );
+  _simConfigurationDock->setMinimumWidth( 300 );
   _simConfigurationDock->setMaximumHeight( 400 );
   _simConfigurationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
                                   QSizePolicy::MinimumExpanding );
 
-  _tfEditor = new TransferFunctionEditor( );
+//  _tfEditor = new TransferFunctionEditor( );
+  _tfWidget = new TransferFunctionWidget( );
+  _tfWidget->setMaximumHeight( 100 );
+
 
   QWidget* container = new QWidget( );
   QVBoxLayout* verticalLayout = new QVBoxLayout( );
-  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
+//  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
 
-  verticalLayout->addWidget( _tfEditor );
-  verticalLayout->addWidget( applyColorButton );
+//  verticalLayout->addWidget( _tfEditor );
+  verticalLayout->addWidget( _tfWidget );
+//  verticalLayout->addWidget( applyColorButton );
 
   container->setLayout( verticalLayout );
   _simConfigurationDock->setWidget( container );
@@ -351,8 +348,13 @@ void MainWindow::initSimColorDock( void )
   this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/RightDockWidgetArea,
                        _simConfigurationDock );
 
-  connect( applyColorButton, SIGNAL( clicked( void )),
-             this, SLOT( UpdateSimulationColorMapping( void )));
+//  connect( applyColorButton, SIGNAL( clicked( void )),
+//             this, SLOT( UpdateSimulationColorMapping( void )));
+
+  connect( _tfWidget, SIGNAL( colorChanged( void )),
+           this, SLOT( UpdateSimulationColorMapping( void )));
+  connect( _tfWidget, SIGNAL( previewColor( void )),
+           this, SLOT( PreviewSimulationColorMapping( void )));
 
 }
 
@@ -487,12 +489,19 @@ void MainWindow::UpdateSimulationColorMapping( void )
 {
 //  TTransferFunction& colors = _tfEditor->getColorPoints( );
 
-  _openGLWidget->changeSimulationColorMapping( _tfEditor->getColorPoints( ));
+//  _openGLWidget->changeSimulationColorMapping( _tfEditor->getColorPoints( ));
+  _openGLWidget->changeSimulationColorMapping( _tfWidget->getColors( ));
+}
+
+void MainWindow::PreviewSimulationColorMapping( void )
+{
+  _openGLWidget->changeSimulationColorMapping( _tfWidget->getPreviewColors( ));
 }
 
 void MainWindow::changeEditorColorMapping( void )
 {
-  _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
+//  _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
+  _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
 }
 
 #ifdef VISIMPL_USE_ZEQ

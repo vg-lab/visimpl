@@ -43,8 +43,6 @@ private:
     ColorPoints *_greenPoints;
     ColorPoints *_alphaPoints;
 
-    QString _lastFilePath;
-
 //    osg::ref_ptr<osg::Texture1D> _texture;
 
     Gradient* gradientFrame;

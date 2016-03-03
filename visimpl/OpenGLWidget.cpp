@@ -763,7 +763,7 @@ void OpenGLWidget::paintGL( void )
 
   }
 
-   if( _elapsedTimeSliderAcc > SIM_SLIDER_UPDATE_PERIOD )
+   if( _player && _elapsedTimeSliderAcc > SIM_SLIDER_UPDATE_PERIOD )
    {
      _elapsedTimeSliderAcc = 0.0f;
      emit updateSlider( _player->GetRelativeTime( ));

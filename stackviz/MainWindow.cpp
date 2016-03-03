@@ -15,7 +15,7 @@ MainWindow::MainWindow( QWidget* parent_ )
 {
   _ui->setupUi( this );
 
-#ifdef VISIMPL_USEBRION
+#ifdef VISIMPL_USE_BRION
   _ui->actionOpenBlueConfig->setEnabled( true );
 #else
   _ui->actionOpenBlueConfig->setEnabled( false );
@@ -106,51 +106,51 @@ void MainWindow::openBlueConfigThroughDialog( void )
 {
 #ifdef VISIMPL_USE_BRION
 
-//   QString path = QFileDialog::getOpenFileName(
-//     this, tr( "Open BlueConfig" ), _lastOpenedFileName,
-//     tr( "BlueConfig ( BlueConfig CircuitConfig);; All files (*)" ),
-//     nullptr, QFileDialog::DontUseNativeDialog );
+   QString path = QFileDialog::getOpenFileName(
+     this, tr( "Open BlueConfig" ), _lastOpenedFileName,
+     tr( "BlueConfig ( BlueConfig CircuitConfig);; All files (*)" ),
+     nullptr, QFileDialog::DontUseNativeDialog );
 
-//   if (path != QString( "" ))
-//   {
-//     bool ok1, ok2;
-//     QInputDialog simTypeDialog;
-//     visimpl::TSimulationType simType;
-//     QStringList items = {"Spikes", "Voltages"};
+   if (path != QString( "" ))
+   {
+     bool ok1, ok2;
+     QInputDialog simTypeDialog;
+     visimpl::TSimulationType simType;
+     QStringList items = {"Spikes", "Voltages"};
 
-//     QString text = QInputDialog::getItem(
-//       this, tr( "Please select simulation type" ),
-//       tr( "Type:" ), items, 0, false, &ok1 );
+     QString text = QInputDialog::getItem(
+       this, tr( "Please select simulation type" ),
+       tr( "Type:" ), items, 0, false, &ok1 );
 
-//     if( !ok1 )
-//       return;
+     if( !ok1 )
+       return;
 
-//     if( text == items[0] )
-//     {
-//       simType = visimpl::TSpikes;
-//       ok2 = true;
-//     }
-//     else
-//     {
-//       simType = visimpl::TVoltages;
+     if( text == items[0] )
+     {
+       simType = visimpl::TSpikes;
+       ok2 = true;
+     }
+     else
+     {
+       simType = visimpl::TVoltages;
 
-//       text = QInputDialog::getText(
-//           this, tr( "Please select report" ),
-//           tr( "Report:" ), QLineEdit::Normal,
-//           "soma", &ok2 );
-//     }
+       text = QInputDialog::getText(
+           this, tr( "Please select report" ),
+           tr( "Report:" ), QLineEdit::Normal,
+           "soma", &ok2 );
+     }
 
-//     if ( ok1 && ok2 && !text.isEmpty( ))
-//     {
-// //      std::string targetLabel = text.toStdString( );
-//       std::string reportLabel = text.toStdString( );
-//       _lastOpenedFileName = QFileInfo(path).path( );
-//       std::string fileName = path.toStdString( );
-//       openBlueConfig( fileName, simType, reportLabel );
-//     }
+     if ( ok1 && ok2 && !text.isEmpty( ))
+     {
+ //      std::string targetLabel = text.toStdString( );
+       std::string reportLabel = text.toStdString( );
+       _lastOpenedFileName = QFileInfo(path).path( );
+       std::string fileName = path.toStdString( );
+       openBlueConfig( fileName, simType, reportLabel );
+     }
 
 
-//   }
+   }
 #endif
 
 }
