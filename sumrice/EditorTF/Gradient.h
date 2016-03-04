@@ -39,10 +39,21 @@ public:
 
     virtual void paintEvent(QPaintEvent *event);
 
+    void plot( const QPolygonF& plot );
+    QPolygonF plot( void );
+    void clearPlot( void );
+
 /* Member attributes */
 protected:
     Direction _direction;
     QGradientStops _stops;
+
+    QPolygonF _plot;
+
+private:
+
+    float xPos( float x_ );
+    float yPos( float y_ );
 };
 
 #endif

@@ -6,6 +6,7 @@ set(SUMRICE_PUBLIC_HEADERS
   Summary.h
   qt/CustomSlider.h
   qt/TransferFunctionWidget.h
+  qt/ParticleSizeWidget.h
   log.h
 )
 
@@ -17,6 +18,7 @@ set(SUMRICE_SOURCES
   EditorTF/ColorPoints.cpp
   EditorTF/TransferFunctionEditor.cpp
   qt/TransferFunctionWidget.cpp
+  qt/ParticleSizeWidget.cpp
   Summary.cpp
   SimulationPlayer.cpp
 )
@@ -25,6 +27,7 @@ set(SUMRICE_MOC_HEADERS
   EditorTF/ColorPoints.h
   EditorTF/TransferFunctionEditor.h
   qt/TransferFunctionWidget.h
+  qt/ParticleSizeWidget.h
   Summary.h
 )
 

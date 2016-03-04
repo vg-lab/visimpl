@@ -52,6 +52,31 @@ void Gradient::alphaGradient()
     setGradientStops(stops);
 }
 
+float Gradient::xPos( float x_ )
+{
+  return x_ * width( ) + x( );
+}
+
+float Gradient::yPos( float y_ )
+{
+  return y_ * height( ) + y( );
+}
+
+void Gradient::plot( const QPolygonF& plot_ )
+{
+  _plot = plot_;
+}
+
+QPolygonF Gradient::plot( void )
+{
+  return _plot;
+}
+
+void Gradient::clearPlot( void )
+{
+  _plot.clear( );
+}
+
 void Gradient::paintEvent(QPaintEvent* /*e*/)
 {
     QPainter painter(this);
@@ -60,4 +85,19 @@ void Gradient::paintEvent(QPaintEvent* /*e*/)
     gradient.setStops(_stops);
     QBrush brush(gradient); 
     painter.fillRect(rect(), brush);
+
+    if( _plot.size( ) > 0)
+    {
+      QRect area = rect( );
+      auto prev = _plot.begin( );
+      QPointF prevPoint( xPos( prev->x( )), yPos( prev->y( ) ) );
+      for( auto current = prev + 1; current != _plot.end( ); current++ )
+      {
+        QPointF point( xPos( current->x( )), yPos( current->y( ) ) );
+
+        painter.drawLine( prevPoint, point );
+
+        prevPoint = point;
+      }
+    }
 }
