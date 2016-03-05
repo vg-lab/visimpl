@@ -515,6 +515,36 @@ TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
   return result;
 }
 
+void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
+{
+  if( _ps )
+  {
+    utils::InterpolationSet< float > newSize;
+    for( auto s : sizes )
+    {
+      newSize.Insert( s.first, s.second );
+    }
+    _prototype->size = newSize;
+
+    _ps->UpdateUnified( 0.0f );
+  }
+}
+
+TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
+{
+  TSizeFunction result;
+  if( _ps )
+  {
+    auto v = _prototype->size.values.begin( );
+    for( auto s : _prototype->size.times)
+    {
+      result.push_back( std::make_pair( s, *v ));
+      v++;
+    }
+  }
+  return result;
+}
+
 #ifdef VISIMPL_USE_ZEQ
 
 void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )

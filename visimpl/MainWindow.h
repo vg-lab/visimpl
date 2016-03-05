@@ -58,6 +58,7 @@ public slots:
   void UpdateSimulationColorMapping( void );
   void PreviewSimulationColorMapping( void );
   void changeEditorColorMapping( void );
+  void changeEditorSizeFunction( void );
 
 protected:
 
@@ -101,5 +102,6 @@ private:
   QDockWidget* _simConfigurationDock;
   TransferFunctionEditor* _tfEditor;
   TransferFunctionWidget* _tfWidget;
+  ParticleSizeWidget* _psWidget;
 
 };

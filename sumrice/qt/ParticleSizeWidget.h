@@ -11,16 +11,11 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QMouseEvent>
+#include <QDoubleSpinBox>
+#include <QLabel>
 
 #include "../EditorTF/ColorPoints.h"
 #include "../EditorTF/Gradient.h"
-
-
-#include <prefr/prefr.h>
-
-typedef utils::InterpolationSet< float > TSizeFunction;
-typedef std::vector< TTFColor > TTransferFunction;
-
 
 class ParticleSizeWidget : public QWidget
 {
@@ -60,7 +55,7 @@ protected:
   void InitDialog( void );
 
   ColorPoints* sizePoints;
-  Gradient* sizeFrame;
+  Gradient* _sizeFrame;
   QDoubleSpinBox* _minSizeBox;
   QDoubleSpinBox* _maxSizeBox;
 

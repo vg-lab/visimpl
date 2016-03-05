@@ -88,7 +88,7 @@ void Gradient::paintEvent(QPaintEvent* /*e*/)
 
     if( _plot.size( ) > 0)
     {
-      QRect area = rect( );
+//      QRect wArea = rect( );
       auto prev = _plot.begin( );
       QPointF prevPoint( xPos( prev->x( )), yPos( prev->y( ) ) );
       for( auto current = prev + 1; current != _plot.end( ); current++ )

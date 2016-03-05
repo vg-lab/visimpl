@@ -5,6 +5,10 @@
  *      Author: sgalindo
  */
 
+#include "ParticleSizeWidget.h"
+
+#include <QGridLayout>
+
 ParticleSizeWidget::ParticleSizeWidget( QWidget* parent_ )
 : QWidget( parent_ )
 {
@@ -28,23 +32,32 @@ void ParticleSizeWidget::InitDialog( void )
 {
   _dialog = new QWidget( );
   _dialog->setWindowModality( Qt::ApplicationModal );
-  _dialog->setMinimumSize( 800, 600 );
+  _dialog->setMinimumSize( 800, 200 );
 
   _acceptButton = new QPushButton( "Accept" );
   _cancelButton = new QPushButton( "Cancel" );
   _previewButton = new QPushButton( "Preview" );
 
-  sizeFrame = new Gradient( );
+  _maxSizeBox = new QDoubleSpinBox( );
+  _minSizeBox = new QDoubleSpinBox( );
+
+  _minValueLabel = new QLabel( );
+  _maxValueLabel = new QLabel( );
+
+  _sizeFrame = new Gradient( );
 
   unsigned int row = 0;
   unsigned int totalColumns = 6;
   QGridLayout* dialogLayout = new QGridLayout( );
 
-  dialogLayout->addWidget( new QLabel( "Result (alpha)" ), row, 0, 1, 1 );
-  dialogLayout->addWidget( _maxSizeBox, row++, totalColumns, 1, 1 );
-  dialogLayout->addWidget( sizeFrame, row, 1, 2, totalColumns - 1 );
-  dialogLayout->addWidget( _maxSizeBox, row++, totalColumns, 1, 1 );
+  dialogLayout->addWidget( new QLabel( "Size" ), row, 0, 1, 1 );
+  row++;
+  dialogLayout->addWidget( _sizeFrame, row, 0, 2, totalColumns - 1 );
+  dialogLayout->addWidget( _maxSizeBox, row, totalColumns, 1, 1 );
+  row++;
+  dialogLayout->addWidget( _minSizeBox, row, totalColumns, 1, 1 );
 
+  row++;
   dialogLayout->addWidget( _cancelButton, row, 1, 1, 1 );
   dialogLayout->addWidget( _previewButton, row, 3, 1, 1 );
   dialogLayout->addWidget( _acceptButton, row, 5, 1, 1 );
@@ -53,15 +66,15 @@ void ParticleSizeWidget::InitDialog( void )
 
   /* Setting gradient frames */
   QGradientStops stops;
-  stops << qMakePair(0.0, QColor(0, 0, 0, 0))
-        << qMakePair(1.0, QColor(255, 255, 255, 255));
-  sizeFrame->setDirection(Gradient::HORIZONTAL);
-  sizeFrame->setGradientStops(stops);
+  stops << qMakePair(0.0, QColor(127, 127, 127, 127))
+        << qMakePair(1.0, QColor(127, 127, 127, 127));
+  _sizeFrame->setDirection(Gradient::HORIZONTAL);
+  _sizeFrame->setGradientStops(stops);
 
   QPolygonF points;
   points << QPointF(0, 0) << QPointF(1, 1);
 
-  sizePoints = new ColorPoints(sizeFrame);
+  sizePoints = new ColorPoints(_sizeFrame);
   sizePoints->setPoints(points);
 
   /* Connecting slots */
@@ -96,7 +109,7 @@ TSizeFunction ParticleSizeWidget::pointsToSizeFunc( const QPolygonF &points )
   {
     time = point.x( );
     value = point.y( ) * ( _maxSize - _minSize) + _minSize;
-    result.Insert( time, value );
+    result.push_back( std::make_pair( time, value ));
   }
 
   return result;
@@ -110,23 +123,23 @@ void ParticleSizeWidget::setSizeFunction( const TSizeFunction& sizeFunc )
 
   _minSize = std::numeric_limits< float >::max( );
   _maxSize = std::numeric_limits< float >::min( );
-  for( auto value : sizeFunc.values )
+  for( auto value : sizeFunc )
   {
-    if( value < _minSize )
-      _minSize = value;
+    if( value.second < _minSize )
+      _minSize = value.second;
 
-    if( value > _maxSize )
-      _maxSize = value;
+    if( value.second > _maxSize )
+      _maxSize = value.second;
   }
 
   float invTotal = 1.0f / ( _maxSize - _minSize ) ;
 
-  auto valueIt = sizeFunc.values.begin( );
-  for( auto time : sizeFunc.times )
+//  auto valueIt = sizeFunc.values.begin( );
+  for( auto time : sizeFunc )
   {
-    result.append( QPointF( time, ( *valueIt - _minSize ) * invTotal ));
+    result.append( QPointF( time.first, ( time.second - _minSize ) * invTotal ));
 
-    valueIt++;
+//    valueIt++;
   }
 
   sizePoints->setPoints( result, true );
@@ -137,43 +150,43 @@ void ParticleSizeWidget::setSizeFunction( const TSizeFunction& sizeFunc )
   _maxSizeBox->setValue( _maxSize );
 
   //TODO draw plot on gradient
-  sizeFrame->plot( result );
+  _sizeFrame->plot( result );
 }
 
-void TransferFunctionWidget::gradientClicked( void )
+void ParticleSizeWidget::gradientClicked( void )
 {
   if( _dialog && !_dialog->isVisible( ))
   {
-    setColorPoints( getColors( ), false);
+//    setColorPoints( getColors( ), false);
 
     _dialog->show( );
   }
 }
 
-void TransferFunctionWidget::acceptClicked( void )
+void ParticleSizeWidget::acceptClicked( void )
 {
   _dialog->close( );
 
-  _result->setGradientStops( nTGradientFrame->getGradientStops( ));
-  _tResult = gradientFrame->getGradientStops( );
-  emit colorChanged( );
+//  _result->setGradientStops( nTGradientFrame->getGradientStops( ));
+//  _tResult = gradientFrame->getGradientStops( );
+  emit sizeChanged( );
 }
 
-void TransferFunctionWidget::cancelClicked( void )
+void ParticleSizeWidget::cancelClicked( void )
 {
   _dialog->close( );
 
   if( previewed )
-    emit colorChanged( );
+    emit sizeChanged( );
 }
 
-void TransferFunctionWidget::previewClicked( void )
+void ParticleSizeWidget::previewClicked( void )
 {
   previewed = true;
-  emit previewColor( );
+  emit sizePreview( );
 }
 
-void TransferFunctionWidget::mousePressEvent(QMouseEvent * event_ )
+void ParticleSizeWidget::mousePressEvent(QMouseEvent * event_ )
 {
   if( event_->button( ) == Qt::LeftButton )
   {

@@ -16,9 +16,6 @@
 #include "../EditorTF/ColorPoints.h"
 #include "../EditorTF/Gradient.h"
 
-typedef std::pair< float, QColor > TTFColor;
-typedef std::vector< TTFColor > TTransferFunction;
-
 class TransferFunctionWidget : public QWidget
 {
   Q_OBJECT;

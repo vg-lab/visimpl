@@ -109,6 +109,7 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
 
   changeEditorColorMapping( );
+  changeEditorSizeFunction( );
   initSummaryWidget( );
 }
 
@@ -333,6 +334,8 @@ void MainWindow::initSimColorDock( void )
   _tfWidget = new TransferFunctionWidget( );
   _tfWidget->setMaximumHeight( 100 );
 
+  _psWidget = new ParticleSizeWidget( );
+  _psWidget->setMaximumHeight( 100 );
 
   QWidget* container = new QWidget( );
   QVBoxLayout* verticalLayout = new QVBoxLayout( );
@@ -341,6 +344,7 @@ void MainWindow::initSimColorDock( void )
 //  verticalLayout->addWidget( _tfEditor );
   verticalLayout->addWidget( _tfWidget );
 //  verticalLayout->addWidget( applyColorButton );
+  verticalLayout->addWidget( _psWidget ) ;
 
   container->setLayout( verticalLayout );
   _simConfigurationDock->setWidget( container );
@@ -502,6 +506,11 @@ void MainWindow::changeEditorColorMapping( void )
 {
 //  _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
   _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
+}
+
+void MainWindow::changeEditorSizeFunction( void )
+{
+  _psWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction() );
 }
 
 #ifdef VISIMPL_USE_ZEQ

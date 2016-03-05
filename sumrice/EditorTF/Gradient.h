@@ -3,6 +3,12 @@
 
 #include <QFrame>
 
+typedef std::pair< float, QColor > TTFColor;
+typedef std::vector< TTFColor > TTransferFunction;
+
+typedef std::pair< float, float > TSize;
+typedef std::vector< TSize > TSizeFunction;
+
 class Gradient : public QFrame
 {
 /* Declarations */

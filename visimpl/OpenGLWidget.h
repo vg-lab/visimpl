@@ -98,6 +98,9 @@ public slots:
   void changeSimulationColorMapping( const TTransferFunction& colors );
   TTransferFunction getSimulationColorMapping( void );
 
+  void changeSimulationSizeFunction( const TSizeFunction& sizes );
+  TSizeFunction getSimulationSizeFunction( void );
+
 #ifdef VISIMPL_USE_ZEQ
 
   void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
