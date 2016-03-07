@@ -1,6 +1,8 @@
 #include <QPainter>
 #include <QBrush>
 
+#include <iostream>
+
 #include "Gradient.h"
 
 Gradient::Gradient(QWidget *parent_) :
@@ -52,16 +54,6 @@ void Gradient::alphaGradient()
     setGradientStops(stops);
 }
 
-float Gradient::xPos( float x_ )
-{
-  return x_ * width( ) + x( );
-}
-
-float Gradient::yPos( float y_ )
-{
-  return y_ * height( ) + y( );
-}
-
 void Gradient::plot( const QPolygonF& plot_ )
 {
   _plot = plot_;
@@ -77,6 +69,16 @@ void Gradient::clearPlot( void )
   _plot.clear( );
 }
 
+float Gradient::xPos( float x_ )
+{
+  return x_ * width( );// + x( );
+}
+
+float Gradient::yPos( float y_ )
+{
+  return (1.0f - y_) * height( );// + y( );
+}
+
 void Gradient::paintEvent(QPaintEvent* /*e*/)
 {
     QPainter painter(this);
@@ -88,9 +90,9 @@ void Gradient::paintEvent(QPaintEvent* /*e*/)
 
     if( _plot.size( ) > 0)
     {
-//      QRect wArea = rect( );
+      painter.setBrush( QBrush( QColor( 0, 0, 0 )));
       auto prev = _plot.begin( );
-      QPointF prevPoint( xPos( prev->x( )), yPos( prev->y( ) ) );
+      QPointF prevPoint( xPos( prev->x( )), yPos( prev->y( )));
       for( auto current = prev + 1; current != _plot.end( ); current++ )
       {
         QPointF point( xPos( current->x( )), yPos( current->y( ) ) );

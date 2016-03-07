@@ -14,14 +14,18 @@ ParticleSizeWidget::ParticleSizeWidget( QWidget* parent_ )
 {
   _result = new Gradient( );
   _result->setDirection( Gradient::HORIZONTAL );
+//  _result->setMinimumHeight( 100 );
 
   InitDialog( );
 
   connect( this, SIGNAL( clicked( void )),
            this, SLOT( gradientClicked( void )));
 
+  unsigned int totalColumns = 5;
   QGridLayout* mainLayout = new QGridLayout( );
-  mainLayout->addWidget( _result );
+  mainLayout->addWidget( _result, 0, 0, 1, totalColumns );
+  mainLayout->addWidget( _minValueLabel, 1, 1, 1, 1 );
+  mainLayout->addWidget( _maxValueLabel, 1, 3, 1, 1 );
 
   this->setLayout( mainLayout );
 }
@@ -39,7 +43,11 @@ void ParticleSizeWidget::InitDialog( void )
   _previewButton = new QPushButton( "Preview" );
 
   _maxSizeBox = new QDoubleSpinBox( );
+  _maxSizeBox->setMinimum( 1.0 );
+  _maxSizeBox->setMaximum( 300.0 );
   _minSizeBox = new QDoubleSpinBox( );
+  _maxSizeBox->setMinimum( 1.0 );
+  _maxSizeBox->setMaximum( 300.0 );
 
   _minValueLabel = new QLabel( );
   _maxValueLabel = new QLabel( );
@@ -95,8 +103,35 @@ TSizeFunction ParticleSizeWidget::getSizeFunction( void )
   return _sizeFunction;
 }
 
+TSizeFunction ParticleSizeWidget::getSizePreview( void )
+{
+  return pointsToSizeFunc( sizePoints->points( ),
+                           _minSizeBox->value( ),
+                           _maxSizeBox->value( ));
+}
 
-TSizeFunction ParticleSizeWidget::pointsToSizeFunc( const QPolygonF &points )
+void ParticleSizeWidget::SetFrameBackground( const TTransferFunction& colors_ )
+{
+  QGradientStops result;
+
+  for( auto c : colors_ )
+  {
+    result.append( QGradientStop( c.first, c.second ));
+  }
+
+  _result->setGradientStops( result );
+  _sizeFrame->setGradientStops( result );
+
+}
+
+TSizeFunction ParticleSizeWidget::pointsToSizeFunc( const QPolygonF& points )
+{
+  return pointsToSizeFunc( points, _minSize, _maxSize );
+}
+
+TSizeFunction ParticleSizeWidget::pointsToSizeFunc( const QPolygonF &points,
+                                                    float minSize,
+                                                    float maxSize )
 {
 
   TSizeFunction result;
@@ -108,7 +143,7 @@ TSizeFunction ParticleSizeWidget::pointsToSizeFunc( const QPolygonF &points )
   for( auto point : points)
   {
     time = point.x( );
-    value = point.y( ) * ( _maxSize - _minSize) + _minSize;
+    value = point.y( ) * ( maxSize - minSize) + minSize;
     result.push_back( std::make_pair( time, value ));
   }
 
@@ -143,14 +178,17 @@ void ParticleSizeWidget::setSizeFunction( const TSizeFunction& sizeFunc )
   }
 
   sizePoints->setPoints( result, true );
-  _minValueLabel->setText( QString::number( double( _minSize ) ));
-  _maxValueLabel->setText( QString::number( double( _maxSize ) ));
+  _minValueLabel->setText( QString("Min size: ") +
+                           QString::number( double( _minSize ) ));
+
+  _maxValueLabel->setText( QString("Max size: ") +
+                           QString::number( double( _maxSize ) ));
 
   _minSizeBox->setValue( _minSize );
   _maxSizeBox->setValue( _maxSize );
 
   //TODO draw plot on gradient
-  _sizeFrame->plot( result );
+  _result->plot( result );
 }
 
 void ParticleSizeWidget::gradientClicked( void )
@@ -166,6 +204,13 @@ void ParticleSizeWidget::gradientClicked( void )
 void ParticleSizeWidget::acceptClicked( void )
 {
   _dialog->close( );
+
+  _maxSize = float( _maxSizeBox->value( ));
+  _minSize = float( _minSizeBox->value( ));
+
+  _sizeFunction = pointsToSizeFunc( sizePoints->points( ));
+
+  _result->plot( sizePoints->points( ));
 
 //  _result->setGradientStops( nTGradientFrame->getGradientStops( ));
 //  _tResult = gradientFrame->getGradientStops( );

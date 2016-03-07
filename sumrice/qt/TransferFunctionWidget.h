@@ -24,7 +24,7 @@ public:
   TransferFunctionWidget( QWidget* parent = 0 );
   virtual ~TransferFunctionWidget( );
 
-  TTransferFunction getColors( );
+  TTransferFunction getColors( bool includeAlpha = true );
   void setColorPoints( const TTransferFunction& colors,
                        bool updateResult = true );
 

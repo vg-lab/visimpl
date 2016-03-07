@@ -71,17 +71,21 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_, brion::GIDSet gids )
 //  colorMapper.Insert(0.66f, glm::vec4( 255, 255, 0.0f, 255 ));
 //  colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
 
-//  colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
-//  colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
-//  colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
-//  colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
-//  colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
+  colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
+  colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
+  colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
+  colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
+  colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
 
-  colorMapper.Insert(0.0f, glm::vec4( 255, 170, 170, 255 ));
-  colorMapper.Insert(0.25f, glm::vec4( 212, 106, 106, 255 ));
-  colorMapper.Insert(0.50f, glm::vec4( 170, 57, 57, 255 ));
-  colorMapper.Insert(0.75f, glm::vec4( 128, 21, 21, 255 ));
-  colorMapper.Insert(1.0f, glm::vec4( 85, 0, 0, 255 ));
+//  colorMapper.Insert(0.0f, glm::vec4( 85, 0, 0, 255 ));
+//  colorMapper.Insert(0.25f, glm::vec4( 128, 21, 21, 255 ));
+//  colorMapper.Insert(0.50f, glm::vec4( 170, 57, 57, 255 ));
+//  colorMapper.Insert(0.75f, glm::vec4( 212, 106, 106, 255 ));
+//  colorMapper.Insert(1.0f, glm::vec4( 255, 170, 170, 255 ));
+
+
+
+
 
   _mainHistogram->colorMapper( colorMapper );
 
@@ -130,7 +134,7 @@ void Summary::AddGIDSelection( const GIDUSet& gids )
     histogram->filteredGIDs( gids );
     histogram->colorMapper( _mainHistogram->colorMapper( ));
     histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
-    histogram->normalizeRule( visimpl::Histogram::T_NORM_GLOBAL );
+    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
     _histograms.push_back( histogram );
 
 

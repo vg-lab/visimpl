@@ -101,6 +101,9 @@ public slots:
   void changeSimulationSizeFunction( const TSizeFunction& sizes );
   TSizeFunction getSimulationSizeFunction( void );
 
+  void changeSimulationDecayValue( float value );
+  float getSimulationDecayValue( void );
+
 #ifdef VISIMPL_USE_ZEQ
 
   void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );

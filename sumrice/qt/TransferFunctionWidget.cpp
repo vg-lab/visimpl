@@ -217,11 +217,11 @@ void TransferFunctionWidget::InitDialog( void )
           this, SLOT(colorPointsChanged(const QPolygonF &)));
 }
 
-TTransferFunction TransferFunctionWidget::getColors( void )
+TTransferFunction TransferFunctionWidget::getColors( bool includeAlpha )
 {
   TTransferFunction result;
 
-  for( auto stop : _tResult )
+  for( auto stop : ( includeAlpha ? _tResult : _result->getGradientStops( )) )
   {
     result.push_back( std::make_pair( float( stop.first ), stop.second ));
   }

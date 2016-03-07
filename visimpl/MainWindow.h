@@ -59,6 +59,11 @@ public slots:
   void PreviewSimulationColorMapping( void );
   void changeEditorColorMapping( void );
   void changeEditorSizeFunction( void );
+  void UpdateSimulationSizeFunction( void );
+  void PreviewSimulationSizeFunction( void );
+
+  void changeEditorDecayValue( void );
+  void UpdateSimulationDecayValue( void );
 
 protected:
 
@@ -103,5 +108,5 @@ private:
   TransferFunctionEditor* _tfEditor;
   TransferFunctionWidget* _tfWidget;
   ParticleSizeWidget* _psWidget;
-
+  QDoubleSpinBox* _decayBox;
 };

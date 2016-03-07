@@ -29,6 +29,8 @@ public:
 
   void setSizeFunction( const TSizeFunction& sizeFunc );
 
+  TSizeFunction getSizePreview( void );
+
   void SetFrameBackground( const TTransferFunction& colors_ );
 
 signals:
@@ -47,6 +49,9 @@ protected slots:
 protected:
 
   TSizeFunction pointsToSizeFunc( const QPolygonF& points );
+  TSizeFunction pointsToSizeFunc( const QPolygonF& points,
+                                  float minValue,
+                                  float maxValue );
   QPolygonF sizeFuncToPoints( const TSizeFunction& sizeFunc );
 
 

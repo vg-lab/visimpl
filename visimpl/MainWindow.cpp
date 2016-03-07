@@ -4,6 +4,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
+#include <QGroupBox>
 // #include "qt/CustomSlider.h"
 
 MainWindow::MainWindow( QWidget* parent_,
@@ -110,6 +111,7 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
   changeEditorColorMapping( );
   changeEditorSizeFunction( );
+  changeEditorDecayValue( );
   initSummaryWidget( );
 }
 
@@ -326,25 +328,56 @@ void MainWindow::initSimColorDock( void )
   _simConfigurationDock = new QDockWidget( );
   _simConfigurationDock->setMinimumHeight( 100 );
   _simConfigurationDock->setMinimumWidth( 300 );
-  _simConfigurationDock->setMaximumHeight( 400 );
+//  _simConfigurationDock->setMaximumHeight( 400 );
   _simConfigurationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
                                   QSizePolicy::MinimumExpanding );
 
 //  _tfEditor = new TransferFunctionEditor( );
   _tfWidget = new TransferFunctionWidget( );
-  _tfWidget->setMaximumHeight( 100 );
+  _tfWidget->setMinimumHeight( 100 );
 
   _psWidget = new ParticleSizeWidget( );
-  _psWidget->setMaximumHeight( 100 );
+  _psWidget->setMinimumHeight( 150 );
+
+  _decayBox = new QDoubleSpinBox( );
+  _decayBox->setMinimum( 0.01 );
+  _decayBox->setMaximum( 600.0 );
+
 
   QWidget* container = new QWidget( );
   QVBoxLayout* verticalLayout = new QVBoxLayout( );
 //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
 
-//  verticalLayout->addWidget( _tfEditor );
-  verticalLayout->addWidget( _tfWidget );
-//  verticalLayout->addWidget( applyColorButton );
-  verticalLayout->addWidget( _psWidget ) ;
+  QGroupBox* tFunctionGB = new QGroupBox( "Transfer function" );
+  QVBoxLayout* tfLayout = new QVBoxLayout( );
+  tfLayout->addWidget( _tfWidget );
+  tFunctionGB->setLayout( tfLayout );
+  tFunctionGB->setMaximumHeight( 130 );
+
+  QGroupBox* sFunctionGB = new QGroupBox( "Size function" );
+  QVBoxLayout* sfLayout = new QVBoxLayout( );
+  sfLayout->addWidget( _psWidget);
+  sFunctionGB->setLayout( sfLayout );
+  sFunctionGB->setMaximumHeight( 200 );
+
+  QGroupBox* dFunctionGB = new QGroupBox( "Decay function" );
+  QHBoxLayout* dfLayout = new QHBoxLayout( );
+  dfLayout->addWidget( new QLabel( "Decay \n(simulation time): " ));
+  dfLayout->addWidget( _decayBox );
+  dFunctionGB->setLayout( dfLayout );
+  dFunctionGB->setMaximumHeight( 200 );
+
+  verticalLayout->setAlignment( Qt::AlignTop );
+  verticalLayout->addWidget( tFunctionGB );
+  verticalLayout->addWidget( sFunctionGB );
+  verticalLayout->addWidget( dFunctionGB );
+
+//  verticalLayout->addWidget( new QLabel( "Transfer function" ));
+//
+//  verticalLayout->addWidget( _tfWidget );
+//
+//  verticalLayout->addWidget( new QLabel( "Size function" ));
+//  verticalLayout->addWidget( _psWidget ) ;
 
   container->setLayout( verticalLayout );
   _simConfigurationDock->setWidget( container );
@@ -359,6 +392,15 @@ void MainWindow::initSimColorDock( void )
            this, SLOT( UpdateSimulationColorMapping( void )));
   connect( _tfWidget, SIGNAL( previewColor( void )),
            this, SLOT( PreviewSimulationColorMapping( void )));
+
+  connect( _psWidget, SIGNAL( sizeChanged( void )),
+           this, SLOT( UpdateSimulationSizeFunction( void )));
+
+  connect( _psWidget, SIGNAL( sizePreview( void )),
+           this, SLOT( PreviewSimulationSizeFunction( void )));
+
+  connect( _decayBox, SIGNAL( valueChanged( double )),
+           this, SLOT( UpdateSimulationDecayValue( void )));
 
 }
 
@@ -495,6 +537,7 @@ void MainWindow::UpdateSimulationColorMapping( void )
 
 //  _openGLWidget->changeSimulationColorMapping( _tfEditor->getColorPoints( ));
   _openGLWidget->changeSimulationColorMapping( _tfWidget->getColors( ));
+  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
 }
 
 void MainWindow::PreviewSimulationColorMapping( void )
@@ -506,12 +549,34 @@ void MainWindow::changeEditorColorMapping( void )
 {
 //  _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
   _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
+  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
 }
 
 void MainWindow::changeEditorSizeFunction( void )
 {
   _psWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction() );
 }
+
+void MainWindow::UpdateSimulationSizeFunction( void )
+{
+  _openGLWidget->changeSimulationSizeFunction( _psWidget->getSizeFunction( ));
+}
+
+void MainWindow::PreviewSimulationSizeFunction( void )
+{
+  _openGLWidget->changeSimulationSizeFunction( _psWidget->getSizePreview( ));
+}
+
+void MainWindow::changeEditorDecayValue( void )
+{
+  _decayBox->setValue( _openGLWidget->getSimulationDecayValue( ));
+}
+
+void MainWindow::UpdateSimulationDecayValue( void )
+{
+  _openGLWidget->changeSimulationDecayValue( _decayBox->value( ));
+}
+
 
 #ifdef VISIMPL_USE_ZEQ
 void MainWindow::_setZeqUri( const std::string& uri_ )

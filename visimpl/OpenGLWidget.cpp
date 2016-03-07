@@ -522,6 +522,7 @@ void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
     utils::InterpolationSet< float > newSize;
     for( auto s : sizes )
     {
+      std::cout << s.first << " " << s.second << std::endl;
       newSize.Insert( s.first, s.second );
     }
     _prototype->size = newSize;
@@ -543,6 +544,16 @@ TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
     }
   }
   return result;
+}
+
+void OpenGLWidget::changeSimulationDecayValue( float value )
+{
+  _prototype->SetLife( value, value );
+}
+
+float OpenGLWidget::getSimulationDecayValue( void )
+{
+  return _prototype->maxLife;
 }
 
 #ifdef VISIMPL_USE_ZEQ
@@ -611,6 +622,8 @@ void OpenGLWidget::paintParticles( void )
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+//  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
   glFrontFace(GL_CCW);
 
