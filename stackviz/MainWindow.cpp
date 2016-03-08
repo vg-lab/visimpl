@@ -42,6 +42,9 @@ void MainWindow::init( const std::string& zeqUri )
   if( !zeqUri.empty( ))
   {
      _setZeqUri( zeqUri );
+     _zeqEvents = new ZeqEventsManager( zeqUri );
+     _zeqEvents->frameReceived.connect(
+         boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ) );
   }
   #endif
 

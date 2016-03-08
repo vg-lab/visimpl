@@ -28,7 +28,6 @@ namespace visimpl
 
     if( loadData )
       LoadData( );
-
   }
 
   SimulationPlayer::~SimulationPlayer( )
@@ -177,6 +176,16 @@ namespace visimpl
     return _loop;
   }
 
+//  void SimulationPlayer::autonomous( bool autonomous_ )
+//  {
+//    _autonomous = autonomous_;
+//  }
+//
+//  bool SimulationPlayer::autonomous( void )
+//  {
+//    return _autonomous;
+//  }
+
   brion::BlueConfig* SimulationPlayer::blueConfig( void )
   {
     return _blueConfig;
@@ -212,49 +221,70 @@ namespace visimpl
     }
   }
 
-
 #ifdef VISIMPL_USE_ZEQ
-void SimulationPlayer::_setZeqUri( const std::string&
-                                   uri_
-  )
-{
-  _zeqConnection = true;
-  _uri =  servus::URI( uri_ );
-  _subscriber = new zeq::Subscriber( _uri );
 
-  _subscriber->registerHandler( zeq::hbp::EVENT_FRAME,
-      boost::bind( &SimulationPlayer::_onFrameEvent , this, _1 ));
-
-  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
-
-}
-
-void* SimulationPlayer::_Subscriber( void* subs )
-{
-  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
-  while ( true )
+  void SimulationPlayer::connectZeq( const std::string& zeqUri )
   {
-    subscriber->receive( 10000 );
-  }
-  pthread_exit( NULL );
-}
+    _zeqEvents = new ZeqEventsManager( zeqUri );
 
-void SimulationPlayer::_onFrameEvent( const zeq::Event& event_ )
-{
-
-  zeq::hbp::data::Frame frame = zeq::hbp::deserializeFrame( event_ );
-
-  float percentage = (frame.current - frame.start) / (frame.end - frame.start);
-
-  if( playerID == masterID )
-  {
-    playbackPositionAt( percentage );
+    _zeqEvents->frameReceived.connect( boost::bind( &SimulationPlayer::requestPlaybackAt,
+                                       this, _1 ));
   }
 
+  void SimulationPlayer::requestPlaybackAt( float percentage )
+  {
+    PlayAt( percentage );
+  }
 
-}
+  void SimulationPlayer::sendCurrentTimestamp( void )
+  {
+    _zeqEvents->sendFrame( _startTime, _endTime, _currentTime );
+  }
 
 #endif
+
+//void SimulationPlayer::_setZeqUri( const std::string&
+//                                   uri_
+//  )
+//{
+//  _zeqConnection = true;
+//  _uri =  servus::URI( uri_ );
+//  _subscriber = new zeq::Subscriber( _uri );
+//  _publisher = new zeq::Publisher( _uri );
+//
+//  _subscriber->registerHandler( zeq::hbp::EVENT_FRAME,
+//      boost::bind( &SimulationPlayer::_onFrameEvent , this, _1 ));
+//
+//  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
+//
+//}
+//
+//void* SimulationPlayer::_Subscriber( void* subs )
+//{
+//  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
+//  while ( true )
+//  {
+//    subscriber->receive( 10000 );
+//  }
+//  pthread_exit( NULL );
+//}
+//
+//void SimulationPlayer::_onFrameEvent( const zeq::Event& event_ )
+//{
+//
+//  zeq::hbp::data::Frame frame = zeq::hbp::deserializeFrame( event_ );
+//
+//  float percentage = (frame.current - frame.start) / (frame.end - frame.start);
+//
+//  if( playerID == masterID )
+//  {
+//    playbackPositionAt( percentage );
+//  }
+//
+//
+//}
+//
+//#endif
 
 
   //*************************************************************************

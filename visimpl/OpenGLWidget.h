@@ -131,6 +131,7 @@ protected:
 #ifdef VISIMPL_USE_ZEQ
 
   std::unordered_set< uint32_t > _selectedGIDs;
+  std::string _zeqUri;
 
 #endif
 

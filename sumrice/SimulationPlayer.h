@@ -12,17 +12,18 @@
 #include <brain/brain.h>
 
 #include <unordered_map>
-
+//
 #ifdef VISIMPL_USE_ZEQ
-  #include <zeq/zeq.h>
-  #include <zeq/hbp/hbp.h>
-  #include <servus/uri.h>
-
-  #include <pthread.h>
-  #include <mutex>
-
-  #include <boost/signals2/signal.hpp>
-  #include <boost/bind.hpp>
+//  #include <zeq/zeq.h>
+//  #include <zeq/hbp/hbp.h>
+//  #include <servus/uri.h>
+//
+//  #include <pthread.h>
+//  #include <mutex>
+//
+#include <boost/signals2/signal.hpp>
+#include <boost/bind.hpp>
+#include "ZeqEventsManager.h"
 #endif
 
 namespace visimpl
@@ -89,6 +90,9 @@ namespace visimpl
     void loop( bool loop );
     bool loop( void );
 
+    void autonomous( bool autonomous_ );
+    bool autonomous( void );
+
     brion::BlueConfig* blueConfig( void );
     brain::Circuit* circuit( void );
     const brion::GIDSet& gids( void );
@@ -98,12 +102,15 @@ namespace visimpl
 
 #ifdef VISIMPL_USE_ZEQ
 
-    // Client side
-    void requestPlaybackAt( float percentage );
-    void receiveCurrentPosition( float percentage );
+    void connectZeq( const std::string& zeqUri );
 
-    // Server side
-    void acceptPlaybackAt( float percentage );
+//    // Client side
+    void requestPlaybackAt( float percentage );
+    void sendCurrentTimestamp( void );
+//    void receiveCurrentPosition( float percentage );
+//
+//    // Server side
+//    void acceptPlaybackAt( float percentage );
 
 #endif
 
@@ -132,28 +139,30 @@ namespace visimpl
     brain::Circuit* _circuit;
     brion::GIDSet _gids;
 
-    unsigned int playerID;
-    unsigned int masterID;
-
-    boost::signals2::signal< void ( float x )> playbackPositionAt;
-
-
 #ifdef VISIMPL_USE_ZEQ
-
-  void _onFrameEvent( const zeq::Event& event_ );
-  void _setZeqUri( const std::string& );
-  static void* _Subscriber( void* subscriber );
-
-  bool _zeqConnection;
-
-  servus::URI _uri;
-  zeq::Subscriber* _subscriber;
-  zeq::Publisher* _publisher;
-
-
-  pthread_t _subscriberThread;
-
+    ZeqEventsManager* _zeqEvents;
 #endif
+//    bool _autonomous;
+
+//    boost::signals2::signal< void ( float x )> playbackPositionAt;
+
+
+//#ifdef VISIMPL_USE_ZEQ
+//
+//  void _onFrameEvent( const zeq::Event& event_ );
+//  void _setZeqUri( const std::string& );
+//  static void* _Subscriber( void* subscriber );
+//
+//  bool _zeqConnection;
+//
+//  servus::URI _uri;
+//  zeq::Subscriber* _subscriber;
+//  zeq::Publisher* _publisher;
+//
+//
+//  pthread_t _subscriberThread;
+//
+//#endif
 
   };
 

@@ -72,6 +72,8 @@ protected:
 
   pthread_t _subscriberThread;
 
+  ZeqEventsManager* _zeqEvents;
+
 #endif
 
   void initSummaryWidget( void );

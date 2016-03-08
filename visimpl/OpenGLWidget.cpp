@@ -28,11 +28,14 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
                             Qt::WindowFlags windowsFlags_,
                             bool paintNeurons_,
                             const std::string&
-//#ifdef VISIMPL_USE_ZEQ
-//                            zeqUri
-//#endif
+#ifdef VISIMPL_USE_ZEQ
+                            zeqUri
+#endif
   )
   : QOpenGLWidget( parent_, windowsFlags_ )
+#ifdef VISIMPL_USE_ZEQ
+  , _zeqUri( zeqUri )
+#endif
   , _fpsLabel( this )
   , _showFps( false )
   , _wireframe( false )
@@ -52,6 +55,7 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _firstFrame( true )
   , _elapsedTimeRenderAcc( 0.0f )
   , _elapsedTimeSliderAcc( 0.0f )
+
 {
 //#ifdef VISIMPL_USE_ZEQ
 //  if ( zeqUri != "" )
@@ -136,6 +140,7 @@ void OpenGLWidget::loadData( const std::string& fileName,
     }
 
     createParticleSystem( );
+    _player->connectZeq( _zeqUri );
 
     break;
 
@@ -818,6 +823,14 @@ void OpenGLWidget::paintGL( void )
    if( _player && _elapsedTimeSliderAcc > SIM_SLIDER_UPDATE_PERIOD )
    {
      _elapsedTimeSliderAcc = 0.0f;
+
+#ifdef VISIMPL_USE_ZEQ
+     if( _zeqUri != "" )
+     {
+       _player->sendCurrentTimestamp( );
+     }
+#endif
+
      emit updateSlider( _player->GetRelativeTime( ));
    }
 

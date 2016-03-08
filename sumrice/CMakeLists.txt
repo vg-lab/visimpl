@@ -3,6 +3,7 @@ set(SUMRICE_PUBLIC_HEADERS
   EditorTF/ColorPoints.h
   EditorTF/TransferFunctionEditor.h
   SimulationPlayer.h
+  ZeqEventsManager.h
   Summary.h
   qt/CustomSlider.h
   qt/TransferFunctionWidget.h
@@ -21,6 +22,7 @@ set(SUMRICE_SOURCES
   qt/ParticleSizeWidget.cpp
   Summary.cpp
   SimulationPlayer.cpp
+  ZeqEventsManager.cpp
 )
 
 set(SUMRICE_MOC_HEADERS
