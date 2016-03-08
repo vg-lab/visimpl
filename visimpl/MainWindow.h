@@ -3,6 +3,7 @@
 #include <QPushButton>
 #include <QSlider>
 #include <QTimer>
+#include <QRadioButton>
 
 #include "OpenGLWidget.h"
 //#include "SimulationPlayer.h"
@@ -65,6 +66,8 @@ public slots:
   void changeEditorDecayValue( void );
   void UpdateSimulationDecayValue( void );
 
+  void AlphaBlendingToggled( void );
+
 protected:
 
 #ifdef VISIMPL_USE_ZEQ
@@ -109,4 +112,7 @@ private:
   TransferFunctionWidget* _tfWidget;
   ParticleSizeWidget* _psWidget;
   QDoubleSpinBox* _decayBox;
+
+  QRadioButton* _alphaNormalButton;
+  QRadioButton* _alphaAccumulativeButton;
 };

@@ -74,6 +74,8 @@ public:
   visimpl::SimulationPlayer* player( );
   void resetParticles( void );
 
+  void SetAlphaBlendingAccumulative( bool accumulative = true );
+
 signals:
 
   void updateSlider( float );
@@ -189,6 +191,8 @@ protected:
   float _renderPeriod;
   float _elapsedTimeRenderAcc;
   float _elapsedTimeSliderAcc;
+
+  bool alphaBlendingAccumulative;
 
 private:
 

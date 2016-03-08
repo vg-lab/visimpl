@@ -343,6 +343,9 @@ void MainWindow::initSimColorDock( void )
   _decayBox->setMinimum( 0.01 );
   _decayBox->setMaximum( 600.0 );
 
+  _alphaNormalButton = new QRadioButton( "Normal" );
+  _alphaAccumulativeButton = new QRadioButton( "Accumulative" );
+  _openGLWidget->SetAlphaBlendingAccumulative( false );
 
   QWidget* container = new QWidget( );
   QVBoxLayout* verticalLayout = new QVBoxLayout( );
@@ -367,10 +370,21 @@ void MainWindow::initSimColorDock( void )
   dFunctionGB->setLayout( dfLayout );
   dFunctionGB->setMaximumHeight( 200 );
 
+  QGroupBox* rFunctionGB = new QGroupBox( "Alpha blending function" );
+  QHBoxLayout* rfLayout = new QHBoxLayout( );
+  rfLayout->addWidget( new QLabel( "Alhpa\nBlending: " ));
+  rfLayout->addWidget( _alphaNormalButton );
+  rfLayout->addWidget( _alphaAccumulativeButton );
+  rFunctionGB->setLayout( rfLayout );
+  rFunctionGB->setMaximumHeight( 200 );
+
+
   verticalLayout->setAlignment( Qt::AlignTop );
   verticalLayout->addWidget( tFunctionGB );
   verticalLayout->addWidget( sFunctionGB );
   verticalLayout->addWidget( dFunctionGB );
+  verticalLayout->addWidget( rFunctionGB );
+
 
 //  verticalLayout->addWidget( new QLabel( "Transfer function" ));
 //
@@ -402,6 +416,13 @@ void MainWindow::initSimColorDock( void )
   connect( _decayBox, SIGNAL( valueChanged( double )),
            this, SLOT( UpdateSimulationDecayValue( void )));
 
+  connect( _alphaNormalButton, SIGNAL( toggled( bool )),
+           this, SLOT( AlphaBlendingToggled( void ) ));
+
+//  connect( _alphaAccumulativeButton, SIGNAL( toggled( bool )),
+//           this, SLOT( AlphaBlendingToggled( void ) ));
+
+  _alphaNormalButton->setChecked( true );
 }
 
 void MainWindow::initSummaryWidget( void )
@@ -575,6 +596,21 @@ void MainWindow::changeEditorDecayValue( void )
 void MainWindow::UpdateSimulationDecayValue( void )
 {
   _openGLWidget->changeSimulationDecayValue( _decayBox->value( ));
+}
+
+void MainWindow::AlphaBlendingToggled( void )
+{
+  std::cout << "Changing alpha blending... ";
+  if( _alphaNormalButton->isChecked( ))
+  {
+    std::cout << "Normal" << std::endl;
+    _openGLWidget->SetAlphaBlendingAccumulative( false );
+  }
+  else
+  {
+    std::cout << "Accumulative" << std::endl;
+    _openGLWidget->SetAlphaBlendingAccumulative( true );
+  }
 }
 
 

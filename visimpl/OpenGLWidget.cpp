@@ -473,6 +473,12 @@ void OpenGLWidget::resetParticles( void )
   _ps->UpdateUnified( 0.0f  );
 }
 
+void OpenGLWidget::SetAlphaBlendingAccumulative( bool accumulative )
+{
+  alphaBlendingAccumulative = accumulative;
+}
+
+
 void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
 {
 
@@ -621,8 +627,11 @@ void OpenGLWidget::paintParticles( void )
 
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-//  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  if( alphaBlendingAccumulative )
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+  else
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 
   glFrontFace(GL_CCW);

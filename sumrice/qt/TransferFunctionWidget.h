@@ -39,7 +39,7 @@ protected slots:
   void cancelClicked( void );
   void previewClicked( void );
 
-  void colorPointsChanged(const QPolygonF &points);
+  void colorPointsChanged( const QPolygonF &points );
 
 signals:
 
@@ -68,8 +68,8 @@ protected:
   Gradient* alphaGradientFrame;
 
   QWidget* _dialog;
-  QPushButton* _acceptButton;
-  QPushButton* _cancelButton;
+  QPushButton* _saveButton;
+  QPushButton* _discardButton;
   QPushButton* _previewButton;
   bool previewed;
 

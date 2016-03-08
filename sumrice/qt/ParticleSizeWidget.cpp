@@ -17,9 +17,9 @@ ParticleSizeWidget::ParticleSizeWidget( QWidget* parent_ )
 //  _result->setMinimumHeight( 100 );
 
   InitDialog( );
-
-  connect( this, SIGNAL( clicked( void )),
-           this, SLOT( gradientClicked( void )));
+//
+//  connect( this, SIGNAL( clicked( void )),
+//           this, SLOT( gradientClicked( void )));
 
   unsigned int totalColumns = 5;
   QGridLayout* mainLayout = new QGridLayout( );
@@ -35,11 +35,11 @@ ParticleSizeWidget::ParticleSizeWidget( QWidget* parent_ )
 void ParticleSizeWidget::InitDialog( void )
 {
   _dialog = new QWidget( );
-  _dialog->setWindowModality( Qt::ApplicationModal );
+  _dialog->setWindowModality( Qt::NonModal );
   _dialog->setMinimumSize( 800, 200 );
 
-  _acceptButton = new QPushButton( "Accept" );
-  _cancelButton = new QPushButton( "Cancel" );
+  _saveButton = new QPushButton( "Save" );
+  _discardButton = new QPushButton( "Discard" );
   _previewButton = new QPushButton( "Preview" );
 
   _maxSizeBox = new QDoubleSpinBox( );
@@ -66,9 +66,9 @@ void ParticleSizeWidget::InitDialog( void )
   dialogLayout->addWidget( _minSizeBox, row, totalColumns, 1, 1 );
 
   row++;
-  dialogLayout->addWidget( _cancelButton, row, 1, 1, 1 );
+  dialogLayout->addWidget( _discardButton, row, 1, 1, 1 );
   dialogLayout->addWidget( _previewButton, row, 3, 1, 1 );
-  dialogLayout->addWidget( _acceptButton, row, 5, 1, 1 );
+  dialogLayout->addWidget( _saveButton, row, 5, 1, 1 );
 
   _dialog->setLayout( dialogLayout );
 
@@ -86,16 +86,16 @@ void ParticleSizeWidget::InitDialog( void )
   sizePoints->setPoints(points);
 
   /* Connecting slots */
-  connect( _acceptButton, SIGNAL( clicked( void )),
+  connect( _saveButton, SIGNAL( clicked( void )),
            this, SLOT( acceptClicked( void )));
-  connect( _cancelButton, SIGNAL( clicked( void )),
+  connect( _discardButton, SIGNAL( clicked( void )),
            this, SLOT( cancelClicked( void )));
 
   connect( _previewButton, SIGNAL( clicked( void )),
            this, SLOT( previewClicked( void) ));
 
-  connect( sizePoints, SIGNAL(pointsChanged(const QPolygonF &)),
-          this, SLOT(colorPointsChanged(const QPolygonF &)));
+//  connect( sizePoints, SIGNAL(pointsChanged(const QPolygonF &)),
+//          this, SLOT(colorPointsChanged(const QPolygonF &)));
 }
 
 TSizeFunction ParticleSizeWidget::getSizeFunction( void )

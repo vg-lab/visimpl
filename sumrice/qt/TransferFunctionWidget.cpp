@@ -26,8 +26,8 @@ QWidget( parent_ )
   _result->setGradientStops( nTGradientFrame->getGradientStops( ));
   _tResult = gradientFrame->getGradientStops( );
 
-  connect( this, SIGNAL( clicked( void )),
-           this, SLOT( gradientClicked( void )));
+//  connect( this, SIGNAL( clicked( void )),
+//           this, SLOT( gradientClicked( void )));
 
   QGridLayout* mainLayout = new QGridLayout( );
   mainLayout->addWidget( _result );
@@ -43,11 +43,11 @@ TransferFunctionWidget::~TransferFunctionWidget()
 void TransferFunctionWidget::InitDialog( void )
 {
   _dialog = new QWidget( );
-  _dialog->setWindowModality( Qt::ApplicationModal );
+  _dialog->setWindowModality( Qt::NonModal );
   _dialog->setMinimumSize( 800, 600 );
 
-  _acceptButton = new QPushButton( "Accept" );
-  _cancelButton = new QPushButton( "Cancel" );
+  _saveButton = new QPushButton( "Save" );
+  _discardButton = new QPushButton( "Discard" );
   _previewButton = new QPushButton( "Preview" );
 
   gradientFrame = new Gradient( );
@@ -76,9 +76,9 @@ void TransferFunctionWidget::InitDialog( void )
   dialogLayout->addWidget( new QLabel( "Result (alpha)" ), row, 0, 1, 1 );
   dialogLayout->addWidget( gradientFrame, row++, 1, 1, totalColumns );
 
-  dialogLayout->addWidget( _cancelButton, row, 1, 1, 1 );
+  dialogLayout->addWidget( _discardButton, row, 1, 1, 1 );
   dialogLayout->addWidget( _previewButton, row, 3, 1, 1 );
-  dialogLayout->addWidget( _acceptButton, row, 5, 1, 1 );
+  dialogLayout->addWidget( _saveButton, row, 5, 1, 1 );
 
   _dialog->setLayout( dialogLayout );
 
@@ -115,9 +115,9 @@ void TransferFunctionWidget::InitDialog( void )
   alphaGradientFrame->alphaGradient();
 
   /* Connecting slots */
-  connect( _acceptButton, SIGNAL( clicked( void )),
+  connect( _saveButton, SIGNAL( clicked( void )),
            this, SLOT( acceptClicked( void )));
-  connect( _cancelButton, SIGNAL( clicked( void )),
+  connect( _discardButton, SIGNAL( clicked( void )),
            this, SLOT( cancelClicked( void )));
 
   connect( _previewButton, SIGNAL( clicked( void )),
@@ -324,13 +324,13 @@ void TransferFunctionWidget::buttonClicked( QAbstractButton* button )
 {
   _dialog->close( );
 
-  if( button == _acceptButton )
+  if( button == _saveButton )
   {
     _result->setGradientStops( nTGradientFrame->getGradientStops( ));
     _tResult = gradientFrame->getGradientStops( );
     emit colorChanged( );
   }
-  else if( button == _cancelButton )
+  else if( button == _discardButton )
   {
     if( previewed )
       emit colorChanged( );

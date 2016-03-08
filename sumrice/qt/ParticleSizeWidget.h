@@ -73,8 +73,8 @@ protected:
   QLabel* _maxValueLabel;
 
   QWidget* _dialog;
-  QPushButton* _acceptButton;
-  QPushButton* _cancelButton;
+  QPushButton* _saveButton;
+  QPushButton* _discardButton;
   QPushButton* _previewButton;
   bool previewed;
 };
