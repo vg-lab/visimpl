@@ -18,13 +18,18 @@
 
   #include <boost/signals2/signal.hpp>
   #include <boost/bind.hpp>
+
+#ifdef VISIMPL_USE_GMRVZEQ
+  #include <gmrvzeq/gmrvzeq.h>
+#endif
+
 #endif
 
 class ZeqEventsManager
 {
 public:
 
-  ZeqEventsManager( const std::string zeqUri_ );
+  ZeqEventsManager( const std::string& zeqUri_ );
 
 //  float getLastRelativePosition( void );
 //  float getCUrrentRelativePosition( void );
@@ -34,6 +39,7 @@ public:
 
 
   boost::signals2::signal< void ( float ) > frameReceived;
+  boost::signals2::signal< void ( unsigned int ) > playbackOpReceived;
 
 
 #ifdef VISIMPL_USE_ZEQ
@@ -41,10 +47,13 @@ public:
 public:
 
   void sendFrame( const float& start, const float& end,
-                  const float& current );
+                  const float& current ) const;
+
+  void sendPlaybackOp( zeq::gmrv::PlaybackOperation operation ) const;
 
 protected:
 
+  void _onPlaybackOpEvent( const zeq::Event& event_ );
   void _onFrameEvent( const zeq::Event& event_ );
   void _setZeqUri( const std::string& );
   static void* _Subscriber( void* subscriber );

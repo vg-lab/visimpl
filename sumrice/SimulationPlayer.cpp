@@ -223,6 +223,14 @@ namespace visimpl
 
 #ifdef VISIMPL_USE_ZEQ
 
+#ifdef VISIMPL_USE_GMRVZEQ
+
+  ZeqEventsManager* SimulationPlayer::zeqEvents( void )
+  {
+    return _zeqEvents;
+  }
+#endif
+
   void SimulationPlayer::connectZeq( const std::string& zeqUri )
   {
     _zeqEvents = new ZeqEventsManager( zeqUri );

@@ -7,6 +7,10 @@
 #include <QGroupBox>
 // #include "qt/CustomSlider.h"
 
+#ifdef VISIMPL_USE_GMRVZEQ
+  #include <gmrvzeq/gmrvzeq.h>
+#endif
+
 MainWindow::MainWindow( QWidget* parent_,
                         bool updateOnIdle )
   : QMainWindow( parent_ )
@@ -108,6 +112,8 @@ void MainWindow::openBlueConfig( const std::string& fileName,
   _endTimeLabel->setText(
         QString::number( (double)_openGLWidget->player( )->endTime( )));
 
+  _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
+      boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
 
   changeEditorColorMapping( );
   changeEditorSizeFunction( );
@@ -445,7 +451,7 @@ void MainWindow::initSummaryWidget( void )
   }
 }
 
-void MainWindow::Play( void )
+void MainWindow::Play( bool notify )
 {
 //  playIcon.swap( pauseIcon );
 
@@ -456,15 +462,29 @@ void MainWindow::Play( void )
     if( _openGLWidget->player( )->isPlaying( ))
     {
       _playButton->setIcon( _pauseIcon );
+
+      if( notify )
+      {
+#ifdef VISIMPL_USE_ZEQ
+      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PAUSE );
+#endif
+      }
     }
     else
     {
       _playButton->setIcon( _playIcon );
+
+      if( notify )
+      {
+#ifdef VISIMPL_USE_ZEQ
+      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PLAY );
+#endif
+      }
     }
   }
 }
 
-void MainWindow::Stop( void )
+void MainWindow::Stop( bool notify )
 {
   if( _openGLWidget )
   {
@@ -472,26 +492,44 @@ void MainWindow::Stop( void )
     _playButton->setIcon( _playIcon );
     _startTimeLabel->setText(
           QString::number( (double)_openGLWidget->player( )->startTime( )));
+
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeq::gmrv::STOP );
+#endif
+    }
+
   }
 }
 
-void MainWindow::Repeat( bool repeat )
+void MainWindow::Repeat( bool repeat, bool notify )
 {
   if( _openGLWidget )
   {
     _openGLWidget->Repeat( repeat );
+
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( repeat ?
+                                  zeq::gmrv::ENABLE_LOOP :
+                                  zeq::gmrv::DISABLE_LOOP );
+#endif
+    }
+
   }
 }
 
-void MainWindow::PlayAt( void )
+void MainWindow::PlayAt( bool notify )
 {
   if( _openGLWidget )
   {
-    PlayAt( _simSlider->sliderPosition( ));
+    PlayAt( _simSlider->sliderPosition( ), notify );
   }
 }
 
-void MainWindow::PlayAt( int sliderPosition )
+void MainWindow::PlayAt( int sliderPosition, bool notify )
 {
   if( _openGLWidget )
   {
@@ -508,10 +546,21 @@ void MainWindow::PlayAt( int sliderPosition )
 
     _openGLWidget->PlayAt( percentage );
 
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+    // Send event
+    _openGLWidget->player( )->zeqEvents( )->sendFrame( _simSlider->minimum( ),
+                           _simSlider->maximum( ),
+                           sliderPosition );
+
+    _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PLAY );
+#endif
+    }
   }
 }
 
-void MainWindow::Restart( void )
+void MainWindow::Restart( bool notify )
 {
   if( _openGLWidget )
   {
@@ -521,14 +570,29 @@ void MainWindow::Restart( void )
       _playButton->setIcon( _pauseIcon );
     else
       _playButton->setIcon( _playIcon );
+
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+    _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeq::gmrv::BEGIN );
+#endif
+    }
+
   }
 }
 
-void MainWindow::GoToEnd( void )
+void MainWindow::GoToEnd( bool notify )
 {
   if( _openGLWidget )
   {
     _openGLWidget->GoToEnd( );
+
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+    _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeq::gmrv::END );
+#endif
+    }
   }
 }
 
@@ -615,6 +679,42 @@ void MainWindow::AlphaBlendingToggled( void )
 
 
 #ifdef VISIMPL_USE_ZEQ
+
+#ifdef VISIMPL_USE_GMRVZEQ
+
+  void MainWindow::ApplyPlaybackOperation( unsigned int playbackOp )
+  {
+    zeq::gmrv::PlaybackOperation operation =
+        ( zeq::gmrv::PlaybackOperation ) playbackOp;
+
+    switch( operation )
+    {
+      case zeq::gmrv::PLAY:
+      case zeq::gmrv::PAUSE:
+        Play( false );
+        break;
+      case zeq::gmrv::STOP:
+        Stop( false );
+        break;
+      case zeq::gmrv::BEGIN:
+        Restart( false );
+        break;
+      case zeq::gmrv::END:
+        GoToEnd( false );
+        break;
+      case zeq::gmrv::ENABLE_LOOP:
+        Repeat( true, false );
+        break;
+      case zeq::gmrv::DISABLE_LOOP:
+        Repeat( false, false );
+        break;
+      default:
+        break;
+    }
+
+  }
+#endif
+
 void MainWindow::_setZeqUri( const std::string& uri_ )
 {
   _zeqConnection = true;

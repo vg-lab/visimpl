@@ -90,9 +90,6 @@ namespace visimpl
     void loop( bool loop );
     bool loop( void );
 
-    void autonomous( bool autonomous_ );
-    bool autonomous( void );
-
     brion::BlueConfig* blueConfig( void );
     brain::Circuit* circuit( void );
     const brion::GIDSet& gids( void );
@@ -101,6 +98,10 @@ namespace visimpl
     TSimulationType simulationType( void );
 
 #ifdef VISIMPL_USE_ZEQ
+
+#ifdef VISIMPL_USE_GMRVZEQ
+    ZeqEventsManager* zeqEvents( void );
+#endif
 
     void connectZeq( const std::string& zeqUri );
 

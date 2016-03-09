@@ -41,15 +41,19 @@ public slots:
 
   void openBlueConfigThroughDialog( void );
 
-  void Play( void );
-  void Stop( void );
-  void Repeat( bool repeat );
-  void PlayAt( void );
-  void PlayAt( int );
-  void Restart( void );
-  void GoToEnd( void );
+  void Play( bool notify = true );
+  void Stop( bool notify = true );
+  void Repeat( bool repeat, bool notify = true );
+  void PlayAt( bool notify = true );
+  void PlayAt( int, bool notify = true );
+  void Restart( bool notify = true );
+  void GoToEnd( bool notify = true );
 
   void UpdateSimulationSlider( float percentage );
+
+#ifdef VISIMPL_USE_GMRVZEQ
+  void ApplyPlaybackOperation( unsigned int playbackOp );
+#endif
 
 protected slots:
 
@@ -67,12 +71,12 @@ protected:
 
   bool _zeqConnection;
 
+  std::string _zeqUri;
+
   servus::URI _uri;
   zeq::Subscriber* _subscriber;
 
   pthread_t _subscriberThread;
-
-  ZeqEventsManager* _zeqEvents;
 
 #endif
 

@@ -46,13 +46,13 @@ public slots:
   void openXMLSceneThroughDialog( void );
   void openSWCFileThroughDialog( void );
 
-  void Play( void );
-  void Stop( void );
-  void Repeat( bool repeat );
-  void PlayAt( void );
-  void PlayAt( int );
-  void Restart( void );
-  void GoToEnd( void );
+  void Play( bool notify = true );
+  void Stop( bool notify = true );
+  void Repeat( bool repeat, bool notify = true );
+  void PlayAt( bool notify = true );
+  void PlayAt( int, bool notify = true );
+  void Restart( bool notify = true );
+  void GoToEnd( bool notify = true );
 
   void UpdateSimulationSlider( float percentage );
 
@@ -71,6 +71,10 @@ public slots:
 protected:
 
 #ifdef VISIMPL_USE_ZEQ
+
+#ifdef VISIMPL_USE_GMRVZEQ
+  void ApplyPlaybackOperation( unsigned int playbackOp );
+#endif
 
   void _onSelectionEvent( const zeq::Event& event_ );
   void _setZeqUri( const std::string& );

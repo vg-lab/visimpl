@@ -42,9 +42,7 @@ void MainWindow::init( const std::string& zeqUri )
   if( !zeqUri.empty( ))
   {
      _setZeqUri( zeqUri );
-     _zeqEvents = new ZeqEventsManager( zeqUri );
-     _zeqEvents->frameReceived.connect(
-         boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ) );
+//     _zeqEvents = new ZeqEventsManager( zeqUri );
   }
   #endif
 
@@ -94,11 +92,21 @@ void MainWindow::openBlueConfig( const std::string& fileName,
   //          this, SLOT( UpdateSimulationSlider( float )));
 
 
-  // _startTimeLabel->setText(
-  //     QString::number( (double)_player->player( )->startTime( )));
+   _startTimeLabel->setText(
+       QString::number( (double)_player->startTime( )));
 
-  // _endTimeLabel->setText(
-  //       QString::number( (double)_player->player( )->endTime( )));
+   _endTimeLabel->setText(
+         QString::number( (double)_player->endTime( )));
+
+#if VISIMPL_USE_GMRVZEQ
+   _player->connectZeq( _zeqUri );
+
+   _player->zeqEvents( )->frameReceived.connect(
+       boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
+
+   _player->zeqEvents( )->playbackOpReceived.connect(
+       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+#endif
 
 
   // changeEditorColorMapping( );
@@ -312,60 +320,88 @@ void MainWindow::initSummaryWidget( )
   scrollArea->setWidget( _contentWidget );
 }
 
-
-void MainWindow::Play( void )
+void MainWindow::Play( bool notify )
 {
 //  playIcon.swap( pauseIcon );
 
   if( _player )
   {
-
-    if( _player->isPlaying( ))
+    if( _player ->isPlaying( ))
     {
       _player->Pause( );
       _playButton->setIcon( _pauseIcon );
+
+      if( notify )
+      {
+#ifdef VISIMPL_USE_ZEQ
+      _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PAUSE );
+#endif
+      }
     }
     else
     {
       _player->Play( );
       _playButton->setIcon( _playIcon );
+
+      if( notify )
+      {
+#ifdef VISIMPL_USE_ZEQ
+      _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PLAY );
+#endif
+      }
     }
   }
 }
 
-void MainWindow::Stop( void )
+void MainWindow::Stop( bool notify )
 {
   if( _player )
   {
     _player->Stop( );
     _playButton->setIcon( _playIcon );
     _startTimeLabel->setText(
-          QString::number( (double)_player->startTime( )));
+          QString::number( (double)_player ->startTime( )));
+
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+      _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::STOP );
+#endif
+    }
+
   }
 }
 
-void MainWindow::Repeat( bool repeat )
+void MainWindow::Repeat( bool repeat, bool notify )
 {
   if( _player )
   {
     _player->loop( repeat );
+
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+      _player ->zeqEvents( )->sendPlaybackOp( repeat ?
+                                  zeq::gmrv::ENABLE_LOOP :
+                                  zeq::gmrv::DISABLE_LOOP );
+#endif
+    }
+
   }
 }
 
-void MainWindow::PlayAt( void )
+void MainWindow::PlayAt( bool notify )
 {
   if( _player )
   {
-    PlayAt( _simSlider->sliderPosition( ));
+    PlayAt( _simSlider->sliderPosition( ), notify );
   }
 }
 
-void MainWindow::PlayAt( int sliderPosition )
+void MainWindow::PlayAt( int sliderPosition, bool notify )
 {
   if( _player )
   {
-
-    _player->Pause( );
 
     int value = _simSlider->value( );
     float percentage = float( value - _simSlider->minimum( )) /
@@ -376,29 +412,56 @@ void MainWindow::PlayAt( int sliderPosition )
 
     _player->PlayAt( percentage );
 
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
     // Send event
+    _player ->zeqEvents( )->sendFrame( _simSlider->minimum( ),
+                           _simSlider->maximum( ),
+                           sliderPosition );
+
+    _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PLAY );
+#endif
+    }
   }
 }
 
-void MainWindow::Restart( void )
+void MainWindow::Restart( bool notify )
 {
   if( _player )
   {
+    bool playing = _player->isPlaying( );
     _player->Stop( );
-    _player->Play( );
+    if( playing )
+     _player->Play( );
 
-    if( _player->isPlaying( ))
+    if( _player ->isPlaying( ))
       _playButton->setIcon( _pauseIcon );
     else
       _playButton->setIcon( _playIcon );
+
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+    _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::BEGIN );
+#endif
+    }
+
   }
 }
 
-void MainWindow::GoToEnd( void )
+void MainWindow::GoToEnd( bool notify )
 {
   if( _player )
   {
-    _player->GoTo( _player->endTime( ));
+    //TODO implement GOTOEND
+
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+    _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::END );
+#endif
+    }
   }
 }
 
@@ -407,8 +470,11 @@ void MainWindow::UpdateSimulationSlider( float percentage )
 //  if( _player->player( )->isPlaying( ))
   {
 
+    double currentTime = percentage * ( _player->endTime( ) - _player->startTime( )) + _player->startTime( );
+//    _player->PlayAt( percentage );
     _startTimeLabel->setText(
-          QString::number( (double) _player->currentTime( )));
+//          QString::number( (double) _player->currentTime( )));
+          QString::number( currentTime ));
 
 //    float percentage = _player->player( )->GetRelativeTime( );
 
@@ -424,8 +490,45 @@ void MainWindow::UpdateSimulationSlider( float percentage )
 
 
 #ifdef VISIMPL_USE_ZEQ
+
+#ifdef VISIMPL_USE_GMRVZEQ
+
+  void MainWindow::ApplyPlaybackOperation( unsigned int playbackOp )
+  {
+    zeq::gmrv::PlaybackOperation operation =
+        ( zeq::gmrv::PlaybackOperation ) playbackOp;
+
+    switch( operation )
+    {
+      case zeq::gmrv::PLAY:
+      case zeq::gmrv::PAUSE:
+        Play( false );
+        break;
+      case zeq::gmrv::STOP:
+        Stop( false );
+        break;
+      case zeq::gmrv::BEGIN:
+        Restart( false );
+        break;
+      case zeq::gmrv::END:
+        GoToEnd( false );
+        break;
+      case zeq::gmrv::ENABLE_LOOP:
+        Repeat( true, false );
+        break;
+      case zeq::gmrv::DISABLE_LOOP:
+        Repeat( false, false );
+        break;
+      default:
+        break;
+    }
+
+  }
+#endif
+
 void MainWindow::_setZeqUri( const std::string& uri_ )
 {
+  _zeqUri = uri_;
   _zeqConnection = true;
   _uri =  servus::URI( uri_ );
   _subscriber = new zeq::Subscriber( _uri );
