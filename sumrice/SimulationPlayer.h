@@ -76,7 +76,7 @@ namespace visimpl
 
     bool isPlaying( void );
 
-    void deltaTime( float deltaTime );
+    virtual void deltaTime( float deltaTime );
     virtual float deltaTime( void );
 
   //  void startTime( float startTime );
@@ -214,7 +214,7 @@ namespace visimpl
                     const std::pair< float, float>* range = nullptr );
 
 
-    virtual void LoadData( const std::pair< float, float>* range = nullptr );
+    virtual void LoadData( void );
     virtual void Clear( void );
     virtual void Stop( void );
     virtual void PlayAt( float percentage );
@@ -253,6 +253,7 @@ namespace visimpl
      brion::CompartmentReport* _voltReport;
      brion::floatsPtr _currentFrame;
 
+     bool loadedRange;
      float _minVoltage;
      float _maxVoltage;
      float _normalizedVoltageFactor;

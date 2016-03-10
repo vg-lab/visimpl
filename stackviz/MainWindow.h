@@ -41,9 +41,11 @@ public slots:
 
   void openBlueConfigThroughDialog( void );
 
+  void PlayPause( bool notify = true );
   void Play( bool notify = true );
+  void Pause( bool notify = true );
   void Stop( bool notify = true );
-  void Repeat( bool repeat, bool notify = true );
+  void Repeat( bool notify = true);
   void PlayAt( bool notify = true );
   void PlayAt( int, bool notify = true );
   void Restart( bool notify = true );
@@ -51,11 +53,14 @@ public slots:
 
   void UpdateSimulationSlider( float percentage );
 
-#ifdef VISIMPL_USE_GMRVZEQ
-  void ApplyPlaybackOperation( unsigned int playbackOp );
-#endif
-
 protected slots:
+
+#ifdef VISIMPL_USE_GMRVZEQ
+
+  void ApplyPlaybackOperation( unsigned int playbackOp );
+  void _zeqEventRepeat( bool repeat );
+
+#endif
 
   void loadComplete( void );
 
@@ -96,6 +101,8 @@ protected:
   QDockWidget* _simulationDock;
   QPushButton* _playButton;
   CustomSlider* _simSlider;
+  QPushButton* _repeatButton;
+  bool _playing;
 
   QIcon _playIcon;
   QIcon _pauseIcon;

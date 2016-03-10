@@ -173,6 +173,7 @@ void MainWindow::initPlaybackDock( )
   _simulationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
                                   QSizePolicy::MinimumExpanding );
 
+  _playing = false;
   unsigned int totalHSpan = 20;
 
   QWidget* content = new QWidget( );
@@ -192,9 +193,10 @@ void MainWindow::initPlaybackDock( )
   QPushButton* stopButton = new QPushButton( );
   QPushButton* nextButton = new QPushButton( );
   QPushButton* prevButton = new QPushButton( );
-  QPushButton* repeatButton = new QPushButton( );
-  repeatButton->setCheckable( true );
-  repeatButton->setChecked( false );
+//  QPushButton* repeatButton = new QPushButton( );
+  _repeatButton = new QPushButton( );
+  _repeatButton->setCheckable( true );
+  _repeatButton->setChecked( false );
 
 //  QIcon playIcon;
 //  QIcon pauseIcon;
@@ -220,7 +222,7 @@ void MainWindow::initPlaybackDock( )
   stopButton->setIcon( stopIcon );
   nextButton->setIcon( nextIcon );
   prevButton->setIcon( prevIcon );
-  repeatButton->setIcon( repeatIcon );
+  _repeatButton->setIcon( repeatIcon );
 
   _startTimeLabel = new QLabel( "" );
   _startTimeLabel->setSizePolicy( QSizePolicy::MinimumExpanding,
@@ -235,14 +237,14 @@ void MainWindow::initPlaybackDock( )
   dockLayout->addWidget( _endTimeLabel, row, totalHSpan - 2, 1, 1, Qt::AlignRight );
 
   row++;
-  dockLayout->addWidget( repeatButton, row, 7, 1, 1 );
+  dockLayout->addWidget( _repeatButton, row, 7, 1, 1 );
   dockLayout->addWidget( prevButton, row, 8, 1, 1 );
   dockLayout->addWidget( _playButton, row, 9, 2, 2 );
   dockLayout->addWidget( stopButton, row, 11, 1, 1 );
   dockLayout->addWidget( nextButton, row, 12, 1, 1 );
 
   connect( _playButton, SIGNAL( clicked( )),
-           this, SLOT( Play( )));
+           this, SLOT( PlayPause( )));
 
   connect( stopButton, SIGNAL( clicked( )),
              this, SLOT( Stop( )));
@@ -253,8 +255,8 @@ void MainWindow::initPlaybackDock( )
   connect( prevButton, SIGNAL( clicked( )),
              this, SLOT( Restart( )));
 
-  connect( repeatButton, SIGNAL( toggled( bool )),
-             this, SLOT( Repeat( bool )));
+  connect( _repeatButton, SIGNAL( clicked( )),
+           this, SLOT( Repeat( )));
 
   connect( _simSlider, SIGNAL( sliderPressed( )),
            this, SLOT( PlayAt( )));
@@ -320,28 +322,22 @@ void MainWindow::initSummaryWidget( )
   scrollArea->setWidget( _contentWidget );
 }
 
+void MainWindow::PlayPause( bool notify )
+{
+  if( _playing )
+    Pause( notify );
+  else
+    Play( notify );
+}
+
 void MainWindow::Play( bool notify )
 {
 //  playIcon.swap( pauseIcon );
-
   if( _player )
   {
-    if( _player ->isPlaying( ))
-    {
-      _player->Pause( );
-      _playButton->setIcon( _pauseIcon );
-
-      if( notify )
-      {
-#ifdef VISIMPL_USE_ZEQ
-      _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PAUSE );
-#endif
-      }
-    }
-    else
-    {
       _player->Play( );
-      _playButton->setIcon( _playIcon );
+      _playButton->setIcon( _pauseIcon );
+      _playing = true;
 
       if( notify )
       {
@@ -349,6 +345,23 @@ void MainWindow::Play( bool notify )
       _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PLAY );
 #endif
       }
+  }
+
+}
+
+void MainWindow::Pause( bool notify )
+{
+  if( _player )
+  {
+    _player->Pause( );
+    _playButton->setIcon( _playIcon );
+    _playing = false;
+
+    if( notify )
+    {
+  #ifdef VISIMPL_USE_ZEQ
+    _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PAUSE );
+  #endif
     }
   }
 }
@@ -361,7 +374,7 @@ void MainWindow::Stop( bool notify )
     _playButton->setIcon( _playIcon );
     _startTimeLabel->setText(
           QString::number( (double)_player ->startTime( )));
-
+    _playing = false;
     if( notify )
     {
 #ifdef VISIMPL_USE_ZEQ
@@ -372,10 +385,11 @@ void MainWindow::Stop( bool notify )
   }
 }
 
-void MainWindow::Repeat( bool repeat, bool notify )
+void MainWindow::Repeat( bool notify )
 {
   if( _player )
   {
+    bool repeat = _repeatButton->isChecked( );
     _player->loop( repeat );
 
     if( notify )
@@ -411,6 +425,7 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
     _playButton->setIcon( _pauseIcon );
 
     _player->PlayAt( percentage );
+    _playing = true;
 
     if( notify )
     {
@@ -430,12 +445,15 @@ void MainWindow::Restart( bool notify )
 {
   if( _player )
   {
-    bool playing = _player->isPlaying( );
+    bool playing = _playing;
     _player->Stop( );
+    _playing = false;
     if( playing )
+    {
      _player->Play( );
-
-    if( _player ->isPlaying( ))
+     _playing = true;
+    }
+    if( _playing )
       _playButton->setIcon( _pauseIcon );
     else
       _playButton->setIcon( _playIcon );
@@ -501,29 +519,44 @@ void MainWindow::UpdateSimulationSlider( float percentage )
     switch( operation )
     {
       case zeq::gmrv::PLAY:
-      case zeq::gmrv::PAUSE:
+//        std::cout << "Received play" << std::endl;
         Play( false );
         break;
+      case zeq::gmrv::PAUSE:
+        Pause( false );
+//        std::cout << "Received pause" << std::endl;
+        break;
       case zeq::gmrv::STOP:
+//        std::cout << "Received stop" << std::endl;
         Stop( false );
         break;
       case zeq::gmrv::BEGIN:
+//        std::cout << "Received begin" << std::endl;
         Restart( false );
         break;
       case zeq::gmrv::END:
+//        std::cout << "Received end" << std::endl;
         GoToEnd( false );
         break;
       case zeq::gmrv::ENABLE_LOOP:
-        Repeat( true, false );
+//        std::cout << "Received enable loop" << std::endl;
+        _zeqEventRepeat( true );
         break;
       case zeq::gmrv::DISABLE_LOOP:
-        Repeat( false, false );
+//        std::cout << "Received disable loop" << std::endl;
+        _zeqEventRepeat( false );
         break;
       default:
         break;
     }
 
   }
+
+  void MainWindow::_zeqEventRepeat( bool repeat )
+  {
+    _repeatButton->setChecked( repeat );
+  }
+
 #endif
 
 void MainWindow::_setZeqUri( const std::string& uri_ )

@@ -76,13 +76,10 @@ void ZeqEventsManager::_onFrameEvent( const zeq::Event& event_ )
 
   float percentage;
 
-//    percentage = (float(_currentFrame.current - _currentFrame.start) /
-//                       float(_currentFrame.end - _currentFrame.start) * invDelta) ;
-
   percentage = ( float( _currentFrame.current ) * invDelta - start )
       / ( float( _currentFrame.end ) * invDelta - start );
 
-  std::cout << "Received percentage " << percentage << std::endl;
+//  std::cout << "Received percentage " << percentage << std::endl;
 
   assert( percentage >= 0.0f && percentage <= 1.0f );
   frameReceived( percentage );

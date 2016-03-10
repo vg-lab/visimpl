@@ -46,9 +46,11 @@ public slots:
   void openXMLSceneThroughDialog( void );
   void openSWCFileThroughDialog( void );
 
+  void PlayPause( bool notify = true );
   void Play( bool notify = true );
+  void Pause( bool notify = true );
   void Stop( bool notify = true );
-  void Repeat( bool repeat, bool notify = true );
+  void Repeat( bool notify = true );
   void PlayAt( bool notify = true );
   void PlayAt( int, bool notify = true );
   void Restart( bool notify = true );
@@ -68,13 +70,19 @@ public slots:
 
   void AlphaBlendingToggled( void );
 
-protected:
+
+protected slots:
 
 #ifdef VISIMPL_USE_ZEQ
 
 #ifdef VISIMPL_USE_GMRVZEQ
+
   void ApplyPlaybackOperation( unsigned int playbackOp );
+  void _zeqEventRepeat( bool repeat );
+
 #endif
+
+protected:
 
   void _onSelectionEvent( const zeq::Event& event_ );
   void _setZeqUri( const std::string& );
@@ -110,6 +118,7 @@ private:
   QPushButton* _playButton;
   QLabel* _startTimeLabel;
   QLabel* _endTimeLabel;
+  QPushButton* _repeatButton;
 
   QDockWidget* _simConfigurationDock;
   TransferFunctionEditor* _tfEditor;

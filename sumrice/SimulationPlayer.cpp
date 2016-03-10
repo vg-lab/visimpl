@@ -88,7 +88,7 @@ namespace visimpl
 
   void SimulationPlayer::Pause( void )
   {
-    _playing = !_playing;
+    _playing = false;
   }
 
   void SimulationPlayer::Stop( void )
@@ -246,7 +246,8 @@ namespace visimpl
 
   void SimulationPlayer::sendCurrentTimestamp( void )
   {
-    _zeqEvents->sendFrame( _startTime, _endTime, _currentTime );
+    if( _playing )
+      _zeqEvents->sendFrame( _startTime, _endTime, _currentTime );
   }
 
 #endif
@@ -330,6 +331,7 @@ namespace visimpl
     _endTime = _spikeReport->getEndTime( );
 
     _currentTime = _startTime;
+
   }
 
   void SpikesPlayer::Clear( void )
@@ -495,15 +497,23 @@ namespace visimpl
   : SimulationPlayer( blueConfigFilePath, false)
   , _report( report )
   , _voltReport( nullptr )
+  , loadedRange( false )
   {
 
+    if( range )
+    {
+      _minVoltage = range->first;
+      _maxVoltage = range->second;
+      loadedRange = true;
+    }
+
     if( loadData)
-      LoadData( range );
+      LoadData( );
 
     _simulationType = TVoltages;
   }
 
-  void VoltagesPlayer::LoadData( const std::pair< float, float>* range )
+  void VoltagesPlayer::LoadData( )
   {
     SimulationPlayer::LoadData( );
 
@@ -549,7 +559,7 @@ namespace visimpl
     std::cout << "Start time: " << _startTime << std::endl;
     std::cout << "End time: " << _endTime << std::endl;
     std::cout << "Delta time: " << _deltaTime << std::endl;
-    if( range == nullptr )
+    if( !loadedRange )
     {
 //      _minVoltage = std::numeric_limits< float >::max( );
 //      _maxVoltage = std::numeric_limits< float >::min( );
@@ -571,11 +581,6 @@ namespace visimpl
       _maxVoltage = 47.5082f;
 
       Stop( );
-    }
-    else
-    {
-      _minVoltage = range->first;
-      _maxVoltage = range->second;
     }
 
     std::cout << "Min Voltage: " << _minVoltage << std::endl;
