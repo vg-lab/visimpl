@@ -1,3 +1,5 @@
+set(CMAKE_AUTOMOC ON)
+
 set(SUMRICE_PUBLIC_HEADERS
   EditorTF/Gradient.h
   EditorTF/ColorPoints.h
@@ -5,9 +7,10 @@ set(SUMRICE_PUBLIC_HEADERS
   SimulationPlayer.h
   ZeqEventsManager.h
   Summary.h
-  qt/CustomSlider.h
-  qt/TransferFunctionWidget.h
-  qt/ParticleSizeWidget.h
+  Histogram.h
+  CustomSlider.h
+  TransferFunctionWidget.h
+  ParticleSizeWidget.h
   log.h
 )
 
@@ -18,20 +21,21 @@ set(SUMRICE_SOURCES
   EditorTF/Gradient.cpp
   EditorTF/ColorPoints.cpp
   EditorTF/TransferFunctionEditor.cpp
-  qt/TransferFunctionWidget.cpp
-  qt/ParticleSizeWidget.cpp
+  TransferFunctionWidget.cpp
+  ParticleSizeWidget.cpp
   Summary.cpp
+  Histogram.cpp
   SimulationPlayer.cpp
   ZeqEventsManager.cpp
 )
 
-set(SUMRICE_MOC_HEADERS
-  EditorTF/ColorPoints.h
-  EditorTF/TransferFunctionEditor.h
-  qt/TransferFunctionWidget.h
-  qt/ParticleSizeWidget.h
-  Summary.h
-)
+#set(SUMRICE_MOC_HEADERS
+#  EditorTF/ColorPoints.h
+#  EditorTF/TransferFunctionEditor.h
+#  TransferFunctionWidget.h
+#  ParticleSizeWidget.h
+#  Summary.h
+#)
 
 set(SUMRICE_LINK_LIBRARIES
   Qt5::Core

@@ -87,7 +87,6 @@ protected:
 
   void initSummaryWidget( void );
   void initPlaybackDock( void );
-  void updateStackView( void );
 
   QString _lastOpenedFileName;
 
@@ -95,6 +94,7 @@ protected:
 
   Summary* _summary;
   visimpl::SimulationPlayer* _player;
+  QTimer _selectionsTimer;
 
 
   // Playback Control

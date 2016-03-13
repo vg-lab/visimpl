@@ -5,23 +5,50 @@
  *      Author: sgalindo
  */
 
-#ifndef SRC_SIMULATIONSUMMARYWIDGET_H_
-#define SRC_SIMULATIONSUMMARYWIDGET_H_
+#ifndef __SIMULATIONSUMMARYWIDGET_H__
+#define __SIMULATIONSUMMARYWIDGET_H__
 
 #include <brion/brion.h>
 #include <prefr/prefr.h>
 
-#include <QFrame>
-#include <unordered_set>
+#include <QWidget>
+#include <QGridLayout>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QCheckBox>
+#include <QTimer>
 
-typedef std::unordered_set< uint32_t > GIDUSet;
-typedef utils::InterpolationSet< glm::vec4 > TColorMapper;
+#include "Histogram.h"
 
 namespace visimpl
 {
   class Histogram;
+
+
+  struct Selection
+  {
+  public:
+
+    Selection( void )
+    {
+      id = _counter;
+      _counter++;
+    }
+
+    unsigned int currentID( void )
+    {
+      return _counter;
+    }
+
+    unsigned int id;
+    std::string name;
+    GIDUSet gids;
+
+  private:
+    static unsigned int _counter;
+  };
 }
-class Summary : public QFrame
+class Summary : public QWidget
 {
 
   Q_OBJECT;
@@ -38,11 +65,14 @@ public:
   Summary( QWidget* parent = 0 );
   Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
 
-  void CreateSummary( brion::SpikeReport* _spikes, brion::GIDSet gids );
-  void AddGIDSelection( const GIDUSet& gids );
+  void Init( brion::SpikeReport* _spikes, brion::GIDSet gids );
+  void AddNewHistogram( const visimpl::Selection& selection
+#ifdef VISIMPL_USE_ZEQ
+                       , bool deferredInsertion = false
+#endif
+                       );
 //  void CreateSummary( brion::CompartmentReport* _voltages );
 
-  virtual void paintEvent(QPaintEvent* event);
   virtual void mouseMoveEvent( QMouseEvent* event_ );
 
   void bins( unsigned int bins_ );
@@ -55,7 +85,47 @@ public:
 
   void showMarker( bool show_ );
 
+protected slots:
+
+  void updateMouseMarker( QPoint point );
+
 protected:
+
+  struct StackRow
+  {
+  public:
+
+    StackRow( )
+    : histogram( nullptr )
+    , label( nullptr )
+    , checkBox( nullptr )
+    { }
+
+    ~StackRow( )
+    {
+//      delete histogram;
+//      delete label;
+//      delete checkBox;
+    }
+
+    visimpl::Histogram* histogram;
+    QLabel* label;
+    QCheckBox* checkBox;
+
+  };
+
+#ifdef VISIMPL_USE_ZEQ
+
+protected slots:
+
+  void deferredInsertion( void );
+
+protected:
+
+  std::list< visimpl::Selection > _pendingSelections;
+  QTimer _insertionTimer;
+
+#endif
 
   void CreateSummarySpikes( );
   void InsertSummarySpikes( const GIDUSet& gids );
@@ -76,7 +146,14 @@ protected:
   TStackType _stackType;
 
   std::vector< visimpl::Histogram* > _histograms;
+  std::vector< QCheckBox* > _checkBoxes;
+  std::vector< StackRow > _rows;
 
+  QGridLayout* _mainLayout;
+  QWidget* _body;
+
+  unsigned int _maxColumns;
+  unsigned int _summaryColumns;
   unsigned int _heightPerRow;
 
   QPoint _lastMousePosition;
@@ -84,71 +161,6 @@ protected:
 
 };
 
-namespace visimpl
-{
-  class Histogram
-  {
-
-  public:
-
-    typedef enum
-    {
-      T_COLOR_LINEAR = 0,
-      T_COLOR_EXPONENTIAL,
-      T_COLOR_LOGARITHMIC
-    } TColorScale;
-
-    typedef enum
-    {
-      T_NORM_GLOBAL = 0,
-      T_NORM_MAX
-    } TNormalize_Rule;
-
-    Histogram( const brion::Spikes& spikes, float startTime, float endTime );
-    Histogram( const brion::SpikeReport& spikeReport );
-
-    void CreateHistogram( unsigned int binsNumber = 250 );
-    void CalculateColors( void );
-
-    void filteredGIDs( const GIDUSet& gids );
-    const GIDUSet& filteredGIDs( void );
-
-    void colorScale( TColorScale scale );
-    TColorScale colorScale( void );
-
-    void normalizeRule( TNormalize_Rule normRule );
-    TNormalize_Rule normalizeRule( void );
-
-    const std::vector< unsigned int>& histogram( void );
-
-    const utils::InterpolationSet< glm::vec4 >& colorMapper( void );
-    void colorMapper(const utils::InterpolationSet< glm::vec4 >& colors );
-
-    const QGradientStops& gradientStops( void );
-
-    unsigned int valueAt( float percentage );
-
-  protected:
-
-    std::vector< unsigned int > _histogram;
-    unsigned int _maxValueHistogramLocal;
-    unsigned int _maxValueHistogramGlobal;
-    QGradientStops _gradientStops;
-
-    brion::Spikes _spikes;
-    float _startTime;
-    float _endTime;
-
-    float (*_scaleFunc)( float value, float maxValue);
-    TColorScale _colorScale;
-    TNormalize_Rule _normRule;
-
-    utils::InterpolationSet< glm::vec4 > _colorMapper;
-
-    GIDUSet _filteredGIDs;
-  };
-}
 
 
-
-#endif /* SRC_SIMULATIONSUMMARYWIDGET_H_ */
+#endif /* __SIMULATIONSUMMARYWIDGET_H__ */

@@ -261,17 +261,8 @@ void MainWindow::initPlaybackDock( )
   connect( _simSlider, SIGNAL( sliderPressed( )),
            this, SLOT( PlayAt( )));
 
-//  connect( _simSlider, SIGNAL( sliderMoved( )),
-//             this, SLOT( PlayAt( )));
-
-//  _summary = new Summary( nullptr, Summary::T_STACK_FIXED );
-////  _summary->setVisible( false );
-//  _summary->setMinimumHeight( 50 );
-//
-//  dockLayout->addWidget( _summary, 0, 1, 2, totalHSpan - 3 );
-
   _simulationDock->setWidget( content );
-  this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/BottomDockWidgetArea,
+  this->addDockWidget( Qt::BottomDockWidgetArea,
                        _simulationDock );
 }
 
@@ -299,27 +290,33 @@ void MainWindow::initSummaryWidget( )
 
 //    GIDUSet gids;
 //    _summary->AddGIDSelection( gids );
-    _summary->CreateSummary( spikesPlayer->spikeReport( ),
+    _summary->Init( spikesPlayer->spikeReport( ),
                              spikesPlayer->gids( ));
 //    _summary->setVisible( true );
   }
 
   _stackLayout = new QGridLayout( );
 
-  _contentWidget = new QWidget( );
+//  _contentWidget = new QWidget( );
 //  _contentWidget->setSizePolicy( QSizePolicy::Expanding,
 //                                QSizePolicy::Expanding );
-  _contentWidget->setMinimumHeight( _summary->heightPerRow( ) * _summary->histogramsNumber() );
-  _contentWidget->setMinimumWidth( width( ) - 5 );
-  QScrollArea* scrollArea = new QScrollArea( );
+//  _contentWidget->setMinimumHeight( _summary->heightPerRow( ) * _summary->histogramsNumber() );
+//  _contentWidget->setMinimumWidth( width( ) - 5 );
+//  QScrollArea* scrollArea = new QScrollArea( );
 //  QVBoxLayout* centralLayout = new QVBoxLayout( );
 
-  _contentWidget->setLayout( _stackLayout );
-  _stackLayout->addWidget( _summary, 0, 0, 1, _columnsNumber - 1 );
+//  _contentWidget->setLayout( _stackLayout );
+//  _stackLayout->addWidget( _summary, 0, 0, 1, _columnsNumber - 1 );
 //  _stackLayout->addWidget( new QPushButton("Test"), 0, _columnsNumber, 1, 1);
 
-  this->setCentralWidget( scrollArea );
-  scrollArea->setWidget( _contentWidget );
+  std::cout << "MainWin width " << width( ) << std::endl;
+//  _summary->setMinimumWidth( width( ) - 5 );
+//  _summary->setMinimumHeight( _summary->heightPerRow( ) *
+//                              _summary->histogramsNumber( ) + 50 );
+
+//  scrollArea->setWidget( _summary );
+  this->setCentralWidget( _summary );
+
 }
 
 void MainWindow::PlayPause( bool notify )
@@ -593,17 +590,11 @@ void MainWindow::_onSelectionEvent( const zeq::Event& event_ )
 
   if( _summary )
   {
-    _summary->AddGIDSelection( selectedSet );
-    _stackLayout->removeWidget( _summary );
+    visimpl::Selection selection;
 
-    unsigned int rowsNumber = _summary->histogramsNumber( );
+    selection.gids = selectedSet;
 
-    _stackLayout->addWidget( _summary, 0, 0, rowsNumber,
-                             _columnsNumber - 1 );
-
-    QCheckBox* checkBox = new QCheckBox( );
-    _checkBoxes.push_back( checkBox );
-    _stackLayout->addWidget( checkBox, rowsNumber, _columnsNumber, 1, 1);
+    _summary->AddNewHistogram( selection, true );
   }
 
 }
@@ -616,17 +607,17 @@ void MainWindow::resizeEvent( QResizeEvent * event_ )
 
   if( resizingEnabled )
   {
-    unsigned int columnsWidth = width( ) / _columnsNumber;
-    unsigned int currentWidth = width( ) - columnsWidth;
-    unsigned int currentHeight =  _summary->heightPerRow( ) *
-                                  _summary->histogramsNumber( );
-
-    _contentWidget->setMinimumWidth( width( ) );
-    _contentWidget->setMinimumHeight( currentHeight + 2 );
-
-    std::cout << width( ) << " -> " << currentWidth << std::endl;
-//    _summary->setMinimumWidth( currentWidth );
-    _summary->resize( currentWidth, currentHeight );
+//    unsigned int columnsWidth = width( ) / _columnsNumber;
+//    unsigned int currentWidth = width( ) - columnsWidth;
+//    unsigned int currentHeight =  _summary->heightPerRow( ) *
+//                                  _summary->histogramsNumber( );
+//
+//    _contentWidget->setMinimumWidth( width( ) );
+//    _contentWidget->setMinimumHeight( currentHeight + 2 );
+//
+//    std::cout << width( ) << " -> " << currentWidth << std::endl;
+////    _summary->setMinimumWidth( currentWidth );
+//    _summary->resize( currentWidth, currentHeight );
   }
 }
 
@@ -636,3 +627,11 @@ void MainWindow::loadComplete( void )
   _summary->showMarker( false );
 }
 
+
+//void MainWindow::updateStackView( void )
+//{
+//  for( unsigned int i = 0 ; i < _summary->histogramsNumber( ); i++)
+//  {
+//    _summary->createSelection( i );
+//  }
+//}

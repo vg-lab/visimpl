@@ -7,14 +7,14 @@
 
 #include "Summary.h"
 
-#include <QPainter>
-#include <QBrush>
 #include <QMouseEvent>
+#include <QVBoxLayout>
+#include <QScrollArea>
 
-
+unsigned int visimpl::Selection::_counter = 0;
 
 Summary::Summary( QWidget* parent_ )
-: QFrame( parent_ )
+: QWidget( parent_ )
 , _bins( 250 )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
@@ -26,7 +26,7 @@ Summary::Summary( QWidget* parent_ )
 
 Summary::Summary( QWidget* parent_,
                   TStackType stackType )
-: QFrame( parent_ )
+: QWidget( parent_ )
 , _bins( 250 )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
@@ -36,22 +36,59 @@ Summary::Summary( QWidget* parent_,
 , _heightPerRow( 50 )
 {
 
-  QPixmap pixmap(20, 20);
-  QPainter painter(&pixmap);
-  painter.fillRect(0, 0, 10, 10, Qt::lightGray);
-  painter.fillRect(10, 10, 10, 10, Qt::lightGray);
-  painter.fillRect(0, 10, 10, 10, Qt::darkGray);
-  painter.fillRect(10, 0, 10, 10, Qt::darkGray);
-  painter.end();
-  QPalette pal = palette();
-  pal.setBrush(backgroundRole(), QBrush(pixmap));
-  setPalette(pal);
-  setAutoFillBackground(true);
-
   setMouseTracking( true );
+
+  _maxColumns= 20;
+  _summaryColumns = _maxColumns - 2;
+
+  QVBoxLayout* upperLayout = new QVBoxLayout( );
+  upperLayout->setAlignment( Qt::AlignTop );
+
+//  QScrollArea* scrollArea = new QScrollArea( );
+  QWidget* header = new QWidget( );
+  QGridLayout* headerLayout = new QGridLayout( );
+  headerLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 1);
+  headerLayout->addWidget( new QLabel( "Activity" ), 0, 1, 1, _summaryColumns);
+  headerLayout->addWidget( new QLabel( "Select" ), 0, _maxColumns - 1, 1, 1);
+
+  QFrame* line = new QFrame();
+  line->setFrameShape(QFrame::HLine);
+  line->setFrameShadow(QFrame::Sunken);
+  headerLayout->addWidget( line, 1, 0, 1, _maxColumns );
+
+  header->setLayout( headerLayout );
+
+  _mainLayout = new QGridLayout( );
+  _mainLayout->setAlignment( Qt::AlignTop );
+
+  _body = new QWidget( );
+  _body->setLayout( _mainLayout );
+
+////  std::cout << width( ) << std::endl;
+//  _body->setMinimumWidth( width( ));
+////  body->setMaximumWidth( width( ));
+
+//  scrollArea->setWidget( _body );
+//  scrollArea->setWidgetResizable( true );
+
+  upperLayout->addWidget( header );
+//  upperLayout->addWidget( scrollArea );
+  upperLayout->addWidget( _body );
+
+  this->setLayout( upperLayout );
+
+#ifdef VISIMPL_USE_ZEQ
+
+  _insertionTimer.setSingleShot( false );
+  _insertionTimer.setInterval( 250 );
+  connect( &_insertionTimer, SIGNAL( timeout( )),
+           this, SLOT(deferredInsertion( )));
+  _insertionTimer.start( );
+
+#endif
 }
 
-void Summary::CreateSummary( brion::SpikeReport* spikes_, brion::GIDSet gids )
+void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
 {
   _spikeReport = spikes_;
   _gids = GIDUSet( gids.begin( ), gids.end( ));
@@ -61,8 +98,13 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_, brion::GIDSet gids )
 //  CreateSummarySpikes( gids );
 //  UpdateGradientColors( );
 
+  StackRow mainRow;
+
   _mainHistogram = new visimpl::Histogram( *spikes_ );
-  _histograms.push_back( _mainHistogram );
+  _mainHistogram->setMinimumHeight( _heightPerRow );
+  _mainHistogram->setMaximumHeight( _heightPerRow );
+//  _mainHistogram->setMinimumWidth( width( ));
+//  _mainLayout->addWidget( _mainHistogram );
 
   TColorMapper colorMapper;
 //  colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
@@ -83,11 +125,29 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_, brion::GIDSet gids )
 //  colorMapper.Insert(0.75f, glm::vec4( 212, 106, 106, 255 ));
 //  colorMapper.Insert(1.0f, glm::vec4( 255, 170, 170, 255 ));
 
-
-
-
-
   _mainHistogram->colorMapper( colorMapper );
+
+  _mainHistogram->mousePosition( &_lastMousePosition );
+  connect( _mainHistogram, SIGNAL( mousePositionChanged( QPoint )),
+           this, SLOT( updateMouseMarker( QPoint )));
+
+
+
+
+  mainRow.histogram = _mainHistogram;
+  QString labelText = QString( "All GIDs");
+  mainRow.label = new QLabel( labelText );
+  mainRow.checkBox = new QCheckBox( );
+
+  unsigned int row = _histograms.size( );
+  _mainLayout->addWidget( mainRow.label, row , 0, 1, 1 );
+  _mainLayout->addWidget( _mainHistogram, row, 1, 1, _summaryColumns );
+  _mainLayout->addWidget( mainRow.checkBox, row, _maxColumns - 1, 1, 1 );
+//  mainRow.checkBox->setVisible( false );
+
+  _rows.push_back( mainRow );
+  _histograms.push_back( _mainHistogram );
+//  _mainLayout->addWidget( _mainHistogram, 0, 0, 1, _summaryColumns );
 
   switch( _stackType )
   {
@@ -103,7 +163,7 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_, brion::GIDSet gids )
     }
     case T_STACK_EXPANDABLE:
     {
-      this->setMinimumHeight( _heightPerRow );
+//      this->setMinimumHeight( _heightPerRow );
       break;
     }
     default:
@@ -117,33 +177,58 @@ void Summary::CreateSummary( brion::SpikeReport* spikes_, brion::GIDSet gids )
   update( );
 }
 
-void Summary::AddGIDSelection( const GIDUSet& gids )
+void Summary::AddNewHistogram( const visimpl::Selection& selection
+#ifdef VISIMPL_USE_ZEQ
+                       , bool deferred
+#endif
+                       )
 {
+  const GIDUSet& gids = selection.gids;
+
   if( gids.size( ) == _gids.size( ) || gids.size( ) == 0)
     return;
 
-  std::cout << "Adding new selection with size " << gids.size( ) << std::endl;
-  if( _stackType == TStackType::T_STACK_FIXED )
-  {
-    _selectionHistogram->filteredGIDs( gids );
 
-  }else if( _stackType == TStackType::T_STACK_EXPANDABLE )
+  if( _stackType == TStackType::T_STACK_EXPANDABLE )
   {
 
+    std::cout << "Adding new selection with size " << gids.size( ) << std::endl;
+#ifdef VISIMPL_USE_ZEQ
+
+    if( deferred )
+    {
+
+      _pendingSelections.push_back( selection );
+
+//      if( !_insertionTimer.isActive( ))
+//        _insertionTimer.start( );
+
+    }
+    else
+#endif
+
+    {
     visimpl::Histogram* histogram = new visimpl::Histogram( *_spikeReport );
-    histogram->filteredGIDs( gids );
+//    histogram->filteredGIDs( gids );
     histogram->colorMapper( _mainHistogram->colorMapper( ));
-    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
-    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
+//    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
+//    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
+//    histogram->mousePosition( &_lastMousePosition );
+    histogram->setMinimumHeight( _heightPerRow );
+    histogram->setMaximumHeight( _heightPerRow );
+//    histogram->setMinimumWidth( 500 );
+    std::cout << "Thread " << this->thread( ) << std::endl;
+    _mainLayout->addWidget( histogram, _histograms.size( ), 0, _maxColumns - 2, 1 );
+//    _mainLayout->addWidget( histogram );
     _histograms.push_back( histogram );
 
 
-    unsigned int newHeight = (_histograms.size( )) * _heightPerRow;
-    setMinimumHeight( newHeight );
-    std::cout << newHeight << std::endl;
-//    resize( width( ), newHeight );
+//    unsigned int newHeight = (_histograms.size( )) * _heightPerRow;
+//    _body->setMinimumHeight( newHeight );
+//    this->setMinimumHeight( newHeight + 100 );
 
-    this->parentWidget( )->resize( width( ), newHeight + 2 );
+//    this->parentWidget( )->resize( width( ), newHeight + 2 );
+    }
 
   }
 
@@ -153,135 +238,91 @@ void Summary::AddGIDSelection( const GIDUSet& gids )
   update( );
 }
 
-//void SimulationSummaryWidget::CreateSummary( brion::CompartmentReport* _voltages )
-//{
-//
-//}
-
-void Summary::paintEvent(QPaintEvent* /*e*/)
+void Summary::deferredInsertion( void )
 {
+//  std::cout << "Deferred call " << std::endl;
 
-  QPainter painter( this );
-  QLinearGradient gradient( 0, 0, width( ), 0 );
-
-  QRect area = rect();
-
-  QGradientStops stops;
-
-  if( _mainHistogram)
+  if( _pendingSelections.size( ) > 0 )
   {
-    switch(_stackType )
-    {
-    case T_STACK_FIXED:
-    {
-      gradient.setStops( _mainHistogram->gradientStops( ) );
-      QBrush brush( gradient );
 
-      area.setHeight( area.height( ) / 2 );
-      painter.fillRect( area, brush );
+    StackRow currentRow;
 
-      assert( _selectionHistogram );
+    visimpl::Selection selection = _pendingSelections.front( );
+    _pendingSelections.pop_front( );
 
-      stops = _selectionHistogram->gradientStops( );
+    std::cout << "Deferred insertion: " << selection.name
+              << " GIDs: " << selection.gids.size( )
+              << std::endl;
 
-      if( stops.size( ) == 0)
-        stops = _mainHistogram->gradientStops( );
+    visimpl::Histogram* histogram = new visimpl::Histogram( *_spikeReport );
+    histogram->filteredGIDs( selection.gids );
+    histogram->colorMapper( _mainHistogram->colorMapper( ));
+    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
+    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
+    histogram->setMinimumHeight( _heightPerRow );
+    histogram->setMaximumHeight( _heightPerRow );
+    //    histogram->setMinimumWidth( 500 );
 
-      gradient.setStops( stops );
-      brush = QBrush ( gradient );
-      area.setCoords( 0, height( ) / 2, width( ), height( ));
-      painter.fillRect( area, brush );
+    currentRow.histogram = histogram;
+    QString labelText =
+        QString( "Selection-").append( QString::number( selection.id ));
+    currentRow.label = new QLabel( labelText );
+    currentRow.checkBox = new QCheckBox( );
 
-      break;
-    }
-    case T_STACK_EXPANDABLE:
-    {
-      area.setHeight( _heightPerRow );
-      unsigned int counter = 0;
-      unsigned int currentHeight = 0;
+    unsigned int row = _histograms.size( );
+    _mainLayout->addWidget( currentRow.label, row , 0, 1, 1 );
+    _mainLayout->addWidget( histogram, row, 1, 1, _summaryColumns );
+    _mainLayout->addWidget( currentRow.checkBox, row, _maxColumns - 1, 1, 1 );
 
-      for( auto histogram : _histograms )
-      {
-  //      std::cout << "Histogram stops: " <<  histogram->gradientStops( ).size( ) << std::endl;
-        gradient.setStops( histogram->gradientStops( ));
-        QBrush brush( gradient );
+    _rows.push_back( currentRow );
 
-        area.setCoords( 0, currentHeight, width( ), currentHeight + _heightPerRow );
+    histogram->mousePosition( &_lastMousePosition );
+    connect( histogram, SIGNAL( mousePositionChanged( QPoint )),
+             this, SLOT( updateMouseMarker( QPoint )));
 
-        painter.fillRect( area, brush );
+//    _mainLayout->addWidget( histogram );
+    _histograms.push_back( histogram );
 
-        currentHeight += _heightPerRow;
-        counter++;
-      }
+    //    unsigned int newHeight = (_histograms.size( )) * _heightPerRow;
+    //    _body->setMinimumHeight( newHeight );
+    //    this->setMinimumHeight( newHeight + 100 );
 
-      break;
-    }
-    }
+    //    this->parentWidget( )->resize( width( ), newHeight + 2 );
 
-    unsigned int currentHeight;
-    for( unsigned int i = 1; i < _histograms.size( ); i++ )
-    {
-      currentHeight = i * _heightPerRow;
+    CreateSummarySpikes( );
+    UpdateGradientColors( );
 
-      QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
-      painter.drawLine( line );
-    }
+    update( );
 
-
-    if( _showMarker )
-    {
-      float percentage = float( _lastMousePosition.x( )) / float( width( ));
-      int positionX = _lastMousePosition.x( );
-      int margin = 5;
-
-      if( width( ) - positionX < 50 )
-        margin = -50;
-
-      QPen pen( QColor( 255, 255, 255 ));
-      painter.setPen( pen );
-
-      currentHeight = _heightPerRow / 2;
-      QPoint position ( positionX + margin, currentHeight );
-      for( auto histogram : _histograms )
-      {
-        painter.drawText( position,
-                          QString::number( histogram->valueAt( percentage )));
-
-        position.setY( position.y( ) + _heightPerRow );
-      }
-
-      QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
-      pen.setColor( QColor( 177, 50, 50 ));
-      painter.setPen( pen );
-      painter.drawLine( marker );
-    }
+//    if( _pendingSelections.size( ) > 0 )
+//      _insertionTimer.start( );
   }
 }
 
 void Summary::mouseMoveEvent( QMouseEvent* event_ )
 {
-  QFrame::mouseMoveEvent( event_ );
+  QWidget::mouseMoveEvent( event_ );
 
   QPoint position = event_->pos( );
-  QRect bounds = rect( );
 
-  if( position != _lastMousePosition &&
-      bounds.contains( position ))
-  {
-    _lastMousePosition = position;
-    _showMarker = true;
-    update( );
-  }
-  else
-  {
-    if( _showMarker )
-    {
-      _showMarker = false;
-      update( );
-    }
-    _showMarker = false;
-  }
+  _lastMousePosition = mapToGlobal( position );
+  _showMarker = true;
 
+  for( auto histogram : _histograms )
+    histogram->update( );
+
+
+}
+
+void Summary::updateMouseMarker( QPoint point )
+{
+  if( point != _lastMousePosition )
+  {
+    _lastMousePosition = point;
+
+    for( auto histogram : _histograms )
+      histogram->update( );
+  }
 }
 
 void Summary::CreateSummarySpikes( )
@@ -331,6 +372,8 @@ void Summary::bins( unsigned int bins_ )
 
   CreateSummarySpikes( );
   UpdateGradientColors( );
+
+  update( );
 }
 
 unsigned int Summary::bins( void )
@@ -351,254 +394,4 @@ unsigned int Summary::heightPerRow( void )
 void Summary::showMarker( bool show_ )
 {
   _showMarker = show_;
-}
-
-/*****************************************************************************/
-/******************************** HISTOGRAM **********************************/
-/*****************************************************************************/
-
-
-visimpl::Histogram::Histogram( const brion::Spikes& spikes,
-                               float startTime,
-                               float endTime )
-: _maxValueHistogramLocal( 0 )
-, _spikes( spikes )
-, _startTime( startTime )
-, _endTime( endTime )
-, _scaleFunc( nullptr )
-, _colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC )
-, _normRule( visimpl::Histogram::T_NORM_MAX )
-{
-  colorScale( _colorScale );
-}
-
-visimpl::Histogram::Histogram( const brion::SpikeReport& spikeReport )
-: _maxValueHistogramLocal( 0 )
-, _spikes( spikeReport.getSpikes( ))
-, _startTime( spikeReport.getStartTime( ))
-, _endTime( spikeReport.getEndTime( ))
-, _scaleFunc( nullptr )
-, _colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC )
-, _normRule( visimpl::Histogram::T_NORM_MAX )
-{
-  colorScale( _colorScale );
-
-}
-
-void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
-{
-
-  _histogram.clear( );
-  _histogram.resize( binsNumber, 0 );
-  _maxValueHistogramLocal = 0;
-  _maxValueHistogramGlobal = 0;
-
-  std::vector< unsigned int > globalHistogram;
-  globalHistogram.resize( binsNumber, 0 );
-
-  float totalTime = _endTime - _startTime ;
-
-  bool filter = _filteredGIDs.size( ) > 0;
-
-  std::cout << "Filtered GIDs: " << _filteredGIDs.size( ) << std::endl;
-
-  unsigned int counter = 0;
-  float invTotal = 1.0f / totalTime;
-  for( auto spike : _spikes )
-  {
-    float perc = ( spike.first - _startTime ) * invTotal;
-    unsigned int position =  _histogram.size( ) * perc;
-
-    globalHistogram[ position ]++;
-
-    if( filter && _filteredGIDs.find( spike.second ) == _filteredGIDs.end( ))
-    {
-      continue;
-    }
-
-    assert( position < _histogram.size( ));
-    _histogram[ position ]++;
-    counter++;
-  }
-
-  std::cout << "Total spikes: " << counter << std::endl;
-
-  unsigned int cont = 0;
-  unsigned int maxPos = 0;
-  for( auto bin : _histogram )
-  {
-    if( bin > _maxValueHistogramLocal )
-    {
-      _maxValueHistogramLocal = bin;
-      maxPos = cont;
-    }
-    cont++;
-  }
-
-  _maxValueHistogramGlobal = _maxValueHistogramLocal;
-
-  if( filter )
-  {
-    for( auto bin : globalHistogram )
-    {
-      if( bin > _maxValueHistogramGlobal )
-      {
-        _maxValueHistogramGlobal = bin;
-      }
-    }
-  }
-
-  std::cout << "Bin with local maximum value " << _maxValueHistogramLocal
-            << " at " << maxPos
-            << std::endl;
-}
-
-namespace visimpl
-{
-
-  // All these functions consider a maxValue = 1.0f / <calculated_maxValue >
-  float linearFunc( float value, float maxValue )
-  {
-    return value * maxValue;
-  }
-
-  float exponentialFunc( float value, float maxValue )
-  {
-    return ( logf( value) * maxValue );
-  }
-
-  float logarithmicFunc( float value, float maxValue )
-  {
-    return ( log10f( value) * maxValue );
-  }
-
-}
-
-void visimpl::Histogram::CalculateColors( void )
-{
-  QGradientStops stops;
-
-  float maxValue = 0.0f;
-  float relativeTime = 0.0f;
-  float delta = 1.0f / _histogram.size( );
-  float percentage;
-
-  maxValue = _normRule == T_NORM_GLOBAL ?
-             _maxValueHistogramGlobal :
-             _maxValueHistogramLocal;
-
-  switch( _colorScale )
-  {
-    case visimpl::Histogram::T_COLOR_LINEAR:
-
-      maxValue = 1.0f / maxValue;
-
-      break;
-    case visimpl::Histogram::T_COLOR_EXPONENTIAL:
-
-      maxValue = 1.0f / logf( maxValue );
-
-      break;
-    case visimpl::Histogram::T_COLOR_LOGARITHMIC:
-
-      maxValue = 1.0f / log10f( maxValue );
-
-      break;
-  }
-
-  for( auto bin : _histogram )
-  {
-    percentage = _scaleFunc( float( bin ), maxValue );
-    percentage = std::max< float >( std::min< float > (1.0f, percentage ), 0.0f);
-//    std::cout << percentage << std::endl;
-    glm::vec4 color = _colorMapper.GetValue( percentage );
-    stops << qMakePair( relativeTime, QColor( color.r, color.g, color.b, color.a ));
-
-    relativeTime += delta;
-  }
-
-  _gradientStops = stops;
-}
-
-void visimpl::Histogram::filteredGIDs( const GIDUSet& gids )
-{
-  if( gids.size( ) > 0 )
-    _filteredGIDs = gids;
-}
-
-const GIDUSet& visimpl::Histogram::filteredGIDs( void )
-{
-  return _filteredGIDs;
-}
-
-void visimpl::Histogram::colorScale( visimpl::Histogram::TColorScale scale )
-{
-  _colorScale = scale;
-
-  switch( _colorScale )
-  {
-    case visimpl::Histogram::T_COLOR_LINEAR:
-
-      _scaleFunc = linearFunc;
-
-      break;
-    case visimpl::Histogram::T_COLOR_EXPONENTIAL:
-
-      _scaleFunc = exponentialFunc;
-
-      break;
-    case visimpl::Histogram::T_COLOR_LOGARITHMIC:
-
-      _scaleFunc = logarithmicFunc;
-
-      break;
-  }
-}
-
-visimpl::Histogram::TColorScale visimpl::Histogram::colorScale( void )
-{
-  return _colorScale;
-}
-
-void visimpl::Histogram::normalizeRule(
-    visimpl::Histogram::TNormalize_Rule normRule )
-{
-  _normRule = normRule;
-}
-
-visimpl::Histogram::TNormalize_Rule visimpl::Histogram::normalizeRule( void )
-{
-  return _normRule;
-}
-
-const std::vector< unsigned int>& visimpl::Histogram::histogram( void )
-{
-  return _histogram;
-}
-
-const utils::InterpolationSet< glm::vec4 >&
-visimpl::Histogram::colorMapper( void )
-{
-  return _colorMapper;
-}
-
-void visimpl::Histogram::colorMapper(
-    const utils::InterpolationSet< glm::vec4 >& colors )
-{
-  _colorMapper = colors;
-}
-
-const QGradientStops& visimpl::Histogram::gradientStops( void )
-{
-  return _gradientStops;
-}
-
-unsigned int visimpl::Histogram::valueAt( float percentage )
-{
-  unsigned int position = percentage * _histogram.size( );
-
-  if( position >= _histogram.size( ))
-    position = _histogram.size( ) - 1;
-
-  return _histogram[ position ];
 }

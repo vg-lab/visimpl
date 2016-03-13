@@ -13,8 +13,8 @@
 #include <QPushButton>
 #include <QMouseEvent>
 
-#include "../EditorTF/ColorPoints.h"
-#include "../EditorTF/Gradient.h"
+#include "EditorTF/ColorPoints.h"
+#include "EditorTF/Gradient.h"
 
 class TransferFunctionWidget : public QWidget
 {
