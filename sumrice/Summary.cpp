@@ -86,7 +86,6 @@ Summary::Summary( QWidget* parent_,
 
 #ifdef VISIMPL_USE_ZEQ
 
-  _inserting = false;
   _insertionTimer.setSingleShot( false );
   _insertionTimer.setInterval( 250 );
   connect( &_insertionTimer, SIGNAL( timeout( )),
