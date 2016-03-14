@@ -141,7 +141,6 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
 
   CalculateColors( );
 
-  _filteredGIDs.clear( );
 }
 
 namespace visimpl

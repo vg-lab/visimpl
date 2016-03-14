@@ -86,11 +86,13 @@ Summary::Summary( QWidget* parent_,
 
 #ifdef VISIMPL_USE_ZEQ
 
+  _inserting = false;
   _insertionTimer.setSingleShot( false );
   _insertionTimer.setInterval( 250 );
   connect( &_insertionTimer, SIGNAL( timeout( )),
            this, SLOT(deferredInsertion( )));
   _insertionTimer.start( );
+
 
 #endif
   }
@@ -235,11 +237,11 @@ void Summary::AddNewHistogram( const visimpl::Selection& selection
 
 void Summary::deferredInsertion( void )
 {
-//  std::cout << "Deferred call " << std::endl;
+//  std::cout << "Deferred call " << thread( ) << std::endl;
 
   if( _pendingSelections.size( ) > 0 )
   {
-
+    _mutex.lock( );
     StackRow currentRow;
 
     visimpl::Selection selection = _pendingSelections.front( );
@@ -275,23 +277,18 @@ void Summary::deferredInsertion( void )
     connect( histogram, SIGNAL( mousePositionChanged( QPoint )),
              this, SLOT( updateMouseMarker( QPoint )));
 
-//    _mainLayout->addWidget( histogram );
     _histograms.push_back( histogram );
-
-    //    unsigned int newHeight = (_histograms.size( )) * _heightPerRow;
-    //    _body->setMinimumHeight( newHeight );
-    //    this->setMinimumHeight( newHeight + 100 );
-
-    //    this->parentWidget( )->resize( width( ), newHeight + 2 );
 
     CreateSummarySpikes( );
 //    UpdateGradientColors( );
 
-    update( );
+    GIDUSet tmp;
+    histogram->filteredGIDs( tmp );
 
-//    if( _pendingSelections.size( ) > 0 )
-//      _insertionTimer.start( );
+    _mutex.unlock( );
+    update( );
   }
+
 }
 
 void Summary::mouseMoveEvent( QMouseEvent* event_ )

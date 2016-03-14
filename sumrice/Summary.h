@@ -11,6 +11,8 @@
 #include <brion/brion.h>
 #include <prefr/prefr.h>
 
+#include <mutex>
+
 #include <QWidget>
 #include <QGridLayout>
 #include <QVBoxLayout>
@@ -123,6 +125,7 @@ protected slots:
 protected:
 
   std::list< visimpl::Selection > _pendingSelections;
+  std::mutex _mutex;
   QTimer _insertionTimer;
 
 #endif
