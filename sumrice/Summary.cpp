@@ -110,7 +110,7 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
   _mainHistogram->setMinimumHeight( _heightPerRow );
   _mainHistogram->setMaximumHeight( _heightPerRow );
 
-
+  _mainHistogram->representationMode( visimpl::Histogram::T_REP_CURVE );
   //  _mainHistogram->setMinimumWidth( width( ));
   //  _mainLayout->addWidget( _mainHistogram );
 
@@ -152,7 +152,7 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
     StackRow mainRow;
 
     mainRow.histogram = _mainHistogram;
-    QString labelText = QString( "All GIDs");
+    QString labelText = QString( "All");
     mainRow.label = new QLabel( labelText );
     mainRow.checkBox = new QCheckBox( );
 
