@@ -74,7 +74,7 @@ visimpl::Histogram::Histogram( const brion::SpikeReport& spikeReport )
 void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
 {
 
-  _histogram.clear( );
+//  _histogram.clear( );
   _histogram.resize( binsNumber, 0 );
   _maxValueHistogramLocal = 0;
   _maxValueHistogramGlobal = 0;
@@ -93,6 +93,7 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
   for( auto spike : _spikes )
   {
     float perc = ( spike.first - _startTime ) * invTotal;
+    perc = std::min( 1.0f, std::max( 0.0f, perc ));
     unsigned int position =  _histogram.size( ) * perc;
 
     globalHistogram[ position ]++;
@@ -137,6 +138,10 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
   std::cout << "Bin with local maximum value " << _maxValueHistogramLocal
             << " at " << maxPos
             << std::endl;
+
+  CalculateColors( );
+
+  _filteredGIDs.clear( );
 }
 
 namespace visimpl

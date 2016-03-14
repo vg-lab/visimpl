@@ -38,13 +38,20 @@ Summary::Summary( QWidget* parent_,
 
   setMouseTracking( true );
 
+  if( _stackType == T_STACK_FIXED )
+  {
+    _mainLayout = new QGridLayout( );
+    this->setLayout( _mainLayout );
+  }
+  else if( _stackType == T_STACK_EXPANDABLE )
+  {
   _maxColumns= 20;
   _summaryColumns = _maxColumns - 2;
 
   QVBoxLayout* upperLayout = new QVBoxLayout( );
   upperLayout->setAlignment( Qt::AlignTop );
 
-//  QScrollArea* scrollArea = new QScrollArea( );
+
   QWidget* header = new QWidget( );
   QGridLayout* headerLayout = new QGridLayout( );
   headerLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 1);
@@ -67,13 +74,13 @@ Summary::Summary( QWidget* parent_,
 ////  std::cout << width( ) << std::endl;
 //  _body->setMinimumWidth( width( ));
 ////  body->setMaximumWidth( width( ));
-
-//  scrollArea->setWidget( _body );
-//  scrollArea->setWidgetResizable( true );
+  QScrollArea* scrollArea = new QScrollArea( );
+  scrollArea->setWidget( _body );
+  scrollArea->setWidgetResizable( true );
 
   upperLayout->addWidget( header );
-//  upperLayout->addWidget( scrollArea );
-  upperLayout->addWidget( _body );
+  upperLayout->addWidget( scrollArea );
+//  upperLayout->addWidget( _body );
 
   this->setLayout( upperLayout );
 
@@ -86,6 +93,7 @@ Summary::Summary( QWidget* parent_,
   _insertionTimer.start( );
 
 #endif
+  }
 }
 
 void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
@@ -97,83 +105,70 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
 //
 //  CreateSummarySpikes( gids );
 //  UpdateGradientColors( );
-
-  StackRow mainRow;
-
   _mainHistogram = new visimpl::Histogram( *spikes_ );
   _mainHistogram->setMinimumHeight( _heightPerRow );
   _mainHistogram->setMaximumHeight( _heightPerRow );
-//  _mainHistogram->setMinimumWidth( width( ));
-//  _mainLayout->addWidget( _mainHistogram );
-
-  TColorMapper colorMapper;
-//  colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
-//  colorMapper.Insert(0.25f, glm::vec4( 128, 128, 255, 255 ));
-//  colorMapper.Insert(0.33f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
-//  colorMapper.Insert(0.66f, glm::vec4( 255, 255, 0.0f, 255 ));
-//  colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
-
-  colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
-  colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
-  colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
-  colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
-  colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
-
-//  colorMapper.Insert(0.0f, glm::vec4( 85, 0, 0, 255 ));
-//  colorMapper.Insert(0.25f, glm::vec4( 128, 21, 21, 255 ));
-//  colorMapper.Insert(0.50f, glm::vec4( 170, 57, 57, 255 ));
-//  colorMapper.Insert(0.75f, glm::vec4( 212, 106, 106, 255 ));
-//  colorMapper.Insert(1.0f, glm::vec4( 255, 170, 170, 255 ));
-
-  _mainHistogram->colorMapper( colorMapper );
-
-  _mainHistogram->mousePosition( &_lastMousePosition );
-  connect( _mainHistogram, SIGNAL( mousePositionChanged( QPoint )),
-           this, SLOT( updateMouseMarker( QPoint )));
 
 
+  //  _mainHistogram->setMinimumWidth( width( ));
+  //  _mainLayout->addWidget( _mainHistogram );
+
+    TColorMapper colorMapper;
+  //  colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
+  //  colorMapper.Insert(0.25f, glm::vec4( 128, 128, 255, 255 ));
+  //  colorMapper.Insert(0.33f, glm::vec4( 0.0f, 255, 0.0f, 255 ));
+  //  colorMapper.Insert(0.66f, glm::vec4( 255, 255, 0.0f, 255 ));
+  //  colorMapper.Insert(1.0f, glm::vec4( 255, 0.0f, 0.0f, 255 ));
+
+    colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
+    colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
+    colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
+    colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
+    colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
+
+  //  colorMapper.Insert(0.0f, glm::vec4( 85, 0, 0, 255 ));
+  //  colorMapper.Insert(0.25f, glm::vec4( 128, 21, 21, 255 ));
+  //  colorMapper.Insert(0.50f, glm::vec4( 170, 57, 57, 255 ));
+  //  colorMapper.Insert(0.75f, glm::vec4( 212, 106, 106, 255 ));
+  //  colorMapper.Insert(1.0f, glm::vec4( 255, 170, 170, 255 ));
+
+    _mainHistogram->colorMapper( colorMapper );
+
+    _mainHistogram->mousePosition( &_lastMousePosition );
+    connect( _mainHistogram, SIGNAL( mousePositionChanged( QPoint )),
+             this, SLOT( updateMouseMarker( QPoint )));
 
 
-  mainRow.histogram = _mainHistogram;
-  QString labelText = QString( "All GIDs");
-  mainRow.label = new QLabel( labelText );
-  mainRow.checkBox = new QCheckBox( );
 
-  unsigned int row = _histograms.size( );
-  _mainLayout->addWidget( mainRow.label, row , 0, 1, 1 );
-  _mainLayout->addWidget( _mainHistogram, row, 1, 1, _summaryColumns );
-  _mainLayout->addWidget( mainRow.checkBox, row, _maxColumns - 1, 1, 1 );
-//  mainRow.checkBox->setVisible( false );
-
-  _rows.push_back( mainRow );
-  _histograms.push_back( _mainHistogram );
-//  _mainLayout->addWidget( _mainHistogram, 0, 0, 1, _summaryColumns );
-
-  switch( _stackType )
+  if( _stackType == T_STACK_FIXED)
   {
-    case T_STACK_FIXED:
-    {
-//      _mainHistogram = new visimpl::Histogram( *spikes_ );
-      _selectionHistogram = new visimpl::Histogram( *spikes_ );
-      _histograms.push_back( _selectionHistogram );
+    _mainLayout->addWidget( _mainHistogram, 0, 1, 1, 1 );
+    _histograms.push_back( _mainHistogram );
+  }
+  else if( _stackType == T_STACK_EXPANDABLE )
+  {
 
-      _selectionHistogram->colorMapper( colorMapper );
+    StackRow mainRow;
 
-      break;
-    }
-    case T_STACK_EXPANDABLE:
-    {
-//      this->setMinimumHeight( _heightPerRow );
-      break;
-    }
-    default:
-      break;
+    mainRow.histogram = _mainHistogram;
+    QString labelText = QString( "All GIDs");
+    mainRow.label = new QLabel( labelText );
+    mainRow.checkBox = new QCheckBox( );
+
+    unsigned int row = _histograms.size( );
+    _mainLayout->addWidget( mainRow.label, row , 0, 1, 1 );
+    _mainLayout->addWidget( _mainHistogram, row, 1, 1, _summaryColumns );
+    _mainLayout->addWidget( mainRow.checkBox, row, _maxColumns - 1, 1, 1 );
+  //  mainRow.checkBox->setVisible( false );
+
+    _rows.push_back( mainRow );
+    _histograms.push_back( _mainHistogram );
 
   }
   //  AddGIDSelection( gids );
 
   CreateSummarySpikes( );
-  UpdateGradientColors( );
+//  UpdateGradientColors( );
   update( );
 }
 
@@ -290,7 +285,7 @@ void Summary::deferredInsertion( void )
     //    this->parentWidget( )->resize( width( ), newHeight + 2 );
 
     CreateSummarySpikes( );
-    UpdateGradientColors( );
+//    UpdateGradientColors( );
 
     update( );
 
