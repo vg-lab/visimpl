@@ -77,6 +77,8 @@ namespace visimpl
 
     unsigned int valueAt( float percentage );
 
+    bool isInitialized( void );
+
 signals:
 
   void mousePositionChanged( QPoint point );
@@ -91,7 +93,8 @@ signals:
     unsigned int _maxValueHistogramLocal;
     unsigned int _maxValueHistogramGlobal;
     QGradientStops _gradientStops;
-    QPolygonF _curveStops;
+    QPolygonF _curveStopsLocal;
+    QPolygonF _curveStopsGlobal;
 
     brion::Spikes _spikes;
     float _startTime;

@@ -13,9 +13,11 @@
 
 unsigned int visimpl::Selection::_counter = 0;
 
+unsigned int DEFAULT_BINS = 250;
+
 Summary::Summary( QWidget* parent_ )
 : QWidget( parent_ )
-, _bins( 250 )
+, _bins( DEFAULT_BINS )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
 , _mainHistogram( nullptr )
@@ -27,7 +29,7 @@ Summary::Summary( QWidget* parent_ )
 Summary::Summary( QWidget* parent_,
                   TStackType stackType )
 : QWidget( parent_ )
-, _bins( 250 )
+, _bins( DEFAULT_BINS )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
 , _mainHistogram( nullptr )
@@ -109,7 +111,7 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
   _mainHistogram = new visimpl::Histogram( *spikes_ );
   _mainHistogram->setMinimumHeight( _heightPerRow );
   _mainHistogram->setMaximumHeight( _heightPerRow );
-
+  _mainHistogram->colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC );
   _mainHistogram->representationMode( visimpl::Histogram::T_REP_CURVE );
   //  _mainHistogram->setMinimumWidth( width( ));
   //  _mainLayout->addWidget( _mainHistogram );
@@ -253,8 +255,9 @@ void Summary::deferredInsertion( void )
     visimpl::Histogram* histogram = new visimpl::Histogram( *_spikeReport );
     histogram->filteredGIDs( selection.gids );
     histogram->colorMapper( _mainHistogram->colorMapper( ));
-    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
+    histogram->colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC );
     histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
+    histogram->representationMode( visimpl::Histogram::T_REP_CURVE );
     histogram->setMinimumHeight( _heightPerRow );
     histogram->setMaximumHeight( _heightPerRow );
     //    histogram->setMinimumWidth( 500 );
@@ -321,7 +324,7 @@ void Summary::CreateSummarySpikes( )
   std::cout << "Creating histograms... Number of bins: " << _bins << std::endl;
   for( auto histogram : _histograms )
   {
-    if( histogram->gradientStops( ).size( ) == 0)
+    if( !histogram->isInitialized( ) )
       histogram->CreateHistogram( _bins );
   }
 
@@ -341,7 +344,7 @@ void Summary::UpdateGradientColors( void )
 {
   for( auto histogram : _histograms )
   {
-    if( histogram->gradientStops( ).size( ) == 0)
+    if( !histogram->isInitialized( ))
       histogram->CalculateColors( );
   }
 
