@@ -24,23 +24,10 @@ visimpl::Histogram::Histogram( const brion::Spikes& spikes,
 , _scaleFunc( nullptr )
 , _colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC )
 , _normRule( visimpl::Histogram::T_NORM_MAX )
+, _repMode( visimpl::Histogram::T_REP_DENSE )
 , _lastMousePosition( nullptr )
 {
-  colorScale( _colorScale );
-
-  QPixmap pixmap(20, 20);
-  QPainter painter(&pixmap);
-  painter.fillRect(0, 0, 10, 10, Qt::lightGray);
-  painter.fillRect(10, 10, 10, 10, Qt::lightGray);
-  painter.fillRect(0, 10, 10, 10, Qt::darkGray);
-  painter.fillRect(10, 0, 10, 10, Qt::darkGray);
-  painter.end();
-  QPalette pal = palette();
-  pal.setBrush(backgroundRole(), QBrush(pixmap));
-  setPalette(pal);
-  setAutoFillBackground(true);
-
-  setMouseTracking( true );
+  init( );
 }
 
 visimpl::Histogram::Histogram( const brion::SpikeReport& spikeReport )
@@ -52,7 +39,13 @@ visimpl::Histogram::Histogram( const brion::SpikeReport& spikeReport )
 , _scaleFunc( nullptr )
 , _colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC )
 , _normRule( visimpl::Histogram::T_NORM_MAX )
+, _repMode( visimpl::Histogram::T_REP_DENSE )
 , _lastMousePosition( nullptr )
+{
+  init( );
+}
+
+void visimpl::Histogram::init( void )
 {
   colorScale( _colorScale );
 
@@ -67,6 +60,7 @@ visimpl::Histogram::Histogram( const brion::SpikeReport& spikeReport )
   pal.setBrush(backgroundRole(), QBrush(pixmap));
   setPalette(pal);
   setAutoFillBackground(true);
+
 
   setMouseTracking( true );
 }
@@ -89,24 +83,58 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
   std::cout << "Filtered GIDs: " << _filteredGIDs.size( ) << std::endl;
 
   unsigned int counter = 0;
-  float invTotal = 1.0f / totalTime;
-  for( auto spike : _spikes )
+
+//  float invTotal = 1.0f / totalTime;
+//  for( auto spike : _spikes )
+//  {
+//    float perc = ( spike.first - _startTime ) * invTotal;
+//    perc = std::min( 1.0f, std::max( 0.0f, perc ));
+//    unsigned int position =  _histogram.size( ) * perc;
+//
+//    globalHistogram[ position ]++;
+//
+//    if( filter && _filteredGIDs.find( spike.second ) == _filteredGIDs.end( ))
+//    {
+//      continue;
+//    }
+//
+//    assert( position < _histogram.size( ));
+//    _histogram[ position ]++;
+//    counter++;
+//  }
+
+//  std::vector< unsigned int > aux ( binsNumber, 0 );
+
+
+  float deltaTime = ( totalTime ) / _histogram.size( );
+  float currentTime = _startTime + deltaTime;
+//  float lastTime = _startTime;
+  auto spike = _spikes.begin( );
+  std::vector< unsigned int >::iterator globalIt = globalHistogram.begin( );
+  for( unsigned int& bin : _histogram )
   {
-    float perc = ( spike.first - _startTime ) * invTotal;
-    perc = std::min( 1.0f, std::max( 0.0f, perc ));
-    unsigned int position =  _histogram.size( ) * perc;
-
-    globalHistogram[ position ]++;
-
-    if( filter && _filteredGIDs.find( spike.second ) == _filteredGIDs.end( ))
+    while( spike != _spikes.end( ) && spike->first <= currentTime )
     {
-      continue;
+      ( *globalIt )++;
+      if( !filter ||  _filteredGIDs.find( spike->second ) != _filteredGIDs.end( ))
+        bin++;
+
+      spike++;
+      counter++;
     }
 
-    assert( position < _histogram.size( ));
-    _histogram[ position ]++;
-    counter++;
+//    lastTime = currentTime;
+    currentTime += deltaTime;
+    globalIt++;
   }
+
+//  for( unsigned int i = 0; i < binsNumber; i++ )
+//  {
+//    unsigned int original = _histogram[ i ];
+//    unsigned int opt = aux[ i ];
+//    if( original != opt )
+//      std::cout << "Values not equal " << i << " -> " << original << " " << opt << std::endl;
+//  }
 
   std::cout << "Total spikes: " << counter << std::endl;
 
@@ -166,48 +194,116 @@ namespace visimpl
 
 void visimpl::Histogram::CalculateColors( void )
 {
-  QGradientStops stops;
-
-  float maxValue = 0.0f;
-  float relativeTime = 0.0f;
-  float delta = 1.0f / _histogram.size( );
-  float percentage;
-
-  maxValue = _normRule == T_NORM_GLOBAL ?
-             _maxValueHistogramGlobal :
-             _maxValueHistogramLocal;
-
-  switch( _colorScale )
+  if( _repMode == T_REP_DENSE )
   {
-    case visimpl::Histogram::T_COLOR_LINEAR:
 
-      maxValue = 1.0f / maxValue;
+    QGradientStops stops;
 
-      break;
-    case visimpl::Histogram::T_COLOR_EXPONENTIAL:
+    float maxValue = 0.0f;
+    float relativeTime = 0.0f;
+    float delta = 1.0f / _histogram.size( );
+    float percentage;
 
-      maxValue = 1.0f / logf( maxValue );
+    maxValue = _normRule == T_NORM_GLOBAL ?
+               _maxValueHistogramGlobal :
+               _maxValueHistogramLocal;
 
-      break;
-    case visimpl::Histogram::T_COLOR_LOGARITHMIC:
+    switch( _colorScale )
+    {
+      case visimpl::Histogram::T_COLOR_LINEAR:
 
-      maxValue = 1.0f / log10f( maxValue );
+        maxValue = 1.0f / maxValue;
 
-      break;
+        break;
+      case visimpl::Histogram::T_COLOR_EXPONENTIAL:
+
+        maxValue = 1.0f / logf( maxValue );
+
+        break;
+      case visimpl::Histogram::T_COLOR_LOGARITHMIC:
+
+        maxValue = 1.0f / log10f( maxValue );
+
+        break;
+    }
+
+    for( auto bin : _histogram )
+    {
+      percentage = _scaleFunc( float( bin ), maxValue );
+      percentage = std::max< float >( std::min< float > (1.0f, percentage ), 0.0f);
+  //    std::cout << percentage << std::endl;
+      glm::vec4 color = _colorMapper.GetValue( percentage );
+      stops << qMakePair( relativeTime, QColor( color.r, color.g, color.b, color.a ));
+
+      relativeTime += delta;
+    }
+
+    _gradientStops = stops;
   }
-
-  for( auto bin : _histogram )
+  else if( _repMode == T_REP_CURVE )
   {
-    percentage = _scaleFunc( float( bin ), maxValue );
-    percentage = std::max< float >( std::min< float > (1.0f, percentage ), 0.0f);
-//    std::cout << percentage << std::endl;
-    glm::vec4 color = _colorMapper.GetValue( percentage );
-    stops << qMakePair( relativeTime, QColor( color.r, color.g, color.b, color.a ));
+//    float maxValue;
+    float invMaxValueLocal;
+    float invMaxValueGlobal;
 
-    relativeTime += delta;
+
+
+    switch( _colorScale )
+    {
+      case visimpl::Histogram::T_COLOR_LINEAR:
+
+        invMaxValueGlobal = 1.0f / _maxValueHistogramGlobal;
+        invMaxValueLocal = 1.0f / _maxValueHistogramLocal;
+
+        break;
+      case visimpl::Histogram::T_COLOR_EXPONENTIAL:
+
+        invMaxValueGlobal = 1.0f / logf( _maxValueHistogramGlobal );
+//        invMaxValueLocal = 1.0f / logf( _maxValueHistogramLocal );
+        invMaxValueLocal = 1.0f / _maxValueHistogramLocal;
+
+        break;
+      case visimpl::Histogram::T_COLOR_LOGARITHMIC:
+
+        invMaxValueGlobal = 1.0f / log10f( _maxValueHistogramGlobal );
+//        invMaxValueLocal = 1.0f / log10f( _maxValueHistogramLocal );
+        invMaxValueLocal = 1.0f / _maxValueHistogramLocal;
+
+        break;
+    }
+
+    float currentX;
+    float globalY;
+    float localY;
+    unsigned int counter = 0;
+    float invBins = 1.0f / float( _histogram.size( ) - 1);
+
+    for( auto bin : _histogram )
+    {
+      currentX = counter * invBins;
+
+      if( bin > 0)
+      {
+        globalY = _scaleFunc( float( bin ), invMaxValueGlobal );
+
+        localY = linearFunc( float( bin ), invMaxValueLocal );
+      }
+      else
+      {
+        globalY = 0.0f;
+        localY = 0.0f;
+      }
+//      if( globalY > 1.0f || globalY < 0.0f)
+//        std::cout << bin << " " << invMaxValueGlobal << std::endl;
+//      std::cout << currentX << " " << globalY << std::endl;
+
+      _curveStopsLocal.push_back( QPointF( currentX, 1.0f - localY ));
+      _curveStopsGlobal.push_back( QPointF( currentX, 1.0f - globalY ));
+
+      counter++;
+    }
+
   }
-
-  _gradientStops = stops;
 }
 
 void visimpl::Histogram::filteredGIDs( const GIDUSet& gids )
@@ -261,6 +357,18 @@ visimpl::Histogram::TNormalize_Rule visimpl::Histogram::normalizeRule( void )
   return _normRule;
 }
 
+void visimpl::Histogram::representationMode(
+    visimpl::Histogram::TRepresentation_Mode repMode )
+{
+  _repMode = repMode;
+}
+
+visimpl::Histogram::TRepresentation_Mode
+visimpl::Histogram::representationMode( void )
+{
+  return _repMode;
+}
+
 const std::vector< unsigned int>& visimpl::Histogram::histogram( void )
 {
   return _histogram;
@@ -293,6 +401,11 @@ unsigned int visimpl::Histogram::valueAt( float percentage )
   return _histogram[ position ];
 }
 
+bool visimpl::Histogram::isInitialized( void )
+{
+  return _gradientStops.size( ) > 0 || _curveStopsGlobal.size( ) > 0;
+}
+
 void visimpl::Histogram::mouseMoveEvent( QMouseEvent* event_ )
 {
   QFrame::mouseMoveEvent( event_ );
@@ -314,22 +427,70 @@ void visimpl::Histogram::mousePosition( QPoint* mousePosition_ )
 
 void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
 {
-
-//  std::cout << "Painting... " << this << std::endl;
   QPainter painter( this );
-  QLinearGradient gradient( 0, 0, width( ), 0 );
-
-  QRect area = rect();
-
-  gradient.setStops( _gradientStops );
-  QBrush brush( gradient );
-
-  painter.fillRect( area, brush );
-
   unsigned int currentHeight = height( );
 
-  QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
-  painter.drawLine( line );
+  QColor penColor;
+
+  if( _repMode == T_REP_DENSE )
+  {
+  //  std::cout << "Painting... " << this << std::endl;
+    QLinearGradient gradient( 0, 0, width( ), 0 );
+
+    QRect area = rect();
+
+    gradient.setStops( _gradientStops );
+    QBrush brush( gradient );
+
+    painter.fillRect( area, brush );
+
+    QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
+    painter.drawLine( line );
+
+    penColor = QColor( 255, 255, 255 );
+
+  }
+  else if( _repMode == T_REP_CURVE )
+  {
+
+    painter.setRenderHint( QPainter::Antialiasing );
+
+    painter.fillRect( rect( ), QBrush( QColor( 255, 255, 255, 255 ),
+                                       Qt::SolidPattern ));
+
+    QPainterPath path;
+    path.moveTo( 0, height( ) );
+    for( auto point : _curveStopsLocal )
+    {
+      path.lineTo( QPoint( point.x( ) * width( ), point.y( ) * height( )));
+    }
+    path.lineTo( width( ), height( ) );
+//    path.lineTo( 0, 0 );
+
+
+//    painter.setPen( Qt::NoPen );
+
+
+
+    QPainterPath globalPath;
+    globalPath.moveTo( 0, height( ) );
+    for( auto point : _curveStopsGlobal )
+    {
+      globalPath.lineTo( QPoint( point.x( ) * width( ), point.y( ) * height( )));
+    }
+    globalPath.lineTo( width( ), height( ) );
+//    path.lineTo( 0, 0 );
+
+    painter.setBrush( QBrush( QColor( 255, 0, 0, 100 ), Qt::SolidPattern));
+//    painter.setPen( Qt::NoPen );
+
+    painter.drawPath( globalPath );
+    painter.setBrush( QBrush( QColor( 0, 0, 128, 50 ), Qt::SolidPattern));
+    painter.drawPath( path );
+
+    penColor = QColor( 0, 0, 0 );
+  }
+
 
   if( _lastMousePosition )
   {
@@ -354,7 +515,8 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
     if( width( ) - positionX < 50 )
       margin = -50;
 
-    QPen pen( QColor( 255, 255, 255 ));
+
+    QPen pen( penColor );
     painter.setPen( pen );
 
     currentHeight = currentHeight / 2;
@@ -367,7 +529,6 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
     painter.setPen( pen );
     painter.drawLine( marker );
   }
-
 }
 
 

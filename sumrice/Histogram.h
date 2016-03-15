@@ -40,6 +40,13 @@ namespace visimpl
       T_NORM_MAX
     } TNormalize_Rule;
 
+    typedef enum
+    {
+      T_REP_DENSE = 0,
+      T_REP_CURVE
+
+    } TRepresentation_Mode;
+
     Histogram( const brion::Spikes& spikes, float startTime, float endTime );
     Histogram( const brion::SpikeReport& spikeReport );
 
@@ -55,6 +62,9 @@ namespace visimpl
     void normalizeRule( TNormalize_Rule normRule );
     TNormalize_Rule normalizeRule( void );
 
+    void representationMode( TRepresentation_Mode repType );
+    TRepresentation_Mode representationMode( void );
+
     const std::vector< unsigned int>& histogram( void );
 
     const utils::InterpolationSet< glm::vec4 >& colorMapper( void );
@@ -67,11 +77,15 @@ namespace visimpl
 
     unsigned int valueAt( float percentage );
 
+    bool isInitialized( void );
+
 signals:
 
   void mousePositionChanged( QPoint point );
 
   protected:
+
+    virtual void init( void );
 
     virtual void paintEvent(QPaintEvent* event);
 
@@ -79,6 +93,8 @@ signals:
     unsigned int _maxValueHistogramLocal;
     unsigned int _maxValueHistogramGlobal;
     QGradientStops _gradientStops;
+    QPolygonF _curveStopsLocal;
+    QPolygonF _curveStopsGlobal;
 
     brion::Spikes _spikes;
     float _startTime;
@@ -87,6 +103,7 @@ signals:
     float (*_scaleFunc)( float value, float maxValue);
     TColorScale _colorScale;
     TNormalize_Rule _normRule;
+    TRepresentation_Mode _repMode;
 
     utils::InterpolationSet< glm::vec4 > _colorMapper;
 
