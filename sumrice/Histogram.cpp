@@ -83,24 +83,58 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
   std::cout << "Filtered GIDs: " << _filteredGIDs.size( ) << std::endl;
 
   unsigned int counter = 0;
-  float invTotal = 1.0f / totalTime;
-  for( auto spike : _spikes )
+
+//  float invTotal = 1.0f / totalTime;
+//  for( auto spike : _spikes )
+//  {
+//    float perc = ( spike.first - _startTime ) * invTotal;
+//    perc = std::min( 1.0f, std::max( 0.0f, perc ));
+//    unsigned int position =  _histogram.size( ) * perc;
+//
+//    globalHistogram[ position ]++;
+//
+//    if( filter && _filteredGIDs.find( spike.second ) == _filteredGIDs.end( ))
+//    {
+//      continue;
+//    }
+//
+//    assert( position < _histogram.size( ));
+//    _histogram[ position ]++;
+//    counter++;
+//  }
+
+//  std::vector< unsigned int > aux ( binsNumber, 0 );
+
+
+  float deltaTime = ( totalTime ) / _histogram.size( );
+  float currentTime = _startTime + deltaTime;
+//  float lastTime = _startTime;
+  auto spike = _spikes.begin( );
+  std::vector< unsigned int >::iterator globalIt = globalHistogram.begin( );
+  for( unsigned int& bin : _histogram )
   {
-    float perc = ( spike.first - _startTime ) * invTotal;
-    perc = std::min( 1.0f, std::max( 0.0f, perc ));
-    unsigned int position =  _histogram.size( ) * perc;
-
-    globalHistogram[ position ]++;
-
-    if( filter && _filteredGIDs.find( spike.second ) == _filteredGIDs.end( ))
+    while( spike != _spikes.end( ) && spike->first <= currentTime )
     {
-      continue;
+      ( *globalIt )++;
+      if( !filter ||  _filteredGIDs.find( spike->second ) != _filteredGIDs.end( ))
+        bin++;
+
+      spike++;
+      counter++;
     }
 
-    assert( position < _histogram.size( ));
-    _histogram[ position ]++;
-    counter++;
+//    lastTime = currentTime;
+    currentTime += deltaTime;
+    globalIt++;
   }
+
+//  for( unsigned int i = 0; i < binsNumber; i++ )
+//  {
+//    unsigned int original = _histogram[ i ];
+//    unsigned int opt = aux[ i ];
+//    if( original != opt )
+//      std::cout << "Values not equal " << i << " -> " << original << " " << opt << std::endl;
+//  }
 
   std::cout << "Total spikes: " << counter << std::endl;
 
@@ -225,13 +259,15 @@ void visimpl::Histogram::CalculateColors( void )
       case visimpl::Histogram::T_COLOR_EXPONENTIAL:
 
         invMaxValueGlobal = 1.0f / logf( _maxValueHistogramGlobal );
-        invMaxValueLocal = 1.0f / logf( _maxValueHistogramLocal );
+//        invMaxValueLocal = 1.0f / logf( _maxValueHistogramLocal );
+        invMaxValueLocal = 1.0f / _maxValueHistogramLocal;
 
         break;
       case visimpl::Histogram::T_COLOR_LOGARITHMIC:
 
         invMaxValueGlobal = 1.0f / log10f( _maxValueHistogramGlobal );
-        invMaxValueLocal = 1.0f / log10f( _maxValueHistogramLocal );
+//        invMaxValueLocal = 1.0f / log10f( _maxValueHistogramLocal );
+        invMaxValueLocal = 1.0f / _maxValueHistogramLocal;
 
         break;
     }
@@ -250,7 +286,7 @@ void visimpl::Histogram::CalculateColors( void )
       {
         globalY = _scaleFunc( float( bin ), invMaxValueGlobal );
 
-        localY = _scaleFunc( float( bin ), invMaxValueLocal );
+        localY = linearFunc( float( bin ), invMaxValueLocal );
       }
       else
       {
