@@ -11,8 +11,6 @@
 #include <brion/brion.h>
 #include <prefr/prefr.h>
 
-#include <mutex>
-
 #include <QWidget>
 #include <QGridLayout>
 #include <QVBoxLayout>
@@ -64,7 +62,6 @@ public:
 
   } TStackType;
 
-  Summary( QWidget* parent = 0 );
   Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
 
   void Init( brion::SpikeReport* _spikes, brion::GIDSet gids );
@@ -87,7 +84,18 @@ public:
 
   void showMarker( bool show_ );
 
+  void colorScaleLocal( visimpl::TColorScale colorScale );
+  visimpl::TColorScale colorScaleLocal( void );
+
+  void colorScaleGlobal( visimpl::TColorScale colorScale );
+  visimpl::TColorScale colorScaleGlobal( void );
+
 protected slots:
+
+  void removeSelections( void );
+
+  void colorScaleLocal( int value );
+  void colorScaleGlobal( int value );
 
   void updateMouseMarker( QPoint point );
 
@@ -125,7 +133,6 @@ protected slots:
 protected:
 
   std::list< visimpl::Selection > _pendingSelections;
-  std::mutex _mutex;
   QTimer _insertionTimer;
 
 #endif
@@ -134,7 +141,7 @@ protected:
   void InsertSummarySpikes( const GIDUSet& gids );
 //  void CreateSummaryVoltages( void );
 
-  void UpdateGradientColors( void );
+  void UpdateGradientColors( bool replace = false );
 
   unsigned int _bins;
 
@@ -144,12 +151,14 @@ protected:
   GIDUSet _gids;
 
   visimpl::Histogram* _mainHistogram;
-  visimpl::Histogram* _selectionHistogram;
+  visimpl::Histogram* _detailHistogram;
 
   TStackType _stackType;
 
+  visimpl::TColorScale _colorScaleLocal;
+  visimpl::TColorScale _colorScaleGlobal;
+
   std::vector< visimpl::Histogram* > _histograms;
-  std::vector< QCheckBox* > _checkBoxes;
   std::vector< StackRow > _rows;
 
   QGridLayout* _mainLayout;

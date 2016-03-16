@@ -7,10 +7,30 @@
 
 #include "Histogram.h"
 
+#include "log.h"
+
 #include <QPainter>
 #include <QBrush>
 
 #include <QMouseEvent>
+
+visimpl::Histogram::Histogram( )
+: QFrame( nullptr )
+, _maxValueHistogramLocal( 0 )
+, _startTime( 0.0f )
+, _endTime( 0.0f )
+, _scaleFuncLocal( nullptr )
+, _scaleFuncGlobal( nullptr )
+, _colorScaleLocal( visimpl::T_COLOR_LINEAR )
+, _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
+, _prevColorScaleLocal( visimpl::T_COLOR_UNDEFINED )
+, _prevColorScaleGlobal( visimpl::T_COLOR_UNDEFINED )
+, _normRule( visimpl::T_NORM_MAX )
+, _repMode( visimpl::T_REP_DENSE )
+, _lastMousePosition( nullptr )
+{
+  init( );
+}
 
 
 visimpl::Histogram::Histogram( const brion::Spikes& spikes,
@@ -21,10 +41,14 @@ visimpl::Histogram::Histogram( const brion::Spikes& spikes,
 , _spikes( spikes )
 , _startTime( startTime )
 , _endTime( endTime )
-, _scaleFunc( nullptr )
-, _colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC )
-, _normRule( visimpl::Histogram::T_NORM_MAX )
-, _repMode( visimpl::Histogram::T_REP_DENSE )
+, _scaleFuncLocal( nullptr )
+, _scaleFuncGlobal( nullptr )
+, _colorScaleLocal( visimpl::T_COLOR_LINEAR )
+, _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
+, _prevColorScaleLocal( visimpl::T_COLOR_UNDEFINED )
+, _prevColorScaleGlobal( visimpl::T_COLOR_UNDEFINED )
+, _normRule( visimpl::T_NORM_MAX )
+, _repMode( visimpl::T_REP_DENSE )
 , _lastMousePosition( nullptr )
 {
   init( );
@@ -36,31 +60,48 @@ visimpl::Histogram::Histogram( const brion::SpikeReport& spikeReport )
 , _spikes( spikeReport.getSpikes( ))
 , _startTime( spikeReport.getStartTime( ))
 , _endTime( spikeReport.getEndTime( ))
-, _scaleFunc( nullptr )
-, _colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC )
-, _normRule( visimpl::Histogram::T_NORM_MAX )
-, _repMode( visimpl::Histogram::T_REP_DENSE )
+, _scaleFuncLocal( nullptr )
+, _scaleFuncGlobal( nullptr )
+, _colorScaleLocal( visimpl::T_COLOR_LINEAR )
+, _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
+, _prevColorScaleLocal( visimpl::T_COLOR_UNDEFINED )
+, _prevColorScaleGlobal( visimpl::T_COLOR_UNDEFINED )
+, _normRule( visimpl::T_NORM_MAX )
+, _repMode( visimpl::T_REP_DENSE )
 , _lastMousePosition( nullptr )
 {
   init( );
 }
 
+void visimpl::Histogram::Spikes( const brion::Spikes& spikes, float startTime, float endTime )
+{
+  _spikes = spikes;
+  _startTime = startTime;
+  _endTime = endTime;
+}
+void visimpl::Histogram::Spikes( const brion::SpikeReport& spikeReport )
+{
+  _spikes = spikeReport.getSpikes( );
+  _startTime = spikeReport.getStartTime( );
+  _endTime = spikeReport.getEndTime( );
+}
+
 void visimpl::Histogram::init( void )
 {
-  colorScale( _colorScale );
+  colorScaleLocal( _colorScaleLocal );
+  colorScaleGlobal( _colorScaleGlobal );
 
-  QPixmap pixmap(20, 20);
-  QPainter painter(&pixmap);
-  painter.fillRect(0, 0, 10, 10, Qt::lightGray);
-  painter.fillRect(10, 10, 10, 10, Qt::lightGray);
-  painter.fillRect(0, 10, 10, 10, Qt::darkGray);
-  painter.fillRect(10, 0, 10, 10, Qt::darkGray);
-  painter.end();
-  QPalette pal = palette();
-  pal.setBrush(backgroundRole(), QBrush(pixmap));
-  setPalette(pal);
-  setAutoFillBackground(true);
-
+//  QPixmap pixmap(20, 20);
+//  QPainter painter(&pixmap);
+//  painter.fillRect(0, 0, 10, 10, Qt::lightGray);
+//  painter.fillRect(10, 10, 10, 10, Qt::lightGray);
+//  painter.fillRect(0, 10, 10, 10, Qt::darkGray);
+//  painter.fillRect(10, 0, 10, 10, Qt::darkGray);
+//  painter.end();
+//  QPalette pal = palette();
+//  pal.setBrush(backgroundRole(), QBrush(pixmap));
+//  setPalette(pal);
+//  setAutoFillBackground(true);
 
   setMouseTracking( true );
 }
@@ -80,35 +121,11 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
 
   bool filter = _filteredGIDs.size( ) > 0;
 
-  std::cout << "Filtered GIDs: " << _filteredGIDs.size( ) << std::endl;
-
   unsigned int counter = 0;
-
-//  float invTotal = 1.0f / totalTime;
-//  for( auto spike : _spikes )
-//  {
-//    float perc = ( spike.first - _startTime ) * invTotal;
-//    perc = std::min( 1.0f, std::max( 0.0f, perc ));
-//    unsigned int position =  _histogram.size( ) * perc;
-//
-//    globalHistogram[ position ]++;
-//
-//    if( filter && _filteredGIDs.find( spike.second ) == _filteredGIDs.end( ))
-//    {
-//      continue;
-//    }
-//
-//    assert( position < _histogram.size( ));
-//    _histogram[ position ]++;
-//    counter++;
-//  }
-
-//  std::vector< unsigned int > aux ( binsNumber, 0 );
-
 
   float deltaTime = ( totalTime ) / _histogram.size( );
   float currentTime = _startTime + deltaTime;
-//  float lastTime = _startTime;
+
   auto spike = _spikes.begin( );
   std::vector< unsigned int >::iterator globalIt = globalHistogram.begin( );
   for( unsigned int& bin : _histogram )
@@ -123,18 +140,9 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
       counter++;
     }
 
-//    lastTime = currentTime;
     currentTime += deltaTime;
     globalIt++;
   }
-
-//  for( unsigned int i = 0; i < binsNumber; i++ )
-//  {
-//    unsigned int original = _histogram[ i ];
-//    unsigned int opt = aux[ i ];
-//    if( original != opt )
-//      std::cout << "Values not equal " << i << " -> " << original << " " << opt << std::endl;
-//  }
 
   std::cout << "Total spikes: " << counter << std::endl;
 
@@ -190,6 +198,34 @@ namespace visimpl
     return ( log10f( value) * maxValue );
   }
 
+  float maxValueFunc( float maxValue,  TColorScale colorScale )
+  {
+    float result = 0.0f;
+    switch( colorScale )
+    {
+      case visimpl::T_COLOR_LINEAR:
+
+        result = 1.0f / maxValue;
+
+        break;
+      case visimpl::T_COLOR_EXPONENTIAL:
+
+        result = 1.0f / logf( maxValue );
+
+        break;
+      case visimpl::T_COLOR_LOGARITHMIC:
+
+        result = 1.0f / log10f( maxValue );
+
+        break;
+      default:
+        VISIMPL_THROW( "Selected color scale function is not available.")
+        break;
+    }
+
+    return result;
+  }
+
 }
 
 void visimpl::Histogram::CalculateColors( void )
@@ -208,28 +244,13 @@ void visimpl::Histogram::CalculateColors( void )
                _maxValueHistogramGlobal :
                _maxValueHistogramLocal;
 
-    switch( _colorScale )
-    {
-      case visimpl::Histogram::T_COLOR_LINEAR:
-
-        maxValue = 1.0f / maxValue;
-
-        break;
-      case visimpl::Histogram::T_COLOR_EXPONENTIAL:
-
-        maxValue = 1.0f / logf( maxValue );
-
-        break;
-      case visimpl::Histogram::T_COLOR_LOGARITHMIC:
-
-        maxValue = 1.0f / log10f( maxValue );
-
-        break;
-    }
+    maxValue = maxValueFunc( maxValue, _normRule == T_NORM_GLOBAL ?
+                                        _colorScaleGlobal :
+                                        _colorScaleLocal );
 
     for( auto bin : _histogram )
     {
-      percentage = _scaleFunc( float( bin ), maxValue );
+      percentage = _scaleFuncLocal( float( bin ), maxValue );
       percentage = std::max< float >( std::min< float > (1.0f, percentage ), 0.0f);
   //    std::cout << percentage << std::endl;
       glm::vec4 color = _colorMapper.GetValue( percentage );
@@ -242,35 +263,21 @@ void visimpl::Histogram::CalculateColors( void )
   }
   else if( _repMode == T_REP_CURVE )
   {
+//    bool updateGlobal = _prevColorScaleGlobal != _colorScaleGlobal;
+//    bool updateLocal = _prevColorScaleLocal != _colorScaleLocal;
+//
+//    if( !updateGlobal && !updateLocal )
+//      return;
+
 //    float maxValue;
     float invMaxValueLocal;
     float invMaxValueGlobal;
 
+    QPolygonF auxLocal;
+    QPolygonF auxGlobal;
 
-
-    switch( _colorScale )
-    {
-      case visimpl::Histogram::T_COLOR_LINEAR:
-
-        invMaxValueGlobal = 1.0f / _maxValueHistogramGlobal;
-        invMaxValueLocal = 1.0f / _maxValueHistogramLocal;
-
-        break;
-      case visimpl::Histogram::T_COLOR_EXPONENTIAL:
-
-        invMaxValueGlobal = 1.0f / logf( _maxValueHistogramGlobal );
-//        invMaxValueLocal = 1.0f / logf( _maxValueHistogramLocal );
-        invMaxValueLocal = 1.0f / _maxValueHistogramLocal;
-
-        break;
-      case visimpl::Histogram::T_COLOR_LOGARITHMIC:
-
-        invMaxValueGlobal = 1.0f / log10f( _maxValueHistogramGlobal );
-//        invMaxValueLocal = 1.0f / log10f( _maxValueHistogramLocal );
-        invMaxValueLocal = 1.0f / _maxValueHistogramLocal;
-
-        break;
-    }
+    invMaxValueLocal = maxValueFunc( _maxValueHistogramLocal, _colorScaleLocal );
+    invMaxValueGlobal = maxValueFunc( _maxValueHistogramGlobal, _colorScaleGlobal );
 
     float currentX;
     float globalY;
@@ -282,26 +289,33 @@ void visimpl::Histogram::CalculateColors( void )
     {
       currentX = counter * invBins;
 
+      globalY = 0.0f;
+      localY = 0.0f;
+
       if( bin > 0)
       {
-        globalY = _scaleFunc( float( bin ), invMaxValueGlobal );
+//        if( updateGlobal )
+          globalY = _scaleFuncGlobal( float( bin ), invMaxValueGlobal );
 
-        localY = linearFunc( float( bin ), invMaxValueLocal );
+//        if( updateLocal )
+          localY = _scaleFuncLocal( float( bin ), invMaxValueLocal );
       }
-      else
-      {
-        globalY = 0.0f;
-        localY = 0.0f;
-      }
-//      if( globalY > 1.0f || globalY < 0.0f)
-//        std::cout << bin << " " << invMaxValueGlobal << std::endl;
-//      std::cout << currentX << " " << globalY << std::endl;
 
-      _curveStopsLocal.push_back( QPointF( currentX, 1.0f - localY ));
-      _curveStopsGlobal.push_back( QPointF( currentX, 1.0f - globalY ));
+//      if( updateGlobal )
+        auxGlobal.push_back( QPointF( currentX, 1.0f - globalY ));
+
+//      if( updateLocal )
+        auxLocal.push_back( QPointF( currentX, 1.0f - localY ));
 
       counter++;
     }
+
+//    if( updateGlobal )
+      _curveStopsGlobal = auxGlobal;
+
+//    if( updateLocal )
+    _curveStopsLocal = auxLocal;
+
 
   }
 }
@@ -317,53 +331,85 @@ const GIDUSet& visimpl::Histogram::filteredGIDs( void )
   return _filteredGIDs;
 }
 
-void visimpl::Histogram::colorScale( visimpl::Histogram::TColorScale scale )
+void visimpl::Histogram::colorScaleLocal( visimpl::TColorScale scale )
 {
-  _colorScale = scale;
 
-  switch( _colorScale )
+  _prevColorScaleLocal = _colorScaleLocal;
+  _colorScaleLocal = scale;
+
+  switch( _colorScaleLocal )
   {
-    case visimpl::Histogram::T_COLOR_LINEAR:
+    case visimpl::T_COLOR_LINEAR:
 
-      _scaleFunc = linearFunc;
-
-      break;
-    case visimpl::Histogram::T_COLOR_EXPONENTIAL:
-
-      _scaleFunc = exponentialFunc;
+      _scaleFuncLocal = linearFunc;
 
       break;
-    case visimpl::Histogram::T_COLOR_LOGARITHMIC:
+    case visimpl::T_COLOR_EXPONENTIAL:
 
-      _scaleFunc = logarithmicFunc;
+      _scaleFuncLocal = exponentialFunc;
 
+      break;
+    case visimpl::T_COLOR_LOGARITHMIC:
+
+      _scaleFuncLocal = logarithmicFunc;
+
+      break;
+    default:
       break;
   }
 }
 
-visimpl::Histogram::TColorScale visimpl::Histogram::colorScale( void )
+void visimpl::Histogram::colorScaleGlobal( visimpl::TColorScale scale )
 {
-  return _colorScale;
+
+  _prevColorScaleGlobal = _colorScaleGlobal;
+  _colorScaleGlobal = scale;
+
+  switch( _colorScaleGlobal )
+  {
+    case visimpl::T_COLOR_LINEAR:
+
+      _scaleFuncGlobal = linearFunc;
+
+      break;
+    case visimpl::T_COLOR_EXPONENTIAL:
+
+      _scaleFuncGlobal = exponentialFunc;
+
+      break;
+    case visimpl::T_COLOR_LOGARITHMIC:
+
+      _scaleFuncGlobal = logarithmicFunc;
+
+      break;
+    default:
+      break;
+  }
+}
+
+visimpl::TColorScale visimpl::Histogram::colorScaleLocal( void )
+{
+  return _colorScaleLocal;
 }
 
 void visimpl::Histogram::normalizeRule(
-    visimpl::Histogram::TNormalize_Rule normRule )
+    visimpl::TNormalize_Rule normRule )
 {
   _normRule = normRule;
 }
 
-visimpl::Histogram::TNormalize_Rule visimpl::Histogram::normalizeRule( void )
+visimpl::TNormalize_Rule visimpl::Histogram::normalizeRule( void )
 {
   return _normRule;
 }
 
 void visimpl::Histogram::representationMode(
-    visimpl::Histogram::TRepresentation_Mode repMode )
+    visimpl::TRepresentation_Mode repMode )
 {
   _repMode = repMode;
 }
 
-visimpl::Histogram::TRepresentation_Mode
+visimpl::TRepresentation_Mode
 visimpl::Histogram::representationMode( void )
 {
   return _repMode;
@@ -465,12 +511,6 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
       path.lineTo( QPoint( point.x( ) * width( ), point.y( ) * height( )));
     }
     path.lineTo( width( ), height( ) );
-//    path.lineTo( 0, 0 );
-
-
-//    painter.setPen( Qt::NoPen );
-
-
 
     QPainterPath globalPath;
     globalPath.moveTo( 0, height( ) );
@@ -479,10 +519,8 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
       globalPath.lineTo( QPoint( point.x( ) * width( ), point.y( ) * height( )));
     }
     globalPath.lineTo( width( ), height( ) );
-//    path.lineTo( 0, 0 );
 
     painter.setBrush( QBrush( QColor( 255, 0, 0, 100 ), Qt::SolidPattern));
-//    painter.setPen( Qt::NoPen );
 
     painter.drawPath( globalPath );
     painter.setBrush( QBrush( QColor( 0, 0, 128, 50 ), Qt::SolidPattern));
@@ -529,6 +567,7 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
     painter.setPen( pen );
     painter.drawLine( marker );
   }
+
 }
 
 

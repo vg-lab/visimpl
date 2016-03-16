@@ -8,23 +8,30 @@
 #include "Summary.h"
 
 #include <QMouseEvent>
+#include <QComboBox>
+#include <QPushButton>
 #include <QVBoxLayout>
 #include <QScrollArea>
+#include <QInputDialog>
 
 unsigned int visimpl::Selection::_counter = 0;
 
 unsigned int DEFAULT_BINS = 250;
 
-Summary::Summary( QWidget* parent_ )
-: QWidget( parent_ )
-, _bins( DEFAULT_BINS )
-, _spikeReport( nullptr )
-, _voltageReport( nullptr )
-, _mainHistogram( nullptr )
-, _selectionHistogram( nullptr )
-, _stackType( T_STACK_FIXED )
-, _heightPerRow( 50 )
-{ }
+static QString colorScaleToString( visimpl::TColorScale colorScale )
+{
+  switch( colorScale )
+  {
+    case visimpl::T_COLOR_LINEAR:
+      return QString( "Linear" );
+    case visimpl::T_COLOR_EXPONENTIAL:
+      return QString( "Exponential" );
+    case visimpl::T_COLOR_LOGARITHMIC:
+      return QString( "Logarithmic");
+    default:
+      return QString( );
+  }
+}
 
 Summary::Summary( QWidget* parent_,
                   TStackType stackType )
@@ -33,8 +40,10 @@ Summary::Summary( QWidget* parent_,
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
 , _mainHistogram( nullptr )
-, _selectionHistogram( nullptr )
+, _detailHistogram( nullptr )
 , _stackType( stackType )
+, _colorScaleLocal( visimpl::T_COLOR_LINEAR )
+, _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
 , _heightPerRow( 50 )
 {
 
@@ -73,6 +82,46 @@ Summary::Summary( QWidget* parent_,
   _body = new QWidget( );
   _body->setLayout( _mainLayout );
 
+  QWidget* foot = new QWidget( );
+  QGridLayout* footLayout = new QGridLayout( );
+
+  QStringList csItems;
+  csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LINEAR )));
+  csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_EXPONENTIAL )));
+  csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LOGARITHMIC )));
+
+  QComboBox* localComboBox = new QComboBox( );
+  localComboBox->addItems( csItems );
+
+  QComboBox* globalComboBox = new QComboBox( );
+  globalComboBox->addItems( csItems );
+
+  QPushButton* removeButton = new QPushButton( "Delete" );
+
+  _detailHistogram = new visimpl::Histogram( );
+
+  footLayout->addWidget( new QLabel( "Local scale" ), 0, 0, 1, 1);
+  footLayout->addWidget( localComboBox, 0, 1, 1, 1 );
+
+  footLayout->addWidget( new QLabel( "Global scale" ), 1, 0, 1, 1);
+  footLayout->addWidget( globalComboBox, 1, 1, 1, 1 );
+
+  footLayout->addWidget( removeButton, 0, 5, 1, 1 );
+
+  localComboBox->setCurrentIndex( ( int ) _colorScaleLocal );
+  globalComboBox->setCurrentIndex( ( int ) _colorScaleGlobal );
+
+  connect( localComboBox, SIGNAL( currentIndexChanged( int ) ),
+           this, SLOT( colorScaleLocal( int )));
+
+  connect( globalComboBox, SIGNAL( currentIndexChanged( int ) ),
+             this, SLOT( colorScaleGlobal( int )));
+
+  connect( removeButton, SIGNAL( clicked( void )),
+           this, SLOT( removeSelections( void )));
+
+  foot->setLayout( footLayout );
+
 ////  std::cout << width( ) << std::endl;
 //  _body->setMinimumWidth( width( ));
 ////  body->setMaximumWidth( width( ));
@@ -82,6 +131,7 @@ Summary::Summary( QWidget* parent_,
 
   upperLayout->addWidget( header );
   upperLayout->addWidget( scrollArea );
+  upperLayout->addWidget( foot );
 //  upperLayout->addWidget( _body );
 
   this->setLayout( upperLayout );
@@ -111,8 +161,9 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
   _mainHistogram = new visimpl::Histogram( *spikes_ );
   _mainHistogram->setMinimumHeight( _heightPerRow );
   _mainHistogram->setMaximumHeight( _heightPerRow );
-  _mainHistogram->colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC );
-  _mainHistogram->representationMode( visimpl::Histogram::T_REP_CURVE );
+  _mainHistogram->colorScaleLocal( _colorScaleLocal );
+  _mainHistogram->colorScaleGlobal( _colorScaleGlobal );
+  _mainHistogram->representationMode( visimpl::T_REP_CURVE );
   //  _mainHistogram->setMinimumWidth( width( ));
   //  _mainLayout->addWidget( _mainHistogram );
 
@@ -220,20 +271,16 @@ void Summary::AddNewHistogram( const visimpl::Selection& selection
 //    _mainLayout->addWidget( histogram );
     _histograms.push_back( histogram );
 
+    CreateSummarySpikes( );
+//    UpdateGradientColors( );
 
-//    unsigned int newHeight = (_histograms.size( )) * _heightPerRow;
-//    _body->setMinimumHeight( newHeight );
-//    this->setMinimumHeight( newHeight + 100 );
+    update( );
 
-//    this->parentWidget( )->resize( width( ), newHeight + 2 );
     }
 
   }
 
-  CreateSummarySpikes( );
-  UpdateGradientColors( );
 
-  update( );
 }
 
 void Summary::deferredInsertion( void )
@@ -242,11 +289,23 @@ void Summary::deferredInsertion( void )
 
   if( _pendingSelections.size( ) > 0 )
   {
-    _mutex.lock( );
     StackRow currentRow;
 
     visimpl::Selection selection = _pendingSelections.front( );
     _pendingSelections.pop_front( );
+
+    QString labelText =
+        QString( "Selection-").append( QString::number( selection.id ));
+
+    bool ok;
+    labelText = QInputDialog::getText( this,
+                                       tr( "Selection Name" ),
+                                       tr( "Please, introduce selection name: "),
+                                       QLineEdit::Normal,
+                                       labelText,
+                                       &ok );
+    if( !ok )
+      return;
 
     std::cout << "Deferred insertion: " << selection.name
               << " GIDs: " << selection.gids.size( )
@@ -255,16 +314,15 @@ void Summary::deferredInsertion( void )
     visimpl::Histogram* histogram = new visimpl::Histogram( *_spikeReport );
     histogram->filteredGIDs( selection.gids );
     histogram->colorMapper( _mainHistogram->colorMapper( ));
-    histogram->colorScale( visimpl::Histogram::T_COLOR_LOGARITHMIC );
-    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
-    histogram->representationMode( visimpl::Histogram::T_REP_CURVE );
+    histogram->colorScaleLocal( _colorScaleLocal );
+    histogram->colorScaleGlobal( _colorScaleGlobal );
+    histogram->normalizeRule( visimpl::T_NORM_MAX );
+    histogram->representationMode( visimpl::T_REP_CURVE );
     histogram->setMinimumHeight( _heightPerRow );
     histogram->setMaximumHeight( _heightPerRow );
     //    histogram->setMinimumWidth( 500 );
 
     currentRow.histogram = histogram;
-    QString labelText =
-        QString( "Selection-").append( QString::number( selection.id ));
     currentRow.label = new QLabel( labelText );
     currentRow.checkBox = new QCheckBox( );
 
@@ -287,7 +345,6 @@ void Summary::deferredInsertion( void )
     GIDUSet tmp;
     histogram->filteredGIDs( tmp );
 
-    _mutex.unlock( );
     update( );
   }
 
@@ -340,17 +397,17 @@ void Summary::CreateSummarySpikes( )
 //
 //}
 
-void Summary::UpdateGradientColors( void )
+void Summary::UpdateGradientColors( bool replace )
 {
   for( auto histogram : _histograms )
   {
-    if( !histogram->isInitialized( ))
+    if( !histogram->isInitialized( ) || replace)
       histogram->CalculateColors( );
   }
 
 //  _mainHistogram->CalculateColors( );
 //
-//  _selectionHistogram->CalculateColors( );
+//  _detailHistogram->CalculateColors( );
 
 }
 
@@ -388,4 +445,59 @@ unsigned int Summary::heightPerRow( void )
 void Summary::showMarker( bool show_ )
 {
   _showMarker = show_;
+}
+
+void Summary::removeSelections( void )
+{
+
+}
+
+void Summary::colorScaleLocal( int value )
+{
+  if( value >= 0 )
+  {
+    colorScaleLocal( ( visimpl::TColorScale ) value );
+  }
+}
+
+void Summary::colorScaleGlobal( int value )
+{
+  if( value >= 0 )
+  {
+    colorScaleGlobal( ( visimpl::TColorScale ) value );
+  }
+}
+
+void Summary::colorScaleLocal( visimpl::TColorScale colorScale )
+{
+  _colorScaleLocal = colorScale;
+
+  for( auto histogram : _histograms )
+  {
+    histogram->colorScaleLocal( colorScale );
+    histogram->CalculateColors( );
+    histogram->update( );
+  }
+}
+
+visimpl::TColorScale Summary::colorScaleLocal( void )
+{
+  return _colorScaleLocal;
+}
+
+void Summary::colorScaleGlobal( visimpl::TColorScale colorScale )
+{
+  _colorScaleGlobal = colorScale;
+
+  for( auto histogram : _histograms )
+  {
+    histogram->colorScaleGlobal( colorScale );
+    histogram->CalculateColors( );
+    histogram->update( );
+  }
+}
+
+visimpl::TColorScale Summary::colorScaleGlobal( void )
+{
+  return _colorScaleGlobal;
 }

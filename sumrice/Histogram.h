@@ -20,6 +20,27 @@ typedef utils::InterpolationSet< glm::vec4 > TColorMapper;
 
 namespace visimpl
 {
+  typedef enum
+  {
+    T_COLOR_LINEAR = 0,
+    T_COLOR_EXPONENTIAL,
+    T_COLOR_LOGARITHMIC,
+    T_COLOR_UNDEFINED
+  } TColorScale;
+
+  typedef enum
+  {
+    T_NORM_GLOBAL = 0,
+    T_NORM_MAX
+  } TNormalize_Rule;
+
+  typedef enum
+  {
+    T_REP_DENSE = 0,
+    T_REP_CURVE
+
+  } TRepresentation_Mode;
+
   class Histogram : public QFrame
   {
 
@@ -27,28 +48,12 @@ namespace visimpl
 
   public:
 
-    typedef enum
-    {
-      T_COLOR_LINEAR = 0,
-      T_COLOR_EXPONENTIAL,
-      T_COLOR_LOGARITHMIC
-    } TColorScale;
-
-    typedef enum
-    {
-      T_NORM_GLOBAL = 0,
-      T_NORM_MAX
-    } TNormalize_Rule;
-
-    typedef enum
-    {
-      T_REP_DENSE = 0,
-      T_REP_CURVE
-
-    } TRepresentation_Mode;
-
+    Histogram( void );
     Histogram( const brion::Spikes& spikes, float startTime, float endTime );
     Histogram( const brion::SpikeReport& spikeReport );
+
+    void Spikes( const brion::Spikes& spikes, float startTime, float endTime );
+    void Spikes( const brion::SpikeReport& spikeReport );
 
     void CreateHistogram( unsigned int binsNumber = 250 );
     void CalculateColors( void );
@@ -56,8 +61,11 @@ namespace visimpl
     void filteredGIDs( const GIDUSet& gids );
     const GIDUSet& filteredGIDs( void );
 
-    void colorScale( TColorScale scale );
-    TColorScale colorScale( void );
+    void colorScaleLocal( TColorScale scale );
+    TColorScale colorScaleLocal( void );
+
+    void colorScaleGlobal( TColorScale scale );
+    TColorScale colorScaleGlobal( void );
 
     void normalizeRule( TNormalize_Rule normRule );
     TNormalize_Rule normalizeRule( void );
@@ -81,7 +89,7 @@ namespace visimpl
 
 signals:
 
-  void mousePositionChanged( QPoint point );
+    void mousePositionChanged( QPoint point );
 
   protected:
 
@@ -100,8 +108,15 @@ signals:
     float _startTime;
     float _endTime;
 
-    float (*_scaleFunc)( float value, float maxValue);
-    TColorScale _colorScale;
+    float (*_scaleFuncLocal)( float value, float maxValue);
+    float (*_scaleFuncGlobal)( float value, float maxValue);
+
+    TColorScale _colorScaleLocal;
+    TColorScale _colorScaleGlobal;
+
+    TColorScale _prevColorScaleLocal;
+    TColorScale _prevColorScaleGlobal;
+
     TNormalize_Rule _normRule;
     TRepresentation_Mode _repMode;
 

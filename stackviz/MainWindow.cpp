@@ -26,7 +26,7 @@ MainWindow::MainWindow( QWidget* parent_ )
 
   _columnsNumber = 100;
   resizingEnabled = false;
-  QTimer::singleShot( 0, this, SLOT( loadComplete( )));
+//  QTimer::singleShot( 0, this, SLOT( loadComplete( )));
 }
 
 void MainWindow::init( const std::string& zeqUri )
