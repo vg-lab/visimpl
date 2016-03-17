@@ -317,6 +317,10 @@ void MainWindow::initSummaryWidget( )
 //  scrollArea->setWidget( _summary );
   this->setCentralWidget( _summary );
 
+  connect( _ui->actionAutoNamingSelections, SIGNAL( triggered( )),
+           _summary, SLOT( toggleAutoNameSelections( )));
+
+
 }
 
 void MainWindow::PlayPause( bool notify )
