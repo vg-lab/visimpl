@@ -99,13 +99,17 @@ Summary::Summary( QWidget* parent_,
 
   QPushButton* removeButton = new QPushButton( "Delete" );
 
-  _detailHistogram = new visimpl::Histogram( );
+  _focusWidget = new FocusFrame( );
+//  _detailHistogram = new visimpl::Histogram( );
 
   footLayout->addWidget( new QLabel( "Local scale" ), 0, 0, 1, 1);
   footLayout->addWidget( localComboBox, 0, 1, 1, 1 );
 
   footLayout->addWidget( new QLabel( "Global scale" ), 1, 0, 1, 1);
   footLayout->addWidget( globalComboBox, 1, 1, 1, 1 );
+
+  footLayout->addWidget( _focusWidget, 0, 2, 3, 1 );
+  _regionWidth = 0.1f;
 
   footLayout->addWidget( removeButton, 0, 5, 1, 1 );
 
@@ -165,6 +169,7 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
   _mainHistogram->colorScaleLocal( _colorScaleLocal );
   _mainHistogram->colorScaleGlobal( _colorScaleGlobal );
   _mainHistogram->representationMode( visimpl::T_REP_CURVE );
+  _mainHistogram->regionWidth( _regionWidth );
   //  _mainHistogram->setMinimumWidth( width( ));
   //  _mainLayout->addWidget( _mainHistogram );
 
@@ -320,6 +325,8 @@ void Summary::deferredInsertion( void )
     histogram->colorScaleGlobal( _colorScaleGlobal );
     histogram->normalizeRule( visimpl::T_NORM_MAX );
     histogram->representationMode( visimpl::T_REP_CURVE );
+    histogram->regionWidth( _regionWidth );
+
     histogram->setMinimumHeight( _heightPerRow );
     histogram->setMaximumHeight( _heightPerRow );
     //    histogram->setMinimumWidth( 500 );
@@ -371,10 +378,23 @@ void Summary::updateMouseMarker( QPoint point )
 {
   if( point != _lastMousePosition )
   {
+    visimpl::Histogram* focusedHistogram =
+        dynamic_cast< visimpl::Histogram* >( sender( ));
+
     _lastMousePosition = point;
 
+    float percentage = float( _lastMousePosition.x( ) ) /
+        focusedHistogram->width( );
+
+    _focusWidget->viewRegion( *focusedHistogram, percentage );
+    _focusWidget->update( );
+
     for( auto histogram : _histograms )
-      histogram->update( );
+    {
+        histogram->paintRegion( histogram == focusedHistogram );
+        histogram->update( );
+    }
+
   }
 }
 
@@ -502,4 +522,14 @@ void Summary::colorScaleGlobal( visimpl::TColorScale colorScale )
 visimpl::TColorScale Summary::colorScaleGlobal( void )
 {
   return _colorScaleGlobal;
+}
+
+void Summary::regionWidth( float region )
+{
+  _regionWidth = region;
+}
+
+float Summary::regionWidth( void )
+{
+  return _regionWidth;
 }

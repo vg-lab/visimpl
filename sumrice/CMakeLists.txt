@@ -8,6 +8,7 @@ set(SUMRICE_PUBLIC_HEADERS
   ZeqEventsManager.h
   Summary.h
   Histogram.h
+  FocusFrame.h
   CustomSlider.h
   TransferFunctionWidget.h
   ParticleSizeWidget.h
@@ -25,6 +26,7 @@ set(SUMRICE_SOURCES
   ParticleSizeWidget.cpp
   Summary.cpp
   Histogram.cpp
+  FocusFrame.cpp
   SimulationPlayer.cpp
   ZeqEventsManager.cpp
 )

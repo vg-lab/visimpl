@@ -73,7 +73,7 @@ namespace visimpl
     void representationMode( TRepresentation_Mode repType );
     TRepresentation_Mode representationMode( void );
 
-    const std::vector< unsigned int>& histogram( void );
+    const std::vector< unsigned int>& histogram( void ) const;
 
     const utils::InterpolationSet< glm::vec4 >& colorMapper( void );
     void colorMapper(const utils::InterpolationSet< glm::vec4 >& colors );
@@ -83,9 +83,16 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event_ );
     void mousePosition( QPoint* mousePosition_ );
 
+    void regionWidth( float region_ );
+    float regionWidth( void );
+    void paintRegion( bool region = false );
+
     unsigned int valueAt( float percentage );
 
     bool isInitialized( void );
+
+    QPolygonF localFunction( void ) const;
+    QPolygonF globalFunction( void ) const;
 
 signals:
 
@@ -125,6 +132,9 @@ signals:
     GIDUSet _filteredGIDs;
 
     QPoint* _lastMousePosition;
+
+    bool _paintRegion;
+    float _regionWidth;
   };
 }
 

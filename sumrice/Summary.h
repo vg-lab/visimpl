@@ -19,6 +19,7 @@
 #include <QTimer>
 
 #include "Histogram.h"
+#include "FocusFrame.h"
 
 namespace visimpl
 {
@@ -89,6 +90,9 @@ public:
 
   void colorScaleGlobal( visimpl::TColorScale colorScale );
   visimpl::TColorScale colorScaleGlobal( void );
+
+  void regionWidth( float region );
+  float regionWidth( void );
 
 protected slots:
 
@@ -166,6 +170,8 @@ protected:
   std::vector< visimpl::Histogram* > _histograms;
   std::vector< StackRow > _rows;
 
+  FocusFrame* _focusWidget;
+
   QGridLayout* _mainLayout;
   QWidget* _body;
 
@@ -177,6 +183,8 @@ protected:
   bool _showMarker;
 
   bool _autoNameSelection;
+
+  float _regionWidth;
 };
 
 

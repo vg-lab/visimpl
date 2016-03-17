@@ -415,7 +415,7 @@ visimpl::Histogram::representationMode( void )
   return _repMode;
 }
 
-const std::vector< unsigned int>& visimpl::Histogram::histogram( void )
+const std::vector< unsigned int>& visimpl::Histogram::histogram( void ) const
 {
   return _histogram;
 }
@@ -452,6 +452,16 @@ bool visimpl::Histogram::isInitialized( void )
   return _gradientStops.size( ) > 0 || _curveStopsGlobal.size( ) > 0;
 }
 
+QPolygonF visimpl::Histogram::localFunction( void ) const
+{
+  return _curveStopsLocal;
+}
+
+QPolygonF visimpl::Histogram::globalFunction( void ) const
+{
+  return _curveStopsGlobal;
+}
+
 void visimpl::Histogram::mouseMoveEvent( QMouseEvent* event_ )
 {
   QFrame::mouseMoveEvent( event_ );
@@ -469,6 +479,21 @@ void visimpl::Histogram::mouseMoveEvent( QMouseEvent* event_ )
 void visimpl::Histogram::mousePosition( QPoint* mousePosition_ )
 {
   _lastMousePosition = mousePosition_;
+}
+
+void visimpl::Histogram::regionWidth( float region_ )
+{
+  _regionWidth = region_;
+}
+
+float visimpl::Histogram::regionWidth( void )
+{
+  return _regionWidth;
+}
+
+void visimpl::Histogram::paintRegion( bool region )
+{
+  _paintRegion = region;
 }
 
 void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
@@ -553,6 +578,18 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
     if( width( ) - positionX < 50 )
       margin = -50;
 
+    if( _paintRegion )
+    {
+      int regionW = _regionWidth * width( );
+      QRect region( std::max( 0, positionX - regionW ),
+                    0,
+                    regionW * 2,
+                    height( ));
+
+      QPen pen( Qt::NoPen );
+      QBrush brush( QColor( 30, 30, 30, 30 ));
+      painter.drawRect( region );
+    }
 
     QPen pen( penColor );
     painter.setPen( pen );
