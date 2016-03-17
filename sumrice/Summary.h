@@ -99,6 +99,11 @@ protected slots:
 
   void updateMouseMarker( QPoint point );
 
+public slots:
+  void toggleAutoNameSelections( void )
+  {
+    _autoNameSelection = !_autoNameSelection;
+  }
 protected:
 
   struct StackRow
@@ -171,6 +176,7 @@ protected:
   QPoint _lastMousePosition;
   bool _showMarker;
 
+  bool _autoNameSelection;
 };
 
 

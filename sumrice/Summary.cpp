@@ -45,6 +45,7 @@ Summary::Summary( QWidget* parent_,
 , _colorScaleLocal( visimpl::T_COLOR_LINEAR )
 , _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
 , _heightPerRow( 50 )
+, _autoNameSelection( false )
 {
 
   setMouseTracking( true );
@@ -297,13 +298,14 @@ void Summary::deferredInsertion( void )
     QString labelText =
         QString( "Selection-").append( QString::number( selection.id ));
 
-    bool ok;
-    labelText = QInputDialog::getText( this,
-                                       tr( "Selection Name" ),
-                                       tr( "Please, introduce selection name: "),
-                                       QLineEdit::Normal,
-                                       labelText,
-                                       &ok );
+    bool ok = true;
+    if ( !_autoNameSelection )
+      labelText = QInputDialog::getText( this,
+                                         tr( "Selection Name" ),
+                                         tr( "Please, introduce selection name: "),
+                                         QLineEdit::Normal,
+                                         labelText,
+                                         &ok );
     if( !ok )
       return;
 
