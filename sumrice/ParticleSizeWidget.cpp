@@ -193,11 +193,17 @@ void ParticleSizeWidget::setSizeFunction( const TSizeFunction& sizeFunc )
 
 void ParticleSizeWidget::gradientClicked( void )
 {
-  if( _dialog && !_dialog->isVisible( ))
-  {
-//    setColorPoints( getColors( ), false);
+  if( !_dialog )
+    return;
 
+  if( !_dialog->isVisible( ))
+  {
     _dialog->show( );
+  }
+  else
+  {
+    _dialog->activateWindow( );
+    _dialog->setFocus( );
   }
 }
 

@@ -311,12 +311,19 @@ void TransferFunctionWidget::setColorPoints( const TTransferFunction& colors,
 
 void TransferFunctionWidget::gradientClicked( void )
 {
-  std::cout << "Gradient clicked" << std::endl;
-  if( _dialog && !_dialog->isVisible( ))
+  if( !_dialog )
+    return;
+
+  if( !_dialog->isVisible( ))
   {
     setColorPoints( getColors( ), false);
 
     _dialog->show( );
+  }
+  else
+  {
+    _dialog->activateWindow( );
+    _dialog->setFocus( );
   }
 }
 
