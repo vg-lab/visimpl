@@ -25,13 +25,13 @@ FocusFrame::FocusFrame( QWidget* parent_ )
 
 
 void FocusFrame::viewRegion( const visimpl::Histogram& histogram,
-                             float marker, float offset,
+                             float marker,// float offset,
                              float regionWidth )
 {
   unsigned int maxSize = histogram.histogram( ).size( );
   
   unsigned int position = maxSize * marker;
-  unsigned int regionW =  maxSize * regionWidth + 1;
+  unsigned int regionW =  maxSize * regionWidth;
 
   int start = position - regionW;
   unsigned int end = position + regionW;
@@ -75,6 +75,7 @@ void FocusFrame::paintEvent( QPaintEvent* /*event_*/ )
 
   QPolygonF::iterator current;
 
+//  int offset = _offset * width( );
   unsigned int delta = width( ) / ( _lastPointLocal - _firstPointLocal - 2 );
 
   unsigned int counter = 0;

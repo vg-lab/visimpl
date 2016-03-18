@@ -22,7 +22,7 @@ public:
   FocusFrame( QWidget* parent = 0 );
 
   void viewRegion( const visimpl::Histogram& histogram,
-                   float marker, float offset,
+                   float marker,// float offset,
                    float regionWidth = 0.1f);
 
   virtual void paintEvent(QPaintEvent* event);
