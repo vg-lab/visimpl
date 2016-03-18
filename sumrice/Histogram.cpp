@@ -102,7 +102,7 @@ void visimpl::Histogram::init( void )
 //  pal.setBrush(backgroundRole(), QBrush(pixmap));
 //  setPalette(pal);
 //  setAutoFillBackground(true);
-
+  _paintRegion = false;
   setMouseTracking( true );
 }
 
@@ -181,21 +181,22 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
 
 namespace visimpl
 {
+  float base = 1.0001f;
 
   // All these functions consider a maxValue = 1.0f / <calculated_maxValue >
-  float linearFunc( float value, float maxValue )
+  float linearFunc( float value, float invMaxValue )
   {
-    return value * maxValue;
+    return value * invMaxValue;
   }
 
   float exponentialFunc( float value, float maxValue )
   {
-    return ( logf( value) * maxValue );
+    return ( powf( base, value - maxValue ));
   }
 
-  float logarithmicFunc( float value, float maxValue )
+  float logarithmicFunc( float value, float invMaxValue )
   {
-    return ( log10f( value) * maxValue );
+    return ( log10f( value) * invMaxValue );
   }
 
   float maxValueFunc( float maxValue,  TColorScale colorScale )
@@ -210,7 +211,7 @@ namespace visimpl
         break;
       case visimpl::T_COLOR_EXPONENTIAL:
 
-        result = 1.0f / logf( maxValue );
+        result = maxValue;
 
         break;
       case visimpl::T_COLOR_LOGARITHMIC:
@@ -526,7 +527,7 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
 
     painter.setRenderHint( QPainter::Antialiasing );
 
-    painter.fillRect( rect( ), QBrush( QColor( 255, 255, 255, 255 ),
+    painter.fillRect( rect( ), QBrush( QColor( 37, 37, 37, 255 ),
                                        Qt::SolidPattern ));
 
     QPainterPath path;
@@ -546,7 +547,7 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
     globalPath.lineTo( width( ), height( ) );
 
     painter.setBrush( QBrush( QColor( 255, 0, 0, 100 ), Qt::SolidPattern));
-
+    painter.setPen( Qt::NoPen );
     painter.drawPath( globalPath );
     painter.setBrush( QBrush( QColor( 0, 0, 128, 50 ), Qt::SolidPattern));
     painter.drawPath( path );

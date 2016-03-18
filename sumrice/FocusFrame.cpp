@@ -28,7 +28,7 @@ void FocusFrame::viewRegion( const visimpl::Histogram& histogram,
                              float marker,
                              float regionWidth )
 {
-  unsigned int maxSize = histogram.histogram( ).size();
+  unsigned int maxSize = histogram.histogram( ).size( ) - 1;
   
   unsigned int position = maxSize * marker;
   unsigned int regionW =  maxSize * regionWidth;
@@ -43,7 +43,7 @@ void FocusFrame::viewRegion( const visimpl::Histogram& histogram,
   else if( end > maxSize )
   {
     end = maxSize;
-    start = end - regionW;
+    start = end - ( 2 * regionW );
   }
 
 
