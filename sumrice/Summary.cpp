@@ -383,7 +383,8 @@ void Summary::updateMouseMarker( QPoint point )
 
     _lastMousePosition = point;
 
-    float percentage = float( _lastMousePosition.x( ) ) /
+    point = focusedHistogram->mapFromGlobal( point );
+    float percentage = float( point.x( ) ) /
         focusedHistogram->width( );
 
     _focusWidget->viewRegion( *focusedHistogram, percentage );

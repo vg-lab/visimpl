@@ -25,37 +25,26 @@ FocusFrame::FocusFrame( QWidget* parent_ )
 
 
 void FocusFrame::viewRegion( const visimpl::Histogram& histogram,
-                             float marker,
+                             float marker, float offset,
                              float regionWidth )
 {
-  unsigned int maxSize = histogram.histogram( ).size( ) - 1;
+  unsigned int maxSize = histogram.histogram( ).size( );
   
   unsigned int position = maxSize * marker;
-  unsigned int regionW =  maxSize * regionWidth;
+  unsigned int regionW =  maxSize * regionWidth + 1;
 
   int start = position - regionW;
   unsigned int end = position + regionW;
   if( start < 0 )
   {
     start = 0;
-    end = regionW;
+    end = 2 * regionW;
   }
   else if( end > maxSize )
   {
     end = maxSize;
     start = end - ( 2 * regionW );
   }
-
-
-  start = std::max( 0, start );
-
-
-  // Get the previous one
-  if( position > 0)
-    position--;
-
-  if( end > maxSize )
-    end = maxSize;
 
   _curveLocal = histogram.localFunction( );
   _curveGlobal = histogram.globalFunction( );
@@ -86,30 +75,36 @@ void FocusFrame::paintEvent( QPaintEvent* /*event_*/ )
 
   QPolygonF::iterator current;
 
-  unsigned int delta = width( ) / ( _lastPointLocal - _firstPointLocal );
+  unsigned int delta = width( ) / ( _lastPointLocal - _firstPointLocal - 2 );
 
+  unsigned int counter = 0;
   pathGlobal.moveTo( 0, height( ));
   for( current  = _curveGlobal.begin( ) + _firstPointGlobal;
        current != _curveGlobal.begin( ) + _lastPointGlobal;
        current++ )
   {
-    int coordX = ( current - ( _curveGlobal.begin( ) + _firstPointGlobal) )
-        * delta; //(*current).x( ) * width( );
+    int coordX = counter * delta;
+//        ( current - ( _curveGlobal.begin( ) + _firstPointGlobal) )
+    //* delta; //(*current).x( ) * width( );
     int coordY = (*current).y( ) * height( );
 
     pathGlobal.lineTo( coordX, coordY );
+    counter++;
   }
   pathGlobal.lineTo( width( ), height( ));
 
+  counter = 0;
   pathLocal.moveTo( 0, height( ));
   for( current  = _curveLocal.begin( ) + _firstPointLocal;
        current != _curveLocal.begin( ) + _lastPointLocal;
        current++ )
   {
-    int coordX = ( current - ( _curveLocal.begin( ) + _firstPointLocal) )
-            * delta; //(*current).x( ) * width( );
+    int coordX = counter * delta;
+//        ( current - ( _curveLocal.begin( ) + _firstPointLocal) )
+           // * delta; //(*current).x( ) * width( );
     int coordY = (*current).y( ) * height( );
     pathLocal.lineTo( coordX, coordY );
+    counter++;
   }
   pathLocal.lineTo( width( ), height( ));
 

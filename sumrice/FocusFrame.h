@@ -22,7 +22,7 @@ public:
   FocusFrame( QWidget* parent = 0 );
 
   void viewRegion( const visimpl::Histogram& histogram,
-                   float marker,
+                   float marker, float offset,
                    float regionWidth = 0.1f);
 
   virtual void paintEvent(QPaintEvent* event);
@@ -33,6 +33,7 @@ protected:
   QPolygonF _curveGlobal;
   float _visibleStart;
   float _width;
+  float _offset;
 
   unsigned int _firstPointLocal;
   unsigned int _lastPointLocal;

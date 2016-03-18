@@ -527,7 +527,7 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
 
     painter.setRenderHint( QPainter::Antialiasing );
 
-    painter.fillRect( rect( ), QBrush( QColor( 37, 37, 37, 255 ),
+    painter.fillRect( rect( ), QBrush( QColor( 255, 255, 255, 255 ),
                                        Qt::SolidPattern ));
 
     QPainterPath path;
@@ -582,7 +582,11 @@ void visimpl::Histogram::paintEvent(QPaintEvent* /*e*/)
     if( _paintRegion )
     {
       int regionW = _regionWidth * width( );
-      QRect region( std::max( 0, positionX - regionW ),
+      int start = std::max( 0, positionX - regionW );
+      if( ( positionX + regionW ) > width( ) )
+        start = width( ) - regionW * 2;
+
+      QRect region( std::max( 0, start ),
                     0,
                     regionW * 2,
                     height( ));
