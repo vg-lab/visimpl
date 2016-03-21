@@ -108,8 +108,8 @@ void visimpl::Histogram::init( void )
 
 void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
 {
-
-//  _histogram.clear( );
+  std::cout << "Bins number: " << binsNumber << std::endl;
+  _histogram.clear( );
   _histogram.resize( binsNumber, 0 );
   _maxValueHistogramLocal = 0;
   _maxValueHistogramGlobal = 0;
@@ -144,7 +144,7 @@ void visimpl::Histogram::CreateHistogram( unsigned int binsNumber )
     globalIt++;
   }
 
-  std::cout << "Total spikes: " << counter << std::endl;
+//  std::cout << "Total spikes: " << counter << std::endl;
 
   unsigned int cont = 0;
   unsigned int maxPos = 0;

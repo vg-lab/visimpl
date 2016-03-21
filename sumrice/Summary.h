@@ -75,7 +75,7 @@ public:
 
   virtual void mouseMoveEvent( QMouseEvent* event_ );
 
-  void bins( unsigned int bins_ );
+
   unsigned int bins( void );
 
   unsigned int histogramsNumber( void );
@@ -108,6 +108,8 @@ protected slots:
   void colorScaleGlobal( int value );
 
   void updateMouseMarker( QPoint point );
+
+  void bins( int bins_ );
 
 public slots:
   void toggleAutoNameSelections( void )

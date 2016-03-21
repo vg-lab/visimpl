@@ -13,6 +13,7 @@
 #include <QVBoxLayout>
 #include <QScrollArea>
 #include <QInputDialog>
+#include <QSpinBox>
 
 unsigned int visimpl::Selection::_counter = 0;
 
@@ -95,7 +96,7 @@ Summary::Summary( QWidget* parent_,
   QComboBox* globalComboBox = new QComboBox( );
   globalComboBox->addItems( csItems );
 
-  QPushButton* removeButton = new QPushButton( "Delete selected" );
+  QPushButton* removeButton = new QPushButton( "Delete" );
 
   _focusWidget = new FocusFrame( );
   _focusWidget->colorLocal( _colorLocal );
@@ -121,6 +122,11 @@ Summary::Summary( QWidget* parent_,
   _localMaxLabel = new QLabel( "" );
   _localMaxLabel->setMaximumWidth( 50 );
 
+  QSpinBox* binSpinBox = new QSpinBox( );
+  binSpinBox->setMinimum( 50 );
+  binSpinBox->setMaximum( 5000 );
+  binSpinBox->setSingleStep( 50 );
+  binSpinBox->setValue( _bins );
 
 //  unsigned int totalRows = 10;
   footLayout->addWidget( new QLabel( "Local normalization:" ), 0, 0, 1, 1);
@@ -131,16 +137,17 @@ Summary::Summary( QWidget* parent_,
   footLayout->addWidget( _globalColorWidget, 2, 1, 1, 1 );
   footLayout->addWidget( globalComboBox, 3, 0, 1, 2 );
 
-  footLayout->addWidget( _focusWidget, 0, 2, 4, 5 );
+  footLayout->addWidget( _focusWidget, 0, 2, 4, 7 );
 
-
-  footLayout->addWidget( removeButton, 0, 7, 1, 1 );
-  footLayout->addWidget( new QLabel( "Current value: "), 1, 7, 1, 1 );
-  footLayout->addWidget( _currentValueLabel, 1, 8, 1, 1 );
-  footLayout->addWidget( new QLabel( "Local max: "), 2, 7, 1, 1 );
-  footLayout->addWidget( _localMaxLabel, 2, 8, 1, 1 );
-  footLayout->addWidget( new QLabel( "Global max: "), 3, 7, 1, 1 );
-  footLayout->addWidget( _globalMaxLabel, 3, 8, 1, 1 );
+  footLayout->addWidget( new QLabel( "Bins:" ), 0, 9, 1, 1 );
+  footLayout->addWidget( binSpinBox, 0, 10, 1, 1 );
+  footLayout->addWidget( removeButton, 0, 11, 1, 1 );
+  footLayout->addWidget( new QLabel( "Current value: "), 1, 9, 1, 2 );
+  footLayout->addWidget( _currentValueLabel, 1, 11, 1, 1 );
+  footLayout->addWidget( new QLabel( "Local max: "), 2, 9, 1, 2 );
+  footLayout->addWidget( _localMaxLabel, 2, 11, 1, 1 );
+  footLayout->addWidget( new QLabel( "Global max: "), 3, 9, 1, 2 );
+  footLayout->addWidget( _globalMaxLabel, 3, 11, 1, 1 );
 
   localComboBox->setCurrentIndex( ( int ) _colorScaleLocal );
   globalComboBox->setCurrentIndex( ( int ) _colorScaleGlobal );
@@ -153,6 +160,9 @@ Summary::Summary( QWidget* parent_,
 
   connect( removeButton, SIGNAL( clicked( void )),
            this, SLOT( removeSelections( void )));
+
+  connect( binSpinBox, SIGNAL( valueChanged( int )),
+           this,  SLOT( bins( int )));
 
   foot->setLayout( footLayout );
 
@@ -489,14 +499,15 @@ unsigned int Summary::histogramsNumber( void )
 }
 
 
-void Summary::bins( unsigned int bins_ )
+void Summary::bins( int bins_ )
 {
   _bins = bins_;
 
-  CreateSummarySpikes( );
-  UpdateGradientColors( );
-
-  update( );
+  for( auto histogram : _histograms )
+  {
+    histogram->CreateHistogram( _bins );
+    update( );
+  }
 }
 
 unsigned int Summary::bins( void )
