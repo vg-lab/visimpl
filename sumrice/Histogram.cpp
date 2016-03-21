@@ -209,11 +209,11 @@ namespace visimpl
         result = 1.0f / maxValue;
 
         break;
-      case visimpl::T_COLOR_EXPONENTIAL:
-
-        result = maxValue;
-
-        break;
+//      case visimpl::T_COLOR_EXPONENTIAL:
+//
+//        result = maxValue;
+//
+//        break;
       case visimpl::T_COLOR_LOGARITHMIC:
 
         result = 1.0f / log10f( maxValue );
@@ -345,11 +345,11 @@ void visimpl::Histogram::colorScaleLocal( visimpl::TColorScale scale )
       _scaleFuncLocal = linearFunc;
 
       break;
-    case visimpl::T_COLOR_EXPONENTIAL:
-
-      _scaleFuncLocal = exponentialFunc;
-
-      break;
+//    case visimpl::T_COLOR_EXPONENTIAL:
+//
+//      _scaleFuncLocal = exponentialFunc;
+//
+//      break;
     case visimpl::T_COLOR_LOGARITHMIC:
 
       _scaleFuncLocal = logarithmicFunc;
@@ -373,11 +373,11 @@ void visimpl::Histogram::colorScaleGlobal( visimpl::TColorScale scale )
       _scaleFuncGlobal = linearFunc;
 
       break;
-    case visimpl::T_COLOR_EXPONENTIAL:
-
-      _scaleFuncGlobal = exponentialFunc;
-
-      break;
+//    case visimpl::T_COLOR_EXPONENTIAL:
+//
+//      _scaleFuncGlobal = exponentialFunc;
+//
+//      break;
     case visimpl::T_COLOR_LOGARITHMIC:
 
       _scaleFuncGlobal = logarithmicFunc;
@@ -421,6 +421,16 @@ const std::vector< unsigned int>& visimpl::Histogram::histogram( void ) const
   return _histogram;
 }
 
+unsigned int visimpl::Histogram::maxLocal( void )
+{
+  return _maxValueHistogramLocal;
+}
+
+unsigned int visimpl::Histogram::maxGlobal( void )
+{
+  return _maxValueHistogramGlobal;
+}
+
 const utils::InterpolationSet< glm::vec4 >&
 visimpl::Histogram::colorMapper( void )
 {
@@ -431,6 +441,26 @@ void visimpl::Histogram::colorMapper(
     const utils::InterpolationSet< glm::vec4 >& colors )
 {
   _colorMapper = colors;
+}
+
+QColor visimpl::Histogram::colorLocal( void )
+{
+  return _colorLocal;
+}
+
+void visimpl::Histogram::colorLocal( const QColor& color )
+{
+  _colorLocal = color;
+}
+
+QColor visimpl::Histogram::colorGlobal( void )
+{
+  return _colorGlobal;
+}
+
+void visimpl::Histogram::colorGlobal( const QColor& color )
+{
+  _colorGlobal = color;
 }
 
 const QGradientStops& visimpl::Histogram::gradientStops( void )
@@ -461,6 +491,17 @@ QPolygonF visimpl::Histogram::localFunction( void ) const
 QPolygonF visimpl::Histogram::globalFunction( void ) const
 {
   return _curveStopsGlobal;
+}
+
+void visimpl::Histogram::mousePressEvent( QMouseEvent* event_ )
+{
+  QFrame::mousePressEvent( event_ );
+
+  QPoint position = event_->pos( );
+
+  float percentage = position.x( ) / float( width( ));
+
+  emit mouseClicked( percentage );
 }
 
 void visimpl::Histogram::mouseMoveEvent( QMouseEvent* event_ )

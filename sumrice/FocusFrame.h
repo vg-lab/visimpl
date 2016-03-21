@@ -27,6 +27,12 @@ public:
 
   virtual void paintEvent(QPaintEvent* event);
 
+  QColor colorLocal( void );
+  void colorLocal( const QColor& );
+
+  QColor colorGlobal( void );
+  void colorGlobal( const QColor& );
+
 protected:
 
   QPolygonF _curveLocal;
@@ -35,13 +41,15 @@ protected:
   float _width;
   float _offset;
 
+  unsigned int _currentPosition;
   unsigned int _firstPointLocal;
   unsigned int _lastPointLocal;
 
   unsigned int _firstPointGlobal;
   unsigned int _lastPointGlobal;
 
-
+  QColor _colorLocal;
+  QColor _colorGlobal;
 };
 
 

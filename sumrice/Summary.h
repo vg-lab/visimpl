@@ -94,7 +94,13 @@ public:
   void regionWidth( float region );
   float regionWidth( void );
 
+signals:
+
+  void histogramClicked( float );
+
 protected slots:
+
+  void childHistogramClicked( float );
 
   void removeSelections( void );
 
@@ -167,6 +173,9 @@ protected:
   visimpl::TColorScale _colorScaleLocal;
   visimpl::TColorScale _colorScaleGlobal;
 
+  QColor _colorLocal;
+  QColor _colorGlobal;
+
   std::vector< visimpl::Histogram* > _histograms;
   std::vector< StackRow > _rows;
 
@@ -174,6 +183,11 @@ protected:
 
   QGridLayout* _mainLayout;
   QWidget* _body;
+  QWidget* _localColorWidget;
+  QWidget* _globalColorWidget;
+  QLabel* _currentValueLabel;
+  QLabel* _globalMaxLabel;
+  QLabel* _localMaxLabel;
 
   unsigned int _maxColumns;
   unsigned int _summaryColumns;

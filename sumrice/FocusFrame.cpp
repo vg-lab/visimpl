@@ -46,6 +46,8 @@ void FocusFrame::viewRegion( const visimpl::Histogram& histogram,
     start = end - ( 2 * regionW );
   }
 
+  _currentPosition = position;
+
   _curveLocal = histogram.localFunction( );
   _curveGlobal = histogram.globalFunction( );
 
@@ -109,10 +111,40 @@ void FocusFrame::paintEvent( QPaintEvent* /*event_*/ )
   }
   pathLocal.lineTo( width( ), height( ));
 
+  painter.setPen( Qt::NoPen );
   painter.setBrush( QBrush( QColor( 255, 0, 0, 100 ), Qt::SolidPattern));
   painter.drawPath( pathGlobal );
 
   painter.setBrush( QBrush( QColor( 0, 0, 128, 50 ), Qt::SolidPattern));
   painter.drawPath( pathLocal );
 
+//  float markerPos = ( _currentPosition - _firstPointLocal ) /
+//                  float( _lastPointLocal - _firstPointLocal );
+//
+//  int positionX = markerPos * width( );
+//
+//  QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
+//  painter.setPen( QColor( 177, 50, 50 ));
+//  painter.drawLine( marker );
+
+}
+
+QColor FocusFrame::colorLocal( void )
+{
+  return _colorLocal;
+}
+
+void FocusFrame::colorLocal( const QColor& color )
+{
+  _colorLocal = color;
+}
+
+QColor FocusFrame::colorGlobal( void )
+{
+  return _colorGlobal;
+}
+
+void FocusFrame::colorGlobal( const QColor& color )
+{
+  _colorGlobal = color;
 }

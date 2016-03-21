@@ -320,6 +320,8 @@ void MainWindow::initSummaryWidget( )
   connect( _ui->actionAutoNamingSelections, SIGNAL( triggered( )),
            _summary, SLOT( toggleAutoNameSelections( )));
 
+  connect( _summary, SIGNAL( histogramClicked( float )),
+           this, SLOT( PlayAt( float )));
 
 }
 
@@ -410,6 +412,18 @@ void MainWindow::PlayAt( bool notify )
   if( _player )
   {
     PlayAt( _simSlider->sliderPosition( ), notify );
+  }
+}
+
+void MainWindow::PlayAt( float percentage, bool notify )
+{
+  if( _player )
+  {
+    int sliderPos = percentage *
+                    ( _simSlider->maximum( ) - _simSlider->minimum( )) +
+                    _simSlider->minimum( );
+
+    PlayAt( sliderPos, notify );
   }
 }
 

@@ -48,6 +48,7 @@ public slots:
   void Repeat( bool notify = true);
   void PlayAt( bool notify = true );
   void PlayAt( int, bool notify = true );
+  void PlayAt( float, bool notify = true );
   void Restart( bool notify = true );
   void GoToEnd( bool notify = true );
 

@@ -24,8 +24,8 @@ static QString colorScaleToString( visimpl::TColorScale colorScale )
   {
     case visimpl::T_COLOR_LINEAR:
       return QString( "Linear" );
-    case visimpl::T_COLOR_EXPONENTIAL:
-      return QString( "Exponential" );
+//    case visimpl::T_COLOR_EXPONENTIAL:
+//      return QString( "Exponential" );
     case visimpl::T_COLOR_LOGARITHMIC:
       return QString( "Logarithmic");
     default:
@@ -44,6 +44,8 @@ Summary::Summary( QWidget* parent_,
 , _stackType( stackType )
 , _colorScaleLocal( visimpl::T_COLOR_LINEAR )
 , _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
+, _colorLocal( 0, 0, 128, 50 )
+, _colorGlobal( 255, 0, 0, 100 )
 , _heightPerRow( 50 )
 , _autoNameSelection( false )
 {
@@ -58,6 +60,7 @@ Summary::Summary( QWidget* parent_,
   else if( _stackType == T_STACK_EXPANDABLE )
   {
   _maxColumns= 20;
+  _regionWidth = 0.1f;
   _summaryColumns = _maxColumns - 2;
 
   QVBoxLayout* upperLayout = new QVBoxLayout( );
@@ -83,7 +86,7 @@ Summary::Summary( QWidget* parent_,
 
   QStringList csItems;
   csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LINEAR )));
-  csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_EXPONENTIAL )));
+//  csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_EXPONENTIAL )));
   csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LOGARITHMIC )));
 
   QComboBox* localComboBox = new QComboBox( );
@@ -92,21 +95,52 @@ Summary::Summary( QWidget* parent_,
   QComboBox* globalComboBox = new QComboBox( );
   globalComboBox->addItems( csItems );
 
-  QPushButton* removeButton = new QPushButton( "Delete" );
+  QPushButton* removeButton = new QPushButton( "Delete selected" );
 
   _focusWidget = new FocusFrame( );
+  _focusWidget->colorLocal( _colorLocal );
+  _focusWidget->colorGlobal( _colorGlobal );
 //  _detailHistogram = new visimpl::Histogram( );
 
-  footLayout->addWidget( new QLabel( "Local scale" ), 0, 0, 1, 1);
-  footLayout->addWidget( localComboBox, 1, 0, 1, 1 );
+  _localColorWidget = new QWidget( );
+  _localColorWidget->setPalette( QPalette( _colorLocal ));
+  _localColorWidget->setAutoFillBackground( true );
+  _localColorWidget->setMaximumWidth( 30 );
+  _localColorWidget->setMinimumHeight( 30 );
 
-  footLayout->addWidget( new QLabel( "Global scale" ), 2, 0, 1, 1);
-  footLayout->addWidget( globalComboBox, 3, 0, 1, 1 );
+  _globalColorWidget = new QWidget( );
+  _globalColorWidget->setPalette( QPalette( _colorGlobal ));
+  _globalColorWidget->setAutoFillBackground( true );
+  _globalColorWidget->setMaximumWidth( 30 );
+  _globalColorWidget->setMinimumHeight( 30 );
 
-  footLayout->addWidget( _focusWidget, 0, 1, 4, 3 );
-  _regionWidth = 0.1f;
+  _currentValueLabel = new QLabel( "" );
+  _currentValueLabel->setMaximumWidth( 50 );
+  _globalMaxLabel = new QLabel( "" );
+  _globalMaxLabel->setMaximumWidth( 50 );
+  _localMaxLabel = new QLabel( "" );
+  _localMaxLabel->setMaximumWidth( 50 );
 
-  footLayout->addWidget( removeButton, 0, 4, 1, 1 );
+
+//  unsigned int totalRows = 10;
+  footLayout->addWidget( new QLabel( "Local normalization:" ), 0, 0, 1, 1);
+  footLayout->addWidget( _localColorWidget, 0, 1, 1, 1 );
+  footLayout->addWidget( localComboBox, 1, 0, 1, 2 );
+
+  footLayout->addWidget( new QLabel( "Global normalization:" ), 2, 0, 1, 1);
+  footLayout->addWidget( _globalColorWidget, 2, 1, 1, 1 );
+  footLayout->addWidget( globalComboBox, 3, 0, 1, 2 );
+
+  footLayout->addWidget( _focusWidget, 0, 2, 4, 5 );
+
+
+  footLayout->addWidget( removeButton, 0, 7, 1, 1 );
+  footLayout->addWidget( new QLabel( "Current value: "), 1, 7, 1, 1 );
+  footLayout->addWidget( _currentValueLabel, 1, 8, 1, 1 );
+  footLayout->addWidget( new QLabel( "Local max: "), 2, 7, 1, 1 );
+  footLayout->addWidget( _localMaxLabel, 2, 8, 1, 1 );
+  footLayout->addWidget( new QLabel( "Global max: "), 3, 7, 1, 1 );
+  footLayout->addWidget( _globalMaxLabel, 3, 8, 1, 1 );
 
   localComboBox->setCurrentIndex( ( int ) _colorScaleLocal );
   globalComboBox->setCurrentIndex( ( int ) _colorScaleGlobal );
@@ -163,6 +197,8 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
   _mainHistogram->setMaximumHeight( _heightPerRow );
   _mainHistogram->colorScaleLocal( _colorScaleLocal );
   _mainHistogram->colorScaleGlobal( _colorScaleGlobal );
+  _mainHistogram->colorLocal( _colorLocal );
+  _mainHistogram->colorGlobal( _colorGlobal );
   _mainHistogram->representationMode( visimpl::T_REP_CURVE );
   _mainHistogram->regionWidth( _regionWidth );
   //  _mainHistogram->setMinimumWidth( width( ));
@@ -222,6 +258,9 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
 
   }
   //  AddGIDSelection( gids );
+
+  connect( _mainHistogram, SIGNAL( mouseClicked( float )),
+           this, SLOT( childHistogramClicked( float )));
 
   CreateSummarySpikes( );
 //  UpdateGradientColors( );
@@ -319,6 +358,8 @@ void Summary::deferredInsertion( void )
     histogram->colorMapper( _mainHistogram->colorMapper( ));
     histogram->colorScaleLocal( _colorScaleLocal );
     histogram->colorScaleGlobal( _colorScaleGlobal );
+    histogram->colorLocal( _colorLocal );
+    histogram->colorGlobal( _colorGlobal );
     histogram->normalizeRule( visimpl::T_NORM_MAX );
     histogram->representationMode( visimpl::T_REP_CURVE );
     histogram->regionWidth( _regionWidth );
@@ -341,6 +382,9 @@ void Summary::deferredInsertion( void )
     histogram->mousePosition( &_lastMousePosition );
     connect( histogram, SIGNAL( mousePositionChanged( QPoint )),
              this, SLOT( updateMouseMarker( QPoint )));
+
+    connect( histogram, SIGNAL( mouseClicked( float )),
+             this, SLOT( childHistogramClicked( float )));
 
     _histograms.push_back( histogram );
 
@@ -387,6 +431,11 @@ void Summary::updateMouseMarker( QPoint point )
 
       _focusWidget->viewRegion( *focusedHistogram, percentage );
       _focusWidget->update( );
+
+      _currentValueLabel->setText(
+          QString::number( focusedHistogram->valueAt( percentage )));
+      _localMaxLabel->setText( QString::number( focusedHistogram->maxLocal( )));
+      _globalMaxLabel->setText( QString::number( focusedHistogram->maxGlobal( )));
     }
 
     for( auto histogram : _histograms )
@@ -468,6 +517,11 @@ unsigned int Summary::heightPerRow( void )
 void Summary::showMarker( bool show_ )
 {
   _showMarker = show_;
+}
+
+void Summary::childHistogramClicked( float percentage )
+{
+  emit histogramClicked( percentage );
 }
 
 void Summary::removeSelections( void )

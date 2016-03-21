@@ -542,6 +542,18 @@ void MainWindow::PlayAt( bool notify )
   }
 }
 
+void MainWindow::PlayAt( float percentage, bool notify )
+{
+  if( _openGLWidget )
+  {
+    int sliderPos = percentage *
+                    ( _simSlider->maximum( ) - _simSlider->minimum( )) +
+                    _simSlider->minimum( );
+
+    PlayAt( sliderPos, notify );
+  }
+}
+
 void MainWindow::PlayAt( int sliderPosition, bool notify )
 {
   if( _openGLWidget )

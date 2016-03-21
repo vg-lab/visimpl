@@ -23,7 +23,7 @@ namespace visimpl
   typedef enum
   {
     T_COLOR_LINEAR = 0,
-    T_COLOR_EXPONENTIAL,
+//    T_COLOR_EXPONENTIAL,
     T_COLOR_LOGARITHMIC,
     T_COLOR_UNDEFINED
   } TColorScale;
@@ -67,6 +67,12 @@ namespace visimpl
     void colorScaleGlobal( TColorScale scale );
     TColorScale colorScaleGlobal( void );
 
+    QColor colorLocal( void );
+    void colorLocal( const QColor& );
+
+    QColor colorGlobal( void );
+    void colorGlobal( const QColor& );
+
     void normalizeRule( TNormalize_Rule normRule );
     TNormalize_Rule normalizeRule( void );
 
@@ -74,12 +80,15 @@ namespace visimpl
     TRepresentation_Mode representationMode( void );
 
     const std::vector< unsigned int>& histogram( void ) const;
+    unsigned int maxLocal( void );
+    unsigned int maxGlobal( void );
 
     const utils::InterpolationSet< glm::vec4 >& colorMapper( void );
     void colorMapper(const utils::InterpolationSet< glm::vec4 >& colors );
 
     const QGradientStops& gradientStops( void );
 
+    virtual void mousePressEvent( QMouseEvent* event_ );
     virtual void mouseMoveEvent( QMouseEvent* event_ );
     void mousePosition( QPoint* mousePosition_ );
 
@@ -97,6 +106,7 @@ namespace visimpl
 signals:
 
     void mousePositionChanged( QPoint point );
+    void mouseClicked( float position );
 
   protected:
 
@@ -120,6 +130,9 @@ signals:
 
     TColorScale _colorScaleLocal;
     TColorScale _colorScaleGlobal;
+
+    QColor _colorLocal;
+    QColor _colorGlobal;
 
     TColorScale _prevColorScaleLocal;
     TColorScale _prevColorScaleGlobal;
