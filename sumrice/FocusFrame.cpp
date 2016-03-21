@@ -76,7 +76,7 @@ void FocusFrame::paintEvent( QPaintEvent* /*event_*/ )
   QPolygonF::iterator current;
 
 //  int offset = _offset * width( );
-  unsigned int delta = width( ) / ( _lastPointLocal - _firstPointLocal - 2 );
+  float delta = width( ) / float( _lastPointLocal - _firstPointLocal - 1);
 
   unsigned int counter = 0;
   pathGlobal.moveTo( 0, height( ));

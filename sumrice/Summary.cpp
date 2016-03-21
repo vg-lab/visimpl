@@ -70,11 +70,6 @@ Summary::Summary( QWidget* parent_,
   headerLayout->addWidget( new QLabel( "Activity" ), 0, 1, 1, _summaryColumns);
   headerLayout->addWidget( new QLabel( "Select" ), 0, _maxColumns - 1, 1, 1);
 
-  QFrame* line = new QFrame();
-  line->setFrameShape(QFrame::HLine);
-  line->setFrameShadow(QFrame::Sunken);
-  headerLayout->addWidget( line, 1, 0, 1, _maxColumns );
-
   header->setLayout( headerLayout );
 
   _mainLayout = new QGridLayout( );
@@ -103,15 +98,15 @@ Summary::Summary( QWidget* parent_,
 //  _detailHistogram = new visimpl::Histogram( );
 
   footLayout->addWidget( new QLabel( "Local scale" ), 0, 0, 1, 1);
-  footLayout->addWidget( localComboBox, 0, 1, 1, 1 );
+  footLayout->addWidget( localComboBox, 1, 0, 1, 1 );
 
-  footLayout->addWidget( new QLabel( "Global scale" ), 1, 0, 1, 1);
-  footLayout->addWidget( globalComboBox, 1, 1, 1, 1 );
+  footLayout->addWidget( new QLabel( "Global scale" ), 2, 0, 1, 1);
+  footLayout->addWidget( globalComboBox, 3, 0, 1, 1 );
 
-  footLayout->addWidget( _focusWidget, 0, 2, 3, 1 );
+  footLayout->addWidget( _focusWidget, 0, 1, 4, 3 );
   _regionWidth = 0.1f;
 
-  footLayout->addWidget( removeButton, 0, 5, 1, 1 );
+  footLayout->addWidget( removeButton, 0, 4, 1, 1 );
 
   localComboBox->setCurrentIndex( ( int ) _colorScaleLocal );
   globalComboBox->setCurrentIndex( ( int ) _colorScaleGlobal );
@@ -203,6 +198,7 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
   if( _stackType == T_STACK_FIXED)
   {
     _mainLayout->addWidget( _mainHistogram, 0, 1, 1, 1 );
+    _mainHistogram->paintRegion( false );
     _histograms.push_back( _mainHistogram );
   }
   else if( _stackType == T_STACK_EXPANDABLE )
@@ -383,17 +379,21 @@ void Summary::updateMouseMarker( QPoint point )
 
     _lastMousePosition = point;
 
-    point = focusedHistogram->mapFromGlobal( point );
-    float percentage = float( point.x( ) ) /
-        focusedHistogram->width( );
+    if( _stackType == T_STACK_EXPANDABLE )
+    {
+      point = focusedHistogram->mapFromGlobal( point );
+      float percentage = float( point.x( ) ) /
+          focusedHistogram->width( );
 
-    _focusWidget->viewRegion( *focusedHistogram, percentage );
-    _focusWidget->update( );
+      _focusWidget->viewRegion( *focusedHistogram, percentage );
+      _focusWidget->update( );
+    }
 
     for( auto histogram : _histograms )
     {
+      if( _stackType == T_STACK_EXPANDABLE )
         histogram->paintRegion( histogram == focusedHistogram );
-        histogram->update( );
+      histogram->update( );
     }
 
   }
