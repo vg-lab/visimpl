@@ -41,22 +41,50 @@ namespace visimpl
 
   } TRepresentation_Mode;
 
-  class Histogram : public QFrame
+  class MultiLevelHistogram : public QFrame
   {
 
     Q_OBJECT;
 
+  protected:
+
+    class Histogram : public std::vector< unsigned int >
+    {
+    public:
+
+      unsigned int _maxValueHistogramLocal;
+      unsigned int _maxValueHistogramGlobal;
+      QGradientStops _gradientStops;
+      QPolygonF _curveStopsLocal;
+      QPolygonF _curveStopsGlobal;
+    };
+
   public:
 
-    Histogram( void );
-    Histogram( const brion::Spikes& spikes, float startTime, float endTime );
-    Histogram( const brion::SpikeReport& spikeReport );
+    typedef enum
+    {
+      T_HIST_MAIN = 0,
+      T_HIST_FOCUS
+    } THistogram;
+
+    MultiLevelHistogram( void );
+    MultiLevelHistogram( const brion::Spikes& spikes, float startTime, float endTime );
+    MultiLevelHistogram( const brion::SpikeReport& spikeReport );
+
+    virtual void init( unsigned int binsNumber = 250, float zoomFactor = 1.5f );
 
     void Spikes( const brion::Spikes& spikes, float startTime, float endTime );
     void Spikes( const brion::SpikeReport& spikeReport );
 
-    void CreateHistogram( unsigned int binsNumber = 250 );
-    void CalculateColors( void );
+    void BuildHistogram( THistogram histogram = T_HIST_MAIN );
+
+    void CalculateColors( THistogram histogramNumber = T_HIST_MAIN );
+
+    void bins( unsigned int binsNumber );
+    unsigned int bins( void );
+
+    void zoomFactor( float factor );
+    float zoomFactor( void );
 
     void filteredGIDs( const GIDUSet& gids );
     const GIDUSet& filteredGIDs( void );
@@ -79,9 +107,13 @@ namespace visimpl
     void representationMode( TRepresentation_Mode repType );
     TRepresentation_Mode representationMode( void );
 
-    const std::vector< unsigned int>& histogram( void ) const;
+    unsigned int histogramSize( void ) const;
     unsigned int maxLocal( void );
     unsigned int maxGlobal( void );
+
+    unsigned int focusHistogramSize( void ) const;
+    unsigned int focusMaxLocal( void );
+    unsigned int focusMaxGlobal( void );
 
     const utils::InterpolationSet< glm::vec4 >& colorMapper( void );
     void colorMapper(const utils::InterpolationSet< glm::vec4 >& colors );
@@ -103,6 +135,9 @@ namespace visimpl
     QPolygonF localFunction( void ) const;
     QPolygonF globalFunction( void ) const;
 
+    QPolygonF focusLocalFunction( void ) const;
+    QPolygonF focusGlobalFunction( void ) const;
+
 signals:
 
     void mousePositionChanged( QPoint point );
@@ -110,18 +145,15 @@ signals:
 
   protected:
 
-    virtual void init( void );
-
     virtual void paintEvent(QPaintEvent* event);
 
-    std::vector< unsigned int > _histogram;
-    unsigned int _maxValueHistogramLocal;
-    unsigned int _maxValueHistogramGlobal;
-    QGradientStops _gradientStops;
-    QPolygonF _curveStopsLocal;
-    QPolygonF _curveStopsGlobal;
+    Histogram _mainHistogram;
+    Histogram _focusHistogram;
 
-    brion::Spikes _spikes;
+    unsigned int _bins;
+    float _zoomFactor;
+
+    const brion::Spikes* _spikes;
     float _startTime;
     float _endTime;
 

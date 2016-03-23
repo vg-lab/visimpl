@@ -18,6 +18,7 @@
 unsigned int visimpl::Selection::_counter = 0;
 
 unsigned int DEFAULT_BINS = 250;
+float DEFAULT_ZOOM_FACTOR = 1.5f;
 
 static QString colorScaleToString( visimpl::TColorScale colorScale )
 {
@@ -38,6 +39,7 @@ Summary::Summary( QWidget* parent_,
                   TStackType stackType )
 : QWidget( parent_ )
 , _bins( DEFAULT_BINS )
+, _zoomFactor( DEFAULT_ZOOM_FACTOR )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
 , _mainHistogram( nullptr )
@@ -128,6 +130,12 @@ Summary::Summary( QWidget* parent_,
   binSpinBox->setSingleStep( 50 );
   binSpinBox->setValue( _bins );
 
+  QDoubleSpinBox* zoomFactorSpinBox = new QDoubleSpinBox( );
+  zoomFactorSpinBox->setMinimum( 1.0 );
+  zoomFactorSpinBox->setMaximum( 100.0 );
+  zoomFactorSpinBox->setSingleStep( 0.5 );
+  zoomFactorSpinBox->setValue( _zoomFactor );
+
 //  unsigned int totalRows = 10;
   footLayout->addWidget( new QLabel( "Local normalization:" ), 0, 0, 1, 1);
   footLayout->addWidget( _localColorWidget, 0, 1, 1, 1 );
@@ -137,17 +145,19 @@ Summary::Summary( QWidget* parent_,
   footLayout->addWidget( _globalColorWidget, 2, 1, 1, 1 );
   footLayout->addWidget( globalComboBox, 3, 0, 1, 2 );
 
-  footLayout->addWidget( _focusWidget, 0, 2, 4, 7 );
+  footLayout->addWidget( _focusWidget, 0, 2, 5, 7 );
 
   footLayout->addWidget( new QLabel( "Bins:" ), 0, 9, 1, 1 );
   footLayout->addWidget( binSpinBox, 0, 10, 1, 1 );
+  footLayout->addWidget( new QLabel( "ZoomFactor:" ), 1, 9, 1, 1 );
+  footLayout->addWidget( zoomFactorSpinBox, 1, 10, 1, 1 );
   footLayout->addWidget( removeButton, 0, 11, 1, 1 );
-  footLayout->addWidget( new QLabel( "Current value: "), 1, 9, 1, 2 );
-  footLayout->addWidget( _currentValueLabel, 1, 11, 1, 1 );
-  footLayout->addWidget( new QLabel( "Local max: "), 2, 9, 1, 2 );
-  footLayout->addWidget( _localMaxLabel, 2, 11, 1, 1 );
-  footLayout->addWidget( new QLabel( "Global max: "), 3, 9, 1, 2 );
-  footLayout->addWidget( _globalMaxLabel, 3, 11, 1, 1 );
+  footLayout->addWidget( new QLabel( "Current value: "), 2, 9, 1, 2 );
+  footLayout->addWidget( _currentValueLabel, 2, 11, 1, 1 );
+  footLayout->addWidget( new QLabel( "Local max: "), 3, 9, 1, 2 );
+  footLayout->addWidget( _localMaxLabel, 3, 11, 1, 1 );
+  footLayout->addWidget( new QLabel( "Global max: "), 4, 9, 1, 2 );
+  footLayout->addWidget( _globalMaxLabel, 4, 11, 1, 1 );
 
   localComboBox->setCurrentIndex( ( int ) _colorScaleLocal );
   globalComboBox->setCurrentIndex( ( int ) _colorScaleGlobal );
@@ -163,6 +173,9 @@ Summary::Summary( QWidget* parent_,
 
   connect( binSpinBox, SIGNAL( valueChanged( int )),
            this,  SLOT( bins( int )));
+
+  connect( zoomFactorSpinBox, SIGNAL( valueChanged( double )),
+           this,  SLOT( zoomFactor( double )));
 
   foot->setLayout( footLayout );
 
@@ -202,7 +215,7 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
 //
 //  CreateSummarySpikes( gids );
 //  UpdateGradientColors( );
-  _mainHistogram = new visimpl::Histogram( *spikes_ );
+  _mainHistogram = new visimpl::MultiLevelHistogram( *spikes_ );
   _mainHistogram->setMinimumHeight( _heightPerRow );
   _mainHistogram->setMaximumHeight( _heightPerRow );
   _mainHistogram->colorScaleLocal( _colorScaleLocal );
@@ -272,7 +285,8 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
   connect( _mainHistogram, SIGNAL( mouseClicked( float )),
            this, SLOT( childHistogramClicked( float )));
 
-  CreateSummarySpikes( );
+  _mainHistogram->init( _bins, _zoomFactor );
+//  CreateSummarySpikes( );
 //  UpdateGradientColors( );
   update( );
 }
@@ -308,7 +322,7 @@ void Summary::AddNewHistogram( const visimpl::Selection& selection
 #endif
 
     {
-    visimpl::Histogram* histogram = new visimpl::Histogram( *_spikeReport );
+    visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
 //    histogram->filteredGIDs( gids );
     histogram->colorMapper( _mainHistogram->colorMapper( ));
 //    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
@@ -322,7 +336,8 @@ void Summary::AddNewHistogram( const visimpl::Selection& selection
 //    _mainLayout->addWidget( histogram );
     _histograms.push_back( histogram );
 
-    CreateSummarySpikes( );
+    histogram->init( _bins, _zoomFactor );
+//    CreateSummarySpikes( );
 //    UpdateGradientColors( );
 
     update( );
@@ -363,7 +378,7 @@ void Summary::deferredInsertion( void )
               << " GIDs: " << selection.gids.size( )
               << std::endl;
 
-    visimpl::Histogram* histogram = new visimpl::Histogram( *_spikeReport );
+    visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
     histogram->filteredGIDs( selection.gids );
     histogram->colorMapper( _mainHistogram->colorMapper( ));
     histogram->colorScaleLocal( _colorScaleLocal );
@@ -398,7 +413,8 @@ void Summary::deferredInsertion( void )
 
     _histograms.push_back( histogram );
 
-    CreateSummarySpikes( );
+    histogram->init( _bins, _zoomFactor );
+//    CreateSummarySpikes( );
 //    UpdateGradientColors( );
 
     GIDUSet tmp;
@@ -428,8 +444,8 @@ void Summary::updateMouseMarker( QPoint point )
 {
   if( point != _lastMousePosition )
   {
-    visimpl::Histogram* focusedHistogram =
-        dynamic_cast< visimpl::Histogram* >( sender( ));
+    visimpl::MultiLevelHistogram* focusedHistogram =
+        dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
 
     _lastMousePosition = point;
 
@@ -464,7 +480,7 @@ void Summary::CreateSummarySpikes( )
   for( auto histogram : _histograms )
   {
     if( !histogram->isInitialized( ) )
-      histogram->CreateHistogram( _bins );
+      histogram->init( _bins, _zoomFactor );
   }
 
 //  _mainHistogram->CreateHistogram( _bins );
@@ -505,7 +521,18 @@ void Summary::bins( int bins_ )
 
   for( auto histogram : _histograms )
   {
-    histogram->CreateHistogram( _bins );
+    histogram->bins( _bins );
+    update( );
+  }
+}
+
+void Summary::zoomFactor( double zoom )
+{
+  _zoomFactor = zoom;
+
+  for( auto histogram : _histograms )
+  {
+    histogram->zoomFactor( _zoomFactor );
     update( );
   }
 }
@@ -513,6 +540,11 @@ void Summary::bins( int bins_ )
 unsigned int Summary::bins( void )
 {
   return _bins;
+}
+
+float Summary::zoomFactor( void )
+{
+  return _zoomFactor;
 }
 
 void Summary::heightPerRow( unsigned int height_ )

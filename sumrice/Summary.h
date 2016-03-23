@@ -18,12 +18,12 @@
 #include <QCheckBox>
 #include <QTimer>
 
-#include "Histogram.h"
 #include "FocusFrame.h"
+#include "Histogram.h"
 
 namespace visimpl
 {
-  class Histogram;
+  class MultiLevelHistogram;
 
 
   struct Selection
@@ -77,6 +77,7 @@ public:
 
 
   unsigned int bins( void );
+  float zoomFactor( void );
 
   unsigned int histogramsNumber( void );
 
@@ -110,6 +111,7 @@ protected slots:
   void updateMouseMarker( QPoint point );
 
   void bins( int bins_ );
+  void zoomFactor( double zoom );
 
 public slots:
   void toggleAutoNameSelections( void )
@@ -135,7 +137,7 @@ protected:
 //      delete checkBox;
     }
 
-    visimpl::Histogram* histogram;
+    visimpl::MultiLevelHistogram* histogram;
     QLabel* label;
     QCheckBox* checkBox;
 
@@ -161,14 +163,15 @@ protected:
   void UpdateGradientColors( bool replace = false );
 
   unsigned int _bins;
+  float _zoomFactor;
 
   brion::SpikeReport* _spikeReport;
   brion::CompartmentReport* _voltageReport;
 
   GIDUSet _gids;
 
-  visimpl::Histogram* _mainHistogram;
-  visimpl::Histogram* _detailHistogram;
+  visimpl::MultiLevelHistogram* _mainHistogram;
+  visimpl::MultiLevelHistogram* _detailHistogram;
 
   TStackType _stackType;
 
@@ -178,7 +181,7 @@ protected:
   QColor _colorLocal;
   QColor _colorGlobal;
 
-  std::vector< visimpl::Histogram* > _histograms;
+  std::vector< visimpl::MultiLevelHistogram* > _histograms;
   std::vector< StackRow > _rows;
 
   FocusFrame* _focusWidget;

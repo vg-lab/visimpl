@@ -24,11 +24,11 @@ FocusFrame::FocusFrame( QWidget* parent_ )
 }
 
 
-void FocusFrame::viewRegion( const visimpl::Histogram& histogram,
+void FocusFrame::viewRegion( const visimpl::MultiLevelHistogram& histogram,
                              float marker,// float offset,
                              float regionWidth )
 {
-  unsigned int maxSize = histogram.histogram( ).size( );
+  unsigned int maxSize = histogram.focusHistogramSize( );
   
   unsigned int position = maxSize * marker;
   unsigned int regionW =  maxSize * regionWidth;
@@ -48,8 +48,8 @@ void FocusFrame::viewRegion( const visimpl::Histogram& histogram,
 
   _currentPosition = position;
 
-  _curveLocal = histogram.localFunction( );
-  _curveGlobal = histogram.globalFunction( );
+  _curveLocal = histogram.focusLocalFunction( );
+  _curveGlobal = histogram.focusGlobalFunction( );
 
   _firstPointLocal = start;
   _firstPointGlobal = start;
