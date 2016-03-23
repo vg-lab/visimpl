@@ -29,8 +29,10 @@ namespace prefr
     float refLife = 0;
 
 //    if (!node->Still())
+    if( current->life > 0.0f)
+    {
       current->life = std::max(0.0f, current->life - deltaTime);
-
+    }
     current->alive = (current->life > 0 || current->alive) && node->active;
 
     if (current->Alive() && !current->Newborn())

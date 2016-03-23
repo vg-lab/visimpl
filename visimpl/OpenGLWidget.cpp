@@ -297,6 +297,22 @@ void OpenGLWidget::createParticleSystem( void )
   _maxLife = 20.0f;
 
 //  prefr::ColorOperationPrototype* prototype =
+
+  _offPrototype =
+      new prefr::ColorOperationPrototype(
+        _maxLife, _maxLife,
+        prefr::ParticleCollection( _ps->particles, 0, maxParticles));
+
+  _offPrototype->color.Insert( 0.0f, ( glm::vec4(0.1f, 0.1f, 0.1f, 0.5f)));
+
+  _offPrototype->velocity.Insert( 0.0f, 0.0f );
+
+//  _offPrototype->size.Insert( 0.0f, 30.0f );
+  _offPrototype->size.Insert( 1.0f, 10.0f );
+
+  _ps->AddPrototype( _offPrototype );
+
+
   _prototype =
     new prefr::ColorOperationPrototype(
       _maxLife, _maxLife,
@@ -307,6 +323,7 @@ void OpenGLWidget::createParticleSystem( void )
 //  prototype->color.Insert( 1.0f, ( glm::vec4(0.2, 0.2, 0.2, 0.05 )));
 
   _ps->AddPrototype( _prototype );
+
 
   prefr::EmissionNode* emissionNode;
 
@@ -584,23 +601,22 @@ void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
 
       auto res = _selectedGIDs.find( id );
 
+      prefr::tparticle_ptr particle = *(node->particles->start);
+
       if( res != _selectedGIDs.end( ))
-        node->active = true;
+      {
+//        node->active = true;
+        _ps->particlePrototype[ particle->id ] =
+            ( unsigned int ) PROTOTYPE_ON;
+      }
       else
       {
-        node->active = false;
+        _ps->particlePrototype[ particle->id ] =
+            ( unsigned int ) PROTOTYPE_OFF;
+        particle->life = 0.0f;
+        particle->alive = true;
+//        node->active = false;
 
-  //      switch( _simulationType )
-  //      {
-  //        case TSpikes:
-  //          dynamic_cast< prefr::ColorEmissionNode* >( node )->killParticles( true );
-  //        break;
-  //        case TVoltages:
-  //          dynamic_cast< prefr::DirectValuedEmissionNode* >( node )->killParticles( true );
-  //        break;
-  //        default:
-  //        break;
-  //      }
       }
     }
 

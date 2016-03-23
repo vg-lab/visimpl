@@ -53,6 +53,12 @@ public:
     NsolScene
   } TDataFileType;
 
+  typedef enum
+  {
+    PROTOTYPE_OFF = 0,
+    PROTOTYPE_ON
+  } TPrototypeEnum;
+
   OpenGLWidget( QWidget* parent = 0,
                 Qt::WindowFlags windowFlags = 0,
                 bool paintNeurons = true,
@@ -177,6 +183,7 @@ protected:
   bool _firstFrame;
 
   prefr::ColorOperationPrototype* _prototype;
+  prefr::ColorOperationPrototype* _offPrototype;
 
 //  brion::BlueConfig* _blueConfig;
 //  brion::SpikeReport* _spikeReport;
