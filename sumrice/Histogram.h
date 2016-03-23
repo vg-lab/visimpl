@@ -129,6 +129,7 @@ namespace visimpl
     void paintRegion( bool region = false );
 
     unsigned int valueAt( float percentage );
+    unsigned int focusValueAt( float percentage );
 
     bool isInitialized( void );
 

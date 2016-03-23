@@ -455,13 +455,13 @@ void Summary::updateMouseMarker( QPoint point )
       float percentage = float( point.x( ) ) /
           focusedHistogram->width( );
 
-      _focusWidget->viewRegion( *focusedHistogram, percentage );
+      _focusWidget->viewRegion( *focusedHistogram, percentage, _regionWidth );
       _focusWidget->update( );
 
       _currentValueLabel->setText(
-          QString::number( focusedHistogram->valueAt( percentage )));
-      _localMaxLabel->setText( QString::number( focusedHistogram->maxLocal( )));
-      _globalMaxLabel->setText( QString::number( focusedHistogram->maxGlobal( )));
+          QString::number( focusedHistogram->focusValueAt( percentage )));
+      _localMaxLabel->setText( QString::number( focusedHistogram->focusMaxLocal( )));
+      _globalMaxLabel->setText( QString::number( focusedHistogram->focusMaxGlobal( )));
     }
 
     for( auto histogram : _histograms )
@@ -595,7 +595,8 @@ void Summary::colorScaleLocal( visimpl::TColorScale colorScale )
   for( auto histogram : _histograms )
   {
     histogram->colorScaleLocal( colorScale );
-    histogram->CalculateColors( );
+    histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_MAIN );
+    histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_FOCUS );
     histogram->update( );
   }
 }
@@ -612,7 +613,8 @@ void Summary::colorScaleGlobal( visimpl::TColorScale colorScale )
   for( auto histogram : _histograms )
   {
     histogram->colorScaleGlobal( colorScale );
-    histogram->CalculateColors( );
+    histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_MAIN );
+    histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_FOCUS );
     histogram->update( );
   }
 }

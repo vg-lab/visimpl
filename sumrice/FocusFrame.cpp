@@ -33,7 +33,7 @@ void FocusFrame::viewRegion( const visimpl::MultiLevelHistogram& histogram,
   unsigned int position = maxSize * marker;
   unsigned int regionW =  maxSize * regionWidth;
 
-  int start = position - regionW;
+  int start = position - regionW - 1;
   unsigned int end = position + regionW;
   if( start < 0 )
   {
@@ -118,14 +118,14 @@ void FocusFrame::paintEvent( QPaintEvent* /*event_*/ )
   painter.setBrush( QBrush( QColor( 0, 0, 128, 50 ), Qt::SolidPattern));
   painter.drawPath( pathLocal );
 
-//  float markerPos = ( _currentPosition - _firstPointLocal ) /
-//                  float( _lastPointLocal - _firstPointLocal );
-//
-//  int positionX = markerPos * width( );
-//
-//  QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
-//  painter.setPen( QColor( 177, 50, 50 ));
-//  painter.drawLine( marker );
+  float markerPos = ( _currentPosition - _firstPointLocal ) /
+                  float( _lastPointLocal - _firstPointLocal - 1 );
+
+  int positionX = markerPos * width( );
+
+  QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
+  painter.setPen( QColor( 177, 50, 50 ));
+  painter.drawLine( marker );
 
 }
 

@@ -269,21 +269,21 @@ namespace visimpl
     }
     else if( _repMode == T_REP_CURVE )
     {
-  //    bool updateGlobal = _prevColorScaleGlobal != _colorScaleGlobal;
-  //    bool updateLocal = _prevColorScaleLocal != _colorScaleLocal;
-  //
-  //    if( !updateGlobal && !updateLocal )
-  //      return;
 
-  //    float maxValue;
       float invMaxValueLocal;
       float invMaxValueGlobal;
 
       QPolygonF auxLocal;
       QPolygonF auxGlobal;
 
-      invMaxValueLocal = maxValueFunc( histogram->_maxValueHistogramLocal, _colorScaleLocal );
-      invMaxValueGlobal = maxValueFunc( histogram->_maxValueHistogramGlobal, _colorScaleGlobal );
+      auxLocal.reserve( histogram->size( ));
+      auxGlobal.reserve( histogram->size( ));
+
+      invMaxValueLocal = maxValueFunc( histogram->_maxValueHistogramLocal,
+                                       _colorScaleLocal );
+
+      invMaxValueGlobal = maxValueFunc( histogram->_maxValueHistogramGlobal,
+                                        _colorScaleGlobal );
 
       float currentX;
       float globalY;
@@ -300,26 +300,20 @@ namespace visimpl
 
         if( bin > 0)
         {
-  //        if( updateGlobal )
             globalY = _scaleFuncGlobal( float( bin ), invMaxValueGlobal );
 
-  //        if( updateLocal )
             localY = _scaleFuncLocal( float( bin ), invMaxValueLocal );
         }
 
-  //      if( updateGlobal )
           auxGlobal.push_back( QPointF( currentX, 1.0f - globalY ));
 
-  //      if( updateLocal )
           auxLocal.push_back( QPointF( currentX, 1.0f - localY ));
 
         counter++;
       }
 
-  //    if( updateGlobal )
       histogram->_curveStopsGlobal = auxGlobal;
 
-  //    if( updateLocal )
       histogram->_curveStopsLocal = auxLocal;
 
 
@@ -547,6 +541,16 @@ namespace visimpl
       position = _mainHistogram.size( ) - 1;
 
     return _mainHistogram[ position ];
+  }
+
+  unsigned int MultiLevelHistogram::focusValueAt( float percentage )
+  {
+    unsigned int position = percentage * _focusHistogram.size( );
+
+    if( position >= _focusHistogram.size( ))
+      position = _focusHistogram.size( ) - 1;
+
+    return _focusHistogram[ position ];
   }
 
   bool MultiLevelHistogram::isInitialized( void )
