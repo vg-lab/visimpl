@@ -194,11 +194,15 @@ void OpenGLWidget::configureSimulation( void )
 
       for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
       {
-        auto res = gidNodesMap.find( (*spike).second );
-        if( res != gidNodesMap.end( ))
+        if( _selectedGIDs.find( ( *spike ).second ) != _selectedGIDs.end( )
+            || _selectedGIDs.size( ) == 0 )
         {
-          dynamic_cast< prefr::ColorEmissionNode* >(( *res ).second )->
-              killParticles( );
+          auto res = gidNodesMap.find( (*spike).second );
+          if( res != gidNodesMap.end( ))
+          {
+            dynamic_cast< prefr::ColorEmissionNode* >(( *res ).second )->
+                killParticles( );
+          }
         }
       }
       break;
