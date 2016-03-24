@@ -328,6 +328,9 @@ void MainWindow::initPlaybackDock( void )
   _simulationDock->setWidget( content );
   this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/BottomDockWidgetArea,
                        _simulationDock );
+
+  connect( _summary, SIGNAL( histogramClicked( float )),
+           this, SLOT( PlayAt( float )));
 }
 
 void MainWindow::initSimColorDock( void )
@@ -546,11 +549,30 @@ void MainWindow::PlayAt( float percentage, bool notify )
 {
   if( _openGLWidget )
   {
-    int sliderPos = percentage *
+    int sliderPosition = percentage *
                     ( _simSlider->maximum( ) - _simSlider->minimum( )) +
                     _simSlider->minimum( );
 
-    PlayAt( sliderPos, notify );
+    _simSlider->setSliderPosition( sliderPosition );
+
+    _openGLWidget->resetParticles( );
+
+    _playButton->setIcon( _pauseIcon );
+
+    _openGLWidget->PlayAt( percentage );
+
+    if( notify )
+    {
+#ifdef VISIMPL_USE_ZEQ
+    // Send event
+    _openGLWidget->player( )->zeqEvents( )->sendFrame( _simSlider->minimum( ),
+                           _simSlider->maximum( ),
+                           sliderPosition );
+
+    _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PLAY );
+#endif
+    }
+
   }
 }
 
@@ -560,12 +582,15 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
   {
 
 //    _openGLWidget->Pause( );
-    _openGLWidget->resetParticles( );
+
 
     int value = _simSlider->value( );
     float percentage = float( value - _simSlider->minimum( )) /
                        float( _simSlider->maximum( ) - _simSlider->minimum( ));
+
     _simSlider->setSliderPosition( sliderPosition );
+
+    _openGLWidget->resetParticles( );
 
     _playButton->setIcon( _pauseIcon );
 

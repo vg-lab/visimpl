@@ -62,144 +62,144 @@ Summary::Summary( QWidget* parent_,
   }
   else if( _stackType == T_STACK_EXPANDABLE )
   {
-  _maxColumns= 20;
-  _regionWidth = 0.1f;
-  _summaryColumns = _maxColumns - 2;
+    _maxColumns= 20;
+    _regionWidth = 0.1f;
+    _summaryColumns = _maxColumns - 2;
 
-  QVBoxLayout* upperLayout = new QVBoxLayout( );
-  upperLayout->setAlignment( Qt::AlignTop );
+    QVBoxLayout* upperLayout = new QVBoxLayout( );
+    upperLayout->setAlignment( Qt::AlignTop );
 
 
-  QWidget* header = new QWidget( );
-  QGridLayout* headerLayout = new QGridLayout( );
-  headerLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 1);
-  headerLayout->addWidget( new QLabel( "Activity" ), 0, 1, 1, _summaryColumns);
-  headerLayout->addWidget( new QLabel( "Select" ), 0, _maxColumns - 1, 1, 1);
+    QWidget* header = new QWidget( );
+    QGridLayout* headerLayout = new QGridLayout( );
+    headerLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 1);
+    headerLayout->addWidget( new QLabel( "Activity" ), 0, 1, 1, _summaryColumns);
+    headerLayout->addWidget( new QLabel( "Select" ), 0, _maxColumns - 1, 1, 1);
 
-  header->setLayout( headerLayout );
+    header->setLayout( headerLayout );
 
-  _mainLayout = new QGridLayout( );
-  _mainLayout->setAlignment( Qt::AlignTop );
+    _mainLayout = new QGridLayout( );
+    _mainLayout->setAlignment( Qt::AlignTop );
 
-  _body = new QWidget( );
-  _body->setLayout( _mainLayout );
+    _body = new QWidget( );
+    _body->setLayout( _mainLayout );
 
-  QWidget* foot = new QWidget( );
-  QGridLayout* footLayout = new QGridLayout( );
+    QWidget* foot = new QWidget( );
+    QGridLayout* footLayout = new QGridLayout( );
 
-  QStringList csItems;
-  csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LINEAR )));
-//  csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_EXPONENTIAL )));
-  csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LOGARITHMIC )));
+    QStringList csItems;
+    csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LINEAR )));
+  //  csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_EXPONENTIAL )));
+    csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LOGARITHMIC )));
 
-  QComboBox* localComboBox = new QComboBox( );
-  localComboBox->addItems( csItems );
+    QComboBox* localComboBox = new QComboBox( );
+    localComboBox->addItems( csItems );
 
-  QComboBox* globalComboBox = new QComboBox( );
-  globalComboBox->addItems( csItems );
+    QComboBox* globalComboBox = new QComboBox( );
+    globalComboBox->addItems( csItems );
 
-  QPushButton* removeButton = new QPushButton( "Delete" );
+    QPushButton* removeButton = new QPushButton( "Delete" );
 
-  _focusWidget = new FocusFrame( );
-  _focusWidget->colorLocal( _colorLocal );
-  _focusWidget->colorGlobal( _colorGlobal );
-//  _detailHistogram = new visimpl::Histogram( );
+    _focusWidget = new FocusFrame( );
+    _focusWidget->colorLocal( _colorLocal );
+    _focusWidget->colorGlobal( _colorGlobal );
+  //  _detailHistogram = new visimpl::Histogram( );
 
-  _localColorWidget = new QWidget( );
-  _localColorWidget->setPalette( QPalette( _colorLocal ));
-  _localColorWidget->setAutoFillBackground( true );
-  _localColorWidget->setMaximumWidth( 30 );
-  _localColorWidget->setMinimumHeight( 30 );
+    _localColorWidget = new QWidget( );
+    _localColorWidget->setPalette( QPalette( _colorLocal ));
+    _localColorWidget->setAutoFillBackground( true );
+    _localColorWidget->setMaximumWidth( 30 );
+    _localColorWidget->setMinimumHeight( 30 );
 
-  _globalColorWidget = new QWidget( );
-  _globalColorWidget->setPalette( QPalette( _colorGlobal ));
-  _globalColorWidget->setAutoFillBackground( true );
-  _globalColorWidget->setMaximumWidth( 30 );
-  _globalColorWidget->setMinimumHeight( 30 );
+    _globalColorWidget = new QWidget( );
+    _globalColorWidget->setPalette( QPalette( _colorGlobal ));
+    _globalColorWidget->setAutoFillBackground( true );
+    _globalColorWidget->setMaximumWidth( 30 );
+    _globalColorWidget->setMinimumHeight( 30 );
 
-  _currentValueLabel = new QLabel( "" );
-  _currentValueLabel->setMaximumWidth( 50 );
-  _globalMaxLabel = new QLabel( "" );
-  _globalMaxLabel->setMaximumWidth( 50 );
-  _localMaxLabel = new QLabel( "" );
-  _localMaxLabel->setMaximumWidth( 50 );
+    _currentValueLabel = new QLabel( "" );
+    _currentValueLabel->setMaximumWidth( 50 );
+    _globalMaxLabel = new QLabel( "" );
+    _globalMaxLabel->setMaximumWidth( 50 );
+    _localMaxLabel = new QLabel( "" );
+    _localMaxLabel->setMaximumWidth( 50 );
 
-  QSpinBox* binSpinBox = new QSpinBox( );
-  binSpinBox->setMinimum( 50 );
-  binSpinBox->setMaximum( 5000 );
-  binSpinBox->setSingleStep( 50 );
-  binSpinBox->setValue( _bins );
+    QSpinBox* binSpinBox = new QSpinBox( );
+    binSpinBox->setMinimum( 50 );
+    binSpinBox->setMaximum( 5000 );
+    binSpinBox->setSingleStep( 50 );
+    binSpinBox->setValue( _bins );
 
-  QDoubleSpinBox* zoomFactorSpinBox = new QDoubleSpinBox( );
-  zoomFactorSpinBox->setMinimum( 1.0 );
-  zoomFactorSpinBox->setMaximum( 100.0 );
-  zoomFactorSpinBox->setSingleStep( 0.5 );
-  zoomFactorSpinBox->setValue( _zoomFactor );
+    QDoubleSpinBox* zoomFactorSpinBox = new QDoubleSpinBox( );
+    zoomFactorSpinBox->setMinimum( 1.0 );
+    zoomFactorSpinBox->setMaximum( 100.0 );
+    zoomFactorSpinBox->setSingleStep( 0.5 );
+    zoomFactorSpinBox->setValue( _zoomFactor );
 
-//  unsigned int totalRows = 10;
-  footLayout->addWidget( new QLabel( "Local normalization:" ), 0, 0, 1, 1);
-  footLayout->addWidget( _localColorWidget, 0, 1, 1, 1 );
-  footLayout->addWidget( localComboBox, 1, 0, 1, 2 );
+  //  unsigned int totalRows = 10;
+    footLayout->addWidget( new QLabel( "Local normalization:" ), 0, 0, 1, 1);
+    footLayout->addWidget( _localColorWidget, 0, 1, 1, 1 );
+    footLayout->addWidget( localComboBox, 1, 0, 1, 2 );
 
-  footLayout->addWidget( new QLabel( "Global normalization:" ), 2, 0, 1, 1);
-  footLayout->addWidget( _globalColorWidget, 2, 1, 1, 1 );
-  footLayout->addWidget( globalComboBox, 3, 0, 1, 2 );
+    footLayout->addWidget( new QLabel( "Global normalization:" ), 2, 0, 1, 1);
+    footLayout->addWidget( _globalColorWidget, 2, 1, 1, 1 );
+    footLayout->addWidget( globalComboBox, 3, 0, 1, 2 );
 
-  footLayout->addWidget( _focusWidget, 0, 2, 5, 7 );
+    footLayout->addWidget( _focusWidget, 0, 2, 5, 7 );
 
-  footLayout->addWidget( new QLabel( "Bins:" ), 0, 9, 1, 1 );
-  footLayout->addWidget( binSpinBox, 0, 10, 1, 1 );
-  footLayout->addWidget( new QLabel( "ZoomFactor:" ), 1, 9, 1, 1 );
-  footLayout->addWidget( zoomFactorSpinBox, 1, 10, 1, 1 );
-  footLayout->addWidget( removeButton, 0, 11, 1, 1 );
-  footLayout->addWidget( new QLabel( "Current value: "), 2, 9, 1, 2 );
-  footLayout->addWidget( _currentValueLabel, 2, 11, 1, 1 );
-  footLayout->addWidget( new QLabel( "Local max: "), 3, 9, 1, 2 );
-  footLayout->addWidget( _localMaxLabel, 3, 11, 1, 1 );
-  footLayout->addWidget( new QLabel( "Global max: "), 4, 9, 1, 2 );
-  footLayout->addWidget( _globalMaxLabel, 4, 11, 1, 1 );
+    footLayout->addWidget( new QLabel( "Bins:" ), 0, 9, 1, 1 );
+    footLayout->addWidget( binSpinBox, 0, 10, 1, 1 );
+    footLayout->addWidget( new QLabel( "ZoomFactor:" ), 1, 9, 1, 1 );
+    footLayout->addWidget( zoomFactorSpinBox, 1, 10, 1, 1 );
+    footLayout->addWidget( removeButton, 0, 11, 1, 1 );
+    footLayout->addWidget( new QLabel( "Current value: "), 2, 9, 1, 2 );
+    footLayout->addWidget( _currentValueLabel, 2, 11, 1, 1 );
+    footLayout->addWidget( new QLabel( "Local max: "), 3, 9, 1, 2 );
+    footLayout->addWidget( _localMaxLabel, 3, 11, 1, 1 );
+    footLayout->addWidget( new QLabel( "Global max: "), 4, 9, 1, 2 );
+    footLayout->addWidget( _globalMaxLabel, 4, 11, 1, 1 );
 
-  localComboBox->setCurrentIndex( ( int ) _colorScaleLocal );
-  globalComboBox->setCurrentIndex( ( int ) _colorScaleGlobal );
+    localComboBox->setCurrentIndex( ( int ) _colorScaleLocal );
+    globalComboBox->setCurrentIndex( ( int ) _colorScaleGlobal );
 
-  connect( localComboBox, SIGNAL( currentIndexChanged( int ) ),
-           this, SLOT( colorScaleLocal( int )));
+    connect( localComboBox, SIGNAL( currentIndexChanged( int ) ),
+             this, SLOT( colorScaleLocal( int )));
 
-  connect( globalComboBox, SIGNAL( currentIndexChanged( int ) ),
-             this, SLOT( colorScaleGlobal( int )));
+    connect( globalComboBox, SIGNAL( currentIndexChanged( int ) ),
+               this, SLOT( colorScaleGlobal( int )));
 
-  connect( removeButton, SIGNAL( clicked( void )),
-           this, SLOT( removeSelections( void )));
+    connect( removeButton, SIGNAL( clicked( void )),
+             this, SLOT( removeSelections( void )));
 
-  connect( binSpinBox, SIGNAL( valueChanged( int )),
-           this,  SLOT( bins( int )));
+    connect( binSpinBox, SIGNAL( valueChanged( int )),
+             this,  SLOT( bins( int )));
 
-  connect( zoomFactorSpinBox, SIGNAL( valueChanged( double )),
-           this,  SLOT( zoomFactor( double )));
+    connect( zoomFactorSpinBox, SIGNAL( valueChanged( double )),
+             this,  SLOT( zoomFactor( double )));
 
-  foot->setLayout( footLayout );
+    foot->setLayout( footLayout );
 
-////  std::cout << width( ) << std::endl;
-//  _body->setMinimumWidth( width( ));
-////  body->setMaximumWidth( width( ));
-  QScrollArea* scrollArea = new QScrollArea( );
-  scrollArea->setWidget( _body );
-  scrollArea->setWidgetResizable( true );
+  ////  std::cout << width( ) << std::endl;
+  //  _body->setMinimumWidth( width( ));
+  ////  body->setMaximumWidth( width( ));
+    QScrollArea* scrollArea = new QScrollArea( );
+    scrollArea->setWidget( _body );
+    scrollArea->setWidgetResizable( true );
 
-  upperLayout->addWidget( header );
-  upperLayout->addWidget( scrollArea );
-  upperLayout->addWidget( foot );
-//  upperLayout->addWidget( _body );
+    upperLayout->addWidget( header );
+    upperLayout->addWidget( scrollArea );
+    upperLayout->addWidget( foot );
+  //  upperLayout->addWidget( _body );
 
-  this->setLayout( upperLayout );
+    this->setLayout( upperLayout );
 
-#ifdef VISIMPL_USE_ZEQ
+  #ifdef VISIMPL_USE_ZEQ
 
-  _insertionTimer.setSingleShot( false );
-  _insertionTimer.setInterval( 250 );
-  connect( &_insertionTimer, SIGNAL( timeout( )),
-           this, SLOT(deferredInsertion( )));
-  _insertionTimer.start( );
+    _insertionTimer.setSingleShot( false );
+    _insertionTimer.setInterval( 250 );
+    connect( &_insertionTimer, SIGNAL( timeout( )),
+             this, SLOT(deferredInsertion( )));
+    _insertionTimer.start( );
 
 
 #endif

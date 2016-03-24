@@ -57,18 +57,13 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _elapsedTimeSliderAcc( 0.0f )
 
 {
-//#ifdef VISIMPL_USE_ZEQ
-//  if ( zeqUri != "" )
-//  {
-//    std::cout << ".......... ZEQ URI " << zeqUri << std::endl;
-//    _camera = new nlrender::Camera( zeqUri );
-//
-//    if( !zeqUri.empty( ))
-//      _setZeqUri( zeqUri );
-//  }
-//  else
-//#endif
+#ifdef VISIMPL_USE_ZEQ
+  if ( zeqUri != "" )
+    _camera = new nlrender::Camera( zeqUri );
+  else
+#endif
   _camera = new nlrender::Camera( );
+
   _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
   _fpsLabel.setStyleSheet(
