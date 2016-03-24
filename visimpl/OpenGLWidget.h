@@ -119,6 +119,8 @@ public slots:
   void showSelection( bool );
   void updateSelection( void );
 
+  void ClearSelection( void );
+
 #endif
 
 protected:

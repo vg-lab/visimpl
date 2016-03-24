@@ -83,7 +83,10 @@ protected slots:
 
 #endif
 
+  void ClearSelection( void );
+
 protected:
+
 
   void _onSelectionEvent( const zeq::Event& event_ );
   void _setZeqUri( const std::string& );
@@ -126,6 +129,9 @@ private:
   TransferFunctionWidget* _tfWidget;
   ParticleSizeWidget* _psWidget;
   QDoubleSpinBox* _decayBox;
+
+  QPushButton* _clearSelectionButton;
+  QLabel* _selectionSizeLabel;
 
   QRadioButton* _alphaNormalButton;
   QRadioButton* _alphaAccumulativeButton;

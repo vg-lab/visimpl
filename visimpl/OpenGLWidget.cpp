@@ -603,16 +603,23 @@ void OpenGLWidget::updateSelection( void )
   {
     _ps->Run( false );
 
+    bool baseOn = !_showSelection || _selectedGIDs.size( ) == 0;
+
     for( auto node : *_ps->emissionNodes )
     {
       auto it = nodesGIDMap.find( node );
       unsigned int id = it->second;
 
-      auto res = _selectedGIDs.find( id );
+//      auto res = _selectedGIDs.find( id );
+
+      bool on =  baseOn || _selectedGIDs.find( id ) != _selectedGIDs.end( );
 
       prefr::tparticle_ptr particle = *( node->particles->start );
 
-      if( res != _selectedGIDs.end( ) || !_showSelection )
+//      if( _selectedGIDs.size( ) == 0 ||
+//          res != _selectedGIDs.end( )
+//          || !_showSelection )
+      if( on )
       {
         //        node->active = true;
         _ps->particlePrototype[ particle->id ] =
@@ -642,6 +649,12 @@ void OpenGLWidget::showSelection( bool showSelection_ )
 
   updateSelection( );
 
+}
+
+void OpenGLWidget::ClearSelection( void )
+{
+  _selectedGIDs.clear( );
+  updateSelection( );
 }
 
 #endif

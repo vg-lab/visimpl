@@ -370,6 +370,10 @@ void MainWindow::initSimColorDock( void )
   _alphaAccumulativeButton = new QRadioButton( "Accumulative" );
   _openGLWidget->SetAlphaBlendingAccumulative( false );
 
+  _clearSelectionButton = new QPushButton( "Discard" );
+  _clearSelectionButton->setEnabled( false );
+  _selectionSizeLabel = new QLabel( "0" );
+
   QWidget* container = new QWidget( );
   QVBoxLayout* verticalLayout = new QVBoxLayout( );
 //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
@@ -401,12 +405,20 @@ void MainWindow::initSimColorDock( void )
   rFunctionGB->setLayout( rfLayout );
   rFunctionGB->setMaximumHeight( 200 );
 
+  QGroupBox* selFunctionGB = new QGroupBox( "Current selection");
+  QHBoxLayout* selLayout = new QHBoxLayout( );
+  selLayout->addWidget( new QLabel( "Selection size: " ));
+  selLayout->addWidget( _selectionSizeLabel );
+  selLayout->addWidget( _clearSelectionButton );
+  selFunctionGB->setLayout( selLayout );
+  selFunctionGB->setMaximumHeight( 200 );
 
   verticalLayout->setAlignment( Qt::AlignTop );
   verticalLayout->addWidget( tFunctionGB );
   verticalLayout->addWidget( sFunctionGB );
   verticalLayout->addWidget( dFunctionGB );
   verticalLayout->addWidget( rFunctionGB );
+  verticalLayout->addWidget( selFunctionGB  );
 
 
 //  verticalLayout->addWidget( new QLabel( "Transfer function" ));
@@ -441,6 +453,9 @@ void MainWindow::initSimColorDock( void )
 
   connect( _alphaNormalButton, SIGNAL( toggled( bool )),
            this, SLOT( AlphaBlendingToggled( void ) ));
+
+  connect( _clearSelectionButton, SIGNAL( clicked( void ))
+           , this, SLOT( ClearSelection( void )));
 
 //  connect( _alphaAccumulativeButton, SIGNAL( toggled( bool )),
 //           this, SLOT( AlphaBlendingToggled( void ) ));
@@ -817,19 +832,33 @@ void* MainWindow::_Subscriber( void* subs )
   pthread_exit( NULL );
 }
 
+void MainWindow::ClearSelection( void )
+{
+  if( _openGLWidget )
+  {
+    _openGLWidget->ClearSelection( );
+
+    _clearSelectionButton->setEnabled( false );
+    _selectionSizeLabel->setText( "0" );
+  }
+}
+
 void MainWindow::_onSelectionEvent( const zeq::Event& event_ )
 {
-
-  std::vector< unsigned int > selected =
-      zeq::hbp::deserializeSelectedIDs( event_ );
-
-  GIDUSet selectedSet( selected.begin( ), selected.end( ));
-
-  _openGLWidget->setSelectedGIDs( selectedSet );
-
-  if( _summary )
+  if( _openGLWidget )
   {
-//    _summary->AddNewHistogram( selectedSet );
+    std::vector< unsigned int > selected =
+        zeq::hbp::deserializeSelectedIDs( event_ );
+
+    GIDUSet selectedSet( selected.begin( ), selected.end( ));
+
+    if( selectedSet.size( ) == 0 )
+      return;
+
+    _openGLWidget->setSelectedGIDs( selectedSet );
+
+    _clearSelectionButton->setEnabled( true );
+    _selectionSizeLabel->setText( QString::number( selectedSet.size( )));
   }
 
 }
