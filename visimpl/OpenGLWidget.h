@@ -82,6 +82,7 @@ public:
 
   void SetAlphaBlendingAccumulative( bool accumulative = true );
 
+
 signals:
 
   void updateSlider( float );
@@ -115,6 +116,8 @@ public slots:
 #ifdef VISIMPL_USE_ZEQ
 
   void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
+  void showSelection( bool );
+  void updateSelection( void );
 
 #endif
 
@@ -200,9 +203,8 @@ protected:
   float _elapsedTimeRenderAcc;
   float _elapsedTimeSliderAcc;
 
-  bool alphaBlendingAccumulative;
-
-private:
+  bool _alphaBlendingAccumulative;
+  bool _showSelection;
 
 };
 

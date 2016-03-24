@@ -70,6 +70,19 @@ void MainWindow::init( const std::string& zeqUri )
   connect( _ui->actionOpenSWCFile, SIGNAL( triggered( )),
            this, SLOT( openSWCFileThroughDialog( )));
 
+#ifdef VISIMPL_USE_ZEQ
+  _ui->actionShowSelection->setEnabled( true );
+  _ui->actionShowSelection->setChecked( true );
+
+  _openGLWidget->showSelection( true );
+
+  connect( _ui->actionShowSelection, SIGNAL( toggled( bool )),
+           _openGLWidget, SLOT( showSelection( bool )));
+
+#else
+  _ui->actionShowSelection->setEnabled( false );
+#endif
+
 
   initPlaybackDock( );
   initSimColorDock( );

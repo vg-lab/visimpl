@@ -23,8 +23,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1000</width>
-     <height>23</height>
+     <width>1280</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -53,6 +53,7 @@
     <addaction name="actionShowFPSOnIdleUpdate"/>
     <addaction name="actionWireframe"/>
     <addaction name="actionBackgroundColor"/>
+    <addaction name="actionShowSelection"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
@@ -71,7 +72,6 @@
    </attribute>
    <addaction name="actionOpenBlueConfig"/>
    <addaction name="actionOpenXMLScene"/>
-   <addaction name="actionCloseData"/>
    <addaction name="actionOpenSWCFile"/>
    <addaction name="separator"/>
    <addaction name="actionWireframe"/>
@@ -137,9 +137,6 @@
     <iconset resource="../qrc/resources.qrc">
      <normaloff>:/icons/open_xml.png</normaloff>:/icons/open_xml.png</iconset>
    </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Open XML Scene</string>
    </property>
@@ -148,6 +145,9 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+X</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
    </property>
   </action>
   <action name="actionCloseData">
@@ -179,9 +179,6 @@
     <iconset resource="../qrc/resources.qrc">
      <normaloff>:/icons/open_swc.png</normaloff>:/icons/open_swc.png</iconset>
    </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>Open SWC</string>
    </property>
@@ -190,6 +187,9 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
    </property>
   </action>
   <action name="actionShowFPSOnIdleUpdate">
@@ -223,18 +223,26 @@
    <property name="shortcut">
     <string>Ctrl+W</string>
    </property>
-  </action>  
+  </action>
   <action name="actionPaintNeurons">
-    <property name="checkable">
-     <bool>true</bool>
-    </property>
-    <property name="text">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
     <string>Paint neurons</string>
-    </property>
-    <property name="toolTip">
+   </property>
+   <property name="toolTip">
     <string>Paint neurons</string>
-    </property>
-   </action>  
+   </property>
+  </action>
+  <action name="actionShowSelection">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show selection</string>
+   </property>
+  </action>
  </widget>
  <resources>
   <include location="../qrc/resources.qrc"/>

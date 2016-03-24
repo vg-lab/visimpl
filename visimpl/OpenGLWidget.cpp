@@ -190,7 +190,7 @@ void OpenGLWidget::configureSimulation( void )
       for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
       {
         if( _selectedGIDs.find( ( *spike ).second ) != _selectedGIDs.end( )
-            || _selectedGIDs.size( ) == 0 )
+            || _selectedGIDs.size( ) == 0 || !_showSelection )
         {
           auto res = gidNodesMap.find( (*spike).second );
           if( res != gidNodesMap.end( ))
@@ -496,8 +496,9 @@ void OpenGLWidget::resetParticles( void )
 
 void OpenGLWidget::SetAlphaBlendingAccumulative( bool accumulative )
 {
-  alphaBlendingAccumulative = accumulative;
+  _alphaBlendingAccumulative = accumulative;
 }
+
 
 
 void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
@@ -591,6 +592,14 @@ void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
 
   std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
 
+  updateSelection( );
+
+}
+
+void OpenGLWidget::updateSelection( void )
+{
+  if( _ps )
+  {
     _ps->Run( false );
 
     for( auto node : *_ps->emissionNodes )
@@ -600,11 +609,11 @@ void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
 
       auto res = _selectedGIDs.find( id );
 
-      prefr::tparticle_ptr particle = *(node->particles->start);
+      prefr::tparticle_ptr particle = *( node->particles->start );
 
-      if( res != _selectedGIDs.end( ))
+      if( res != _selectedGIDs.end( ) || !_showSelection )
       {
-//        node->active = true;
+        //        node->active = true;
         _ps->particlePrototype[ particle->id ] =
             ( unsigned int ) PROTOTYPE_ON;
       }
@@ -612,16 +621,26 @@ void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
       {
         _ps->particlePrototype[ particle->id ] =
             ( unsigned int ) PROTOTYPE_OFF;
-        particle->life = 0.0f;
-        particle->alive = true;
-//        node->active = false;
+  //      particle->life = 0.0f;
+  //      particle->alive = true;
+        //        node->active = false;
 
       }
     }
 
-
     _ps->Run( true );
     _ps->UpdateUnified( 0.0f  );
+
+  }
+}
+
+void OpenGLWidget::showSelection( bool showSelection_ )
+{
+
+  _showSelection = showSelection_;
+
+  updateSelection( );
+
 }
 
 #endif
@@ -648,7 +667,7 @@ void OpenGLWidget::paintParticles( void )
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
-  if( alphaBlendingAccumulative )
+  if( _alphaBlendingAccumulative )
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
   else
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
