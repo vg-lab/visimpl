@@ -323,6 +323,9 @@ void MainWindow::initSummaryWidget( )
   connect( _summary, SIGNAL( histogramClicked( float )),
            this, SLOT( PlayAt( float )));
 
+  connect( _summary, SIGNAL( histogramClicked( visimpl::MultiLevelHistogram* )),
+             this, SLOT( HistogramClicked( visimpl::MultiLevelHistogram* )));
+
 }
 
 void MainWindow::PlayPause( bool notify )
@@ -572,6 +575,22 @@ void MainWindow::UpdateSimulationSlider( float percentage )
     _repeatButton->setChecked( repeat );
   }
 
+  void MainWindow::HistogramClicked( visimpl::MultiLevelHistogram* histogram )
+  {
+    const GIDUSet* selection;
+
+    if( histogram->filteredGIDs( ).size( ) == 0)
+      selection = &_summary->gids( );
+    else
+      selection = &histogram->filteredGIDs( );
+
+    std::vector< uint32_t > selected ( selection->begin( ),
+                                   selection->end( ));
+
+    std::cout << "Sending selection of size " << selected.size( ) << std::endl;
+    _publisher->publish( zeq::hbp::serializeSelectedIDs( selected ));
+  }
+
 #endif
 
 void MainWindow::_setZeqUri( const std::string& uri_ )
@@ -580,6 +599,7 @@ void MainWindow::_setZeqUri( const std::string& uri_ )
   _zeqConnection = true;
   _uri =  servus::URI( uri_ );
   _subscriber = new zeq::Subscriber( _uri );
+  _publisher = new zeq::Publisher( _uri );
 
   _subscriber->registerHandler( zeq::hbp::EVENT_SELECTEDIDS,
       boost::bind( &MainWindow::_onSelectionEvent , this, _1 ));

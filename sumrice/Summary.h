@@ -95,13 +95,17 @@ public:
   void regionWidth( float region );
   float regionWidth( void );
 
+  const GIDUSet& gids( void );
+
 signals:
 
   void histogramClicked( float );
+  void histogramClicked( visimpl::MultiLevelHistogram* );
 
 protected slots:
 
   void childHistogramClicked( float );
+  void childHistogramClicked( void );
 
   void removeSelections( void );
 

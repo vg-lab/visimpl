@@ -206,10 +206,10 @@ Summary::Summary( QWidget* parent_,
   }
 }
 
-void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
+void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids_ )
 {
   _spikeReport = spikes_;
-  _gids = GIDUSet( gids.begin( ), gids.end( ));
+  _gids = GIDUSet( gids_.begin( ), gids_.end( ));
 //
 //  _filteredGIDs = gids;
 //
@@ -285,6 +285,9 @@ void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids )
   connect( _mainHistogram, SIGNAL( mouseClicked( float )),
            this, SLOT( childHistogramClicked( float )));
 
+  connect( _mainHistogram, SIGNAL( modifierClicked( void )),
+           this, SLOT( childHistogramClicked( void )));
+
   _mainHistogram->init( _bins, _zoomFactor );
 //  CreateSummarySpikes( );
 //  UpdateGradientColors( );
@@ -297,16 +300,16 @@ void Summary::AddNewHistogram( const visimpl::Selection& selection
 #endif
                        )
 {
-  const GIDUSet& gids = selection.gids;
+  const GIDUSet& selected = selection.gids;
 
-  if( gids.size( ) == _gids.size( ) || gids.size( ) == 0)
+  if( selected.size( ) == _gids.size( ) || selected.size( ) == 0)
     return;
 
 
   if( _stackType == TStackType::T_STACK_EXPANDABLE )
   {
 
-    std::cout << "Adding new selection with size " << gids.size( ) << std::endl;
+    std::cout << "Adding new selection with size " << selected.size( ) << std::endl;
 #ifdef VISIMPL_USE_ZEQ
 
     if( deferred )
@@ -410,6 +413,9 @@ void Summary::deferredInsertion( void )
 
     connect( histogram, SIGNAL( mouseClicked( float )),
              this, SLOT( childHistogramClicked( float )));
+
+    connect( histogram, SIGNAL( modifierClicked( void )),
+             this, SLOT( childHistogramClicked( void )));
 
     _histograms.push_back( histogram );
 
@@ -567,6 +573,11 @@ void Summary::childHistogramClicked( float percentage )
   emit histogramClicked( percentage );
 }
 
+void Summary::childHistogramClicked( void )
+{
+  emit histogramClicked( dynamic_cast< visimpl::MultiLevelHistogram* >( sender( )));
+}
+
 void Summary::removeSelections( void )
 {
 
@@ -632,4 +643,9 @@ void Summary::regionWidth( float region )
 float Summary::regionWidth( void )
 {
   return _regionWidth;
+}
+
+const GIDUSet& Summary::gids( void )
+{
+  return _gids;
 }

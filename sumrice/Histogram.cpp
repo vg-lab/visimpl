@@ -583,11 +583,18 @@ namespace visimpl
   {
     QFrame::mousePressEvent( event_ );
 
-    QPoint position = event_->pos( );
+    if( event_->modifiers() == Qt::ControlModifier )
+    {
+      emit modifierClicked( );
+    }
+    else
+    {
+      QPoint position = event_->pos( );
 
-    float percentage = position.x( ) / float( width( ));
+      float percentage = position.x( ) / float( width( ));
 
-    emit mouseClicked( percentage );
+      emit mouseClicked( percentage );
+    }
   }
 
   void MultiLevelHistogram::mouseMoveEvent( QMouseEvent* event_ )

@@ -61,6 +61,8 @@ protected slots:
   void ApplyPlaybackOperation( unsigned int playbackOp );
   void _zeqEventRepeat( bool repeat );
 
+  void HistogramClicked( visimpl::MultiLevelHistogram* );
+
 #endif
 
   void loadComplete( void );
@@ -81,6 +83,7 @@ protected:
 
   servus::URI _uri;
   zeq::Subscriber* _subscriber;
+  zeq::Publisher* _publisher;
 
   pthread_t _subscriberThread;
 

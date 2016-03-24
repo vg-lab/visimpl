@@ -588,7 +588,8 @@ float OpenGLWidget::getSimulationDecayValue( void )
 
 void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
 {
-  _selectedGIDs = gids;
+  if( gids.size( ) > 0 )
+    _selectedGIDs = gids;
 
   std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
 

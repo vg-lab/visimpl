@@ -143,6 +143,7 @@ signals:
 
     void mousePositionChanged( QPoint point );
     void mouseClicked( float position );
+    void modifierClicked( void );
 
   protected:
 
