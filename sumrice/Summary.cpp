@@ -132,7 +132,7 @@ Summary::Summary( QWidget* parent_,
 
     QDoubleSpinBox* zoomFactorSpinBox = new QDoubleSpinBox( );
     zoomFactorSpinBox->setMinimum( 1.0 );
-    zoomFactorSpinBox->setMaximum( 100.0 );
+//    zoomFactorSpinBox->setMaximum( 100.0 );
     zoomFactorSpinBox->setSingleStep( 0.5 );
     zoomFactorSpinBox->setValue( _zoomFactor );
 
