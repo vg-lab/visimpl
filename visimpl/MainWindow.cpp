@@ -58,9 +58,6 @@ void MainWindow::init( const std::string& zeqUri )
   connect( _ui->actionShowFPSOnIdleUpdate, SIGNAL( triggered( )),
            _openGLWidget, SLOT( toggleShowFPS( )));
 
-  connect( _ui->actionWireframe, SIGNAL( triggered( )),
-           _openGLWidget, SLOT( toggleWireframe( )));
-
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
            this, SLOT( openBlueConfigThroughDialog( )));
 

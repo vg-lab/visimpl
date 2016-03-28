@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>25</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -51,7 +51,6 @@
     <addaction name="actionUpdateOnIdle"/>
     <addaction name="actionPaintNeurons"/>
     <addaction name="actionShowFPSOnIdleUpdate"/>
-    <addaction name="actionWireframe"/>
     <addaction name="actionBackgroundColor"/>
     <addaction name="actionShowSelection"/>
    </widget>
@@ -74,9 +73,9 @@
    <addaction name="actionOpenXMLScene"/>
    <addaction name="actionOpenSWCFile"/>
    <addaction name="separator"/>
-   <addaction name="actionWireframe"/>
    <addaction name="actionCloseData"/>
    <addaction name="actionBackgroundColor"/>
+   <addaction name="actionShowSelection"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -152,7 +151,7 @@
   </action>
   <action name="actionCloseData">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="../qrc/resources.qrc">
@@ -168,7 +167,7 @@
     <string>Ctrl+Shift+C</string>
    </property>
    <property name="visible">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="iconVisibleInMenu">
     <bool>true</bool>
@@ -206,24 +205,6 @@
     <string>Ctrl+S</string>
    </property>
   </action>
-  <action name="actionWireframe">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="../qrc/resources.qrc">
-     <normaloff>:/icons/wireframe.png</normaloff>:/icons/wireframe.png</iconset>
-   </property>
-   <property name="text">
-    <string>Show wireframe</string>
-   </property>
-   <property name="toolTip">
-    <string>Show wireframe</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+W</string>
-   </property>
-  </action>
   <action name="actionPaintNeurons">
    <property name="checkable">
     <bool>true</bool>
@@ -234,10 +215,17 @@
    <property name="toolTip">
     <string>Paint neurons</string>
    </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
   </action>
   <action name="actionShowSelection">
    <property name="checkable">
     <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../qrc/resources.qrc">
+     <normaloff>:/icons/query.png</normaloff>:/icons/query.png</iconset>
    </property>
    <property name="text">
     <string>Show selection</string>

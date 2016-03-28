@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icons">
+    <file>query.png</file>
     <file>qneurolots.ico</file>
     <file>wireframe.png</file>
     <file>open_swc.png</file>
