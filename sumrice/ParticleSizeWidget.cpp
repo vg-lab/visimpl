@@ -214,6 +214,12 @@ void ParticleSizeWidget::acceptClicked( void )
   _maxSize = float( _maxSizeBox->value( ));
   _minSize = float( _minSizeBox->value( ));
 
+  _minValueLabel->setText( QString("Min size: ") +
+                           QString::number( double( _minSize ) ));
+
+  _maxValueLabel->setText( QString("Max size: ") +
+                           QString::number( double( _maxSize ) ));
+
   _sizeFunction = pointsToSizeFunc( sizePoints->points( ));
 
   _result->plot( sizePoints->points( ));
