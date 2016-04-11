@@ -196,12 +196,12 @@ namespace visimpl
     return _circuit;
   }
 
-  const brion::GIDSet& SimulationPlayer::gids( void )
+  const TGIDSet& SimulationPlayer::gids( void )
   {
     return _gids;
   }
 
-  brion::Vector3fs SimulationPlayer::positions( void )
+  TPosVect SimulationPlayer::positions( void )
   {
     return _circuit->getPositions( _gids );
   }

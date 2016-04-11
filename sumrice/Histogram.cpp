@@ -138,9 +138,11 @@ namespace visimpl
       {
         ( *globalIt )++;
         if( !filter ||  _filteredGIDs.find( spike->second ) != _filteredGIDs.end( ))
+        {
           bin++;
+          spike++;
+        }
 
-        spike++;
         counter++;
       }
 
@@ -148,7 +150,7 @@ namespace visimpl
       globalIt++;
     }
 
-  //  std::cout << "Total spikes: " << counter << std::endl;
+    std::cout << "Total spikes: " << counter << std::endl;
 
     unsigned int cont = 0;
     unsigned int maxPos = 0;

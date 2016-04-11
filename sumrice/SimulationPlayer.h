@@ -26,14 +26,10 @@
 #include "ZeqEventsManager.h"
 #endif
 
+#include "SimulationData.h"
+
 namespace visimpl
 {
-  typedef enum
-  {
-    TUndefined = 0,
-    TSpikes,
-    TVoltages
-  } TSimulationType;
 
   typedef enum
   {
@@ -45,6 +41,8 @@ namespace visimpl
     T_PLAYBACK_SINGLE_SHOT
 
   } TPlaybackOperation;
+
+
 
   class SimulationPlayer
   {
@@ -92,8 +90,8 @@ namespace visimpl
 
     brion::BlueConfig* blueConfig( void );
     brain::Circuit* circuit( void );
-    const brion::GIDSet& gids( void );
-    brion::Vector3fs positions( void );
+    const TGIDSet& gids( void );
+    TPosVect positions( void );
 
     TSimulationType simulationType( void );
 
@@ -138,7 +136,7 @@ namespace visimpl
 
     brion::BlueConfig* _blueConfig;
     brain::Circuit* _circuit;
-    brion::GIDSet _gids;
+    GIDSet _gids;
 
 #ifdef VISIMPL_USE_ZEQ
     ZeqEventsManager* _zeqEvents;
