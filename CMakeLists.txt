@@ -49,6 +49,7 @@ common_package( nsol REQUIRED )
 common_package( neurolots REQUIRED )
 common_package( prefr REQUIRED )
 common_package( Brion REQUIRED )
+common_package(HDF5 REQUIRED COMPONENTS C CXX)
 
 list( APPEND VISIMPL_DEPENDENT_LIBRARIES 
   OpenGL 
@@ -93,6 +94,7 @@ common_package_post()
 add_subdirectory( sumrice )
 add_subdirectory( visimpl )
 add_subdirectory( stackviz )
+add_subdirectory( examplesh5 )
 
 include(CPackConfig)
 include(DoxygenRule)

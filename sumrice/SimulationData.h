@@ -13,30 +13,20 @@
 
 #include <vmmlib/vmmlib.h>
 
+#include <H5Cpp.h>
+
+#include "types.h"
+
+#include "H5Network.h"
+
 namespace visimpl
 {
-  typedef std::set< uint32_t > TGIDSet;
-  typedef std::vector< vmml::Vector3f > TPosVect;
-  typedef std::multimap< float, uint32_t > TSpikes;
-
-  typedef enum
-  {
-    TUndefined = 0,
-    TSpikes,
-    TVoltages
-  } TSimulationType;
-
-  typedef enum
-  {
-    TBlueConfig = 0,
-    THDF5
-  } TDataType;
-
   class SimulationData
   {
   public:
 
     SimulationData( std::string filePath, TDataType dataType );
+    virtual ~SimulationData( void );
 
     const TGIDSet& gids( void ) const;
 
@@ -44,7 +34,7 @@ namespace visimpl
 
     TSimulationType simulationType( void ) const;
 
-    SimulationData* get( void ) = 0;
+    virtual SimulationData* get( void ) = 0;
 
   protected:
 
@@ -58,6 +48,7 @@ namespace visimpl
 
 
     brion::BlueConfig* _blueConfig;
+    H5Network* _h5Network;
 
   };
 
@@ -68,13 +59,13 @@ namespace visimpl
     SpikeData( const std::string& filePath, TDataType dataType,
                const std::string& report = "" );
 
-    const TSpikes& spikes( void ) const;
+    const TSpikesMap& spikes( void ) const;
 
     SpikeData* get( void );
 
   protected:
 
-    TSpikes _spikes;
+    TSpikesMap _spikes;
   };
 
   class VoltageData : public SimulationData

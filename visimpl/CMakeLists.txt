@@ -1,4 +1,4 @@
-add_definitions(-DNEUROLOTS_SKIP_GLEW_INCLUDE )
+add_definitions(-DVISIMPL_SKIP_GLEW_INCLUDE )
 
 set(Name Visimpl)
 set(NAME VISIMPL)

@@ -13,6 +13,8 @@ set(SUMRICE_PUBLIC_HEADERS
   TransferFunctionWidget.h
   ParticleSizeWidget.h
   log.h
+  types.h
+  H5Network.h
 )
 
 set(SUMRICE_HEADERS
@@ -29,6 +31,7 @@ set(SUMRICE_SOURCES
   FocusFrame.cpp
   SimulationPlayer.cpp
   ZeqEventsManager.cpp
+  H5Network.cpp
 )
 
 #set(SUMRICE_MOC_HEADERS
@@ -58,3 +61,5 @@ set(SUMRICE_INCLUDE_NAME sumrice)
 set(SUMRICE_NAMESPACE sumrice)
 add_definitions(-DVISIMPL_SHARED)
 common_library( sumrice )
+
+

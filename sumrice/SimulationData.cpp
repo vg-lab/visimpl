@@ -12,6 +12,8 @@ namespace visimpl
 
   SimulationData::SimulationData( std::string filePath, TDataType dataType )
   : _simulationType( TUndefined )
+  , _blueConfig( nullptr )
+  , _h5Network( nullptr )
   {
     switch( dataType )
     {
@@ -30,12 +32,23 @@ namespace visimpl
       }
       case THDF5:
       {
+        _h5Network = new H5Network( filePath );
+        _h5Network->Load( );
+
+        _gids = _h5Network->GetGIDs( );
+
+        _positions = _h5Network->GetComposedPositions( );
 
         break;
       }
       default:
         break;
     }
+  }
+
+  SimulationData::~SimulationData( void )
+  {
+
   }
 
   const TGIDSet& SimulationData::gids( void ) const
@@ -89,7 +102,7 @@ namespace visimpl
 
   }
 
-  const TSpikes& SpikeData::spikes( void ) const
+  const TSpikesMap& SpikeData::spikes( void ) const
   {
     return _spikes;
   }

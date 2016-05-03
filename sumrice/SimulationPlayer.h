@@ -26,6 +26,7 @@
 #include "ZeqEventsManager.h"
 #endif
 
+#include "types.h"
 #include "SimulationData.h"
 
 namespace visimpl
@@ -136,7 +137,7 @@ namespace visimpl
 
     brion::BlueConfig* _blueConfig;
     brain::Circuit* _circuit;
-    GIDSet _gids;
+    TGIDSet _gids;
 
 #ifdef VISIMPL_USE_ZEQ
     ZeqEventsManager* _zeqEvents;
