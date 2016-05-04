@@ -50,7 +50,7 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _currentClearColor( 20, 20, 20, 0 )
   , _particlesShader( nullptr )
   , _ps( nullptr )
-  , _simulationType( TSimulationType::TUndefined )
+  , _simulationType( TSimulationType::TSimNetwork )
   , _player( nullptr )
   , _firstFrame( true )
   , _elapsedTimeRenderAcc( 0.0f )
@@ -118,13 +118,13 @@ void OpenGLWidget::loadData( const std::string& fileName,
 
     switch( _simulationType )
     {
-      case TSpikes:
+      case TSimSpikes:
         _deltaTime = 0.5f;
         _player = new SpikesPlayer( fileName, true );
         _player->deltaTime( _deltaTime );
         break;
 
-      case TVoltages:
+      case TSimVoltages:
         _player = new VoltagesPlayer( fileName, report, true);
         _deltaTime = _player->deltaTime( );
         break;
@@ -182,7 +182,7 @@ void OpenGLWidget::configureSimulation( void )
 
   switch( _simulationType )
   {
-    case TSpikes:
+    case TSimSpikes:
     {
       SpikesCRange spikes =
           dynamic_cast< visimpl::SpikesPlayer* >( _player )->spikesNow( );
@@ -202,7 +202,7 @@ void OpenGLWidget::configureSimulation( void )
       }
       break;
     }
-    case TVoltages:
+    case TSimVoltages:
     {
       visimpl::VoltagesPlayer* vplayer =
           dynamic_cast< visimpl::VoltagesPlayer* >(_player);
@@ -362,12 +362,12 @@ void OpenGLWidget::createParticleSystem( void )
 
     switch( _simulationType )
     {
-    case TSpikes:
+    case TSimSpikes:
       emissionNode = new prefr::ColorEmissionNode( collection, position,
                                                    glm::vec4( 0, 0, 0, 0 ),
                                                    true );
       break;
-    case TVoltages:
+    case TSimVoltages:
       emissionNode = new prefr::DirectValuedEmissionNode(
           collection, position, glm::vec4( 0, 0, 0, 0 ), true );
 
@@ -401,7 +401,7 @@ void OpenGLWidget::createParticleSystem( void )
 
   switch( _simulationType )
   {
-    case TSpikes:
+    case TSimSpikes:
       emitter = new prefr::CompositeColorEmitter( *_ps->particles, 1.f, true );
       std::cout << "Created Spikes Emitter" << std::endl;
       updater = new prefr::CompositeColorUpdater( *_ps->particles );
@@ -418,7 +418,7 @@ void OpenGLWidget::createParticleSystem( void )
       _prototype->size.Insert( 1.0f, 10.0f );
 
       break;
-    case TVoltages:
+    case TSimVoltages:
 
       emitter = new prefr::DirectValuedEmitter( *_ps->particles, 1.f, true );
       std::cout << "Created Voltages Emitter" << std::endl;
@@ -480,10 +480,10 @@ void OpenGLWidget::resetParticles( void )
   {
     switch( _simulationType )
     {
-      case TSpikes:
+      case TSimSpikes:
         dynamic_cast< prefr::ColorEmissionNode* >( *node )->killParticles( false );
       break;
-      case TVoltages:
+      case TSimVoltages:
         dynamic_cast< prefr::DirectValuedEmissionNode* >( *node )->killParticles( false );
       break;
       default:

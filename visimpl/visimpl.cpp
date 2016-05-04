@@ -20,7 +20,7 @@ int main( int argc, char** argv )
 
   QApplication application(argc,argv);
 
-  visimpl::TSimulationType simType = visimpl::TSpikes;
+  visimpl::TSimulationType simType = visimpl::TSimSpikes;
 
   std::string blueConfig;
   std::string swcFile;
@@ -98,13 +98,13 @@ int main( int argc, char** argv )
 //    }
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
-      simType = visimpl::TSpikes;
+      simType = visimpl::TSimSpikes;
     }
     else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
     {
       if(++i < argc )
       {
-        simType = visimpl::TVoltages;
+        simType = visimpl::TSimVoltages;
         report = std::string( argv[ i ]);
       }
       else

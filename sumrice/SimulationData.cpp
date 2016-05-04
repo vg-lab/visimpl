@@ -12,7 +12,7 @@ namespace visimpl
 
   SimulationData::SimulationData( std::string filePath_,
                                   TDataType dataType )
-  : _simulationType( TUndefined )
+  : _simulationType( TSimNetwork )
   , _blueConfig( nullptr )
   , _h5Network( nullptr )
   {
@@ -103,7 +103,7 @@ namespace visimpl
 
   }
 
-  const TSpikesMap& SpikeData::spikes( void ) const
+  const TSpikes& SpikeData::spikes( void ) const
   {
     return _spikes;
   }

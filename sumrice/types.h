@@ -20,13 +20,13 @@ namespace visimpl
 {
   typedef std::set< uint32_t > TGIDSet;
   typedef std::vector< vmml::Vector3f > TPosVect;
-  typedef std::multimap< float, uint32_t > TSpikesMap;
+  typedef std::multimap< float, uint32_t > TSpikes;
 
   typedef enum
   {
-    TUndefined = 0,
-    TSpikes,
-    TVoltages
+    TSimNetwork = 0,
+    TSimSpikes,
+    TSimVoltages
   } TSimulationType;
 
   typedef enum

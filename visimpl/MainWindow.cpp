@@ -156,12 +156,12 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
     if( text == items[0] )
     {
-      simType = visimpl::TSpikes;
+      simType = visimpl::TSimSpikes;
       ok2 = true;
     }
     else
     {
-      simType = visimpl::TVoltages;
+      simType = visimpl::TSimVoltages;
 
       text = QInputDialog::getText(
           this, tr( "Please select report" ),
@@ -465,7 +465,7 @@ void MainWindow::initSummaryWidget( void )
   visimpl::TSimulationType simType =
       _openGLWidget->player( )->simulationType( );
 
-  if( simType == visimpl::TSpikes )
+  if( simType == visimpl::TSimSpikes )
   {
     visimpl::SpikesPlayer* spikesPlayer =
         dynamic_cast< visimpl::SpikesPlayer* >( _openGLWidget->player( ));

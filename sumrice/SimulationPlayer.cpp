@@ -20,7 +20,7 @@ namespace visimpl
   , _playing( false )
   , _loop( false )
   , _finished( false )
-  , _simulationType( TUndefined )
+  , _simulationType( TSimNetwork )
   , _blueConfigPath( blueConfigFilePath )
   , _blueConfig( nullptr )
   , _circuit( nullptr )
@@ -309,7 +309,7 @@ namespace visimpl
     if( loadData )
       LoadData( );
 
-    _simulationType = TSpikes;
+    _simulationType = TSimSpikes;
 
   }
 
@@ -510,7 +510,7 @@ namespace visimpl
     if( loadData)
       LoadData( );
 
-    _simulationType = TVoltages;
+    _simulationType = TSimVoltages;
   }
 
   void VoltagesPlayer::LoadData( )

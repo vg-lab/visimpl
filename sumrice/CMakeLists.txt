@@ -15,6 +15,7 @@ set(SUMRICE_PUBLIC_HEADERS
   log.h
   types.h
   H5Network.h
+  H5Activity.h
   SimulationData.h
 )
 
@@ -33,6 +34,7 @@ set(SUMRICE_SOURCES
   SimulationPlayer.cpp
   ZeqEventsManager.cpp
   H5Network.cpp
+  H5Activity.cpp
   SimulationData.cpp
 )
 

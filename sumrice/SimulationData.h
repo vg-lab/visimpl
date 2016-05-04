@@ -59,13 +59,13 @@ namespace visimpl
     SpikeData( const std::string& filePath, TDataType dataType,
                const std::string& report = "" );
 
-    const TSpikesMap& spikes( void ) const;
+    const TSpikes& spikes( void ) const;
 
     SpikeData* get( void );
 
   protected:
 
-    TSpikesMap _spikes;
+    TSpikes _spikes;
   };
 
   class VoltageData : public SimulationData

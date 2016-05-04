@@ -24,7 +24,7 @@ int main( int argc, char** argv )
   std::string zeqUri;
   std::string target = std::string( "" );
   std::string report = std::string( "" );
-  visimpl::TSimulationType simType = visimpl::TSpikes;
+  visimpl::TSimulationType simType = visimpl::TSimSpikes;
 
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
@@ -67,13 +67,13 @@ int main( int argc, char** argv )
     }
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
-       simType = visimpl::TSpikes;
+       simType = visimpl::TSimSpikes;
     }
     else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
     {
       if(++i < argc )
       {
-         simType = visimpl::TVoltages;
+         simType = visimpl::TSimVoltages;
         report = std::string( argv[ i ]);
       }
       else

@@ -17,29 +17,40 @@
 
 #include "types.h"
 
+class H5Activity;
+class H5Spikes;
+
 class H5Network
 {
+  friend class H5Activity;
+  friend class H5Spikes;
+
 public:
 
   H5Network( void );
-  H5Network( std::string fileName, std::string pattern = "neuron" );
+  H5Network( const std::string& fileName ,
+             const std::string& pattern = "neuron" );
 
   ~H5Network( void );
 
   void Load( void );
-  void Load( std::string fileName, std::string pattern = "neuron" );
+  void Load( const std::string& fileName ,
+             const std::string& pattern = "neuron" );
 
   void Clear( void );
 
-  unsigned int subSetsNumber( void );
+  unsigned int subSetsNumber( void ) const;
 
-  visimpl::TGIDSet GetGIDs( void );
-  visimpl::TPosVect GetComposedPositions( void );
+  visimpl::TGIDSet GetGIDs( void ) const;
+  visimpl::TPosVect GetComposedPositions( void ) const;
 
-  unsigned int ComposeID( unsigned int datasetIdx, unsigned int localIdx );
+  const std::vector< unsigned int >& offsets( void ) const;
 
-  std::string fileName( void );
-  std::string pattern( void );
+  unsigned int ComposeID( unsigned int datasetIdx,
+                          unsigned int localIdx ) const;
+
+  std::string fileName( void ) const;
+  std::string pattern( void ) const;
 
 protected:
 

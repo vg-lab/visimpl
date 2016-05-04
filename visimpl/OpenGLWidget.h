@@ -69,7 +69,7 @@ public:
   void createParticleSystem( void );
   void loadData( const std::string& fileName,
                  const TDataFileType fileType = TDataFileType::tBlueConfig,
-                 visimpl::TSimulationType simulationType = visimpl::TSpikes,
+                 visimpl::TSimulationType simulationType = visimpl::TSimSpikes,
                  const std::string& report = std::string( "" ));
 
   void idleUpdate( bool idleUpdate_ = true )

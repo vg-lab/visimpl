@@ -15,7 +15,8 @@ H5Network::H5Network( void )
 
 }
 
-H5Network::H5Network( std::string fileName_, std::string pattern_ )
+H5Network::H5Network( const std::string& fileName_,
+                      const std::string& pattern_ )
 : _fileName( fileName_ )
 , _pattern( pattern_ )
 , _totalRecords( 0 )
@@ -28,7 +29,8 @@ H5Network::~H5Network( void )
 
 }
 
-void H5Network::Load( std::string fileName_, std::string pattern_ )
+void H5Network::Load( const std::string& fileName_,
+                      const std::string& pattern_ )
 {
   _fileName = fileName_;
   _pattern = pattern_;
@@ -137,7 +139,7 @@ void H5Network::Clear( void )
 
 }
 
-visimpl::TGIDSet H5Network::GetGIDs( void )
+visimpl::TGIDSet H5Network::GetGIDs( void ) const
 {
   visimpl::TGIDSet result;
 
@@ -149,7 +151,7 @@ visimpl::TGIDSet H5Network::GetGIDs( void )
   return result;
 }
 
-visimpl::TPosVect H5Network::GetComposedPositions( void )
+visimpl::TPosVect H5Network::GetComposedPositions( void ) const
 {
   visimpl::TPosVect result;
 
@@ -175,23 +177,29 @@ visimpl::TPosVect H5Network::GetComposedPositions( void )
   return result;
 }
 
-std::string H5Network::fileName( void )
+std::string H5Network::fileName( void ) const
 {
   return _fileName;
 }
 
-std::string H5Network::pattern( void )
+std::string H5Network::pattern( void ) const
 {
   return _pattern;
 }
 
 unsigned int H5Network::ComposeID( unsigned int datasetIdx,
-                                   unsigned int localIdx )
+                                   unsigned int localIdx ) const
 {
   return _offsets[ datasetIdx ] + localIdx;
 }
 
-unsigned int H5Network::subSetsNumber( void )
+unsigned int H5Network::subSetsNumber( void ) const
 {
   return _datasets.size( );
 }
+
+const std::vector< unsigned int >& H5Network::offsets( void ) const
+{
+  return _offsets;
+}
+

@@ -67,12 +67,12 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
   switch( _simulationType )
  {
-   case visimpl::TSpikes:
+   case visimpl::TSimSpikes:
      _player = new visimpl::SpikesPlayer( fileName, true );
 //     _player->deltaTime( _deltaTime );
      break;
 
-   case visimpl::TVoltages:
+   case visimpl::TSimVoltages:
      _player = new visimpl::VoltagesPlayer( fileName, reportLabel, true);
 //     _deltaTime = _player->deltaTime( );
      break;
@@ -138,12 +138,12 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
      if( text == items[0] )
      {
-       simType = visimpl::TSpikes;
+       simType = visimpl::TSimSpikes;
        ok2 = true;
      }
      else
      {
-       simType = visimpl::TVoltages;
+       simType = visimpl::TSimVoltages;
 
        text = QInputDialog::getText(
            this, tr( "Please select report" ),
@@ -282,7 +282,7 @@ void MainWindow::initSummaryWidget( )
 //                           QSizePolicy::Preferred );
 
 
-  if( _simulationType == visimpl::TSpikes )
+  if( _simulationType == visimpl::TSimSpikes )
   {
     visimpl::SpikesPlayer* spikesPlayer =
         dynamic_cast< visimpl::SpikesPlayer* >( _player);

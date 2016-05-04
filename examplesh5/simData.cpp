@@ -41,6 +41,9 @@ int main( int argc, char** argv )
 
   std::cout << "Loaded positions: " << positions.size( ) << std::endl;
 
+
+
+
   return 0;
 }
 
