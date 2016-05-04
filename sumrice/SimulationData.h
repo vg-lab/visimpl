@@ -34,7 +34,7 @@ namespace visimpl
 
     TSimulationType simulationType( void ) const;
 
-    virtual SimulationData* get( void ) = 0;
+    virtual SimulationData* get( void );
 
   protected:
 

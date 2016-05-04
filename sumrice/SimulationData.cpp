@@ -10,7 +10,8 @@
 namespace visimpl
 {
 
-  SimulationData::SimulationData( std::string filePath, TDataType dataType )
+  SimulationData::SimulationData( std::string filePath_,
+                                  TDataType dataType )
   : _simulationType( TUndefined )
   , _blueConfig( nullptr )
   , _h5Network( nullptr )
@@ -19,8 +20,8 @@ namespace visimpl
     {
       case TBlueConfig:
       {
-        _blueConfig = new brion::BlueConfig( filePath );
-        brain::Circuit* circuit = new brain::Circuit( _blueConfig );
+        _blueConfig = new brion::BlueConfig( filePath_ );
+        brain::Circuit* circuit = new brain::Circuit( *_blueConfig );
 
         _gids = circuit->getGIDs( );
 
@@ -32,7 +33,7 @@ namespace visimpl
       }
       case THDF5:
       {
-        _h5Network = new H5Network( filePath );
+        _h5Network = new H5Network( filePath_ );
         _h5Network->Load( );
 
         _gids = _h5Network->GetGIDs( );
@@ -73,9 +74,9 @@ namespace visimpl
 
 
 
-  SpikeData::SpikeData( const std::string& filePath, TDataType dataType,
-                        const std::string& report  )
-  : SimulationData( filePath, dataType )
+  SpikeData::SpikeData( const std::string& filePath_, TDataType dataType,
+                        const std::string& /*report*/  )
+  : SimulationData( filePath_, dataType )
   {
 
     switch( dataType )

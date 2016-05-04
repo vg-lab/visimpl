@@ -1,20 +1,10 @@
 set(CMAKE_AUTOMOC ON)
 
-set(EXAMPLESH5_PUBLIC_HEADERS
-  
-)
-
-set(EXAMPLESH5_HEADERS
-)
-
-set(EXAMPLESH5_SOURCES
-  testh5.cpp
-)
-
 set(EXAMPLESH5_LINK_LIBRARIES
   Qt5::Core
   Qt5::Widgets
   Brion
+  Brain
   prefr
 )
 
@@ -28,7 +18,13 @@ endif()
 
 list( APPEND EXAMPLESH5_LINK_LIBRARIES ${HDF5_LIBRARIES})
 
-set(EXAMPLESH5_INCLUDE_NAME examplesh5)
-set(EXAMPLESH5_NAMESPACE examplesh5)
-add_definitions(-DVISIMPL_SHARED)
-common_application( examplesh5 )
+add_executable( loadh5 testh5.cpp )
+target_link_libraries( loadh5 ${EXAMPLESH5_LINK_LIBRARIES} )
+
+add_executable( simDataH5 simData.cpp )
+target_link_libraries( simDataH5 ${EXAMPLESH5_LINK_LIBRARIES} sumrice )
+
+
+  
+   
+                       

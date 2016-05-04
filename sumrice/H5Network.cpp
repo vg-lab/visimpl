@@ -164,9 +164,10 @@ visimpl::TPosVect H5Network::GetComposedPositions( void )
     hsize_t dims[2];
     dataset.getSpace().getSimpleExtentDims( dims );
 
-//    std::vector< vmml::Vector3f > subset( dims[ 0 ] );
-    dataset.read( result.data( ) + currentOffset * sizeof( vmml::Vector3f ),
-                  H5::PredType::IEEE_F32LE );
+    std::vector< vmml::Vector3f > subset( dims[ 0 ] );
+    dataset.read( subset.data( ), H5::PredType::IEEE_F32LE );
+
+    result.insert( result.end( ), subset.begin( ), subset.end( ));
 
     currentOffset += dims[ 0 ];
   }

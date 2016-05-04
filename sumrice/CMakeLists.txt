@@ -15,6 +15,7 @@ set(SUMRICE_PUBLIC_HEADERS
   log.h
   types.h
   H5Network.h
+  SimulationData.h
 )
 
 set(SUMRICE_HEADERS
@@ -32,6 +33,7 @@ set(SUMRICE_SOURCES
   SimulationPlayer.cpp
   ZeqEventsManager.cpp
   H5Network.cpp
+  SimulationData.cpp
 )
 
 #set(SUMRICE_MOC_HEADERS
@@ -46,6 +48,7 @@ set(SUMRICE_LINK_LIBRARIES
   Qt5::Core
   Qt5::Widgets
   Brion
+  Brain
   prefr
 )
 
