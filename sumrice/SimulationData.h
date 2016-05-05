@@ -36,6 +36,9 @@ namespace visimpl
 
     virtual SimulationData* get( void );
 
+    virtual float startTime( void );
+    virtual float endTime( void );
+
   protected:
 
     std::string filePath;
@@ -49,6 +52,9 @@ namespace visimpl
 
     brion::BlueConfig* _blueConfig;
     H5Network* _h5Network;
+
+    float _startTime;
+    float _endTime;
 
   };
 

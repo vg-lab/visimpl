@@ -7,6 +7,8 @@
 
 #include "SimulationData.h"
 
+#include "H5Activity.h"
+
 namespace visimpl
 {
 
@@ -72,10 +74,20 @@ namespace visimpl
     return this;
   }
 
+  float SimulationData::startTime( void )
+  {
+    return _startTime;
+  }
+
+  float SimulationData::endTime( void )
+  {
+    return _endTime;
+  }
+
 
 
   SpikeData::SpikeData( const std::string& filePath_, TDataType dataType,
-                        const std::string& /*report*/  )
+                        const std::string& report  )
   : SimulationData( filePath_, dataType )
   {
 
@@ -88,12 +100,22 @@ namespace visimpl
           brion::SpikeReport spikeReport(  _blueConfig->getSpikeSource( ),
                                            brion::MODE_READ );
           _spikes = spikeReport.getSpikes( );
+
+          _startTime = spikeReport.getStartTime( );
+          _endTime = spikeReport.getEndTime( );
         }
 
         break;
       }
       case THDF5:
       {
+        H5Spikes spikeReport( *_h5Network, report );
+        spikeReport.Load( );
+
+        _spikes = spikeReport.spikes( );
+
+        _startTime = spikeReport.startTime( );
+        _endTime = spikeReport.endTime( );
 
         break;
       }

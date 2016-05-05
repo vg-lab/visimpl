@@ -108,6 +108,8 @@ void H5Spikes::Load( void )
     if( innerDatasets != 2 )
       continue;
 
+    std::cout << "Found 2 datasets in " << currentName << std::endl;
+
     for( unsigned int j = 0; j < innerDatasets; j++ )
     {
       // Check child type.
@@ -122,9 +124,9 @@ void H5Spikes::Load( void )
       H5::DataSet dataset = group.openDataSet( dataSetName );
 
       hsize_t dims[2];
-      dataset.getSpace().getSimpleExtentDims( dims );
+      int totalDims = dataset.getSpace().getSimpleExtentDims( dims );
 
-      if( dims[ 1 ] != 1 )
+      if( totalDims > 1)
         break;
 
       if( dims[ 0 ] == 0 )
@@ -132,23 +134,24 @@ void H5Spikes::Load( void )
 
       if( j == 0)
       {
-
-        if( dataset.getDataType( ).getClass( ) != H5T_class_t::H5T_FLOAT )
-          break;
-
-        // Store current dataset.
-        _spikeTimes.push_back( dataset );
-
-      }
-      else
-      {
         if( dataset.getDataType( ).getClass( ) != H5T_class_t::H5T_INTEGER )
         {
-          _spikeTimes.pop_back( );
           break;
         }
 
         _spikeIds.push_back( dataset );
+
+      }
+      else
+      {
+        if( dataset.getDataType( ).getClass( ) != H5T_class_t::H5T_FLOAT )
+        {
+          _spikeIds.pop_back( );
+          break;
+        }
+
+        // Store current dataset.
+        _spikeTimes.push_back( dataset );
 
         // Assume dataset is correct so far...
 
@@ -165,16 +168,59 @@ void H5Spikes::Load( void )
   }
 
   _totalRecords = records;
-
+  std::cout << "Loaded " << _totalRecords << " spikes." << std::endl;
 }
 
 visimpl::TSpikes H5Spikes::spikes( void )
 {
-//  const std::vector< unsigned int >& offsets = _network->_offsets;
-
   visimpl::TSpikes result;
 
+  if( _totalRecords == 0 )
+    return result;
 
+  const std::vector< unsigned int >& offsets = _network->_offsets;
+
+  _startTime = std::numeric_limits< float >::max( );
+  _endTime = std::numeric_limits< float >::min( );
+
+  for( unsigned int i = 0; i < _spikeTimes.size( ); i++ )
+  {
+    H5::DataSet& times = _spikeTimes[ i ];
+    H5::DataSet& ids = _spikeIds[ i ];
+
+    unsigned int currentOffset = offsets[ i ];
+
+    hsize_t dimsTimes[ 2 ];
+    hsize_t dimsIds[ 2 ];
+
+    times.getSpace( ).getSimpleExtentDims( dimsTimes );
+    ids.getSpace( ).getSimpleExtentDims( dimsIds );
+
+    assert( dimsTimes[ 0 ] == dimsIds[ 0 ] );
+
+    unsigned int numRecords = dimsTimes[ 0 ];
+
+    std::vector< float > tempTimes( numRecords );
+    std::vector< unsigned int > tempIds( numRecords );
+
+    times.read( tempTimes.data( ), H5::PredType::IEEE_F32LE );
+    ids.read( tempIds.data( ), H5::PredType::STD_U16LE );
+
+    if( *tempTimes.begin( ) < _startTime )
+      _startTime = *tempTimes.begin( );
+
+    if( tempTimes.back( ) > _endTime )
+      _endTime = tempTimes.back( );
+
+
+    auto time = tempTimes.begin( );
+    for( auto id : tempIds )
+    {
+      result.insert( std::make_pair( *time, id + currentOffset ));
+
+      time++;
+    }
+  }
 
   return result;
 }

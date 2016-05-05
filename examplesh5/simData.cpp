@@ -18,31 +18,71 @@ int main( int argc, char** argv )
     std::cerr << "Error: a file must be provided as a parameter." << std::endl;
     return  1 ;
   }
+  std::string simtype = argv[ 1 ];
+  std::string path = argv[ 2 ];
+  std::string secondaryPath;
 
-  std::string path = argv[ 1 ];
-
-  std::string simtype;
-
-  if( argc == 3)
-    simtype = argv[ 2 ];
 
   visimpl::TDataType dataType( visimpl::TDataType::THDF5 );
 
   if( simtype == "-bc")
     dataType = visimpl::TDataType::TBlueConfig;
+  else if ( simtype == "-h5" )
+  {
+    if( argc < 4)
+    {
+      std::cerr << "Error: an activity file must be provided after network file" << std::endl;
+      return 1;
+    }
 
-  visimpl::SimulationData simData( path, dataType );
+    secondaryPath = argv[ 3 ];
+  }
 
-  visimpl::TGIDSet gids = simData.gids( );
-
-  std::cout << "Loaded GIDS: " << gids.size( ) << std::endl;
-
-  visimpl::TPosVect positions = simData.positions( );
-
-  std::cout << "Loaded positions: " << positions.size( ) << std::endl;
+  std::cout << "--------------------------------------" << std::endl;
+  std::cout << "Network" << std::endl;
+  std::cout << "--------------------------------------" << std::endl;
 
 
 
+  {
+    visimpl::SimulationData simData( path, dataType );
+
+    visimpl::TGIDSet gids = simData.gids( );
+
+    std::cout << "Loaded GIDS: " << gids.size( ) << std::endl;
+
+    visimpl::TPosVect positions = simData.positions( );
+
+    std::cout << "Loaded positions: " << positions.size( ) << std::endl;
+  }
+
+  std::cout << "--------------------------------------" << std::endl;
+  std::cout << "Spikes" << std::endl;
+  std::cout << "--------------------------------------" << std::endl;
+
+  if(  dataType == visimpl::TDataType::TBlueConfig || !secondaryPath.empty( ))
+  {
+    visimpl::SpikeData simData( path, dataType, secondaryPath );
+
+    visimpl::TGIDSet gids = simData.gids( );
+
+    std::cout << "Loaded GIDS: " << gids.size( ) << std::endl;
+
+    visimpl::TPosVect positions = simData.positions( );
+
+    std::cout << "Loaded positions: " << positions.size( ) << std::endl;
+
+    visimpl::TSpikes spikes = simData.spikes( );
+
+    float startTime = simData.startTime( );
+    float endTime = simData.endTime( );
+
+    std::cout << "Loaded spikes: " << spikes.size( ) << std::endl;
+    std::cout << "Starting from " << startTime
+              << " to " << endTime << std::endl;
+  }
+
+  std::cout << "--------------------------------------" << std::endl;
 
   return 0;
 }

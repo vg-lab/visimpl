@@ -105,7 +105,12 @@ void H5Network::Load( void )
     H5::DataSet dataset = group.openDataSet( dataSetName );
 
     hsize_t dims[2];
-    dataset.getSpace().getSimpleExtentDims( dims );
+    int totalDims = dataset.getSpace().getSimpleExtentDims( dims );
+
+    if( totalDims != 2)
+      continue;
+
+    std::cout << dims[ 1 ] << " -> "<< dims[ 0 ] << std::endl;
     if( dims[ 1 ] != 3 )
       continue;
 
