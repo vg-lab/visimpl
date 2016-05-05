@@ -217,9 +217,10 @@ visimpl::TSpikes H5Spikes::spikes( void )
     for( auto id : tempIds )
     {
       result.insert( std::make_pair( *time, id + currentOffset ));
-
       time++;
     }
+
+    std::cout << "Loaded dataset " << i << " with " << tempTimes.size( ) << std::endl;
   }
 
   return result;

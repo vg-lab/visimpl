@@ -120,7 +120,9 @@ void OpenGLWidget::loadData( const std::string& fileName,
     {
       case TSimSpikes:
         _deltaTime = 0.5f;
-        _player = new SpikesPlayer( fileName, true );
+//        _player = new SpikesPlayer( fileName, true );
+        _player = new SpikesPlayer( );
+        _player->LoadData( TDataType::TBlueConfig, fileName );
         _player->deltaTime( _deltaTime );
         break;
 

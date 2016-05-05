@@ -74,12 +74,12 @@ namespace visimpl
     return this;
   }
 
-  float SimulationData::startTime( void )
+  float SimulationData::startTime( void ) const
   {
     return _startTime;
   }
 
-  float SimulationData::endTime( void )
+  float SimulationData::endTime( void ) const
   {
     return _endTime;
   }

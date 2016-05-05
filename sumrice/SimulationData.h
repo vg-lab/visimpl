@@ -36,8 +36,8 @@ namespace visimpl
 
     virtual SimulationData* get( void );
 
-    virtual float startTime( void );
-    virtual float endTime( void );
+    virtual float startTime( void ) const;
+    virtual float endTime( void ) const;
 
   protected:
 

@@ -10,6 +10,21 @@
 namespace visimpl
 {
 
+  SimulationPlayer::SimulationPlayer( void )
+  : _currentTime( 0.0f )
+  , _previousTime( 0.0f )
+  , _deltaTime( 0.0f )
+  , _startTime( 0.0f )
+  , _endTime( 0.0f )
+  , _playing( false )
+  , _loop( false )
+  , _finished( false )
+  , _simulationType( TSimNetwork )
+  , _simData( nullptr )
+  {
+
+  }
+
   SimulationPlayer::SimulationPlayer( const std::string& blueConfigFilePath,
                                       bool loadData )
   : _currentTime( 0.0f )
@@ -22,8 +37,8 @@ namespace visimpl
   , _finished( false )
   , _simulationType( TSimNetwork )
   , _blueConfigPath( blueConfigFilePath )
-  , _blueConfig( nullptr )
-  , _circuit( nullptr )
+//  , _blueConfig( nullptr )
+//  , _circuit( nullptr )
   {
 
     if( loadData )
@@ -37,34 +52,63 @@ namespace visimpl
 
   void SimulationPlayer::LoadData( void )
   {
+//    Clear( );
+//
+//    std::cout << " Loading BlueConfig: " << _blueConfigPath.c_str( ) << std::endl;
+//
+//    _blueConfig = new brion::BlueConfig( _blueConfigPath );
+//
+////    brion::URI circuitSource = _blueConfig->getCircuitSource( );
+////    std::cout << " Loading Circuit: " << _blueConfig->getCircuitSource( )
+////              << " -> " << circuitSource.getPath( )
+////              << std::endl;
+//
+//    _circuit = new brain::Circuit( *_blueConfig );
+//
+//    _gids = _circuit->getGIDs( );
+//
+//    std::cout << "GID Set size: " << _gids.size( ) << std::endl;
+  }
+
+
+  void SimulationPlayer::LoadData( TDataType dataType,
+                                   const std::string& networkPath_ )
+  {
     Clear( );
 
-    std::cout << " Loading BlueConfig: " << _blueConfigPath.c_str( ) << std::endl;
+    switch( dataType )
+    {
+      case TDataType::TBlueConfig:
+      case TDataType::THDF5:
+      {
+        _simData = new SimulationData( networkPath_, dataType );
+        _gids = _simData->gids( );
 
-    _blueConfig = new brion::BlueConfig( _blueConfigPath );
+        std::cout << "GID Set size: " << _gids.size( ) << std::endl;
 
-//    brion::URI circuitSource = _blueConfig->getCircuitSource( );
-//    std::cout << " Loading Circuit: " << _blueConfig->getCircuitSource( )
-//              << " -> " << circuitSource.getPath( )
-//              << std::endl;
+      }
+      break;
 
-    _circuit = new brain::Circuit( *_blueConfig );
-
-    _gids = _circuit->getGIDs( );
-
-    std::cout << "GID Set size: " << _gids.size( ) << std::endl;
+      default:
+        break;
+    }
   }
 
   void SimulationPlayer::Clear( void )
   {
-    if( _blueConfig )
-    {
-      delete _blueConfig;
+//    if( _blueConfig )
+//    {
+//      delete _blueConfig;
+//
+//      delete _circuit;
+//
+//      _gids.clear( );
+//    }
 
-      delete _circuit;
+    if( _simData )
+      delete _simData;
 
-      _gids.clear( );
-    }
+    _gids.clear( );
   }
 
   void SimulationPlayer::Frame( void )
@@ -186,15 +230,15 @@ namespace visimpl
 //    return _autonomous;
 //  }
 
-  brion::BlueConfig* SimulationPlayer::blueConfig( void )
-  {
-    return _blueConfig;
-  }
-
-  brain::Circuit* SimulationPlayer::circuit( void )
-  {
-    return _circuit;
-  }
+//  brion::BlueConfig* SimulationPlayer::blueConfig( void )
+//  {
+//    return _blueConfig;
+//  }
+//
+//  brain::Circuit* SimulationPlayer::circuit( void )
+//  {
+//    return _circuit;
+//  }
 
   const TGIDSet& SimulationPlayer::gids( void )
   {
@@ -203,7 +247,8 @@ namespace visimpl
 
   TPosVect SimulationPlayer::positions( void )
   {
-    return _circuit->getPositions( _gids );
+//    return _circuit->getPositions( _gids );
+    return _simData->positions( );
   }
 
   TSimulationType SimulationPlayer::simulationType( void )
@@ -300,11 +345,16 @@ namespace visimpl
   //************************ SPIKES SIMULATION PLAYER ***********************
   //*************************************************************************
 
+  SpikesPlayer::SpikesPlayer( void )
+  : SimulationPlayer( )
+  {
+    _simulationType = TSimSpikes;
+  }
 
   SpikesPlayer::SpikesPlayer( const std::string& blueConfigFilePath,
                                     bool loadData )
   : SimulationPlayer( blueConfigFilePath, false )
-  , _spikeReport( nullptr )
+//  , _spikeReport( nullptr )
   {
     if( loadData )
       LoadData( );
@@ -316,30 +366,49 @@ namespace visimpl
 
   void SpikesPlayer::LoadData( void )
   {
-    SimulationPlayer::LoadData( );
+//    SimulationPlayer::LoadData( );
+//
+//    std::cout << "Loading spikes: "
+//        << _blueConfig->getSpikeSource( ).getPath( ).c_str( ) << std::endl;
+//
+//    _spikeReport = new brion::SpikeReport( _blueConfig->getSpikeSource( ),
+//                                           brion::MODE_READ );
+//
+//    _currentSpike = _spikeReport->getSpikes( ).begin( );
+//    _previousSpike = _currentSpike;
+//
+//    _startTime = _spikeReport->getStartTime( );
+//    _endTime = _spikeReport->getEndTime( );
+//
+//    _currentTime = _startTime;
 
-    std::cout << "Loading spikes: "
-        << _blueConfig->getSpikeSource( ).getPath( ).c_str( ) << std::endl;
+  }
 
-    _spikeReport = new brion::SpikeReport( _blueConfig->getSpikeSource( ),
-                                           brion::MODE_READ );
+  void SpikesPlayer::LoadData( TDataType dataType,
+                           const std::string& networkPath,
+                           const std::string& activityPath )
+  {
+    _simData = new SpikeData( networkPath, dataType, activityPath );
 
-    _currentSpike = _spikeReport->getSpikes( ).begin( );
+    SpikeData* spikes = dynamic_cast< SpikeData* >( _simData );
+
+    std::cout << "Loaded " << spikes->spikes( ).size( ) << " spikes." << std::endl;
+
+    _currentSpike = spikes->spikes( ).begin( );
     _previousSpike = _currentSpike;
 
-    _startTime = _spikeReport->getStartTime( );
-    _endTime = _spikeReport->getEndTime( );
+    _startTime = spikes->startTime( );
+    _endTime = spikes->endTime( );
 
     _currentTime = _startTime;
-
   }
 
   void SpikesPlayer::Clear( void )
   {
     SimulationPlayer::Clear( );
 
-    if( _spikeReport )
-      delete _spikeReport;
+//    if( _spikeReport )
+//      delete _spikeReport;
   }
 
   void SpikesPlayer::Stop( void )
@@ -375,7 +444,8 @@ namespace visimpl
 
   void SpikesPlayer::FrameProcess( void )
   {
-    const brion::Spikes& spikes = Spikes( );
+//    const brion::Spikes& spikes = Spikes( );
+    const visimpl::TSpikes& spikes = Spikes( );
     _previousSpike = _currentSpike;
     SpikesCIter last;
 
@@ -414,14 +484,20 @@ namespace visimpl
     _currentSpike = spike;
   }
 
-  const brion::Spikes& SpikesPlayer::Spikes( void )
+  const visimpl::TSpikes& SpikesPlayer::Spikes( void )
   {
-    return _spikeReport->getSpikes( );
+//    return _spikeReport->getSpikes( );
+    return dynamic_cast< SpikeData* >( _simData )->spikes( );
   }
 
-  brion::SpikeReport* SpikesPlayer::spikeReport( void )
+//  brion::SpikeReport* SpikesPlayer::spikeReport( void )
+//  {
+//    return _spikeReport;
+//  }
+
+  visimpl::SpikeData* SpikesPlayer::spikeReport( void ) const
   {
-    return _spikeReport;
+    return dynamic_cast< SpikeData* >( _simData );
   }
 
   SpikesCRange
@@ -515,79 +591,79 @@ namespace visimpl
 
   void VoltagesPlayer::LoadData( )
   {
-    SimulationPlayer::LoadData( );
-
-    brion::GIDSet old = _gids;
-    brion::GIDSet gidsNew;
-    _voltReport = new brion::CompartmentReport(
-        _blueConfig->getReportSource( _report ),
-        brion::MODE_READ,
-        gidsNew );
-    brion::GIDSet other = _voltReport->getGIDs( );
-    std::cout << "GID Set size: " << gidsNew.size( ) << std::endl;
-    std::cout << "GID Set size: " << other.size( ) << std::endl;
-
-    _deltaTime = _voltReport->getTimestep( );
-    _startTime = _voltReport->getStartTime( );
-    _endTime = _voltReport->getEndTime( );
-
-    std::cout << "Offsets: " << _voltReport->getOffsets( ).size( ) << std::endl;
+//    SimulationPlayer::LoadData( );
 //
-//    std::cout << "Looking for mismatches..." << std::endl;
+//    brion::GIDSet old = _gids;
+//    brion::GIDSet gidsNew;
+//    _voltReport = new brion::CompartmentReport(
+//        _blueConfig->getReportSource( _report ),
+//        brion::MODE_READ,
+//        gidsNew );
+//    brion::GIDSet other = _voltReport->getGIDs( );
+//    std::cout << "GID Set size: " << gidsNew.size( ) << std::endl;
+//    std::cout << "GID Set size: " << other.size( ) << std::endl;
+//
+//    _deltaTime = _voltReport->getTimestep( );
+//    _startTime = _voltReport->getStartTime( );
+//    _endTime = _voltReport->getEndTime( );
+//
+//    std::cout << "Offsets: " << _voltReport->getOffsets( ).size( ) << std::endl;
+////
+////    std::cout << "Looking for mismatches..." << std::endl;
+////    for( auto gid : _gids )
+////    {
+////      if( other.find( gid ) == other.end( ))
+////      {
+////        std::cout << "GID :" << gid << " not found!" << std::endl;
+////        _gids.erase( gid );
+////      }
+////    }
+//
+//    _gids = other;
+//
+//    std::cout << "GID Set size: " << _gids.size( ) << std::endl;
+//
+//    unsigned int counter = 0;
 //    for( auto gid : _gids )
 //    {
-//      if( other.find( gid ) == other.end( ))
-//      {
-//        std::cout << "GID :" << gid << " not found!" << std::endl;
-//        _gids.erase( gid );
-//      }
+//      _gidRef[ gid ] = counter;
+//      counter++;
 //    }
-
-    _gids = other;
-
-    std::cout << "GID Set size: " << _gids.size( ) << std::endl;
-
-    unsigned int counter = 0;
-    for( auto gid : _gids )
-    {
-      _gidRef[ gid ] = counter;
-      counter++;
-    }
-
-
-
-    std::cout << "Start time: " << _startTime << std::endl;
-    std::cout << "End time: " << _endTime << std::endl;
-    std::cout << "Delta time: " << _deltaTime << std::endl;
-    if( !loadedRange )
-    {
-//      _minVoltage = std::numeric_limits< float >::max( );
-//      _maxVoltage = std::numeric_limits< float >::min( );
-//      for( float dt = _startTime; dt < _endTime; dt += _deltaTime )
-//      {
-//        std::cout << "\rdt: " << dt;
-//        brion::floatsPtr frame = _voltReport->loadFrame( dt );
-//        for( unsigned int i = 0; i < _gids.size( ); i++ )
-//        {
-//          float voltage = (* frame )[ i ];
-//          if( voltage < _minVoltage )
-//            _minVoltage = voltage;
-//          if( voltage > _maxVoltage )
-//            _maxVoltage = voltage;
-//        }
-//      }
-//      std::cout << std::endl;
-      _minVoltage = -87.6816f;
-      _maxVoltage = 47.5082f;
-
-      Stop( );
-    }
-
-    std::cout << "Min Voltage: " << _minVoltage << std::endl;
-    std::cout << "Max Voltage: " << _maxVoltage << std::endl;
-
-    _normalizedVoltageFactor = 1.0f / std::abs( _maxVoltage - _minVoltage );
-    std::cout << "Norm factor: " << _normalizedVoltageFactor << std::endl;
+//
+//
+//
+//    std::cout << "Start time: " << _startTime << std::endl;
+//    std::cout << "End time: " << _endTime << std::endl;
+//    std::cout << "Delta time: " << _deltaTime << std::endl;
+//    if( !loadedRange )
+//    {
+////      _minVoltage = std::numeric_limits< float >::max( );
+////      _maxVoltage = std::numeric_limits< float >::min( );
+////      for( float dt = _startTime; dt < _endTime; dt += _deltaTime )
+////      {
+////        std::cout << "\rdt: " << dt;
+////        brion::floatsPtr frame = _voltReport->loadFrame( dt );
+////        for( unsigned int i = 0; i < _gids.size( ); i++ )
+////        {
+////          float voltage = (* frame )[ i ];
+////          if( voltage < _minVoltage )
+////            _minVoltage = voltage;
+////          if( voltage > _maxVoltage )
+////            _maxVoltage = voltage;
+////        }
+////      }
+////      std::cout << std::endl;
+//      _minVoltage = -87.6816f;
+//      _maxVoltage = 47.5082f;
+//
+//      Stop( );
+//    }
+//
+//    std::cout << "Min Voltage: " << _minVoltage << std::endl;
+//    std::cout << "Max Voltage: " << _maxVoltage << std::endl;
+//
+//    _normalizedVoltageFactor = 1.0f / std::abs( _maxVoltage - _minVoltage );
+//    std::cout << "Norm factor: " << _normalizedVoltageFactor << std::endl;
   }
 
   void VoltagesPlayer::Clear( void )

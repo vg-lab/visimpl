@@ -20,6 +20,7 @@
 
 #include "FocusFrame.h"
 #include "Histogram.h"
+#include "SimulationData.h"
 
 namespace visimpl
 {
@@ -65,7 +66,8 @@ public:
 
   Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
 
-  void Init( brion::SpikeReport* _spikes, brion::GIDSet gids );
+//  void Init( brion::SpikeReport* _spikes, brion::GIDSet gids );
+  void Init( visimpl::SpikeData* spikes_, brion::GIDSet gids_ );
   void AddNewHistogram( const visimpl::Selection& selection
 #ifdef VISIMPL_USE_ZEQ
                        , bool deferredInsertion = false
@@ -135,11 +137,7 @@ protected:
     { }
 
     ~StackRow( )
-    {
-//      delete histogram;
-//      delete label;
-//      delete checkBox;
-    }
+    { }
 
     visimpl::MultiLevelHistogram* histogram;
     QLabel* label;
@@ -160,6 +158,8 @@ protected:
 
 #endif
 
+  void Init( void );
+
   void CreateSummarySpikes( );
   void InsertSummarySpikes( const GIDUSet& gids );
 //  void CreateSummaryVoltages( void );
@@ -169,7 +169,8 @@ protected:
   unsigned int _bins;
   float _zoomFactor;
 
-  brion::SpikeReport* _spikeReport;
+//  brion::SpikeReport* _spikeReport;
+  visimpl::SpikeData* _spikeReport;
   brion::CompartmentReport* _voltageReport;
 
   GIDUSet _gids;

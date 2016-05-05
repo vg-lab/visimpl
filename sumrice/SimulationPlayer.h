@@ -50,12 +50,14 @@ namespace visimpl
 
   public:
 
+    SimulationPlayer( void );
     SimulationPlayer( const std::string& blueConfigFilePath,
                       bool loadData = true );
 
     virtual ~SimulationPlayer( );
 
     virtual void LoadData( void );
+    virtual void LoadData( TDataType dataType, const std::string& networkPath );
 
     virtual void Clear( void );
 
@@ -89,8 +91,8 @@ namespace visimpl
     void loop( bool loop );
     bool loop( void );
 
-    brion::BlueConfig* blueConfig( void );
-    brain::Circuit* circuit( void );
+//    brion::BlueConfig* blueConfig( void );
+//    brain::Circuit* circuit( void );
     const TGIDSet& gids( void );
     TPosVect positions( void );
 
@@ -135,34 +137,15 @@ namespace visimpl
 
     std::string _blueConfigPath;
 
-    brion::BlueConfig* _blueConfig;
-    brain::Circuit* _circuit;
+//    brion::BlueConfig* _blueConfig;
+//    brain::Circuit* _circuit;
     TGIDSet _gids;
 
 #ifdef VISIMPL_USE_ZEQ
     ZeqEventsManager* _zeqEvents;
 #endif
-//    bool _autonomous;
 
-//    boost::signals2::signal< void ( float x )> playbackPositionAt;
-
-
-//#ifdef VISIMPL_USE_ZEQ
-//
-//  void _onFrameEvent( const zeq::Event& event_ );
-//  void _setZeqUri( const std::string& );
-//  static void* _Subscriber( void* subscriber );
-//
-//  bool _zeqConnection;
-//
-//  servus::URI _uri;
-//  zeq::Subscriber* _subscriber;
-//  zeq::Publisher* _publisher;
-//
-//
-//  pthread_t _subscriberThread;
-//
-//#endif
+    SimulationData* _simData;
 
   };
 
@@ -176,16 +159,22 @@ namespace visimpl
   {
   public:
 
+    SpikesPlayer( void );
     SpikesPlayer( const std::string& blueConfigFilePath,
                   bool loadData = true );
 
     virtual void LoadData( void );
+    virtual void LoadData( TDataType dataType,
+                           const std::string& networkPath,
+                           const std::string& activityPath = "" );
+
     virtual void Clear( void );
     virtual void PlayAt( float percentage );
     virtual void Stop( void );
 
-    virtual const brion::Spikes& Spikes( void );
-    brion::SpikeReport* spikeReport( void );
+    virtual const visimpl::TSpikes& Spikes( void );
+//    brion::SpikeReport* spikeReport( void );
+    visimpl::SpikeData* spikeReport( void ) const;
 
     SpikesCRange spikesAtTime( float time );
 
@@ -200,7 +189,7 @@ namespace visimpl
     SpikesCIter _previousSpike;
     SpikesCIter _currentSpike;
 
-    brion::SpikeReport* _spikeReport;
+//    brion::SpikeReport* _spikeReport;
   };
 
   class VoltagesPlayer : public SimulationPlayer
