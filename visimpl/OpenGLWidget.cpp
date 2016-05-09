@@ -79,8 +79,8 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   _maxFPS = 20.0f;
   _renderPeriod = 1.0f / _maxFPS;
 
-//  _playbackSpeed = 5.0f;
-  _playbackSpeed = 0.4;
+  _playbackSpeed = 5.0f;
+//  _playbackSpeed = 1.f;
 
 }
 

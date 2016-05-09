@@ -204,7 +204,10 @@ visimpl::TSpikes H5Spikes::spikes( void )
     std::vector< unsigned int > tempIds( numRecords );
 
     times.read( tempTimes.data( ), H5::PredType::IEEE_F32LE );
-    ids.read( tempIds.data( ), H5::PredType::STD_U16LE );
+    ids.read( tempIds.data( ), H5::PredType::NATIVE_UINT );
+
+    times.close( );
+    ids.close( );
 
     if( *tempTimes.begin( ) < _startTime )
       _startTime = *tempTimes.begin( );
@@ -216,8 +219,16 @@ visimpl::TSpikes H5Spikes::spikes( void )
     auto time = tempTimes.begin( );
     for( auto id : tempIds )
     {
+      if( id + currentOffset > tempIds.size( ))
+      {
+        std::cout << "ID " << id << " out of bounds. " << id
+                  << " + " << currentOffset
+                  << " = " << id + currentOffset << std::endl;
+      }
+
       result.insert( std::make_pair( *time, id + currentOffset ));
       time++;
+
     }
 
     std::cout << "Loaded dataset " << i << " with " << tempTimes.size( ) << std::endl;
