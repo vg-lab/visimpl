@@ -59,19 +59,23 @@ void MainWindow::showStatusBarMessage ( const QString& message )
   _ui->statusbar->showMessage( message );
 }
 
-void MainWindow::openBlueConfig( const std::string& fileName,
-                                 visimpl::TSimulationType simulationType,
-                                 const std::string& reportLabel )
+void MainWindow::openData( const std::string& fileName,
+                           visimpl::TSimulationType simulationType,
+                           const std::string& reportLabel )
 {
   _simulationType = simulationType;
 
   switch( _simulationType )
  {
    case visimpl::TSimSpikes:
-     _player = new visimpl::SpikesPlayer( fileName, true );
+   {
+     visimpl::SpikesPlayer* player = new visimpl::SpikesPlayer( );
+     player->LoadData( visimpl::TDataType::TBlueConfig,  fileName, reportLabel );
+     _player = player;
+
 //     _player->deltaTime( _deltaTime );
      break;
-
+   }
    case visimpl::TSimVoltages:
      _player = new visimpl::VoltagesPlayer( fileName, reportLabel, true);
 //     _deltaTime = _player->deltaTime( );
@@ -157,7 +161,7 @@ void MainWindow::openBlueConfigThroughDialog( void )
        std::string reportLabel = text.toStdString( );
        _lastOpenedFileName = QFileInfo(path).path( );
        std::string fileName = path.toStdString( );
-       openBlueConfig( fileName, simType, reportLabel );
+       openData( fileName, simType, reportLabel );
      }
 
 

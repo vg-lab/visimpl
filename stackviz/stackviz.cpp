@@ -118,7 +118,7 @@ int main( int argc, char** argv )
   mainWindow.init( zeqUri );
 
   if ( !blueConfig.empty( ) )
-    mainWindow.openBlueConfig( blueConfig, 
+    mainWindow.openData( blueConfig, 
                                 simType,
                                report );
 

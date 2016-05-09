@@ -103,48 +103,40 @@ OpenGLWidget::~OpenGLWidget( void )
 
 
 void OpenGLWidget::loadData( const std::string& fileName,
-                             const TDataFileType fileType,
+                             const visimpl::TDataType fileType,
                              TSimulationType simulationType,
                              const std::string& report)
 {
 
   makeCurrent( );
 
-  switch( fileType )
+  _simulationType = simulationType;
+
+  switch( _simulationType )
   {
-  case TDataFileType::tBlueConfig:
-
-    _simulationType = simulationType;
-
-    switch( _simulationType )
-    {
-      case TSimSpikes:
-        _deltaTime = 0.5f;
+    case TSimSpikes:
+      _deltaTime = 0.5f;
 //        _player = new SpikesPlayer( fileName, true );
-        _player = new SpikesPlayer( );
-        _player->LoadData( TDataType::TBlueConfig, fileName );
-        _player->deltaTime( _deltaTime );
-        break;
+      SpikesPlayer* player = new SpikesPlayer( );
+      player->LoadData( fileType, fileName, report );
+      _player = player;
+      _player->deltaTime( _deltaTime );
+      break;
 
-      case TSimVoltages:
-        _player = new VoltagesPlayer( fileName, report, true);
-        _deltaTime = _player->deltaTime( );
-        break;
+    case TSimVoltages:
+      _player = new VoltagesPlayer( fileName, report, true);
+      _deltaTime = _player->deltaTime( );
+      break;
 
-      default:
-        VISIMPL_THROW("Cannot load an undefined simulation type.");
-
-    }
-
-    createParticleSystem( );
-    _player->connectZeq( _zeqUri );
-
-    break;
-
-  default:
-    throw std::runtime_error( "Data file type not supported" );
+    default:
+      VISIMPL_THROW("Cannot load an undefined simulation type.");
 
   }
+
+  createParticleSystem( );
+  _player->connectZeq( _zeqUri );
+
+  break;
 
   this->_paint = true;
   update( );

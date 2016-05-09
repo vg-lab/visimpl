@@ -32,7 +32,7 @@ public:
   void init( const std::string& zeqUri = "" );
   void showStatusBarMessage ( const QString& message );
 
-  void openBlueConfig( const std::string& fileName,
+  void openData( const std::string& fileName,
                        visimpl::TSimulationType simulationType,
                        const std::string& report);
 

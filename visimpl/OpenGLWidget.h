@@ -68,7 +68,7 @@ public:
   void createNeuronsCollection( void );
   void createParticleSystem( void );
   void loadData( const std::string& fileName,
-                 const TDataFileType fileType = TDataFileType::tBlueConfig,
+                 const visimpl::TDataType = visimpl::TDataType::TBlueConfig,
                  visimpl::TSimulationType simulationType = visimpl::TSimSpikes,
                  const std::string& report = std::string( "" ));
 

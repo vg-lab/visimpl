@@ -161,7 +161,7 @@ int main( int argc, char** argv )
   }
 
   if ( blueConfig != "" )
-    mainWindow.openBlueConfig( blueConfig, simType, report );
+    mainWindow.openData( blueConfig, simType, report );
 
 //  if ( swcFile != "" )
 //    mainWindow.openSWCFile( swcFile );

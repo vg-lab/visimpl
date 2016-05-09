@@ -110,7 +110,7 @@ namespace visimpl
       case THDF5:
       {
         H5Spikes spikeReport( *_h5Network, report );
-        spikeReport.Load( );
+        spikeReport.Load(  );
 
         _spikes = spikeReport.spikes( );
 

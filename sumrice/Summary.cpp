@@ -216,6 +216,8 @@ void Summary::Init( visimpl::SpikeData* spikes_, brion::GIDSet gids_ )
 {
   _spikeReport = spikes_;
   _gids = GIDUSet( gids_.begin( ), gids_.end( ));
+
+  Init( );
 }
 
 void Summary::Init( void )

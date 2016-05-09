@@ -103,12 +103,12 @@ void MainWindow::showStatusBarMessage ( const QString& message )
   _ui->statusbar->showMessage( message );
 }
 
-void MainWindow::openBlueConfig( const std::string& fileName,
+void MainWindow::openData( const std::string& fileName,
                                  visimpl::TSimulationType simulationType,
                                  const std::string& reportLabel)
 {
   _openGLWidget->loadData( fileName,
-                           OpenGLWidget::TDataFileType::tBlueConfig,
+                           visimpl::TDataType::TBlueConfig,
                            simulationType, reportLabel );
 
 
@@ -175,7 +175,7 @@ void MainWindow::openBlueConfigThroughDialog( void )
       std::string reportLabel = text.toStdString( );
       _lastOpenedFileName = QFileInfo(path).path( );
       std::string fileName = path.toStdString( );
-      openBlueConfig( fileName, simType, reportLabel );
+      openData( fileName, simType, reportLabel );
     }
 
 
