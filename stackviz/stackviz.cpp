@@ -20,10 +20,12 @@ int main( int argc, char** argv )
 
   QApplication application(argc,argv);
 
-  std::string blueConfig;
+  std::string networkFile;
+  std::string activityFile;
   std::string zeqUri;
   std::string target = std::string( "" );
   std::string report = std::string( "" );
+  visimpl::TDataType dataType = visimpl::TBlueConfig;
   visimpl::TSimulationType simType = visimpl::TSimSpikes;
 
 
@@ -59,12 +61,27 @@ int main( int argc, char** argv )
     {
       if( ++i < argc )
       {
-        blueConfig = std::string( argv[ i ]);
+        networkFile = std::string( argv[ i ]);
+        dataType = visimpl::TBlueConfig;
       }
       else
         usageMessage( argv[0] );
 
     }
+    else if( std::strcmp( argv[ i ], "-h5" ) == 0 )
+    {
+      if( i + 2 < argc )
+      {
+        ++i;
+        networkFile = std::string( argv[ i ]);
+        ++i;
+        activityFile = std::string( argv[ i ]);
+        dataType = visimpl::THDF5;
+      }
+      else
+        usageMessage( argv[0] );
+    }
+
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
        simType = visimpl::TSimSpikes;
@@ -117,11 +134,18 @@ int main( int argc, char** argv )
   mainWindow.show( );
   mainWindow.init( zeqUri );
 
-  if ( !blueConfig.empty( ) )
-    mainWindow.openData( blueConfig, 
-                                simType,
-                               report );
-
+  if( !networkFile.empty( ))
+  switch( dataType )
+  {
+    case visimpl::TDataType::TBlueConfig:
+      mainWindow.openBlueConfig( networkFile, simType, report );
+      break;
+    case visimpl::TDataType::THDF5:
+      mainWindow.openHDF5File( networkFile, simType, activityFile );
+      break;
+    default:
+      break;
+  }
   return application.exec();
 
 }

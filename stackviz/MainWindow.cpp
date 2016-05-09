@@ -59,9 +59,9 @@ void MainWindow::showStatusBarMessage ( const QString& message )
   _ui->statusbar->showMessage( message );
 }
 
-void MainWindow::openData( const std::string& fileName,
-                           visimpl::TSimulationType simulationType,
-                           const std::string& reportLabel )
+void MainWindow::openBlueConfig( const std::string& fileName,
+                                 visimpl::TSimulationType simulationType,
+                                 const std::string& reportLabel )
 {
   _simulationType = simulationType;
 
@@ -70,7 +70,7 @@ void MainWindow::openData( const std::string& fileName,
    case visimpl::TSimSpikes:
    {
      visimpl::SpikesPlayer* player = new visimpl::SpikesPlayer( );
-     player->LoadData( visimpl::TDataType::TBlueConfig,  fileName, reportLabel );
+     player->LoadData( visimpl::TDataType::TBlueConfig,  fileName );
      _player = player;
 
 //     _player->deltaTime( _deltaTime );
@@ -86,35 +86,8 @@ void MainWindow::openData( const std::string& fileName,
 
  }
 
+  configurePlayer( );
 
-  // _player->loadData( fileName,
-  //                          OpenGLWidget::TDataFileType::tBlueConfig,
-  //                          simulationType, reportLabel );
-
-
-  // connect( _player, SIGNAL( updateSlider( float )),
-  //          this, SLOT( UpdateSimulationSlider( float )));
-
-
-   _startTimeLabel->setText(
-       QString::number( (double)_player->startTime( )));
-
-   _endTimeLabel->setText(
-         QString::number( (double)_player->endTime( )));
-
-#if VISIMPL_USE_GMRVZEQ
-   _player->connectZeq( _zeqUri );
-
-   _player->zeqEvents( )->frameReceived.connect(
-       boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
-
-   _player->zeqEvents( )->playbackOpReceived.connect(
-       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
-#endif
-
-
-  // changeEditorColorMapping( );
-   initSummaryWidget( );
 }
 
 void MainWindow::openBlueConfigThroughDialog( void )
@@ -161,13 +134,49 @@ void MainWindow::openBlueConfigThroughDialog( void )
        std::string reportLabel = text.toStdString( );
        _lastOpenedFileName = QFileInfo(path).path( );
        std::string fileName = path.toStdString( );
-       openData( fileName, simType, reportLabel );
+       openBlueConfig( fileName, simType, reportLabel );
      }
 
 
    }
 #endif
 
+}
+
+
+void MainWindow::openHDF5File( const std::string& networkFile,
+                               visimpl::TSimulationType simulationType,
+                               const std::string& activityFile )
+{
+  _simulationType = simulationType;
+
+  visimpl::SpikesPlayer* player = new visimpl::SpikesPlayer( );
+  player->LoadData( visimpl::TDataType::THDF5,  networkFile, activityFile );
+  _player = player;
+
+  configurePlayer( );
+}
+
+void MainWindow::configurePlayer( void )
+{
+  _startTimeLabel->setText(
+      QString::number( (double)_player->startTime( )));
+
+  _endTimeLabel->setText(
+        QString::number( (double)_player->endTime( )));
+
+#if VISIMPL_USE_GMRVZEQ
+  _player->connectZeq( _zeqUri );
+
+  _player->zeqEvents( )->frameReceived.connect(
+      boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
+
+  _player->zeqEvents( )->playbackOpReceived.connect(
+      boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+#endif
+
+ // changeEditorColorMapping( );
+  initSummaryWidget( );
 }
 
 void MainWindow::initPlaybackDock( )

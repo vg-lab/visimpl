@@ -116,10 +116,11 @@ protected slots:
 
   void updateMouseMarker( QPoint point );
 
+public slots:
+
   void bins( int bins_ );
   void zoomFactor( double zoom );
 
-public slots:
   void toggleAutoNameSelections( void )
   {
     _autoNameSelection = !_autoNameSelection;

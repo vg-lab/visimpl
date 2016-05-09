@@ -33,9 +33,13 @@ public:
   void init( const std::string& zeqUri = "" );
   void showStatusBarMessage ( const QString& message );
 
-  void openData( const std::string& fileName,
+  void openBlueConfig( const std::string& fileName,
                        visimpl::TSimulationType simulationType,
                        const std::string& report);
+
+  void openHDF5File( const std::string& networkFile,
+                     visimpl::TSimulationType simulationType,
+                     const std::string& activityFile = "" );
 
 public slots:
 
@@ -70,6 +74,7 @@ protected slots:
 protected:
 
   void resizeEvent(QResizeEvent * event);
+  void configurePlayer( void );
 
 #ifdef VISIMPL_USE_ZEQ
 

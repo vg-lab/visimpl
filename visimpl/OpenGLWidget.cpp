@@ -79,7 +79,8 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   _maxFPS = 20.0f;
   _renderPeriod = 1.0f / _maxFPS;
 
-  _playbackSpeed = 5.0f;
+//  _playbackSpeed = 5.0f;
+  _playbackSpeed = 0.4;
 
 }
 
@@ -115,33 +116,38 @@ void OpenGLWidget::loadData( const std::string& fileName,
   switch( _simulationType )
   {
     case TSimSpikes:
+    {
       _deltaTime = 0.5f;
 //        _player = new SpikesPlayer( fileName, true );
-      SpikesPlayer* player = new SpikesPlayer( );
-      player->LoadData( fileType, fileName, report );
-      _player = player;
+      SpikesPlayer* spPlayer = new SpikesPlayer( );
+      spPlayer->LoadData( fileType, fileName, report );
+      _player = spPlayer;
       _player->deltaTime( _deltaTime );
       break;
-
+    }
     case TSimVoltages:
+    {
       _player = new VoltagesPlayer( fileName, report, true);
       _deltaTime = _player->deltaTime( );
       break;
-
+    }
     default:
       VISIMPL_THROW("Cannot load an undefined simulation type.");
 
   }
 
-  createParticleSystem( );
-  _player->connectZeq( _zeqUri );
+  float scale = 1.0f;
+  if( fileType == visimpl::THDF5 )
+  {
+    scale = 500.f;
+  }
 
-  break;
+  createParticleSystem( scale );
+  _player->connectZeq( _zeqUri );
 
   this->_paint = true;
   update( );
 
-  return;
 }
 
 
@@ -192,7 +198,15 @@ void OpenGLWidget::configureSimulation( void )
             dynamic_cast< prefr::ColorEmissionNode* >(( *res ).second )->
                 killParticles( );
           }
+//          else
+//          {
+//            std::cout << "Spike not found for " << spike->second << std::endl;
+//          }
         }
+//        else
+//        {
+//          std::cout << "Spike not found for " << spike->second << std::endl;
+//        }
       }
       break;
     }
@@ -251,7 +265,7 @@ void OpenGLWidget::createNeuronsCollection( void )
 //  _neuronsCollection = new neurolots::NeuronsCollection( _camera );
 }
 
-void OpenGLWidget::createParticleSystem( void )
+void OpenGLWidget::createParticleSystem( float scale )
 {
   makeCurrent( );
   prefr::Config::init( );
@@ -346,6 +360,9 @@ void OpenGLWidget::createParticleSystem( void )
 
 
     glm::vec3 position( brionPos.x( ), brionPos.y( ), brionPos.z( ));
+
+    if( scale != 1.0f )
+      position *= scale;
 
     cameraPivot += position;
 

@@ -66,7 +66,7 @@ public:
   ~OpenGLWidget( void );
 
   void createNeuronsCollection( void );
-  void createParticleSystem( void );
+  void createParticleSystem( float scale = 1.0f );
   void loadData( const std::string& fileName,
                  const visimpl::TDataType = visimpl::TDataType::TBlueConfig,
                  visimpl::TSimulationType simulationType = visimpl::TSimSpikes,

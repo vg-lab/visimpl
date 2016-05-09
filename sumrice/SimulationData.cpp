@@ -109,6 +109,11 @@ namespace visimpl
       }
       case THDF5:
       {
+        if( report.empty( ))
+        {
+          std::cerr << "Error: Activity file path is empty." << std::endl;
+        }
+
         H5Spikes spikeReport( *_h5Network, report );
         spikeReport.Load(  );
 
