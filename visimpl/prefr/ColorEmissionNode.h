@@ -34,6 +34,8 @@ namespace prefr
     virtual void Size( float size );
     virtual float Size();
 
+    virtual bool Emits();
+
   protected:
 
     glm::vec4 color_;

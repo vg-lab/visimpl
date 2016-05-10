@@ -60,7 +60,6 @@ namespace prefr
          it != particles->end; it++ )
     {
       ( *it )->life = -0.1f;
-
       if( changeState )
         ( *it )->alive = false;
 //      else
@@ -68,6 +67,10 @@ namespace prefr
     }
   }
 
+  bool ColorEmissionNode::Emits()
+  {
+    return true;
+  }
 
 }
 

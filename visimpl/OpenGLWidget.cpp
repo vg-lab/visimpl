@@ -206,7 +206,7 @@ void OpenGLWidget::configureSimulation( void )
           if( res != gidNodesMap.end( ))
           {
             dynamic_cast< prefr::ColorEmissionNode* >(( *res ).second )->
-                killParticles( );
+                killParticles( true  );
           }
 //          else
 //          {
@@ -431,20 +431,25 @@ void OpenGLWidget::createParticleSystem( float scale )
       updater = new prefr::CompositeColorUpdater( *_ps->particles );
       std::cout << "Created Spikes Updater" << std::endl;
 
-      _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
-      _prototype->color.Insert( 0.1f, ( glm::vec4(1, 0, 0, 0.2 )));
-      _prototype->color.Insert( 0.7f, ( glm::vec4(1, 0.5, 0, 0.2 )));
-      _prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 0.3, 0.05 )));
+//      _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
+//      _prototype->color.Insert( 0.1f, ( glm::vec4(1, 0, 0, 0.2 )));
+//      _prototype->color.Insert( 0.7f, ( glm::vec4(1, 0.5, 0, 0.2 )));
+//      _prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 0.3, 0.05 )));
+
+      _prototype->color.Insert( 0.0f, ( glm::vec4(0.f, 1.f, 0.f, 0.05)));
+      _prototype->color.Insert( 0.35f, ( glm::vec4(1, 0, 0, 0.2 )));
+      _prototype->color.Insert( 0.7f, ( glm::vec4(1.f, 1.f, 0, 0.2 )));
+      _prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 1.f, 0.2 )));
 
       _prototype->velocity.Insert( 0.0f, 0.0f );
 
-      _prototype->size.Insert( 0.0f, 30.0f );
+      _prototype->size.Insert( 0.0f, 20.0f );
       _prototype->size.Insert( 1.0f, 10.0f );
 
       break;
     case TSimVoltages:
 
-      emitter = new prefr::DirectValuedEmitter( *_ps->particles, 1.f, true );
+      emitter = new prefr::DirectValuedEmitter( *_ps->particles, 1000.f, true );
       std::cout << "Created Voltages Emitter" << std::endl;
       updater = new prefr::DirectValuedUpdater( *_ps->particles );
       std::cout << "Created Voltages Updater" << std::endl;
@@ -1227,9 +1232,9 @@ void OpenGLWidget::GoToEnd( void )
 
 void OpenGLWidget::reducePlaybackSpeed( )
 {
-  _playbackSpeed -= 0.1f;
-  if( _playbackSpeed < 0.1f )
-    _playbackSpeed = 0.1f;
+  _playbackSpeed -= 0.01f;
+  if( _playbackSpeed < 0.01f )
+    _playbackSpeed = 0.01f;
 
   std::cout << "Playback speed: x" << _playbackSpeed << std::endl;
 }
@@ -1237,7 +1242,7 @@ void OpenGLWidget::reducePlaybackSpeed( )
 void OpenGLWidget::increasePlaybackSpeed( )
 {
 
-  _playbackSpeed += 0.1f;
+  _playbackSpeed += 0.01f;
 
   std::cout << "Playback speed: x" << _playbackSpeed << std::endl;
 }
