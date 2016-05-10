@@ -2,6 +2,8 @@
 #include <QOpenGLContext>
 #include <QMouseEvent>
 #include <QColorDialog>
+#include <QShortcut>
+
 #include <sstream>
 #include <string>
 #include <iostream>
@@ -55,6 +57,7 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _firstFrame( true )
   , _elapsedTimeRenderAcc( 0.0f )
   , _elapsedTimeSliderAcc( 0.0f )
+  , _elapsedTimeSimAcc( 0.0f )
 
 {
 #ifdef VISIMPL_USE_ZEQ
@@ -76,12 +79,18 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   // This is needed to get key evends
   this->setFocusPolicy( Qt::WheelFocus );
 
-  _maxFPS = 20.0f;
+  _maxFPS = 30.0f;
   _renderPeriod = 1.0f / _maxFPS;
 
-  _playbackSpeed = 5.0f;
-//  _playbackSpeed = 1.f;
+//  _playbackSpeed = 5.0f;
+  _playbackSpeed = 1.f;
+  _renderSpeed = 1.f;
 
+  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Minus ),
+                 this, SLOT( reducePlaybackSpeed( ) ));
+
+  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Plus ),
+                   this, SLOT( increasePlaybackSpeed( ) ));
 }
 
 
@@ -187,6 +196,7 @@ void OpenGLWidget::configureSimulation( void )
       SpikesCRange spikes =
           dynamic_cast< visimpl::SpikesPlayer* >( _player )->spikesNow( );
 
+      unsigned int count = 0;
       for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
       {
         if( _selectedGIDs.find( ( *spike ).second ) != _selectedGIDs.end( )
@@ -202,12 +212,15 @@ void OpenGLWidget::configureSimulation( void )
 //          {
 //            std::cout << "Spike not found for " << spike->second << std::endl;
 //          }
+          count += 1;
         }
 //        else
 //        {
 //          std::cout << "Spike not found for " << spike->second << std::endl;
 //        }
       }
+
+      std::cout << "Fired " << count << " spikes." << std::endl;
       break;
     }
     case TSimVoltages:
@@ -841,6 +854,7 @@ void OpenGLWidget::paintGL( void )
 
   _elapsedTimeRenderAcc += _deltaTime;
   _elapsedTimeSliderAcc += _deltaTime;
+//  _elapsedTimeSimAcc += _deltaTime;
 
 
   _frameCount++;
@@ -862,8 +876,9 @@ void OpenGLWidget::paintGL( void )
 
       if( _elapsedTimeRenderAcc >= _renderPeriod )
       {
-        _elapsedTimeRenderAcc *= _playbackSpeed;
-        _player->deltaTime( _elapsedTimeRenderAcc );
+        _elapsedTimeSimAcc = _elapsedTimeRenderAcc * _playbackSpeed;
+
+        _player->deltaTime( _elapsedTimeSimAcc );
 //        std::cout << _elapsedTimeRenderAcc << std::endl;
 
         configureSimulation( );
@@ -1209,3 +1224,20 @@ void OpenGLWidget::GoToEnd( void )
 
 }
 
+
+void OpenGLWidget::reducePlaybackSpeed( )
+{
+  _playbackSpeed -= 0.1f;
+  if( _playbackSpeed < 0.1f )
+    _playbackSpeed = 0.1f;
+
+  std::cout << "Playback speed: x" << _playbackSpeed << std::endl;
+}
+
+void OpenGLWidget::increasePlaybackSpeed( )
+{
+
+  _playbackSpeed += 0.1f;
+
+  std::cout << "Playback speed: x" << _playbackSpeed << std::endl;
+}

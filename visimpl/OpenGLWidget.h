@@ -123,6 +123,11 @@ public slots:
 
 #endif
 
+protected slots:
+
+  void reducePlaybackSpeed( );
+  void increasePlaybackSpeed( );
+
 protected:
 
   virtual void initializeGL( void );
@@ -200,10 +205,12 @@ protected:
   std::unordered_map< prefr::EmissionNode*, uint32_t > nodesGIDMap;
 
   float _playbackSpeed;
+  float _renderSpeed;
   float _maxFPS;
   float _renderPeriod;
   float _elapsedTimeRenderAcc;
   float _elapsedTimeSliderAcc;
+  float _elapsedTimeSimAcc;
 
   bool _alphaBlendingAccumulative;
   bool _showSelection;
