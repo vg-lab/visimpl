@@ -132,6 +132,7 @@ void OpenGLWidget::loadData( const std::string& fileName,
       spPlayer->LoadData( fileType, fileName, report );
       _player = spPlayer;
       _player->deltaTime( _deltaTime );
+
       break;
     }
     case TSimVoltages:
@@ -153,6 +154,21 @@ void OpenGLWidget::loadData( const std::string& fileName,
 
   createParticleSystem( scale );
   _player->connectZeq( _zeqUri );
+
+  switch( fileType )
+  {
+    case visimpl::TBlueConfig:
+      _playbackSpeed = 5.0f;
+      changeSimulationDecayValue( 5.0f );
+      break;
+    case visimpl::THDF5:
+      _playbackSpeed = 0.05f;
+      changeSimulationDecayValue( 1.0f );
+      break;
+
+    default:
+      break;
+  }
 
   this->_paint = true;
   update( );
@@ -220,7 +236,7 @@ void OpenGLWidget::configureSimulation( void )
 //        }
       }
 
-      std::cout << "Fired " << count << " spikes." << std::endl;
+//      std::cout << "Fired " << count << " spikes." << std::endl;
       break;
     }
     case TSimVoltages:
