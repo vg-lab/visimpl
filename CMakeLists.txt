@@ -4,9 +4,16 @@
 #   sergio.galindo@urjc.es
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
-cmake_minimum_required(VERSION 2.8)
-project(visimpl)
+# ViSimpl project and version
+project(visimpl VERSION 0.1.0)
+set(visimpl_VERSION_ABI 1)
+
+# Disable in source building
+if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
+  message(FATAL "no in source building allowed.")
+endif()
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake
   ${CMAKE_SOURCE_DIR}/CMake/common)
@@ -21,13 +28,6 @@ endif()
 
 include(GitExternal)
 
-# QtSimpleViewer version
-set(LAST_RELEASE 0.0.0)
-set(VERSION_MAJOR "0")
-set(VERSION_MINOR "1")
-set(VERSION_PATCH "0")
-set(VERSION_ABI 1)
-
 # description
 set(VISIMPL_DESCRIPTION "Visimpl")
 set(COMMON_PROJECT_DOMAIN gmrv.es)
@@ -36,36 +36,36 @@ include(Common)
 
 option(VISIMPL_WITH_ZEQ "VISIMPL_WITH_ZEQ" ON)
 
-common_package( Qt5Core 5.4 REQUIRED )
-common_package( Qt5Gui 5.4 REQUIRED )
-common_package( Qt5Widgets 5.4 REQUIRED )
-common_package( Qt5OpenGL REQUIRED )
-common_package( GLEW REQUIRED SYSTEM )
-# common_package( GLUT REQUIRED SYSTEM )
-common_package( OpenGL REQUIRED )
-common_package( Eigen3 REQUIRED SYSTEM)
-common_package( nsol REQUIRED )
-common_package( neurolots REQUIRED )
-common_package( prefr REQUIRED )
-common_package( Brion REQUIRED )
+common_find_package( Qt5Core 5.4 REQUIRED )
+common_find_package( Qt5Gui 5.4 REQUIRED )
+common_find_package( Qt5Widgets 5.4 REQUIRED )
+common_find_package( Qt5OpenGL REQUIRED )
+common_find_package( GLEW REQUIRED SYSTEM )
+# common_find_package( GLUT REQUIRED SYSTEM )
+common_find_package( OpenGL REQUIRED )
+common_find_package( Eigen3 REQUIRED SYSTEM)
+common_find_package( nsol REQUIRED )
+common_find_package( neurolots REQUIRED )
+common_find_package( prefr REQUIRED )
+common_find_package( Brion REQUIRED )
 
 if(VISIMPL_WITH_ZEQ)
-  common_package(zeq)
+  common_find_package(zeq)
   if ( ZEQ_FOUND )
     list(APPEND VISIMPL_DEPENDENT_LIBRARIES zeq)
-    common_package(Threads REQUIRED)
+    common_find_package(Threads REQUIRED)
     list(APPEND VISIMPL_DEPENDENT_LIBRARIES Threads)
   endif( )
 endif( )
 
 if(VISIMPL_WITH_GMRVZEQ)
-  common_package(gmrvzeq)
+  common_find_package(gmrvzeq)
   if ( GMRVZEQ_FOUND )
     list(APPEND VISIMPL_DEPENDENT_LIBRARIES gmrvzeq)
   endif( )
 endif( )
 
-common_package_post()
+common_find_package_post()
 
 add_subdirectory(src)
 
