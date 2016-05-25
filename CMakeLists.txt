@@ -35,6 +35,7 @@ set(COMMON_PROJECT_DOMAIN gmrv.es)
 include(Common)
 
 option(VISIMPL_WITH_ZEQ "VISIMPL_WITH_ZEQ" ON)
+option(VISIMPL_WITH_GMRVZEQ "VISIMPL_WITH_GMRVZEQ" ON)
 
 common_find_package( Qt5Core 5.4 REQUIRED )
 common_find_package( Qt5Gui 5.4 REQUIRED )
@@ -48,6 +49,29 @@ common_find_package( nsol REQUIRED )
 common_find_package( neurolots REQUIRED )
 common_find_package( prefr REQUIRED )
 common_find_package( Brion REQUIRED )
+common_find_package( HDF5 REQUIRED COMPONENTS C CXX )
+
+list( APPEND VISIMPL_DEPENDENT_LIBRARIES 
+  OpenGL 
+  GLEW 
+  Eigen3 
+  nsol 
+  neurolots 
+  prefr 
+  Brion 
+)
+
+if (QT5CORE_FOUND)
+  list(APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5Core)
+endif( )
+
+if (QT5WIDGETS_FOUND)
+  list(APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5Widgets)
+endif( )
+
+if (QT5OPENGL_FOUND)
+  list(APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5OpenGL)
+endif( )
 
 if(VISIMPL_WITH_ZEQ)
   common_find_package(zeq)
@@ -56,7 +80,6 @@ if(VISIMPL_WITH_ZEQ)
     common_find_package(Threads REQUIRED)
     list(APPEND VISIMPL_DEPENDENT_LIBRARIES Threads)
   endif( )
-endif( )
 
 if(VISIMPL_WITH_GMRVZEQ)
   common_find_package(gmrvzeq)
@@ -67,7 +90,10 @@ endif( )
 
 common_find_package_post()
 
-add_subdirectory(src)
+add_subdirectory( sumrice )
+add_subdirectory( visimpl )
+add_subdirectory( stackviz )
+add_subdirectory( examplesh5 )
 
 include(CPackConfig)
 include(DoxygenRule)
