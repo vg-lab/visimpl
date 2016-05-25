@@ -20,9 +20,11 @@ int main( int argc, char** argv )
 
   QApplication application(argc,argv);
 
-  visimpl::TSimulationType simType = visimpl::TSpikes;
+  visimpl::TSimulationType simType = visimpl::TSimSpikes;
+  visimpl::TDataType dataType = visimpl::TBlueConfig;
 
-  std::string blueConfig;
+  std::string networkFile;
+  std::string activityFile;
   std::string swcFile;
   std::string sceneFile;
   std::string zeqUri;
@@ -61,50 +63,36 @@ int main( int argc, char** argv )
     {
       if( ++i < argc )
       {
-        blueConfig = std::string( argv[ i ]);
+        networkFile = std::string( argv[ i ]);
+        dataType = visimpl::TBlueConfig;
       }
       else
         usageMessage( argv[0] );
 
     }
-//    if( std::strcmp( argv[ i ], "-swc" ) == 0 )
-//    {
-//      if( ++i < argc )
-//      {
-//        swcFile = std::string( argv[ i ]);
-//      }
-//      else
-//        usageMessage( argv[0] );
-//
-//    }
-//    if( std::strcmp( argv[ i ], "-xml" ) == 0 )
-//    {
-//      if( ++i < argc )
-//      {
-//        sceneFile = std::string( argv[ i ]);
-//      }
-//      else
-//        usageMessage( argv[0] );
-//
-//    }
-//    if( std::strcmp( argv[ i ], "-target" ) == 0 )
-//    {
-//      if(++i < argc )
-//      {
-//        target = std::string( argv[ i ]);
-//      }
-//      else
-//        usageMessage( argv[0] );
-//    }
+    else if( std::strcmp( argv[ i ], "-h5" ) == 0 )
+    {
+      if( i + 2 < argc )
+      {
+        ++i;
+        networkFile = std::string( argv[ i ]);
+        ++i;
+        activityFile = std::string( argv[ i ]);
+        dataType = visimpl::THDF5;
+      }
+      else
+        usageMessage( argv[0] );
+    }
+
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
-      simType = visimpl::TSpikes;
+      simType = visimpl::TSimSpikes;
     }
     else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
     {
       if(++i < argc )
       {
-        simType = visimpl::TVoltages;
+        simType = visimpl::TSimVoltages;
         report = std::string( argv[ i ]);
       }
       else
@@ -152,22 +140,18 @@ int main( int argc, char** argv )
   mainWindow.show( );
   mainWindow.init( zeqUri );
 
-  if ( atLeastTwo( !blueConfig.empty( ),
-                   !swcFile.empty( ),
-                   !sceneFile.empty( )))
+  if( !networkFile.empty( ))
+  switch( dataType )
   {
-    std::cerr << "Error: -swc, -xml and -bc options are exclusive" << std::endl;
-    usageMessage( argv[0] );
+    case visimpl::TDataType::TBlueConfig:
+      mainWindow.openBlueConfig( networkFile, simType, report );
+      break;
+    case visimpl::TDataType::THDF5:
+      mainWindow.openHDF5File( networkFile, simType, activityFile );
+      break;
+    default:
+      break;
   }
-
-  if ( blueConfig != "" )
-    mainWindow.openBlueConfig( blueConfig, simType, report );
-
-//  if ( swcFile != "" )
-//    mainWindow.openSWCFile( swcFile );
-//
-//  if ( sceneFile != "" )
-//    mainWindow.openXMLScene( sceneFile );
 
   return application.exec();
 

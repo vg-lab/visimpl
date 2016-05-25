@@ -65,7 +65,7 @@ void MainWindow::init( const std::string& zeqUri )
            this, SLOT( openXMLSceneThroughDialog( )));
 
   connect( _ui->actionOpenSWCFile, SIGNAL( triggered( )),
-           this, SLOT( openSWCFileThroughDialog( )));
+           this, SLOT( openHDF5ThroughDialog( )));
 
 #ifdef VISIMPL_USE_ZEQ
   _ui->actionShowSelection->setEnabled( true );
@@ -108,27 +108,11 @@ void MainWindow::openBlueConfig( const std::string& fileName,
                                  const std::string& reportLabel)
 {
   _openGLWidget->loadData( fileName,
-                           OpenGLWidget::TDataFileType::tBlueConfig,
+                           visimpl::TDataType::TBlueConfig,
                            simulationType, reportLabel );
 
+  configurePlayer( );
 
-  connect( _openGLWidget, SIGNAL( updateSlider( float )),
-           this, SLOT( UpdateSimulationSlider( float )));
-
-
-  _startTimeLabel->setText(
-      QString::number( (double)_openGLWidget->player( )->startTime( )));
-
-  _endTimeLabel->setText(
-        QString::number( (double)_openGLWidget->player( )->endTime( )));
-
-  _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
-      boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
-
-  changeEditorColorMapping( );
-  changeEditorSizeFunction( );
-  changeEditorDecayValue( );
-  initSummaryWidget( );
 }
 
 void MainWindow::openBlueConfigThroughDialog( void )
@@ -156,12 +140,12 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
     if( text == items[0] )
     {
-      simType = visimpl::TSpikes;
+      simType = visimpl::TSimSpikes;
       ok2 = true;
     }
     else
     {
-      simType = visimpl::TVoltages;
+      simType = visimpl::TSimVoltages;
 
       text = QInputDialog::getText(
           this, tr( "Please select report" ),
@@ -185,51 +169,69 @@ void MainWindow::openBlueConfigThroughDialog( void )
 }
 
 
-void MainWindow::openXMLScene( const std::string& fileName )
+
+void MainWindow::openHDF5File( const std::string& networkFile,
+                               visimpl::TSimulationType simulationType,
+                               const std::string& activityFile )
 {
-  _openGLWidget->loadData( fileName,
-    OpenGLWidget::TDataFileType::NsolScene );
+  _openGLWidget->loadData( networkFile,
+                           visimpl::TDataType::THDF5,
+                           simulationType,
+                           activityFile );
+
+  configurePlayer( );
 }
 
 
-void MainWindow::openXMLSceneThroughDialog( void )
-{
-#ifdef NSOL_USE_QT5CORE
-  QString path = QFileDialog::getOpenFileName(
-    this, tr( "Open XML Scene" ), _lastOpenedFileName,
-    tr( "XML ( *.xml);; All files (*)" ), nullptr,
-    QFileDialog::DontUseNativeDialog );
-
-  if ( path != QString( "" ))
-  {
-    std::string fileName = path.toStdString( );
-    openXMLScene( fileName );
-  }
-#endif
-
-}
-
-
-void MainWindow::openSWCFile( const std::string& fileName )
-{
-  _openGLWidget->loadData( fileName,
-    OpenGLWidget::TDataFileType::SWC );
-}
-
-
-void MainWindow::openSWCFileThroughDialog( void )
+void MainWindow::openHDF5ThroughDialog( void )
 {
   QString path = QFileDialog::getOpenFileName(
-    this, tr( "Open Swc File" ), _lastOpenedFileName,
-    tr( "swc ( *.swc);; All files (*)" ), nullptr,
+    this, tr( "Open a H5 network file" ), _lastOpenedFileName,
+    tr( "hdf5 ( *.h5);; All files (*)" ), nullptr,
     QFileDialog::DontUseNativeDialog );
 
-  if ( path != QString( "" ))
+  std::string networkFile;
+  std::string activityFile;
+
+  if ( path == QString( "" ))
+    return;
+
+  networkFile = path.toStdString( );
+
+  path = QFileDialog::getOpenFileName(
+  this, tr( "Open a H5 activity file" ), path,
+  tr( "hdf5 ( *.h5);; All files (*)" ), nullptr,
+  QFileDialog::DontUseNativeDialog );
+
+  if( path == QString( "" ))
   {
-    std::string fileName = path.toStdString( );
-    openSWCFile( fileName );
+    return;
   }
 
+  activityFile = path.toStdString( );
+
+  openHDF5File( networkFile, visimpl::TSimSpikes, activityFile );
+}
+
+void MainWindow::configurePlayer( void )
+{
+  connect( _openGLWidget, SIGNAL( updateSlider( float )),
+             this, SLOT( UpdateSimulationSlider( float )));
+
+
+  _startTimeLabel->setText(
+      QString::number( (double)_openGLWidget->player( )->startTime( )));
+
+  _endTimeLabel->setText(
+        QString::number( (double)_openGLWidget->player( )->endTime( )));
+
+  _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
+      boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+
+  changeEditorColorMapping( );
+  changeEditorSizeFunction( );
+  changeEditorDecayValue( );
+  initSummaryWidget( );
 }
 
 void MainWindow::initPlaybackDock( void )
@@ -465,7 +467,7 @@ void MainWindow::initSummaryWidget( void )
   visimpl::TSimulationType simType =
       _openGLWidget->player( )->simulationType( );
 
-  if( simType == visimpl::TSpikes )
+  if( simType == visimpl::TSimSpikes )
   {
     visimpl::SpikesPlayer* spikesPlayer =
         dynamic_cast< visimpl::SpikesPlayer* >( _openGLWidget->player( ));
@@ -475,6 +477,7 @@ void MainWindow::initSummaryWidget( void )
 //    _summary->AddGIDSelection( gids );
     _summary->Init( spikesPlayer->spikeReport( ),
                              spikesPlayer->gids( ));
+//    _summary->bins( 5000 );
 //    _summary->setVisible( true );
 
   }

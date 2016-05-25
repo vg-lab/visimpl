@@ -11,7 +11,7 @@
 namespace prefr
 {
 
-  static float invRandMax = 1.0f / RAND_MAX;
+//  static float invRandMax = 1.0f / RAND_MAX;
 
   CompositeColorEmitter::
   CompositeColorEmitter( const ParticleCollection& particlesArray,
@@ -34,8 +34,8 @@ namespace prefr
     if (cProto && (!current->Alive() || override))
     {
       if( current->life < 0.0f )
-        current->life = glm::clamp(rand() * invRandMax, 0.0f, 1.0f) *
-           cProto->lifeInterval + cProto->minLife;
+        current->life = cProto->minLife;
+      current->alive = true;
 
      current->velocity = node->GetEmissionVelocityDirection();
      current->position = node->GetEmissionPosition();

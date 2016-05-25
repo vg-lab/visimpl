@@ -66,10 +66,10 @@ public:
   ~OpenGLWidget( void );
 
   void createNeuronsCollection( void );
-  void createParticleSystem( void );
+  void createParticleSystem( float scale = 1.0f );
   void loadData( const std::string& fileName,
-                 const TDataFileType fileType = TDataFileType::tBlueConfig,
-                 visimpl::TSimulationType simulationType = visimpl::TSpikes,
+                 const visimpl::TDataType = visimpl::TDataType::TBlueConfig,
+                 visimpl::TSimulationType simulationType = visimpl::TSimSpikes,
                  const std::string& report = std::string( "" ));
 
   void idleUpdate( bool idleUpdate_ = true )
@@ -122,6 +122,11 @@ public slots:
   void ClearSelection( void );
 
 #endif
+
+protected slots:
+
+  void reducePlaybackSpeed( );
+  void increasePlaybackSpeed( );
 
 protected:
 
@@ -200,10 +205,12 @@ protected:
   std::unordered_map< prefr::EmissionNode*, uint32_t > nodesGIDMap;
 
   float _playbackSpeed;
+  float _renderSpeed;
   float _maxFPS;
   float _renderPeriod;
   float _elapsedTimeRenderAcc;
   float _elapsedTimeSliderAcc;
+  float _elapsedTimeSimAcc;
 
   bool _alphaBlendingAccumulative;
   bool _showSelection;

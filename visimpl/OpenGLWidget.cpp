@@ -2,6 +2,8 @@
 #include <QOpenGLContext>
 #include <QMouseEvent>
 #include <QColorDialog>
+#include <QShortcut>
+
 #include <sstream>
 #include <string>
 #include <iostream>
@@ -50,11 +52,12 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _currentClearColor( 20, 20, 20, 0 )
   , _particlesShader( nullptr )
   , _ps( nullptr )
-  , _simulationType( TSimulationType::TUndefined )
+  , _simulationType( TSimulationType::TSimNetwork )
   , _player( nullptr )
   , _firstFrame( true )
   , _elapsedTimeRenderAcc( 0.0f )
   , _elapsedTimeSliderAcc( 0.0f )
+  , _elapsedTimeSimAcc( 0.0f )
 
 {
 #ifdef VISIMPL_USE_ZEQ
@@ -76,11 +79,18 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   // This is needed to get key evends
   this->setFocusPolicy( Qt::WheelFocus );
 
-  _maxFPS = 20.0f;
+  _maxFPS = 30.0f;
   _renderPeriod = 1.0f / _maxFPS;
 
-  _playbackSpeed = 5.0f;
+//  _playbackSpeed = 5.0f;
+  _playbackSpeed = 1.f;
+  _renderSpeed = 1.f;
 
+  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Minus ),
+                 this, SLOT( reducePlaybackSpeed( ) ));
+
+  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Plus ),
+                   this, SLOT( increasePlaybackSpeed( ) ));
 }
 
 
@@ -103,51 +113,66 @@ OpenGLWidget::~OpenGLWidget( void )
 
 
 void OpenGLWidget::loadData( const std::string& fileName,
-                             const TDataFileType fileType,
+                             const visimpl::TDataType fileType,
                              TSimulationType simulationType,
                              const std::string& report)
 {
 
   makeCurrent( );
 
+  _simulationType = simulationType;
+
+  switch( _simulationType )
+  {
+    case TSimSpikes:
+    {
+      _deltaTime = 0.5f;
+//        _player = new SpikesPlayer( fileName, true );
+      SpikesPlayer* spPlayer = new SpikesPlayer( );
+      spPlayer->LoadData( fileType, fileName, report );
+      _player = spPlayer;
+      _player->deltaTime( _deltaTime );
+
+      break;
+    }
+    case TSimVoltages:
+    {
+      _player = new VoltagesPlayer( fileName, report, true);
+      _deltaTime = _player->deltaTime( );
+      break;
+    }
+    default:
+      VISIMPL_THROW("Cannot load an undefined simulation type.");
+
+  }
+
+  float scale = 1.0f;
+  if( fileType == visimpl::THDF5 )
+  {
+    scale = 500.f;
+  }
+
+  createParticleSystem( scale );
+  _player->connectZeq( _zeqUri );
+
   switch( fileType )
   {
-  case TDataFileType::tBlueConfig:
+    case visimpl::TBlueConfig:
+      _playbackSpeed = 5.0f;
+      changeSimulationDecayValue( 5.0f );
+      break;
+    case visimpl::THDF5:
+      _playbackSpeed = 0.05f;
+      changeSimulationDecayValue( 1.0f );
+      break;
 
-    _simulationType = simulationType;
-
-    switch( _simulationType )
-    {
-      case TSpikes:
-        _deltaTime = 0.5f;
-        _player = new SpikesPlayer( fileName, true );
-        _player->deltaTime( _deltaTime );
-        break;
-
-      case TVoltages:
-        _player = new VoltagesPlayer( fileName, report, true);
-        _deltaTime = _player->deltaTime( );
-        break;
-
-      default:
-        VISIMPL_THROW("Cannot load an undefined simulation type.");
-
-    }
-
-    createParticleSystem( );
-    _player->connectZeq( _zeqUri );
-
-    break;
-
-  default:
-    throw std::runtime_error( "Data file type not supported" );
-
+    default:
+      break;
   }
 
   this->_paint = true;
   update( );
 
-  return;
 }
 
 
@@ -182,11 +207,12 @@ void OpenGLWidget::configureSimulation( void )
 
   switch( _simulationType )
   {
-    case TSpikes:
+    case TSimSpikes:
     {
       SpikesCRange spikes =
           dynamic_cast< visimpl::SpikesPlayer* >( _player )->spikesNow( );
 
+      unsigned int count = 0;
       for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
       {
         if( _selectedGIDs.find( ( *spike ).second ) != _selectedGIDs.end( )
@@ -196,13 +222,24 @@ void OpenGLWidget::configureSimulation( void )
           if( res != gidNodesMap.end( ))
           {
             dynamic_cast< prefr::ColorEmissionNode* >(( *res ).second )->
-                killParticles( );
+                killParticles( true  );
           }
+//          else
+//          {
+//            std::cout << "Spike not found for " << spike->second << std::endl;
+//          }
+          count += 1;
         }
+//        else
+//        {
+//          std::cout << "Spike not found for " << spike->second << std::endl;
+//        }
       }
+
+//      std::cout << "Fired " << count << " spikes." << std::endl;
       break;
     }
-    case TVoltages:
+    case TSimVoltages:
     {
       visimpl::VoltagesPlayer* vplayer =
           dynamic_cast< visimpl::VoltagesPlayer* >(_player);
@@ -257,7 +294,7 @@ void OpenGLWidget::createNeuronsCollection( void )
 //  _neuronsCollection = new neurolots::NeuronsCollection( _camera );
 }
 
-void OpenGLWidget::createParticleSystem( void )
+void OpenGLWidget::createParticleSystem( float scale )
 {
   makeCurrent( );
   prefr::Config::init( );
@@ -353,6 +390,9 @@ void OpenGLWidget::createParticleSystem( void )
 
     glm::vec3 position( brionPos.x( ), brionPos.y( ), brionPos.z( ));
 
+    if( scale != 1.0f )
+      position *= scale;
+
     cameraPivot += position;
 
     start = i * partPerEmitter;
@@ -362,12 +402,12 @@ void OpenGLWidget::createParticleSystem( void )
 
     switch( _simulationType )
     {
-    case TSpikes:
+    case TSimSpikes:
       emissionNode = new prefr::ColorEmissionNode( collection, position,
                                                    glm::vec4( 0, 0, 0, 0 ),
                                                    true );
       break;
-    case TVoltages:
+    case TSimVoltages:
       emissionNode = new prefr::DirectValuedEmissionNode(
           collection, position, glm::vec4( 0, 0, 0, 0 ), true );
 
@@ -401,26 +441,31 @@ void OpenGLWidget::createParticleSystem( void )
 
   switch( _simulationType )
   {
-    case TSpikes:
+    case TSimSpikes:
       emitter = new prefr::CompositeColorEmitter( *_ps->particles, 1.f, true );
       std::cout << "Created Spikes Emitter" << std::endl;
       updater = new prefr::CompositeColorUpdater( *_ps->particles );
       std::cout << "Created Spikes Updater" << std::endl;
 
-      _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
-      _prototype->color.Insert( 0.1f, ( glm::vec4(1, 0, 0, 0.2 )));
-      _prototype->color.Insert( 0.7f, ( glm::vec4(1, 0.5, 0, 0.2 )));
-      _prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 0.3, 0.05 )));
+//      _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
+//      _prototype->color.Insert( 0.1f, ( glm::vec4(1, 0, 0, 0.2 )));
+//      _prototype->color.Insert( 0.7f, ( glm::vec4(1, 0.5, 0, 0.2 )));
+//      _prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 0.3, 0.05 )));
+
+      _prototype->color.Insert( 0.0f, ( glm::vec4(0.f, 1.f, 0.f, 0.05)));
+      _prototype->color.Insert( 0.35f, ( glm::vec4(1, 0, 0, 0.2 )));
+      _prototype->color.Insert( 0.7f, ( glm::vec4(1.f, 1.f, 0, 0.2 )));
+      _prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 1.f, 0.2 )));
 
       _prototype->velocity.Insert( 0.0f, 0.0f );
 
-      _prototype->size.Insert( 0.0f, 30.0f );
+      _prototype->size.Insert( 0.0f, 20.0f );
       _prototype->size.Insert( 1.0f, 10.0f );
 
       break;
-    case TVoltages:
+    case TSimVoltages:
 
-      emitter = new prefr::DirectValuedEmitter( *_ps->particles, 1.f, true );
+      emitter = new prefr::DirectValuedEmitter( *_ps->particles, 1000.f, true );
       std::cout << "Created Voltages Emitter" << std::endl;
       updater = new prefr::DirectValuedUpdater( *_ps->particles );
       std::cout << "Created Voltages Updater" << std::endl;
@@ -480,10 +525,10 @@ void OpenGLWidget::resetParticles( void )
   {
     switch( _simulationType )
     {
-      case TSpikes:
+      case TSimSpikes:
         dynamic_cast< prefr::ColorEmissionNode* >( *node )->killParticles( false );
       break;
-      case TVoltages:
+      case TSimVoltages:
         dynamic_cast< prefr::DirectValuedEmissionNode* >( *node )->killParticles( false );
       break;
       default:
@@ -830,6 +875,7 @@ void OpenGLWidget::paintGL( void )
 
   _elapsedTimeRenderAcc += _deltaTime;
   _elapsedTimeSliderAcc += _deltaTime;
+//  _elapsedTimeSimAcc += _deltaTime;
 
 
   _frameCount++;
@@ -851,8 +897,9 @@ void OpenGLWidget::paintGL( void )
 
       if( _elapsedTimeRenderAcc >= _renderPeriod )
       {
-        _elapsedTimeRenderAcc *= _playbackSpeed;
-        _player->deltaTime( _elapsedTimeRenderAcc );
+        _elapsedTimeSimAcc = _elapsedTimeRenderAcc * _playbackSpeed;
+
+        _player->deltaTime( _elapsedTimeSimAcc );
 //        std::cout << _elapsedTimeRenderAcc << std::endl;
 
         configureSimulation( );
@@ -1198,3 +1245,20 @@ void OpenGLWidget::GoToEnd( void )
 
 }
 
+
+void OpenGLWidget::reducePlaybackSpeed( )
+{
+  _playbackSpeed -= 0.01f;
+  if( _playbackSpeed < 0.01f )
+    _playbackSpeed = 0.01f;
+
+  std::cout << "Playback speed: x" << _playbackSpeed << std::endl;
+}
+
+void OpenGLWidget::increasePlaybackSpeed( )
+{
+
+  _playbackSpeed += 0.01f;
+
+  std::cout << "Playback speed: x" << _playbackSpeed << std::endl;
+}

@@ -56,12 +56,31 @@ namespace visimpl
 //    init( );
   }
 
-  MultiLevelHistogram::MultiLevelHistogram( const brion::SpikeReport& spikeReport )
+//  MultiLevelHistogram::MultiLevelHistogram( const brion::SpikeReport& spikeReport )
+//  : QFrame( nullptr )
+//  //, _maxValueHistogramLocal( 0 )
+//  , _spikes( &spikeReport.getSpikes( ))
+//  , _startTime( spikeReport.getStartTime( ))
+//  , _endTime( spikeReport.getEndTime( ))
+//  , _scaleFuncLocal( nullptr )
+//  , _scaleFuncGlobal( nullptr )
+//  , _colorScaleLocal( T_COLOR_LINEAR )
+//  , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
+//  , _prevColorScaleLocal( T_COLOR_UNDEFINED )
+//  , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
+//  , _normRule( T_NORM_MAX )
+//  , _repMode( T_REP_DENSE )
+//  , _lastMousePosition( nullptr )
+//  {
+////    init( );
+//  }
+
+  MultiLevelHistogram::MultiLevelHistogram( const visimpl::SpikeData& spikeReport )
   : QFrame( nullptr )
   //, _maxValueHistogramLocal( 0 )
-  , _spikes( &spikeReport.getSpikes( ))
-  , _startTime( spikeReport.getStartTime( ))
-  , _endTime( spikeReport.getEndTime( ))
+  , _spikes( &spikeReport.spikes( ))
+  , _startTime( spikeReport.startTime( ))
+  , _endTime( spikeReport.endTime( ))
   , _scaleFuncLocal( nullptr )
   , _scaleFuncGlobal( nullptr )
   , _colorScaleLocal( T_COLOR_LINEAR )
@@ -75,17 +94,26 @@ namespace visimpl
 //    init( );
   }
 
+
   void MultiLevelHistogram::Spikes( const brion::Spikes& spikes, float startTime, float endTime )
   {
     _spikes = &spikes;
     _startTime = startTime;
     _endTime = endTime;
   }
-  void MultiLevelHistogram::Spikes( const brion::SpikeReport& spikeReport )
+
+//  void MultiLevelHistogram::Spikes( const brion::SpikeReport& spikeReport )
+//  {
+//    _spikes = &spikeReport.getSpikes( );
+//    _startTime = spikeReport.getStartTime( );
+//    _endTime = spikeReport.getEndTime( );
+//  }
+
+  void MultiLevelHistogram::Spikes( const visimpl::SpikeData& spikeReport )
   {
-    _spikes = &spikeReport.getSpikes( );
-    _startTime = spikeReport.getStartTime( );
-    _endTime = spikeReport.getEndTime( );
+    _spikes = &spikeReport.spikes( );
+    _startTime = spikeReport.startTime( );
+    _endTime = spikeReport.endTime( );
   }
 
   void MultiLevelHistogram::init( unsigned int binsNumber, float zoomFactor_ )
@@ -138,9 +166,11 @@ namespace visimpl
       {
         ( *globalIt )++;
         if( !filter ||  _filteredGIDs.find( spike->second ) != _filteredGIDs.end( ))
+        {
           bin++;
+          spike++;
+        }
 
-        spike++;
         counter++;
       }
 
@@ -148,7 +178,7 @@ namespace visimpl
       globalIt++;
     }
 
-  //  std::cout << "Total spikes: " << counter << std::endl;
+    std::cout << "Total spikes: " << counter << std::endl;
 
     unsigned int cont = 0;
     unsigned int maxPos = 0;

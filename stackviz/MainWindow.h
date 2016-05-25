@@ -37,6 +37,10 @@ public:
                        visimpl::TSimulationType simulationType,
                        const std::string& report);
 
+  void openHDF5File( const std::string& networkFile,
+                     visimpl::TSimulationType simulationType,
+                     const std::string& activityFile = "" );
+
 public slots:
 
   void openBlueConfigThroughDialog( void );
@@ -70,6 +74,7 @@ protected slots:
 protected:
 
   void resizeEvent(QResizeEvent * event);
+  void configurePlayer( void );
 
 #ifdef VISIMPL_USE_ZEQ
 

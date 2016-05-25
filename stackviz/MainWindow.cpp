@@ -67,12 +67,16 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
   switch( _simulationType )
  {
-   case visimpl::TSpikes:
-     _player = new visimpl::SpikesPlayer( fileName, true );
+   case visimpl::TSimSpikes:
+   {
+     visimpl::SpikesPlayer* player = new visimpl::SpikesPlayer( );
+     player->LoadData( visimpl::TDataType::TBlueConfig,  fileName );
+     _player = player;
+
 //     _player->deltaTime( _deltaTime );
      break;
-
-   case visimpl::TVoltages:
+   }
+   case visimpl::TSimVoltages:
      _player = new visimpl::VoltagesPlayer( fileName, reportLabel, true);
 //     _deltaTime = _player->deltaTime( );
      break;
@@ -82,35 +86,8 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
  }
 
+  configurePlayer( );
 
-  // _player->loadData( fileName,
-  //                          OpenGLWidget::TDataFileType::tBlueConfig,
-  //                          simulationType, reportLabel );
-
-
-  // connect( _player, SIGNAL( updateSlider( float )),
-  //          this, SLOT( UpdateSimulationSlider( float )));
-
-
-   _startTimeLabel->setText(
-       QString::number( (double)_player->startTime( )));
-
-   _endTimeLabel->setText(
-         QString::number( (double)_player->endTime( )));
-
-#if VISIMPL_USE_GMRVZEQ
-   _player->connectZeq( _zeqUri );
-
-   _player->zeqEvents( )->frameReceived.connect(
-       boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
-
-   _player->zeqEvents( )->playbackOpReceived.connect(
-       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
-#endif
-
-
-  // changeEditorColorMapping( );
-   initSummaryWidget( );
 }
 
 void MainWindow::openBlueConfigThroughDialog( void )
@@ -138,12 +115,12 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
      if( text == items[0] )
      {
-       simType = visimpl::TSpikes;
+       simType = visimpl::TSimSpikes;
        ok2 = true;
      }
      else
      {
-       simType = visimpl::TVoltages;
+       simType = visimpl::TSimVoltages;
 
        text = QInputDialog::getText(
            this, tr( "Please select report" ),
@@ -164,6 +141,42 @@ void MainWindow::openBlueConfigThroughDialog( void )
    }
 #endif
 
+}
+
+
+void MainWindow::openHDF5File( const std::string& networkFile,
+                               visimpl::TSimulationType simulationType,
+                               const std::string& activityFile )
+{
+  _simulationType = simulationType;
+
+  visimpl::SpikesPlayer* player = new visimpl::SpikesPlayer( );
+  player->LoadData( visimpl::TDataType::THDF5,  networkFile, activityFile );
+  _player = player;
+
+  configurePlayer( );
+}
+
+void MainWindow::configurePlayer( void )
+{
+  _startTimeLabel->setText(
+      QString::number( (double)_player->startTime( )));
+
+  _endTimeLabel->setText(
+        QString::number( (double)_player->endTime( )));
+
+#if VISIMPL_USE_GMRVZEQ
+  _player->connectZeq( _zeqUri );
+
+  _player->zeqEvents( )->frameReceived.connect(
+      boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
+
+  _player->zeqEvents( )->playbackOpReceived.connect(
+      boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+#endif
+
+ // changeEditorColorMapping( );
+  initSummaryWidget( );
 }
 
 void MainWindow::initPlaybackDock( )
@@ -282,7 +295,7 @@ void MainWindow::initSummaryWidget( )
 //                           QSizePolicy::Preferred );
 
 
-  if( _simulationType == visimpl::TSpikes )
+  if( _simulationType == visimpl::TSimSpikes )
   {
     visimpl::SpikesPlayer* spikesPlayer =
         dynamic_cast< visimpl::SpikesPlayer* >( _player);

@@ -36,15 +36,15 @@ public:
                        visimpl::TSimulationType simulationType,
                        const std::string& report);
 
-  void openXMLScene( const std::string& fileName );
-  void openSWCFile( const std::string& fileName );
+  void openHDF5File( const std::string& networkFile,
+                     visimpl::TSimulationType simulationType,
+                     const std::string& activityFile = "" );
 
 
 public slots:
 
   void openBlueConfigThroughDialog( void );
-  void openXMLSceneThroughDialog( void );
-  void openSWCFileThroughDialog( void );
+  void openHDF5ThroughDialog( void );
 
   void PlayPause( bool notify = true );
   void Play( bool notify = true );
@@ -87,6 +87,7 @@ protected slots:
 
 protected:
 
+  void configurePlayer( void );
 
   void _onSelectionEvent( const zeq::Event& event_ );
   void _setZeqUri( const std::string& );

@@ -206,16 +206,29 @@ Summary::Summary( QWidget* parent_,
   }
 }
 
-void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids_ )
+//void Summary::Init( brion::SpikeReport* spikes_, brion::GIDSet gids_ )
+//{
+//  _spikeReport = spikes_;
+//  _gids = GIDUSet( gids_.begin( ), gids_.end( ));
+//}
+
+void Summary::Init( visimpl::SpikeData* spikes_, brion::GIDSet gids_ )
 {
   _spikeReport = spikes_;
   _gids = GIDUSet( gids_.begin( ), gids_.end( ));
+
+  Init( );
+}
+
+void Summary::Init( void )
+{
+
 //
 //  _filteredGIDs = gids;
 //
 //  CreateSummarySpikes( gids );
 //  UpdateGradientColors( );
-  _mainHistogram = new visimpl::MultiLevelHistogram( *spikes_ );
+  _mainHistogram = new visimpl::MultiLevelHistogram( *_spikeReport );
   _mainHistogram->setMinimumHeight( _heightPerRow );
   _mainHistogram->setMaximumHeight( _heightPerRow );
   _mainHistogram->colorScaleLocal( _colorScaleLocal );
