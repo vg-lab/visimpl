@@ -7,12 +7,13 @@
 
 #include "ZeqEventsManager.h"
 
+#include <thread>
 
 ZeqEventsManager::ZeqEventsManager( const std::string& zeqUri_ )
 {
 
-#ifdef VISIMPL_USE_ZEQ
-  _setZeqUri( zeqUri_ );
+#ifdef VISIMPL_USE_ZEROEQ
+  _setZeqSession( zeqUri_ );
 #endif
 }
 
@@ -24,82 +25,112 @@ ZeqEventsManager::ZeqEventsManager( const std::string& zeqUri_ )
 //  float ZeqEventsManager::elapsedTime( void );
 //  float ZeqEventsManager::deltaTime( void );
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
 void ZeqEventsManager::sendFrame( const float& start, const float& end,
                   const float& current ) const
 {
   unsigned int factor = 10000;
 
-  zeq::hbp::data::Frame frame;
-  frame.current = current * factor;
-  frame.start = start * factor;
-  frame.end = end * factor;
-  frame.delta = 10000;
+//  zeq::hbp::data::Frame frame;
+//  frame.current = current * factor;
+//  frame.start = start * factor;
+//  frame.end = end * factor;
+//  frame.delta = 10000;
 
-  _publisher->publish( zeq::hbp::serializeFrame( frame ));
+  lexis::render::Frame frame;
+
+  frame.setCurrent( current * factor );
+  frame.setStart( start * factor );
+  frame.setEnd( end * factor );
+  frame.setDelta( 10000 );
+
+  _publisher->publish( frame );
 }
 
-void ZeqEventsManager::sendPlaybackOp( zeq::gmrv::PlaybackOperation operation ) const
+void ZeqEventsManager::sendPlaybackOp( zeroeq::gmrv::PlaybackOperation operation ) const
 {
-  _publisher->publish( zeq::gmrv::serializePlaybackOperation( operation ));
+  zeroeq::gmrv::PlaybackOp op;
+  op.setOp(( uint32_t ) operation );
+  _publisher->publish( op );
 }
 
 
-void* ZeqEventsManager::_Subscriber( void* subs )
+//void* ZeqEventsManager::_Subscriber( void* subs )
+//{
+////  zeroeq::Subscriber* subscriber = dynamic_cast< zeroeq::Subscriber* >( subs );
+////  while ( true )
+////  {
+////    subscriber->receive( 10000 );
+////  }
+////  pthread_exit( NULL );
+//}
+
+void ZeqEventsManager::_onPlaybackOpEvent( zeroeq::gmrv::ConstPlaybackOpPtr event_ )
 {
-  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
-  while ( true )
-  {
-    subscriber->receive( 10000 );
-  }
-  pthread_exit( NULL );
+  playbackOpReceived( event_->getOp( ) );
 }
 
-void ZeqEventsManager::_onPlaybackOpEvent( const zeq::Event& event_ )
+void ZeqEventsManager::_onFrameEvent( /*lexis::render::ConstFramePtr event_*/ )
 {
-  zeq::gmrv::PlaybackOperation operation =
-      zeq::gmrv::deserializePlaybackOperation( event_ );
+  //  _currentFrame = zeq::hbp::deserializeFrame( event_ );
 
-  playbackOpReceived( ( unsigned int ) operation );
+  float invDelta = 1.0f / float( _currentFrame.getDelta( ) );
 
-}
-
-void ZeqEventsManager::_onFrameEvent( const zeq::Event& event_ )
-{
-  _lastFrame = _currentFrame;
-  _currentFrame = zeq::hbp::deserializeFrame( event_ );
-
-  float invDelta = 1.0f / float( _currentFrame.delta );
-
-  float start = _currentFrame.start * invDelta;
+  float start = _currentFrame.getStart( ) * invDelta;
 
   float percentage;
 
-  percentage = ( float( _currentFrame.current ) * invDelta - start )
-      / ( float( _currentFrame.end ) * invDelta - start );
+  percentage = ( float( _currentFrame.getCurrent( ) ) * invDelta - start )
+      / ( float( _currentFrame.getEnd( ) ) * invDelta - start );
 
 //  std::cout << "Received percentage " << percentage << std::endl;
+  _lastFrame = _currentFrame;
 
   assert( percentage >= 0.0f && percentage <= 1.0f );
   frameReceived( percentage );
 
+
 }
 
-void ZeqEventsManager::_setZeqUri( const std::string& uri_ )
+void ZeqEventsManager::_setZeqSession( const std::string& session_ )
 {
-  _zeqConnection = true;
-  _uri =  servus::URI( uri_ );
-  _subscriber = new zeq::Subscriber( _uri );
-  _publisher = new zeq::Publisher( _uri );
+//  _zeqConnection = true;
+//  _uri =  servus::URI( uri_ );
+//  _subscriber = new zeq::Subscriber( _uri );
+//  _publisher = new zeq::Publisher( _uri );
+//
+//  _subscriber->registerHandler( zeq::hbp::EVENT_FRAME,
+//      boost::bind( &ZeqEventsManager::_onFrameEvent , this, _1 ));
+//
+//  _subscriber->registerHandler( zeq::gmrv::EVENT_PLAYBACKOP,
+//      boost::bind( &ZeqEventsManager::_onPlaybackOpEvent , this, _1 ));
+//
+//  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
 
-  _subscriber->registerHandler( zeq::hbp::EVENT_FRAME,
-      boost::bind( &ZeqEventsManager::_onFrameEvent , this, _1 ));
+  _zeroeqConnection = true;
 
-  _subscriber->registerHandler( zeq::gmrv::EVENT_PLAYBACKOP,
-      boost::bind( &ZeqEventsManager::_onPlaybackOpEvent , this, _1 ));
+  _subscriber = new zeroeq::Subscriber( session_ );
+  _publisher = new zeroeq::Publisher( session_ );
 
-  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
+  _currentFrame.registerDeserializedCallback(
+      [&]( ){ _lastFrame = _currentFrame; _onFrameEvent( ); } );
+
+  _subscriber->subscribe( _currentFrame );
+
+  _subscriber->subscribe( zeroeq::gmrv::PlaybackOp::ZEROBUF_TYPE_IDENTIFIER(),
+                          [&]( const void* data, const size_t size )
+                          {
+                            _onPlaybackOpEvent( zeroeq::gmrv::PlaybackOp::create( data, size ));
+                          } );
+
+//  _subscriber->subscribe( lexis::render::Frame::ZEROBUF_TYPE_IDENTIFIER(),
+//                          [&]( const void* data, const size_t size )
+//                          {
+//                           _onFrameEvent( ::lexis::render::Frame::create( data, size ));
+//                          } );
+
+  std::thread thread( [&]() { while( true) _subscriber->receive( 10000 );});
 
 }
 

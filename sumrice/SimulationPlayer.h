@@ -13,7 +13,7 @@
 
 #include <unordered_map>
 //
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 //  #include <zeq/zeq.h>
 //  #include <zeq/hbp/hbp.h>
 //  #include <servus/uri.h>
@@ -98,9 +98,9 @@ namespace visimpl
 
     TSimulationType simulationType( void );
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
-#ifdef VISIMPL_USE_GMRVZEQ
+#ifdef VISIMPL_USE_GMRVLEX
     ZeqEventsManager* zeqEvents( void );
 #endif
 
@@ -141,7 +141,7 @@ namespace visimpl
 //    brain::Circuit* _circuit;
     TGIDSet _gids;
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
     ZeqEventsManager* _zeqEvents;
 #endif
 

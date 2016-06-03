@@ -193,7 +193,7 @@ Summary::Summary( QWidget* parent_,
 
     this->setLayout( upperLayout );
 
-  #ifdef VISIMPL_USE_ZEQ
+  #ifdef VISIMPL_USE_ZEROEQ
 
     _insertionTimer.setSingleShot( false );
     _insertionTimer.setInterval( 250 );
@@ -308,7 +308,7 @@ void Summary::Init( void )
 }
 
 void Summary::AddNewHistogram( const visimpl::Selection& selection
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
                        , bool deferred
 #endif
                        )
@@ -323,7 +323,7 @@ void Summary::AddNewHistogram( const visimpl::Selection& selection
   {
 
     std::cout << "Adding new selection with size " << selected.size( ) << std::endl;
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
     if( deferred )
     {

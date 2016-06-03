@@ -1,18 +1,12 @@
 add_definitions(-DVISIMPL_SKIP_GLEW_INCLUDE )
 
+ set(PROJECT_VERSION_ABI ${${PROJECT_NAME}_VERSION_ABI})
+
 set(Name Visimpl)
 set(NAME VISIMPL)
 set(namespace visimpl)
 set(NAMESPACE VISIMPL)
 set(INCLUDE_NAME visimpl)
-configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/api.h
-  ${PROJECT_BINARY_DIR}/include/visimpl/api.h @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.h
-  ${PROJECT_BINARY_DIR}/include/visimpl/version.h @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.cpp
-  ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp @ONLY)
-
-
 
 set(UIDIR ${PROJECT_SOURCE_DIR}/ui)
 set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
@@ -27,11 +21,15 @@ configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/api.h
 configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.h
   ${PROJECT_BINARY_DIR}/include/visimpl/version.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.cpp
-  ${PROJECT_BINARY_DIR}/src/version.cpp @ONLY)
+  ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp @ONLY)
+
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
 
 
 set(VISIMPL_SOURCES
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
+  visimpl.ui
   visimpl.cpp
   MainWindow.cpp
   OpenGLWidget.cpp
@@ -60,14 +58,14 @@ set(VISIMPL_HEADERS
   prefr/DirectValuedEmitter.h  
 )
 
-set(VISIMPL_MOC_HEADERS
-  MainWindow.h
-  OpenGLWidget.h
-)
+#set(VISIMPL_MOC_HEADERS
+#  MainWindow.h
+#  OpenGLWidget.h
+#)
 
-set(VISIMPL_UI_FORMS
-  ${UIDIR}/visimpl.ui
-)
+#set(VISIMPL_UI_FORMS
+#  ${UIDIR}/
+#)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -110,8 +108,12 @@ if (ZEQ_FOUND)
   list(APPEND VISIMPL_LINK_LIBRARIES zeq zeqHBP ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-if (GMRVZEQ_FOUND)
-  list( APPEND VISIMPL_LINK_LIBRARIES gmrvzeq )
+if (GMRVLEX_FOUND)
+  list( APPEND VISIMPL_LINK_LIBRARIES gmrvlex )
+endif()
+
+if (LEXIS_FOUND)
+  list( APPEND VISIMPL_LINK_LIBRARIES Lexis )
 endif()
 
 if (DEFLECT_FOUND)
@@ -126,4 +128,4 @@ if (NEUROLOTS_FOUND)
   list(APPEND VISIMPL_LINK_LIBRARIES nlrender nlgenerator nlfem )
 endif()
 
-common_application( visimpl )
+common_application( visimpl GUI ${COMMON_APP_ARGS})

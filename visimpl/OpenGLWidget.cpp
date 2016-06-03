@@ -30,12 +30,12 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
                             Qt::WindowFlags windowsFlags_,
                             bool paintNeurons_,
                             const std::string&
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
                             zeqUri
 #endif
   )
   : QOpenGLWidget( parent_, windowsFlags_ )
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
   , _zeqUri( zeqUri )
 #endif
   , _fpsLabel( this )
@@ -60,7 +60,7 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _elapsedTimeSimAcc( 0.0f )
 
 {
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
   if ( zeqUri != "" )
     _camera = new nlrender::Camera( zeqUri );
   else
@@ -629,7 +629,7 @@ float OpenGLWidget::getSimulationDecayValue( void )
   return _prototype->maxLife;
 }
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
 void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
 {
@@ -778,7 +778,7 @@ void OpenGLWidget::paintParticles( void )
 
 }
 
-//#ifdef VISIMPL_USE_ZEQ
+//#ifdef VISIMPL_USE_ZEROEQ
 //void OpenGLWidget::_setZeqUri( const std::string&
 //                                   uri_
 //  )
@@ -919,7 +919,7 @@ void OpenGLWidget::paintGL( void )
    {
      _elapsedTimeSliderAcc = 0.0f;
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
      if( _zeqUri != "" )
      {
        _player->sendCurrentTimestamp( );

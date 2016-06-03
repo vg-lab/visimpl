@@ -65,11 +65,11 @@ public:
   } TStackType;
 
   Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
-
+  virtual ~Summary( ){};
 //  void Init( brion::SpikeReport* _spikes, brion::GIDSet gids );
   void Init( visimpl::SpikeData* spikes_, brion::GIDSet gids_ );
   void AddNewHistogram( const visimpl::Selection& selection
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
                        , bool deferredInsertion = false
 #endif
                        );
@@ -146,7 +146,7 @@ protected:
 
   };
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
 protected slots:
 

@@ -38,7 +38,7 @@ void MainWindow::init( const std::string& zeqUri )
   initPlaybackDock( );
 
 
-  #ifdef VISIMPL_USE_ZEQ
+  #ifdef VISIMPL_USE_ZEROEQ
   if( !zeqUri.empty( ))
   {
      _setZeqUri( zeqUri );
@@ -165,7 +165,7 @@ void MainWindow::configurePlayer( void )
   _endTimeLabel->setText(
         QString::number( (double)_player->endTime( )));
 
-#if VISIMPL_USE_GMRVZEQ
+#if VISIMPL_USE_GMRVLEX
   _player->connectZeq( _zeqUri );
 
   _player->zeqEvents( )->frameReceived.connect(
@@ -360,7 +360,7 @@ void MainWindow::Play( bool notify )
 
       if( notify )
       {
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
       _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PLAY );
 #endif
       }
@@ -378,7 +378,7 @@ void MainWindow::Pause( bool notify )
 
     if( notify )
     {
-  #ifdef VISIMPL_USE_ZEQ
+  #ifdef VISIMPL_USE_ZEROEQ
     _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::PAUSE );
   #endif
     }
@@ -396,7 +396,7 @@ void MainWindow::Stop( bool notify )
     _playing = false;
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
       _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::STOP );
 #endif
     }
@@ -413,7 +413,7 @@ void MainWindow::Repeat( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
       _player ->zeqEvents( )->sendPlaybackOp( repeat ?
                                   zeq::gmrv::ENABLE_LOOP :
                                   zeq::gmrv::DISABLE_LOOP );
@@ -460,7 +460,7 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
     // Send event
     _player ->zeqEvents( )->sendFrame( _simSlider->minimum( ),
                            _simSlider->maximum( ),
@@ -491,8 +491,8 @@ void MainWindow::Restart( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEQ
-    _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::BEGIN );
+#ifdef VISIMPL_USE_ZEROEQ
+    _player->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::BEGIN );
 #endif
     }
 
@@ -507,7 +507,7 @@ void MainWindow::GoToEnd( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
     _player ->zeqEvents( )->sendPlaybackOp( zeq::gmrv::END );
 #endif
     }
@@ -538,42 +538,42 @@ void MainWindow::UpdateSimulationSlider( float percentage )
 }
 
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
-#ifdef VISIMPL_USE_GMRVZEQ
+#ifdef VISIMPL_USE_GMRVLEX
 
   void MainWindow::ApplyPlaybackOperation( unsigned int playbackOp )
   {
-    zeq::gmrv::PlaybackOperation operation =
-        ( zeq::gmrv::PlaybackOperation ) playbackOp;
+    zeroeq::gmrv::PlaybackOperation operation =
+        ( zeroeq::gmrv::PlaybackOperation ) playbackOp;
 
     switch( operation )
     {
-      case zeq::gmrv::PLAY:
+      case zeroeq::gmrv::PLAY:
 //        std::cout << "Received play" << std::endl;
         Play( false );
         break;
-      case zeq::gmrv::PAUSE:
+      case zeroeq::gmrv::PAUSE:
         Pause( false );
 //        std::cout << "Received pause" << std::endl;
         break;
-      case zeq::gmrv::STOP:
+      case zeroeq::gmrv::STOP:
 //        std::cout << "Received stop" << std::endl;
         Stop( false );
         break;
-      case zeq::gmrv::BEGIN:
+      case zeroeq::gmrv::BEGIN:
 //        std::cout << "Received begin" << std::endl;
         Restart( false );
         break;
-      case zeq::gmrv::END:
+      case zeroeq::gmrv::END:
 //        std::cout << "Received end" << std::endl;
         GoToEnd( false );
         break;
-      case zeq::gmrv::ENABLE_LOOP:
+      case zeroeq::gmrv::ENABLE_LOOP:
 //        std::cout << "Received enable loop" << std::endl;
         _zeqEventRepeat( true );
         break;
-      case zeq::gmrv::DISABLE_LOOP:
+      case zeroeq::gmrv::DISABLE_LOOP:
 //        std::cout << "Received disable loop" << std::endl;
         _zeqEventRepeat( false );
         break;
@@ -611,19 +611,20 @@ void MainWindow::_setZeqUri( const std::string& uri_ )
   _zeqUri = uri_;
   _zeqConnection = true;
   _uri =  servus::URI( uri_ );
-  _subscriber = new zeq::Subscriber( _uri );
-  _publisher = new zeq::Publisher( _uri );
+  _subscriber = new zeroeq::Subscriber( _uri );
+  _publisher = new zeroeq::Publisher( _uri );
 
   _subscriber->registerHandler( zeq::hbp::EVENT_SELECTEDIDS,
       boost::bind( &MainWindow::_onSelectionEvent , this, _1 ));
 
-  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
+//  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
+  std::thread thread( [&]() { while( true) _subscriber->receive( 10000 );});
 
 }
 
 void* MainWindow::_Subscriber( void* subs )
 {
-  zeq::Subscriber* subscriber = static_cast< zeq::Subscriber* >( subs );
+  zeroeq::Subscriber* subscriber = static_cast< zeroeq::Subscriber* >( subs );
   while ( true )
   {
     subscriber->receive( 10000 );

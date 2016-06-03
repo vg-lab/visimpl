@@ -13,6 +13,7 @@
 
 // #include "EditorTF/TransferFunctionEditor.h"
 
+#include "ui_visimpl.h"
 
 namespace Ui
 {
@@ -74,9 +75,9 @@ public slots:
 
 protected slots:
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
-#ifdef VISIMPL_USE_GMRVZEQ
+#ifdef VISIMPL_USE_GMRVLEX
 
   void ApplyPlaybackOperation( unsigned int playbackOp );
   void _zeqEventRepeat( bool repeat );
@@ -89,16 +90,16 @@ protected:
 
   void configurePlayer( void );
 
-  void _onSelectionEvent( const zeq::Event& event_ );
+  void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr  );
   void _setZeqUri( const std::string& );
   static void* _Subscriber( void* subscriber );
 
   bool _zeqConnection;
 
   servus::URI _uri;
-  zeq::Subscriber* _subscriber;
+  zeroeq::Subscriber* _subscriber;
 
-  pthread_t _subscriberThread;
+//  pthread_t _subscriberThread;
 
 
 #endif

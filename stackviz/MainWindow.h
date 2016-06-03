@@ -14,8 +14,6 @@
 
 // #include "EditorTF/TransferFunctionEditor.h"
 
-
-
 namespace Ui
 {
 class MainWindow;
@@ -60,7 +58,7 @@ public slots:
 
 protected slots:
 
-#ifdef VISIMPL_USE_GMRVZEQ
+#ifdef VISIMPL_USE_GMRVLEX
 
   void ApplyPlaybackOperation( unsigned int playbackOp );
   void _zeqEventRepeat( bool repeat );
@@ -76,7 +74,7 @@ protected:
   void resizeEvent(QResizeEvent * event);
   void configurePlayer( void );
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
   void _onSelectionEvent( const zeq::Event& event_ );
   void _setZeqUri( const std::string& );
@@ -87,8 +85,8 @@ protected:
   std::string _zeqUri;
 
   servus::URI _uri;
-  zeq::Subscriber* _subscriber;
-  zeq::Publisher* _publisher;
+  zeroeq::Subscriber* _subscriber;
+  zeroeq::Publisher* _publisher;
 
   pthread_t _subscriberThread;
 
