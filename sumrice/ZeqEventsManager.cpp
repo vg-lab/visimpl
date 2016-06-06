@@ -7,8 +7,6 @@
 
 #include "ZeqEventsManager.h"
 
-#include <thread>
-
 ZeqEventsManager::ZeqEventsManager( const std::string& zeqUri_ )
 {
 
@@ -17,7 +15,17 @@ ZeqEventsManager::ZeqEventsManager( const std::string& zeqUri_ )
 #endif
 }
 
+ZeqEventsManager::~ZeqEventsManager( )
+{
+  if( _thread )
+    delete _thread;
 
+  if( _publisher )
+    delete _publisher;
+
+  if( _subscriber )
+    delete _subscriber;
+}
 
 //  float ZeqEventsManager::getLastRelativePosition( void );
 //  float ZeqEventsManager::getCUrrentRelativePosition( void );
@@ -108,10 +116,12 @@ void ZeqEventsManager::_setZeqSession( const std::string& session_ )
 //
 //  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
 
+  _session = session_.empty( ) ? zeroeq::DEFAULT_SESSION : session_;
+
   _zeroeqConnection = true;
 
-  _subscriber = new zeroeq::Subscriber( session_ );
-  _publisher = new zeroeq::Publisher( session_ );
+  _subscriber = new zeroeq::Subscriber( _session );
+  _publisher = new zeroeq::Publisher( _session );
 
   _currentFrame.registerDeserializedCallback(
       [&]( ){ _lastFrame = _currentFrame; _onFrameEvent( ); } );
@@ -130,7 +140,7 @@ void ZeqEventsManager::_setZeqSession( const std::string& session_ )
 //                           _onFrameEvent( ::lexis::render::Frame::create( data, size ));
 //                          } );
 
-  std::thread thread( [&]() { while( true) _subscriber->receive( 10000 );});
+  _thread = new std::thread( [&]() { while( _zeroeqConnection ) _subscriber->receive( 10000 );});
 
 }
 

@@ -96,7 +96,7 @@ protected:
 
   bool _zeqConnection;
 
-  servus::URI _uri;
+  std::string _uri;
   zeroeq::Subscriber* _subscriber;
 
 //  pthread_t _subscriberThread;

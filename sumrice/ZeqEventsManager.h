@@ -27,6 +27,8 @@
   #include <gmrvlex/gmrvlex.h>
 #endif
 
+#include <thread>
+
 #endif
 
 class ZeqEventsManager
@@ -34,7 +36,7 @@ class ZeqEventsManager
 public:
 
   ZeqEventsManager( const std::string& zeroeqUri_ );
-
+  ~ZeqEventsManager( );
 //  float getLastRelativePosition( void );
 //  float getCUrrentRelativePosition( void );
 //
@@ -64,7 +66,7 @@ protected:
 
   bool _zeroeqConnection;
 
-  servus::URI _uri;
+  std::string _session;
   zeroeq::Subscriber* _subscriber;
   zeroeq::Publisher* _publisher;
 
@@ -75,6 +77,8 @@ protected:
 
   lexis::render::Frame _lastFrame;
   lexis::render::Frame _currentFrame;
+
+  std::thread* _thread;
 
 #endif
 

@@ -14,6 +14,19 @@
 
 // #include "EditorTF/TransferFunctionEditor.h"
 
+#ifdef VISIMPL_USE_ZEROEQ
+#include <zeroeq/zeroeq.h>
+#ifdef VISIMPL_USE_LEXIS
+#include <lexis/lexis.h>
+#endif
+#ifdef VISIMPL_USE_GMRVLEX
+#include <gmrvlex/gmrvlex.h>
+#endif
+
+#endif
+
+#include "ui_stackviz.h"
+
 namespace Ui
 {
 class MainWindow;
@@ -76,9 +89,9 @@ protected:
 
 #ifdef VISIMPL_USE_ZEROEQ
 
-  void _onSelectionEvent( const zeq::Event& event_ );
+  void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected );
   void _setZeqUri( const std::string& );
-  static void* _Subscriber( void* subscriber );
+//  static void* _Subscriber( void* subscriber );
 
   bool _zeqConnection;
 
@@ -88,7 +101,9 @@ protected:
   zeroeq::Subscriber* _subscriber;
   zeroeq::Publisher* _publisher;
 
-  pthread_t _subscriberThread;
+//  pthread_t _subscriberThread;
+
+  std::thread* _thread;
 
 #endif
 

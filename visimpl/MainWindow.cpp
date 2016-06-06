@@ -813,8 +813,9 @@ void MainWindow::AlphaBlendingToggled( void )
 void MainWindow::_setZeqUri( const std::string& uri_ )
 {
   _zeqConnection = true;
+  _uri = uri_.empty( ) ? zeroeq::DEFAULT_SESSION : uri_;
 //  _uri =  servus::URI( uri_ );
-  _subscriber = new zeroeq::Subscriber( uri_ );
+  _subscriber = new zeroeq::Subscriber( _uri );
 
   _subscriber->subscribe(
       lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
@@ -825,7 +826,7 @@ void MainWindow::_setZeqUri( const std::string& uri_ )
 //      boost::bind( &MainWindow::_onSelectionEvent , this, _1 ));
 
 //  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
-  std::thread thread_( [&]() { while( true) _subscriber->receive( 10000 );});
+  std::thread thread_( [&]() { while( _zeqConnection ) _subscriber->receive( 10000 );});
 }
 
 void* MainWindow::_Subscriber( void* subs )

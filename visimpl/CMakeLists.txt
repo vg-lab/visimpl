@@ -1,15 +1,6 @@
 add_definitions(-DVISIMPL_SKIP_GLEW_INCLUDE )
 
- set(PROJECT_VERSION_ABI ${${PROJECT_NAME}_VERSION_ABI})
-
-set(Name Visimpl)
-set(NAME VISIMPL)
-set(namespace visimpl)
-set(NAMESPACE VISIMPL)
-set(INCLUDE_NAME visimpl)
-
-set(UIDIR ${PROJECT_SOURCE_DIR}/ui)
-set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
+set(PROJECT_VERSION_ABI ${${PROJECT_NAME}_VERSION_ABI})
 
 set(Name Visimpl)
 set(NAME VISIMPL)
@@ -22,6 +13,10 @@ configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.h
   ${PROJECT_BINARY_DIR}/include/visimpl/version.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.cpp
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp @ONLY)
+
+
+set(UIDIR ${PROJECT_SOURCE_DIR}/ui)
+set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
