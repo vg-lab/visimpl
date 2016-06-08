@@ -920,7 +920,7 @@ void OpenGLWidget::paintGL( void )
      _elapsedTimeSliderAcc = 0.0f;
 
 #ifdef VISIMPL_USE_ZEROEQ
-     if( _zeqUri != "" )
+//     if( _player->zeqEvents( )-> != "" )
      {
        _player->sendCurrentTimestamp( );
      }

@@ -629,7 +629,7 @@ void MainWindow::_setZeqUri( const std::string& uri_ )
       { _onSelectionEvent( lexis::data::SelectedIDs::create( data, size ));});
 
 //  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
-  _thread = new std::thread( [&]() { while( _zeqConnection ) _subscriber->receive( 10000 );});
+  _thread = new std::thread( [&]() { while( true ) _subscriber->receive( 10000 );});
 
 }
 

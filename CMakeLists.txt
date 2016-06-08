@@ -53,7 +53,6 @@ common_find_package( prefr REQUIRED )
 common_find_package( Brion REQUIRED )
 common_find_package( HDF5 REQUIRED COMPONENTS C CXX )
 common_find_package( Lexis )
-common_find_package( gmrvlex )
 
 list( APPEND VISIMPL_DEPENDENT_LIBRARIES 
   OpenGL 
@@ -83,13 +82,19 @@ if(VISIMPL_WITH_ZEQ)
     list(APPEND VISIMPL_DEPENDENT_LIBRARIES ZeroEQ)
     common_find_package(Threads REQUIRED)
     list(APPEND VISIMPL_DEPENDENT_LIBRARIES Threads)
-  endif( )
-
-  if(VISIMPL_WITH_GMRVZEQ)
+    
+    common_find_package(Lexis)
+    if(LEXIS_FOUND)
+      list(APPEND VISIMPL_DEPENDENT_LIBRARIES Lexis)
+    endif()
+    
+    if(VISIMPL_WITH_GMRVZEQ)
     common_find_package(gmrvlex)
     if ( GMRVLEX_FOUND )
       list(APPEND VISIMPL_DEPENDENT_LIBRARIES gmrvlex)
     endif( )
+  endif( )
+    
   endif( )
 endif( )
 common_find_package_post()

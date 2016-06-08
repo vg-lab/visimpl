@@ -56,6 +56,7 @@ void ZeqEventsManager::sendFrame( const float& start, const float& end,
   _publisher->publish( frame );
 }
 
+#ifdef VISIMPL_USE_GMRVLEX
 void ZeqEventsManager::sendPlaybackOp( zeroeq::gmrv::PlaybackOperation operation ) const
 {
   zeroeq::gmrv::PlaybackOp op;
@@ -78,11 +79,10 @@ void ZeqEventsManager::_onPlaybackOpEvent( zeroeq::gmrv::ConstPlaybackOpPtr even
 {
   playbackOpReceived( event_->getOp( ) );
 }
+#endif
 
 void ZeqEventsManager::_onFrameEvent( /*lexis::render::ConstFramePtr event_*/ )
 {
-  //  _currentFrame = zeq::hbp::deserializeFrame( event_ );
-
   float invDelta = 1.0f / float( _currentFrame.getDelta( ) );
 
   float start = _currentFrame.getStart( ) * invDelta;
@@ -92,7 +92,6 @@ void ZeqEventsManager::_onFrameEvent( /*lexis::render::ConstFramePtr event_*/ )
   percentage = ( float( _currentFrame.getCurrent( ) ) * invDelta - start )
       / ( float( _currentFrame.getEnd( ) ) * invDelta - start );
 
-//  std::cout << "Received percentage " << percentage << std::endl;
   _lastFrame = _currentFrame;
 
   assert( percentage >= 0.0f && percentage <= 1.0f );
@@ -140,7 +139,7 @@ void ZeqEventsManager::_setZeqSession( const std::string& session_ )
 //                           _onFrameEvent( ::lexis::render::Frame::create( data, size ));
 //                          } );
 
-  _thread = new std::thread( [&]() { while( _zeroeqConnection ) _subscriber->receive( 10000 );});
+  _thread = new std::thread( [&]() { while( true ) _subscriber->receive( 10000 );});
 
 }
 

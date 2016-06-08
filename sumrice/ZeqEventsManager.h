@@ -11,9 +11,9 @@
 #ifdef VISIMPL_USE_ZEROEQ
   #include <zeroeq/zeroeq.h>
 //  #include <zeroeq/hbp/hbp.h>
-  #include <servus/uri.h>
+//  #include <servus/uri.h>
 
-  #include <pthread.h>
+//  #include <pthread.h>
   #include <mutex>
 
   #include <boost/signals2/signal.hpp>
@@ -55,11 +55,17 @@ public:
   void sendFrame( const float& start, const float& end,
                   const float& current ) const;
 
+#ifdef VISIMPL_USE_GMRVLEX
+
   void sendPlaybackOp( zeroeq::gmrv::PlaybackOperation operation ) const;
 
 protected:
-
   void _onPlaybackOpEvent( zeroeq::gmrv::ConstPlaybackOpPtr event_ );
+
+#endif
+
+protected:
+
   void _onFrameEvent( /*lexis::render::ConstFramePtr event_*/ );
   void _setZeqSession( const std::string& );
 //  static void* _Subscriber( void* subscriber );

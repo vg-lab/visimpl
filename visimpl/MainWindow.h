@@ -92,13 +92,14 @@ protected:
 
   void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr  );
   void _setZeqUri( const std::string& );
-  static void* _Subscriber( void* subscriber );
+//  static void* _Subscriber( void* subscriber );
 
   bool _zeqConnection;
 
   std::string _uri;
   zeroeq::Subscriber* _subscriber;
 
+  std::thread* _thread;
 //  pthread_t _subscriberThread;
 
 
@@ -118,7 +119,6 @@ private:
   OpenGLWidget* _openGLWidget;
   Summary* _summary;
 
-//  visimpl::SimulationPlayer* _player;
   QDockWidget* _simulationDock;
   QSlider* _simSlider;
   QPushButton* _playButton;

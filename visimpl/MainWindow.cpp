@@ -814,7 +814,7 @@ void MainWindow::_setZeqUri( const std::string& uri_ )
 {
   _zeqConnection = true;
   _uri = uri_.empty( ) ? zeroeq::DEFAULT_SESSION : uri_;
-//  _uri =  servus::URI( uri_ );
+
   _subscriber = new zeroeq::Subscriber( _uri );
 
   _subscriber->subscribe(
@@ -822,22 +822,18 @@ void MainWindow::_setZeqUri( const std::string& uri_ )
       [&]( const void* data, const size_t size )
       { _onSelectionEvent( lexis::data::SelectedIDs::create( data, size ));});
 
-//  _subscriber->registerHandler( zeq::hbp::EVENT_SELECTEDIDS,
-//      boost::bind( &MainWindow::_onSelectionEvent , this, _1 ));
-
-//  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
-  std::thread thread_( [&]() { while( _zeqConnection ) _subscriber->receive( 10000 );});
+  _thread = new std::thread( [&]() { while( true ) _subscriber->receive( 10000 );});
 }
 
-void* MainWindow::_Subscriber( void* subs )
-{
-  zeroeq::Subscriber* subscriber = static_cast< zeroeq::Subscriber* >( subs );
-  while ( true )
-  {
-    subscriber->receive( 10000 );
-  }
-  pthread_exit( NULL );
-}
+//void* MainWindow::_Subscriber( void* subs )
+//{
+//  zeroeq::Subscriber* subscriber = static_cast< zeroeq::Subscriber* >( subs );
+//  while ( true )
+//  {
+//    subscriber->receive( 10000 );
+//  }
+//  pthread_exit( NULL );
+//}
 
 void MainWindow::ClearSelection( void )
 {
