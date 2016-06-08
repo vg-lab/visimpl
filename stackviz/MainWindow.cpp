@@ -40,7 +40,7 @@ void MainWindow::init( const std::string& zeqUri )
 
 
   #ifdef VISIMPL_USE_ZEROEQ
-  if( !zeqUri.empty( ))
+//  if( !zeqUri.empty( ))
   {
      _setZeqUri( zeqUri );
 //     _zeqEvents = new ZeqEventsManager( zeqUri );
@@ -649,6 +649,7 @@ void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
 //  std::vector< unsigned int > selected =
 //      zeroeq::hbp::deserializeSelectedIDs( event_ );
   std::vector< uint32_t > ids = std::move( selected->getIdsVector( ));
+  std::cout << "Received selection with " << ids.size( ) << " elements" << std::endl;
 
   GIDUSet selectedSet( ids.begin( ), ids.end( ));
 

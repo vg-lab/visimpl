@@ -168,10 +168,11 @@ namespace visimpl
         if( !filter ||  _filteredGIDs.find( spike->second ) != _filteredGIDs.end( ))
         {
           bin++;
-          spike++;
+
         }
 
         counter++;
+        spike++;
       }
 
       currentTime += deltaTime;
