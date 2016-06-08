@@ -86,10 +86,9 @@ void MainWindow::init( const std::string& zeqUri )
   initSimColorDock( );
 
   #ifdef VISIMPL_USE_ZEROEQ
-  if( !zeqUri.empty( ))
-  {
-      _setZeqUri( zeqUri );
-  }
+
+  _setZeqUri( zeqUri );
+
   #endif
 }
 
@@ -848,12 +847,16 @@ void MainWindow::ClearSelection( void )
 
 void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
 {
+
+  std::cout << "Received selection" << std::endl;
   if( _openGLWidget )
   {
 //    std::vector< unsigned int > selected =
 //        zeq::hbp::deserializeSelectedIDs( selected );
 
     std::vector< uint32_t > ids = std::move( selected->getIdsVector( ));
+
+
 
     GIDUSet selectedSet( ids.begin( ), ids.end( ));
 

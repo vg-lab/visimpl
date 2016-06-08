@@ -40,11 +40,9 @@ void MainWindow::init( const std::string& zeqUri )
 
 
   #ifdef VISIMPL_USE_ZEROEQ
-//  if( !zeqUri.empty( ))
-  {
-     _setZeqUri( zeqUri );
-//     _zeqEvents = new ZeqEventsManager( zeqUri );
-  }
+
+  _setZeqUri( zeqUri );
+
   #endif
 
 }
@@ -604,13 +602,14 @@ void MainWindow::UpdateSimulationSlider( float percentage )
     std::vector< uint32_t > selected ( selection->begin( ),
                                    selection->end( ));
 
-    std::vector< uint32_t > se( {1, 2, 3} );
+    std::cout << "Publishing selection of " << selected.size( ) << std::endl;
+//    std::vector< uint32_t > se( {1, 2, 3} );
 
 //     selectedIds( selected );
 //    selectedIds.setIds( selected );
 
 //    std::cout << "Sending selection of size " << selected.size( ) << std::endl;
-    _publisher->publish( lexis::data::SelectedIDs( se ));
+    _publisher->publish( lexis::data::SelectedIDs( selected ));
   }
 
 #endif
