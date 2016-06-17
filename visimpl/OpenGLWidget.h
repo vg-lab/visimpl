@@ -160,7 +160,7 @@ protected:
   glm::vec3 _lastCameraPosition;
 
 //  neurolots::NeuronsCollection* _neuronsCollection;
-  bool _paintNeurons;
+  bool _focusOnSelection;
 
   unsigned int _frameCount;
 

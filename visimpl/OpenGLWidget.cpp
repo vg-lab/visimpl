@@ -41,7 +41,7 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _fpsLabel( this )
   , _showFps( false )
   , _wireframe( false )
-  , _paintNeurons( paintNeurons_ )
+  , _focusOnSelection( paintNeurons_ )
   , _frameCount( 0 )
   , _mouseX( 0 )
   , _mouseY( 0 )
@@ -642,6 +642,18 @@ void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
 
 }
 
+
+void ExpandBoundingBox( Eigen::Vector3f& minBounds,
+                        Eigen::Vector3f& maxBounds,
+                        glm::vec3 position)
+{
+  for( unsigned int i = 0; i < 3; ++i )
+  {
+    minBounds( i ) = std::min( minBounds( i ), position[ i ] );
+    maxBounds( i ) = std::max( maxBounds( i ), position[ i ] );
+  }
+}
+
 void OpenGLWidget::updateSelection( void )
 {
   if( _ps )
@@ -649,6 +661,13 @@ void OpenGLWidget::updateSelection( void )
     _ps->Run( false );
 
     bool baseOn = !_showSelection || _selectedGIDs.size( ) == 0;
+
+    Eigen::Vector3f boundingBoxMin( std::numeric_limits< float >::max( ),
+                                    std::numeric_limits< float >::max( ),
+                                    std::numeric_limits< float >::max( ));
+    Eigen::Vector3f boundingBoxMax( std::numeric_limits< float >::min( ),
+                                    std::numeric_limits< float >::min( ),
+                                    std::numeric_limits< float >::min( ));
 
     for( auto node : *_ps->emissionNodes )
     {
@@ -661,25 +680,18 @@ void OpenGLWidget::updateSelection( void )
 
       prefr::tparticle_ptr particle = *( node->particles->start );
 
-//      if( _selectedGIDs.size( ) == 0 ||
-//          res != _selectedGIDs.end( )
-//          || !_showSelection )
-      if( on )
-      {
-        //        node->active = true;
-        _ps->particlePrototype[ particle->id ] =
-            ( unsigned int ) PROTOTYPE_ON;
-      }
-      else
-      {
-        _ps->particlePrototype[ particle->id ] =
-            ( unsigned int ) PROTOTYPE_OFF;
-  //      particle->life = 0.0f;
-  //      particle->alive = true;
-        //        node->active = false;
+      _ps->particlePrototype[ particle->id ] =
+                ( unsigned int )( on ? PROTOTYPE_ON : PROTOTYPE_OFF);
 
-      }
+      if( ( _focusOnSelection && on ) || !_focusOnSelection )
+        ExpandBoundingBox( boundingBoxMin, boundingBoxMax, particle->position );
+
     }
+
+    Eigen::Vector3f center = ( boundingBoxMax + boundingBoxMin ) * 0.5f;
+    float radius = ( boundingBoxMax - center ).norm( );
+
+    _camera->TargetPivotRadius( center, radius );
 
     _ps->Run( true );
     _ps->UpdateUnified( 0.0f  );
@@ -889,7 +901,7 @@ void OpenGLWidget::paintGL( void )
   {
     _camera->Anim( );
 
-//    if ( _neuronsCollection && _paintNeurons )
+//    if ( _neuronsCollection && _focusOnSelection )
 //      _neuronsCollection->Paint( );
 
     if ( _ps )
@@ -1160,7 +1172,7 @@ void OpenGLWidget::toggleWireframe( void )
 
 void OpenGLWidget::togglePaintNeurons( void )
 {
-  _paintNeurons = !_paintNeurons;
+  _focusOnSelection = !_focusOnSelection;
   update( );
 }
 
