@@ -55,6 +55,7 @@ common_package( neurolots REQUIRED )
 common_package( prefr REQUIRED )
 common_package( Brion REQUIRED )
 common_package( HDF5 REQUIRED COMPONENTS C CXX )
+common_package( OpenMP )
 
 list( APPEND VISIMPL_DEPENDENT_LIBRARIES 
   OpenGL 
@@ -76,6 +77,10 @@ endif( )
 
 if (QT5OPENGL_FOUND)
   list(APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5OpenGL)
+endif( )
+
+if( OPENMP_FOUND )
+  list( APPEND VISIMPL_DEPENDENT_LIBRARIES OpenMP )
 endif( )
 
 if(VISIMPL_WITH_ZEQ)

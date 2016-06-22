@@ -44,12 +44,15 @@ Summary::Summary( QWidget* parent_,
 , _voltageReport( nullptr )
 , _mainHistogram( nullptr )
 , _detailHistogram( nullptr )
+, _focusedHistogram( nullptr )
+, _mousePressed( false )
 , _stackType( stackType )
 , _colorScaleLocal( visimpl::T_COLOR_LINEAR )
 , _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
 , _colorLocal( 0, 0, 128, 50 )
 , _colorGlobal( 255, 0, 0, 100 )
 , _heightPerRow( 50 )
+, _overRegionEdge( false )
 , _autoNameSelection( false )
 {
 
@@ -262,6 +265,7 @@ void Summary::Init( void )
     _mainHistogram->colorMapper( colorMapper );
 
     _mainHistogram->mousePosition( &_lastMousePosition );
+    _mainHistogram->regionPosition( &_regionPosition );
     connect( _mainHistogram, SIGNAL( mousePositionChanged( QPoint )),
              this, SLOT( updateMouseMarker( QPoint )));
 
@@ -295,11 +299,14 @@ void Summary::Init( void )
   }
   //  AddGIDSelection( gids );
 
-  connect( _mainHistogram, SIGNAL( mouseClicked( float )),
-           this, SLOT( childHistogramClicked( float )));
+  connect( _mainHistogram, SIGNAL( mousePressed( QPoint, float )),
+           this, SLOT( childHistogramPressed( QPoint, float )));
 
-  connect( _mainHistogram, SIGNAL( modifierClicked( void )),
-           this, SLOT( childHistogramClicked( void )));
+  connect( _mainHistogram, SIGNAL( mouseReleased( QPoint, float )),
+           this, SLOT( childHistogramReleased( QPoint, float )));
+
+  connect( _mainHistogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
+           this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
 
   _mainHistogram->init( _bins, _zoomFactor );
 //  CreateSummarySpikes( );
@@ -421,14 +428,19 @@ void Summary::deferredInsertion( void )
     _rows.push_back( currentRow );
 
     histogram->mousePosition( &_lastMousePosition );
+    histogram->regionPosition( &_regionPosition );
+
     connect( histogram, SIGNAL( mousePositionChanged( QPoint )),
              this, SLOT( updateMouseMarker( QPoint )));
 
-    connect( histogram, SIGNAL( mouseClicked( float )),
-             this, SLOT( childHistogramClicked( float )));
+    connect( histogram, SIGNAL( mousePressed( QPoint, float )),
+             this, SLOT( childHistogramPressed( QPoint, float )));
 
-    connect( histogram, SIGNAL( modifierClicked( void )),
-             this, SLOT( childHistogramClicked( void )));
+    connect( histogram, SIGNAL( mouseReleased( QPoint, float )),
+             this, SLOT( childHistogramReleased( QPoint, float )));
+
+    connect( histogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
+             this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
 
     _histograms.push_back( histogram );
 
@@ -444,23 +456,75 @@ void Summary::deferredInsertion( void )
 
 }
 
+int pixelMargin = 10;
+
+void Summary::childHistogramPressed( QPoint position, float /*percentage*/ )
+{
+  if( !_overRegionEdge )
+    _regionPosition = position;
+
+  _mousePressed = true;
+
+  if( _focusedHistogram != sender( ))
+  {
+    _focusedHistogram =
+            dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
+
+
+
+    std::cout << "Focused mouse pressed" << std::endl;
+
+    if( _stackType == T_STACK_EXPANDABLE )
+    {
+      for( auto histogram : _histograms )
+      {
+          histogram->paintRegion( histogram == _focusedHistogram );
+        histogram->update( );
+      }
+    }
+
+  }
+//  else if
+}
+
+void Summary::childHistogramReleased( QPoint /*position*/, float /*percentage*/ )
+{
+  _mousePressed = false;
+  std::cout << "Mouse released" << std::endl;
+}
+
+void Summary::childHistogramClicked( float percentage,
+                                     Qt::KeyboardModifiers modifiers )
+{
+  if( modifiers == Qt::ControlModifier )
+    emit histogramClicked(
+        dynamic_cast< visimpl::MultiLevelHistogram* >( sender( )));
+  else if( modifiers == Qt::ShiftModifier )
+    emit histogramClicked( percentage );
+}
+
 void Summary::mouseMoveEvent( QMouseEvent* event_ )
 {
   QWidget::mouseMoveEvent( event_ );
 
-  QPoint position = event_->pos( );
+  if( _mousePressed )
+  {
+    QPoint position = event_->pos( );
 
-  _lastMousePosition = mapToGlobal( position );
-  _showMarker = true;
+    _lastMousePosition = mapToGlobal( position );
+    _showMarker = true;
 
-  for( auto histogram : _histograms )
-    histogram->update( );
+    for( auto histogram : _histograms )
+      histogram->update( );
 
-
+  }
 }
 
 void Summary::updateMouseMarker( QPoint point )
 {
+  if( _mousePressed )
+    _regionPosition = point;
+
   if( point != _lastMousePosition )
   {
     visimpl::MultiLevelHistogram* focusedHistogram =
@@ -470,22 +534,25 @@ void Summary::updateMouseMarker( QPoint point )
 
     if( _stackType == T_STACK_EXPANDABLE )
     {
-      point = focusedHistogram->mapFromGlobal( point );
-      float percentage = float( point.x( ) ) /
-          focusedHistogram->width( );
+      if( focusedHistogram == _focusedHistogram && _mousePressed )
+      {
+        point = focusedHistogram->mapFromGlobal( point );
+        float percentage = float( point.x( ) ) /
+            focusedHistogram->width( );
 
-      _focusWidget->viewRegion( *focusedHistogram, percentage, _regionWidth );
-      _focusWidget->update( );
+        _focusWidget->viewRegion( *focusedHistogram, percentage, _regionWidth );
+        _focusWidget->update( );
 
-      _currentValueLabel->setText(
-          QString::number( focusedHistogram->focusValueAt( percentage )));
-      _localMaxLabel->setText( QString::number( focusedHistogram->focusMaxLocal( )));
-      _globalMaxLabel->setText( QString::number( focusedHistogram->focusMaxGlobal( )));
+        _currentValueLabel->setText(
+            QString::number( focusedHistogram->focusValueAt( percentage )));
+        _localMaxLabel->setText( QString::number( focusedHistogram->focusMaxLocal( )));
+        _globalMaxLabel->setText( QString::number( focusedHistogram->focusMaxGlobal( )));
+      }
     }
 
     for( auto histogram : _histograms )
     {
-      if( _stackType == T_STACK_EXPANDABLE )
+      if( _stackType == T_STACK_EXPANDABLE && _mousePressed )
         histogram->paintRegion( histogram == focusedHistogram );
       histogram->update( );
     }
@@ -579,16 +646,6 @@ unsigned int Summary::heightPerRow( void )
 void Summary::showMarker( bool show_ )
 {
   _showMarker = show_;
-}
-
-void Summary::childHistogramClicked( float percentage )
-{
-  emit histogramClicked( percentage );
-}
-
-void Summary::childHistogramClicked( void )
-{
-  emit histogramClicked( dynamic_cast< visimpl::MultiLevelHistogram* >( sender( )));
 }
 
 void Summary::removeSelections( void )
