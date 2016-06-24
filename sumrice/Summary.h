@@ -212,7 +212,11 @@ protected:
   QPoint _lastMousePosition;
   QPoint _regionPosition;
   bool _showMarker;
-  bool _overRegionEdge;
+  bool _overRegionEdgeLower;
+  bool _overRegionEdgeUpper;
+  float _regionPercentage;
+  float _regionEdgeLower;
+  float _regionEdgeUpper;
 
   bool _autoNameSelection;
 

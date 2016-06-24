@@ -52,7 +52,7 @@ Summary::Summary( QWidget* parent_,
 , _colorLocal( 0, 0, 128, 50 )
 , _colorGlobal( 255, 0, 0, 100 )
 , _heightPerRow( 50 )
-, _overRegionEdge( false )
+, _overRegionEdgeLower( false )
 , _autoNameSelection( false )
 {
 
@@ -242,6 +242,7 @@ void Summary::Init( void )
   _mainHistogram->regionWidth( _regionWidth );
   //  _mainHistogram->setMinimumWidth( width( ));
   //  _mainLayout->addWidget( _mainHistogram );
+  _focusedHistogram = _mainHistogram;
 
     TColorMapper colorMapper;
   //  colorMapper.Insert(0.0f, glm::vec4( 0.0f, 0.0f, 255, 255 ));
@@ -460,30 +461,48 @@ int pixelMargin = 10;
 
 void Summary::childHistogramPressed( QPoint position, float /*percentage*/ )
 {
-  if( !_overRegionEdge )
-    _regionPosition = position;
-
-  _mousePressed = true;
 
   if( _focusedHistogram != sender( ))
   {
     _focusedHistogram =
             dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
+  }
 
+  QPoint relposition = _focusedHistogram->mapFromGlobal( position );
+  float percentage = float( relposition.x( )) / _focusedHistogram->width( );
 
+  _currentValueLabel->setText(
+      QString::number( _focusedHistogram->focusValueAt( percentage )));
+  _localMaxLabel->setText( QString::number( _focusedHistogram->focusMaxLocal( )));
+  _globalMaxLabel->setText( QString::number( _focusedHistogram->focusMaxGlobal( )));
 
-    std::cout << "Focused mouse pressed" << std::endl;
-
-    if( _stackType == T_STACK_EXPANDABLE )
+//  if( _focusedHistogram )
+  {
+//    if( !_overRegionEdgeLower || !_overRegionEdgeUpper )
     {
-      for( auto histogram : _histograms )
-      {
-          histogram->paintRegion( histogram == _focusedHistogram );
-        histogram->update( );
-      }
+      _regionPosition = position;
+      _regionPercentage = percentage;
+      _regionEdgeLower = std::max( percentage - _regionWidth, 0.0f );
+      _regionEdgeUpper = std::min( percentage + _regionWidth, 1.0f );
+      std::cout << "Focus region bounds " << _regionEdgeLower
+                << " " << percentage
+                << " " << _regionEdgeUpper
+                << std::endl;
     }
 
   }
+  _mousePressed = true;
+
+  if( _stackType == T_STACK_EXPANDABLE )
+  {
+    for( auto histogram : _histograms )
+    {
+        histogram->paintRegion( histogram == _focusedHistogram );
+      histogram->update( );
+    }
+  }
+
+  std::cout << "Focused mouse pressed" << std::endl;
 //  else if
 }
 
@@ -507,46 +526,80 @@ void Summary::mouseMoveEvent( QMouseEvent* event_ )
 {
   QWidget::mouseMoveEvent( event_ );
 
-  if( _mousePressed )
-  {
-    QPoint position = event_->pos( );
-
-    _lastMousePosition = mapToGlobal( position );
-    _showMarker = true;
-
-    for( auto histogram : _histograms )
-      histogram->update( );
-
-  }
+//  if( _mousePressed )
+//  {
+//    QPoint position = event_->pos( );
+//
+//    _lastMousePosition = mapToGlobal( position );
+//    _showMarker = true;
+//
+//    for( auto histogram : _histograms )
+//      histogram->update( );
+//
+//  }
 }
+
+float regionEditMargin = 0.01f;
 
 void Summary::updateMouseMarker( QPoint point )
 {
+  visimpl::MultiLevelHistogram* focusedHistogram =
+          dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
+
+  _lastMousePosition = point;
+
+  QPoint relpoint = focusedHistogram->mapFromGlobal( point );
+  float percentage = float( relpoint.x( )) / focusedHistogram->width( );
+
   if( _mousePressed )
-    _regionPosition = point;
-
-  if( point != _lastMousePosition )
   {
-    visimpl::MultiLevelHistogram* focusedHistogram =
-        dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
+    _regionPosition = point;
+//    _regionPosition = position;
+    _regionPercentage = percentage;
+    _regionEdgeLower = std::max( percentage - _regionWidth, 0.0f );
+    _regionEdgeUpper = std::min( percentage + _regionWidth, 1.0f );
+    std::cout << "Focus region bounds " << _regionEdgeLower
+              << " " << percentage
+              << " " << _regionEdgeUpper
+              << std::endl;
 
-    _lastMousePosition = point;
+    _focusWidget->viewRegion( *focusedHistogram, percentage, _regionWidth );
+    _focusWidget->update( );
+  }
 
     if( _stackType == T_STACK_EXPANDABLE )
     {
-      if( focusedHistogram == _focusedHistogram && _mousePressed )
+      if( focusedHistogram == _focusedHistogram )
       {
-        point = focusedHistogram->mapFromGlobal( point );
-        float percentage = float( point.x( ) ) /
-            focusedHistogram->width( );
 
-        _focusWidget->viewRegion( *focusedHistogram, percentage, _regionWidth );
-        _focusWidget->update( );
 
-        _currentValueLabel->setText(
-            QString::number( focusedHistogram->focusValueAt( percentage )));
-        _localMaxLabel->setText( QString::number( focusedHistogram->focusMaxLocal( )));
-        _globalMaxLabel->setText( QString::number( focusedHistogram->focusMaxGlobal( )));
+        if(( percentage >= _regionEdgeLower - regionEditMargin &&
+            percentage <= _regionEdgeLower + regionEditMargin ))
+        {
+          _overRegionEdgeLower = true;
+          std::cout << "Over lower edge " << _regionEdgeLower - regionEditMargin
+                    << " >= " << percentage
+                    << " <= " << _regionEdgeLower + regionEditMargin
+                    << std::endl;
+        }
+        else if(( percentage >= ( _regionEdgeUpper- regionEditMargin ) &&
+                  percentage <= ( _regionEdgeUpper + regionEditMargin )))
+        {
+          _overRegionEdgeUpper = true;
+          std::cout << "Over upper edge " << _regionEdgeUpper - regionEditMargin
+                    << " >= " << percentage
+                    << " <= " << _regionEdgeUpper + regionEditMargin
+                    << std::endl;
+        }
+
+        if( _mousePressed )
+        {
+
+        }
+//        _currentValueLabel->setText(
+//            QString::number( focusedHistogram->focusValueAt( percentage )));
+//        _localMaxLabel->setText( QString::number( focusedHistogram->focusMaxLocal( )));
+//        _globalMaxLabel->setText( QString::number( focusedHistogram->focusMaxGlobal( )));
       }
     }
 
@@ -556,8 +609,6 @@ void Summary::updateMouseMarker( QPoint point )
         histogram->paintRegion( histogram == focusedHistogram );
       histogram->update( );
     }
-
-  }
 }
 
 void Summary::CreateSummarySpikes( )
