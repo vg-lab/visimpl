@@ -623,6 +623,8 @@ void Summary::updateMouseMarker( QPoint point )
 
         _regionWidth = std::max( 0.01f, std::min( 0.5f, _regionWidth ));
 
+        _regionWidthPixels = _regionWidth * focusedHistogram->width( );
+
         _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
         _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
         _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
@@ -639,6 +641,8 @@ void Summary::updateMouseMarker( QPoint point )
 
         _regionWidth += diffPerc;
         _regionWidth = std::max( 0.01f, std::min( 0.5f, _regionWidth ));
+
+        _regionWidthPixels = _regionWidth * focusedHistogram->width( );
 
         _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
         _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
