@@ -15,6 +15,8 @@
 #include <QInputDialog>
 #include <QSpinBox>
 
+#include <QApplication>
+
 unsigned int visimpl::Selection::_counter = 0;
 
 unsigned int DEFAULT_BINS = 250;
@@ -266,7 +268,7 @@ void Summary::Init( void )
     _mainHistogram->colorMapper( colorMapper );
 
     _mainHistogram->mousePosition( &_lastMousePosition );
-    _mainHistogram->regionPosition( &_regionPosition );
+    _mainHistogram->regionPosition( &_regionGlobalPosition );
     connect( _mainHistogram, SIGNAL( mousePositionChanged( QPoint )),
              this, SLOT( updateMouseMarker( QPoint )));
 
@@ -429,7 +431,7 @@ void Summary::deferredInsertion( void )
     _rows.push_back( currentRow );
 
     histogram->mousePosition( &_lastMousePosition );
-    histogram->regionPosition( &_regionPosition );
+    histogram->regionPosition( &_regionGlobalPosition );
 
     connect( histogram, SIGNAL( mousePositionChanged( QPoint )),
              this, SLOT( updateMouseMarker( QPoint )));
@@ -466,31 +468,55 @@ void Summary::childHistogramPressed( QPoint position, float /*percentage*/ )
   {
     _focusedHistogram =
             dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
+
+    _focusedHistogram->regionWidth( _regionWidth );
   }
 
-  QPoint relposition = _focusedHistogram->mapFromGlobal( position );
-  float percentage = float( relposition.x( )) / _focusedHistogram->width( );
+  QPoint cursorLocalPoint = _focusedHistogram->mapFromGlobal( position );
+  float percentage = float( cursorLocalPoint.x( )) / _focusedHistogram->width( );
 
   _currentValueLabel->setText(
       QString::number( _focusedHistogram->focusValueAt( percentage )));
   _localMaxLabel->setText( QString::number( _focusedHistogram->focusMaxLocal( )));
   _globalMaxLabel->setText( QString::number( _focusedHistogram->focusMaxGlobal( )));
 
-//  if( _focusedHistogram )
+  if( _overRegionEdgeLower )
   {
-//    if( !_overRegionEdgeLower || !_overRegionEdgeUpper )
-    {
-      _regionPosition = position;
-      _regionPercentage = percentage;
-      _regionEdgeLower = std::max( percentage - _regionWidth, 0.0f );
-      _regionEdgeUpper = std::min( percentage + _regionWidth, 1.0f );
-      std::cout << "Focus region bounds " << _regionEdgeLower
-                << " " << percentage
-                << " " << _regionEdgeUpper
-                << std::endl;
-    }
-
+    std::cout << "Selected lower edge" << std::endl;
+    _selectedEdgeLower = true;
   }
+  else if( _overRegionEdgeUpper )
+  {
+    std::cout << "Selected upper edge" << std::endl;
+    _selectedEdgeUpper = true;
+  }
+  else
+  {
+
+    _regionGlobalPosition = position;
+    _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
+
+
+     SetFocusRegionPosition( cursorLocalPoint );
+
+//    _regionGlobalPosition.setX( std::max( _regionWidthPixels, cursorLocalPoint.x(  )));
+//    _regionGlobalPosition.setX( std::min( cursorLocalPoint.x(  ),
+//                          _focusedHistogram->width( ) - _regionWidthPixels));
+//
+//    //TODO
+//    _regionPercentage = percentage;
+//    _regionEdgeLower = std::max( percentage - _regionWidth, _regionWidth );
+//    _regionEdgePointLower = _regionGlobalPosition.x( ) - _regionWidthPixels;
+//    _regionEdgeUpper = std::min( percentage + _regionWidth, _regionWidth );
+//    _regionEdgePointUpper = _regionGlobalPosition.x( ) + _regionWidthPixels;
+//    std::cout << "Focus region bounds " << _regionEdgeLower
+//              << " " << percentage
+//              << " " << _regionEdgeUpper
+//              << std::endl;
+
+    _selectedEdgeLower = _selectedEdgeUpper = false;
+  }
+
   _mousePressed = true;
 
   if( _stackType == T_STACK_EXPANDABLE )
@@ -526,6 +552,7 @@ void Summary::mouseMoveEvent( QMouseEvent* event_ )
 {
   QWidget::mouseMoveEvent( event_ );
 
+  QApplication::setOverrideCursor( Qt::ArrowCursor );
 //  if( _mousePressed )
 //  {
 //    QPoint position = event_->pos( );
@@ -539,7 +566,34 @@ void Summary::mouseMoveEvent( QMouseEvent* event_ )
 //  }
 }
 
-float regionEditMargin = 0.01f;
+float regionEditMargin = 0.005f;
+int regionEditMarginPixels = 5;
+
+void Summary::SetFocusRegionPosition( QPoint cursorLocalPosition )
+{
+  _regionLocalPosition = cursorLocalPosition;
+
+  _regionLocalPosition.setX( std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
+  _regionLocalPosition.setX( std::min( _regionLocalPosition.x(  ),
+                        _focusedHistogram->width( ) - _regionWidthPixels));
+
+  _regionPercentage = float( _regionLocalPosition.x( )) / _focusedHistogram->width( );
+
+  std::cout << " " << _regionLocalPosition.x( ) << " -> " << _regionPercentage << std::endl;
+
+//    _regionPosition = position;
+  _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
+  _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
+  _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
+  _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
+  std::cout << "Focus region bounds " << _regionEdgeLower
+            << " " << _regionPercentage
+            << " " << _regionEdgeUpper
+            << std::endl;
+
+  _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+  _focusWidget->update( );
+}
 
 void Summary::updateMouseMarker( QPoint point )
 {
@@ -548,60 +602,101 @@ void Summary::updateMouseMarker( QPoint point )
 
   _lastMousePosition = point;
 
-  QPoint relpoint = focusedHistogram->mapFromGlobal( point );
-  float percentage = float( relpoint.x( )) / focusedHistogram->width( );
+  if( _stackType != T_STACK_EXPANDABLE )
+    return;
 
-  if( _mousePressed )
+  float invWidth = 1.0f / float( focusedHistogram->width( ));
+
+  QPoint cursorLocalPoint = focusedHistogram->mapFromGlobal( point );
+  float percentage = float( cursorLocalPoint.x( )) * invWidth ;
+
+  if( focusedHistogram == _focusedHistogram )
   {
-    _regionPosition = point;
-//    _regionPosition = position;
-    _regionPercentage = percentage;
-    _regionEdgeLower = std::max( percentage - _regionWidth, 0.0f );
-    _regionEdgeUpper = std::min( percentage + _regionWidth, 1.0f );
-    std::cout << "Focus region bounds " << _regionEdgeLower
-              << " " << percentage
-              << " " << _regionEdgeUpper
-              << std::endl;
-
-    _focusWidget->viewRegion( *focusedHistogram, percentage, _regionWidth );
-    _focusWidget->update( );
-  }
-
-    if( _stackType == T_STACK_EXPANDABLE )
+    if( _mousePressed )
     {
-      if( focusedHistogram == _focusedHistogram )
+      if( _selectedEdgeLower )
+      {
+        float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointLower ) * invWidth;
+        std::cout << "Difference from edge " << diffPerc << std::endl;
+
+        _regionWidth -= diffPerc;
+
+        _regionWidth = std::max( 0.01f, std::min( 0.5f, _regionWidth ));
+
+        _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
+        _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
+        _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
+        _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
+
+         _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+        _focusWidget->update( );
+      }
+      else if ( _selectedEdgeUpper )
       {
 
+        float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointUpper ) * invWidth;
+        std::cout << "Difference from edge " << diffPerc << std::endl;
 
-        if(( percentage >= _regionEdgeLower - regionEditMargin &&
-            percentage <= _regionEdgeLower + regionEditMargin ))
-        {
-          _overRegionEdgeLower = true;
-          std::cout << "Over lower edge " << _regionEdgeLower - regionEditMargin
-                    << " >= " << percentage
-                    << " <= " << _regionEdgeLower + regionEditMargin
-                    << std::endl;
-        }
-        else if(( percentage >= ( _regionEdgeUpper- regionEditMargin ) &&
-                  percentage <= ( _regionEdgeUpper + regionEditMargin )))
-        {
-          _overRegionEdgeUpper = true;
-          std::cout << "Over upper edge " << _regionEdgeUpper - regionEditMargin
-                    << " >= " << percentage
-                    << " <= " << _regionEdgeUpper + regionEditMargin
-                    << std::endl;
-        }
+        _regionWidth += diffPerc;
+        _regionWidth = std::max( 0.01f, std::min( 0.5f, _regionWidth ));
 
-        if( _mousePressed )
-        {
+        _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
+        _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
+        _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
+        _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
 
-        }
-//        _currentValueLabel->setText(
-//            QString::number( focusedHistogram->focusValueAt( percentage )));
-//        _localMaxLabel->setText( QString::number( focusedHistogram->focusMaxLocal( )));
-//        _globalMaxLabel->setText( QString::number( focusedHistogram->focusMaxGlobal( )));
+        _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+        _focusWidget->update( );
       }
+      else
+      {
+
+        _regionGlobalPosition = point;
+        _regionWidthPixels = _regionWidth * focusedHistogram->width( );
+
+
+        SetFocusRegionPosition( cursorLocalPoint );
+
+        std::cout << "Region position X: " << _regionGlobalPosition.x( );
+
+
+      }
+
+      _focusedHistogram->regionWidth( _regionWidth );
+
+    } // end mousePressed
+
+    std::cout << point.x( ) << " " << _regionEdgePointLower << " "
+    << _regionEdgePointUpper << std::endl;
+
+//        if(( percentage >= _regionEdgeLower - regionEditMargin &&
+//            percentage <= _regionEdgeLower + regionEditMargin ))
+    if( abs(cursorLocalPoint.x( ) - _regionEdgePointLower) < regionEditMarginPixels )
+    {
+      _overRegionEdgeLower = true;
+      std::cout << "Over lower edge " << _regionEdgeLower - regionEditMargin
+                << " >= " << percentage
+                << " <= " << _regionEdgeLower + regionEditMargin
+                << std::endl;
+      QApplication::setOverrideCursor( Qt::SizeHorCursor );
     }
+//        else if(( percentage >= ( _regionEdgeUpper- regionEditMargin ) &&
+//                  percentage <= ( _regionEdgeUpper + regionEditMargin )))
+    else if( abs(_regionEdgePointUpper - cursorLocalPoint.x( )) < regionEditMarginPixels )
+    {
+      _overRegionEdgeUpper = true;
+      std::cout << "Over upper edge " << _regionEdgeUpper - regionEditMargin
+                << " >= " << percentage
+                << " <= " << _regionEdgeUpper + regionEditMargin
+                << std::endl;
+      QApplication::setOverrideCursor( Qt::SizeHorCursor );
+    }
+    else
+    {
+      QApplication::setOverrideCursor( Qt::ArrowCursor );
+      _overRegionEdgeLower = _overRegionEdgeUpper = false;
+    }
+  }
 
     for( auto histogram : _histograms )
     {

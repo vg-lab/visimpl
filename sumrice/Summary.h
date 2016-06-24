@@ -169,6 +169,8 @@ protected:
 
   void UpdateGradientColors( bool replace = false );
 
+  void SetFocusRegionPosition( QPoint localPosition );
+
   unsigned int _bins;
   float _zoomFactor;
 
@@ -210,17 +212,26 @@ protected:
   unsigned int _heightPerRow;
 
   QPoint _lastMousePosition;
-  QPoint _regionPosition;
+  QPoint _regionGlobalPosition;
+  QPoint _regionLocalPosition;
   bool _showMarker;
-  bool _overRegionEdgeLower;
-  bool _overRegionEdgeUpper;
+
   float _regionPercentage;
+  float _regionWidth;
+  int _regionWidthPixels;
+
+  bool _overRegionEdgeLower;
+  bool _selectedEdgeLower;
+  int _regionEdgePointLower;
   float _regionEdgeLower;
+
+  bool _overRegionEdgeUpper;
+  bool _selectedEdgeUpper;
+  int _regionEdgePointUpper;
   float _regionEdgeUpper;
 
   bool _autoNameSelection;
 
-  float _regionWidth;
 };
 
 
