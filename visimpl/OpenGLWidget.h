@@ -28,9 +28,8 @@
 // #include "EditorTF/TransferFunctionEditor.h"
 #include <sumrice/sumrice.h>
 
-#ifdef VISIMPL_USE_ZEQ
-  #include <zeq/zeq.h>
-  #include <zeq/hbp/hbp.h>
+#ifdef VISIMPL_USE_ZEROEQ
+  #include <zeroeq/zeroeq.h>
   #include <servus/uri.h>
 
   #include <pthread.h>
@@ -113,7 +112,7 @@ public slots:
   void changeSimulationDecayValue( float value );
   float getSimulationDecayValue( void );
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
   void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
   void showSelection( bool );
@@ -144,7 +143,7 @@ protected:
   void updateSimulation( void );
   void paintParticles( void );
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
   std::unordered_set< uint32_t > _selectedGIDs;
   std::string _zeqUri;

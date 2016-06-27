@@ -10,6 +10,8 @@
 
 #include "H5Activity.h"
 
+#include <assert.h>
+
 H5Activity::H5Activity( const H5Network& network,
             const std::string& fileName_,
             const std::string& pattern_ )

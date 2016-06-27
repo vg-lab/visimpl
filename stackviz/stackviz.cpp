@@ -47,7 +47,7 @@ int main( int argc, char** argv )
     }
     if( std::strcmp( argv[ i ], "-zeq" ) == 0 )
     {
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
       if( ++i < argc )
       {
         zeqUri = std::string( argv[ i ]);
@@ -190,7 +190,7 @@ void dumpVersion( void )
             << std::endl << std::endl;
 
   std::cerr << "zeq support built-in: ";
-  #ifdef VISIMPL_USE_ZEQ
+  #ifdef VISIMPL_USE_ZEROEQ
   std::cerr << "\t\tyes";
   #else
   std::cerr << "\t\tno";
@@ -198,7 +198,7 @@ void dumpVersion( void )
   std::cerr << std::endl;
 
   std::cerr << "GmrvZeq support built-in: ";
-  #ifdef VISIMPL_USE_GMRVZEQ
+  #ifdef VISIMPL_USE_GMRVLEX
   std::cerr << "\tyes";
   #else
   std::cerr << "\tno";

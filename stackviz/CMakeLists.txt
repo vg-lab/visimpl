@@ -1,6 +1,8 @@
 add_definitions(-DNEUROLOTS_SKIP_GLEW_INCLUDE )
 
-set(Name Visimpl)
+set(PROJECT_VERSION_ABI ${${PROJECT_NAME}_VERSION_ABI})
+ 
+set(Name Stackviz)
 set(NAME STACKVIZ)
 set(namespace stackviz)
 set(NAMESPACE STACKVIZ)
@@ -13,22 +15,8 @@ configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.cpp
   ${PROJECT_BINARY_DIR}/src/stackviz/version.cpp @ONLY)
 
 
-
 set(UIDIR ${PROJECT_SOURCE_DIR}/ui)
 set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
-
-set(Name Visimpl)
-set(NAME STACKVIZ)
-set(namespace stackviz)
-set(NAMESPACE STACKVIZ)
-set(INCLUDE_NAME stackviz)
-configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/api.h
-  ${PROJECT_BINARY_DIR}/include/stackviz/api.h @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.h
-  ${PROJECT_BINARY_DIR}/include/stackviz/version.h @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.cpp
-  ${PROJECT_BINARY_DIR}/src/version.cpp @ONLY)
-
 
 set(STACKVIZ_SOURCES
   ${PROJECT_BINARY_DIR}/src/stackviz/version.cpp
@@ -77,12 +65,16 @@ endif( )
 add_definitions( "-DDEFAULT_CONTEXT_OPENGL_MAJOR=${DEFAULT_CONTEXT_OPENGL_MAJOR}" )
 add_definitions( "-DDEFAULT_CONTEXT_OPENGL_MINOR=${DEFAULT_CONTEXT_OPENGL_MINOR}" )
 
-if (ZEQ_FOUND)
-  list(APPEND STACKVIZ_LINK_LIBRARIES zeq zeqHBP ${CMAKE_THREAD_LIBS_INIT})
+if (ZEROEQ_FOUND)
+  list(APPEND STACKVIZ_LINK_LIBRARIES ZeroEQ ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-if (GMRVZEQ_FOUND)
-  list( APPEND STACKVIZ_LINK_LIBRARIES gmrvzeq )
+if (GMRVLEX_FOUND)
+  list( APPEND STACKVIZ_LINK_LIBRARIES gmrvlex )
+endif()
+
+if (LEXIS_FOUND)
+  list( APPEND STACKVIZ_LINK_LIBRARIES Lexis )
 endif()
 
 if (DEFLECT_FOUND)
@@ -93,4 +85,4 @@ if (BRION_FOUND)
   list(APPEND STACKVIZ_LINK_LIBRARIES Brion Brain)
 endif()
 
-common_application( stackviz )
+common_application( stackviz GUI ${COMMON_APP_ARGS})

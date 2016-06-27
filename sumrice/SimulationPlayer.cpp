@@ -266,9 +266,9 @@ namespace visimpl
     }
   }
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
-#ifdef VISIMPL_USE_GMRVZEQ
+#ifdef VISIMPL_USE_GMRVLEX
 
   ZeqEventsManager* SimulationPlayer::zeqEvents( void )
   {

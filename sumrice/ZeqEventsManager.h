@@ -8,20 +8,26 @@
 #ifndef __ZEQEVENTSMANAGER_H_
 #define __ZEQEVENTSMANAGER_H_
 
-#ifdef VISIMPL_USE_ZEQ
-  #include <zeq/zeq.h>
-  #include <zeq/hbp/hbp.h>
-  #include <servus/uri.h>
+#ifdef VISIMPL_USE_ZEROEQ
+  #include <zeroeq/zeroeq.h>
+//  #include <zeroeq/hbp/hbp.h>
+//  #include <servus/uri.h>
 
-  #include <pthread.h>
+//  #include <pthread.h>
   #include <mutex>
 
   #include <boost/signals2/signal.hpp>
   #include <boost/bind.hpp>
 
-#ifdef VISIMPL_USE_GMRVZEQ
-  #include <gmrvzeq/gmrvzeq.h>
+#ifdef VISIMPL_USE_LEXIS
+#include <lexis/lexis.h>
 #endif
+
+#ifdef VISIMPL_USE_GMRVLEX
+  #include <gmrvlex/gmrvlex.h>
+#endif
+
+#include <thread>
 
 #endif
 
@@ -29,8 +35,8 @@ class ZeqEventsManager
 {
 public:
 
-  ZeqEventsManager( const std::string& zeqUri_ );
-
+  ZeqEventsManager( const std::string& zeroeqUri_ );
+  ~ZeqEventsManager( );
 //  float getLastRelativePosition( void );
 //  float getCUrrentRelativePosition( void );
 //
@@ -42,32 +48,43 @@ public:
   boost::signals2::signal< void ( unsigned int ) > playbackOpReceived;
 
 
-#ifdef VISIMPL_USE_ZEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
 public:
 
   void sendFrame( const float& start, const float& end,
                   const float& current ) const;
 
-  void sendPlaybackOp( zeq::gmrv::PlaybackOperation operation ) const;
+#ifdef VISIMPL_USE_GMRVLEX
+
+  void sendPlaybackOp( zeroeq::gmrv::PlaybackOperation operation ) const;
+
+protected:
+  void _onPlaybackOpEvent( zeroeq::gmrv::ConstPlaybackOpPtr event_ );
+
+#endif
 
 protected:
 
-  void _onPlaybackOpEvent( const zeq::Event& event_ );
-  void _onFrameEvent( const zeq::Event& event_ );
-  void _setZeqUri( const std::string& );
-  static void* _Subscriber( void* subscriber );
+  void _onFrameEvent( /*lexis::render::ConstFramePtr event_*/ );
+  void _setZeqSession( const std::string& );
+//  static void* _Subscriber( void* subscriber );
 
-  bool _zeqConnection;
+  bool _zeroeqConnection;
 
-  servus::URI _uri;
-  zeq::Subscriber* _subscriber;
-  zeq::Publisher* _publisher;
+  std::string _session;
+  zeroeq::Subscriber* _subscriber;
+  zeroeq::Publisher* _publisher;
 
   pthread_t _subscriberThread;
 
-  zeq::hbp::data::Frame _lastFrame;
-  zeq::hbp::data::Frame _currentFrame;
+//  zeroeq::hbp::data::Frame _lastFrame;
+//  zeroeq::hbp::data::Frame _currentFrame;
+
+  lexis::render::Frame _lastFrame;
+  lexis::render::Frame _currentFrame;
+
+  std::thread* _thread;
 
 #endif
 
