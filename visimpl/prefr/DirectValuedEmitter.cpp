@@ -26,28 +26,28 @@ namespace prefr
   {
     ColorOperationPrototype* cProto =
             dynamic_cast<ColorOperationPrototype*>(
-                GetCurrentPrototype( current->id ) );
+                GetCurrentPrototype( current->id( ) ) );
 
     DirectValuedEmissionNode* node =
-        dynamic_cast<DirectValuedEmissionNode*>( GetCurrentNode( current->id ) );
+        dynamic_cast<DirectValuedEmissionNode*>( GetCurrentNode( current->id( ) ) );
 
-    if (cProto && (!current->Alive() || override))
+    if (cProto && (!current->alive( ) || override))
     {
-     current->life = glm::clamp(rand() * invRandMax, 0.0f, 1.0f) *
-         cProto->lifeInterval + cProto->minLife;
+     current->life( glm::clamp(rand() * invRandMax, 0.0f, 1.0f) *
+         cProto->lifeInterval + cProto->minLife );
 
-     current->velocity = node->GetEmissionVelocityDirection();
-     current->position = node->GetEmissionPosition();
+     current->velocity( node->GetEmissionVelocityDirection( ));
+     current->position( node->GetEmissionPosition( ));
 
-     current->color = glm::clamp(
-         cProto->colorop(node->Color(), cProto->color.GetFirstValue()),
-         0.0f, 1.0f);
+     current->color( glm::clamp(
+         cProto->colorop( node->Color( ), cProto->color.GetFirstValue( )),
+         0.0f, 1.0f ));
 
-     current->velocityModule = cProto->velocity.GetFirstValue();
+     current->velocityModule( cProto->velocity.GetFirstValue( ));
 
-     current->size = cProto->size.GetFirstValue();
+     current->size( cProto->size.GetFirstValue( ));
 
-     current->newborn = false;
+     current->newborn( false );
 
 
     }

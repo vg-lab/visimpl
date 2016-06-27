@@ -26,29 +26,29 @@ namespace prefr
   {
     ColorOperationPrototype* cProto =
             dynamic_cast<ColorOperationPrototype*>(
-                GetCurrentPrototype( current->id ) );
+                GetCurrentPrototype( current->id( ) ) );
 
     ColorEmissionNode* node =
-        dynamic_cast<ColorEmissionNode*>( GetCurrentNode( current->id ) );
+        dynamic_cast<ColorEmissionNode*>( GetCurrentNode( current->id( ) ) );
 
-    if (cProto && (!current->Alive() || override))
+    if (cProto && (!current->alive( ) || override))
     {
-      if( current->life < 0.0f )
-        current->life = cProto->minLife;
-      current->alive = true;
+      if( current->life( ) < 0.0f )
+        current->life( cProto->minLife );
+      current->alive( true );
 
-     current->velocity = node->GetEmissionVelocityDirection();
-     current->position = node->GetEmissionPosition();
+     current->velocity( node->GetEmissionVelocityDirection( ));
+     current->position( node->GetEmissionPosition( ));
 
-     current->color = glm::clamp(
+     current->color( glm::clamp(
          cProto->colorop(node->Color(), cProto->color.GetFirstValue()),
-         0.0f, 1.0f);
+         0.0f, 1.0f));
 
-     current->velocityModule = cProto->velocity.GetFirstValue();
+     current->velocityModule( cProto->velocity.GetFirstValue( ));
 
-     current->size = cProto->size.GetFirstValue();
+     current->size( cProto->size.GetFirstValue( ));
 
-     current->newborn = true;
+     current->newborn( true );
 
 
     }

@@ -67,15 +67,15 @@ namespace prefr
 
   void DirectValuedEmissionNode::killParticles( bool changeState )
   {
-    for( tparticleContainer::iterator it = particles->start;
-         it != particles->end; it++ )
+    for( tparticle it = particles->begin( );
+         it != particles->end( ); ++it )
     {
-      ( *it )->life = 0.0f;
+      it.life( 0.0f );
 
       if( changeState )
-        ( *it )->alive = false;
+        it.alive( false );
       else
-        ( *it )->alive = true;
+        it.alive( true );
     }
   }
 

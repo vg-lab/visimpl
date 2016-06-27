@@ -337,7 +337,7 @@ void OpenGLWidget::createParticleSystem( float scale )
   _offPrototype =
       new prefr::ColorOperationPrototype(
         _maxLife, _maxLife,
-        prefr::ParticleCollection( _ps->particles, 0, maxParticles));
+        ParticleCollection( _ps->particles, 0, maxParticles));
 
   _offPrototype->color.Insert( 0.0f, ( glm::vec4(0.1f, 0.1f, 0.1f, 0.5f)));
 
@@ -352,7 +352,7 @@ void OpenGLWidget::createParticleSystem( float scale )
   _prototype =
     new prefr::ColorOperationPrototype(
       _maxLife, _maxLife,
-      prefr::ParticleCollection( _ps->particles, 0, maxParticles));
+      ParticleCollection( _ps->particles, 0, maxParticles));
 
 //  prototype->color.Insert( 0.0f, ( glm::vec4(0.2, 0.2, 0.2, 0.05)));
 //  prototype->color.Insert( 0.1f, ( glm::vec4(0, 1, 1, 0.5 )));
@@ -398,7 +398,7 @@ void OpenGLWidget::createParticleSystem( float scale )
     start = i * partPerEmitter;
     end = start + partPerEmitter;
 
-    prefr::ParticleCollection collection ( _ps->particles, start, end );
+    ParticleCollection collection ( _ps->particles, start, end );
 
     switch( _simulationType )
     {
@@ -442,9 +442,9 @@ void OpenGLWidget::createParticleSystem( float scale )
   switch( _simulationType )
   {
     case TSimSpikes:
-      emitter = new prefr::CompositeColorEmitter( *_ps->particles, 1.f, true );
+      emitter = new prefr::CompositeColorEmitter( _ps->particles, 1.f, true );
       std::cout << "Created Spikes Emitter" << std::endl;
-      updater = new prefr::CompositeColorUpdater( *_ps->particles );
+      updater = new prefr::CompositeColorUpdater( _ps->particles );
       std::cout << "Created Spikes Updater" << std::endl;
 
 //      _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
@@ -465,9 +465,9 @@ void OpenGLWidget::createParticleSystem( float scale )
       break;
     case TSimVoltages:
 
-      emitter = new prefr::DirectValuedEmitter( *_ps->particles, 1000.f, true );
+      emitter = new prefr::DirectValuedEmitter( _ps->particles, 1000.f, true );
       std::cout << "Created Voltages Emitter" << std::endl;
-      updater = new prefr::DirectValuedUpdater( *_ps->particles );
+      updater = new prefr::DirectValuedUpdater( _ps->particles );
       std::cout << "Created Voltages Updater" << std::endl;
 
       _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
@@ -494,15 +494,15 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   #if (PREFR_USE_CUDA)
   std::cout << "CUDA sorter" << std::endl;
-  sorter = new prefr::ThrustParticleSorter( *_ps->particles );
+  sorter = new prefr::ThrustParticleSorter( _ps->particles );
   #else
-  sorter = new prefr::ParticleSorter( *_ps->particles );
+  sorter = new prefr::ParticleSorter( _ps->particles );
   #endif
 
   std::cout << "Created sorter" << std::endl;
 
   prefr::GLDefaultParticleRenderer* renderer =
-    new prefr::GLDefaultParticleRenderer( *_ps->particles );
+    new prefr::GLDefaultParticleRenderer( _ps->particles );
 
   std::cout << "Created systems" << std::endl;
 
@@ -678,13 +678,13 @@ void OpenGLWidget::updateSelection( void )
 
       bool on =  baseOn || _selectedGIDs.find( id ) != _selectedGIDs.end( );
 
-      prefr::tparticle_ptr particle = *( node->particles->start );
+      prefr::tparticle particle = node->particles->begin( );
 
-      _ps->particlePrototype[ particle->id ] =
+      _ps->particlePrototype[ particle.id( ) ] =
                 ( unsigned int )( on ? PROTOTYPE_ON : PROTOTYPE_OFF);
 
       if( ( _focusOnSelection && on ) || !_focusOnSelection )
-        ExpandBoundingBox( boundingBoxMin, boundingBoxMax, particle->position );
+        ExpandBoundingBox( boundingBoxMin, boundingBoxMax, particle.position( ) );
 
     }
 
