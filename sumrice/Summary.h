@@ -106,8 +106,10 @@ signals:
 
 protected slots:
 
-  void childHistogramClicked( float );
-  void childHistogramClicked( void );
+  void childHistogramPressed( QPoint, float );
+  void childHistogramReleased( QPoint, float );
+  void childHistogramClicked( float percentage,
+                              Qt::KeyboardModifiers modifiers );
 
   void removeSelections( void );
 
@@ -167,6 +169,8 @@ protected:
 
   void UpdateGradientColors( bool replace = false );
 
+  void SetFocusRegionPosition( QPoint localPosition );
+
   unsigned int _bins;
   float _zoomFactor;
 
@@ -178,6 +182,9 @@ protected:
 
   visimpl::MultiLevelHistogram* _mainHistogram;
   visimpl::MultiLevelHistogram* _detailHistogram;
+  visimpl::MultiLevelHistogram* _focusedHistogram;
+
+  bool _mousePressed;
 
   TStackType _stackType;
 
@@ -205,11 +212,26 @@ protected:
   unsigned int _heightPerRow;
 
   QPoint _lastMousePosition;
+  QPoint _regionGlobalPosition;
+  QPoint _regionLocalPosition;
   bool _showMarker;
+
+  float _regionPercentage;
+  float _regionWidth;
+  int _regionWidthPixels;
+
+  bool _overRegionEdgeLower;
+  bool _selectedEdgeLower;
+  int _regionEdgePointLower;
+  float _regionEdgeLower;
+
+  bool _overRegionEdgeUpper;
+  bool _selectedEdgeUpper;
+  int _regionEdgePointUpper;
+  float _regionEdgeUpper;
 
   bool _autoNameSelection;
 
-  float _regionWidth;
 };
 
 

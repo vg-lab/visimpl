@@ -168,9 +168,9 @@ namespace visimpl
         if( !filter ||  _filteredGIDs.find( spike->second ) != _filteredGIDs.end( ))
         {
           bin++;
-          spike++;
-        }
 
+        }
+        spike++;
         counter++;
       }
 
@@ -613,18 +613,28 @@ namespace visimpl
   {
     QFrame::mousePressEvent( event_ );
 
-    if( event_->modifiers() == Qt::ControlModifier )
+    QPoint position = event_->pos( );
+
+    float percentage = position.x( ) / float( width( ));
+
+    if( event_->modifiers( ) == Qt::ControlModifier ||
+        event_->modifiers( ) == Qt::ShiftModifier )
     {
-      emit modifierClicked( );
+      emit mouseModifierPressed( percentage, event_->modifiers( ));
     }
     else
     {
-      QPoint position = event_->pos( );
-
-      float percentage = position.x( ) / float( width( ));
-
-      emit mouseClicked( percentage );
+      emit mousePressed( mapToGlobal( position ), percentage );
     }
+  }
+
+  void MultiLevelHistogram::mouseReleaseEvent( QMouseEvent* event_ )
+  {
+    QPoint position = event_->pos( );
+
+    float percentage = position.x( ) / float( width( ));
+    std::cout << this << " release event" << std::endl;
+    emit mouseReleased( mapToGlobal( position ), percentage );
   }
 
   void MultiLevelHistogram::mouseMoveEvent( QMouseEvent* event_ )
@@ -644,6 +654,11 @@ namespace visimpl
   void MultiLevelHistogram::mousePosition( QPoint* mousePosition_ )
   {
     _lastMousePosition = mousePosition_;
+  }
+
+  void MultiLevelHistogram::regionPosition( QPoint* regionPosition_ )
+  {
+    _regionPosition = regionPosition_;
   }
 
   void MultiLevelHistogram::regionWidth( float region_ )
@@ -724,15 +739,18 @@ namespace visimpl
     {
       QPoint localPosition = mapFromGlobal( *_lastMousePosition );
 
-      if( localPosition.x( ) > width( ))
-        localPosition.setX( width( ));
-      else if ( localPosition.x( ) < 0 )
-        localPosition.setX( 0 );
+      localPosition.setX( std::min( width( ), std::max( 0, localPosition.x( ))));
+      localPosition.setY( std::min( height( ), std::max( 0, localPosition.y( ))));
 
-      if( localPosition.y( ) > height( ))
-        localPosition.setY( height( ));
-      else if ( localPosition.y( ) < 0 )
-        localPosition.setY( 0 );
+//      if( localPosition.x( ) > width( ))
+//        localPosition.setX( width( ));
+//      else if ( localPosition.x( ) < 0 )
+//        localPosition.setX( 0 );
+//
+//      if( localPosition.y( ) > height( ))
+//        localPosition.setY( height( ));
+//      else if ( localPosition.y( ) < 0 )
+//        localPosition.setY( 0 );
 
 
       float percentage = float( localPosition.x( )) / float( width( ));
@@ -743,17 +761,20 @@ namespace visimpl
       if( width( ) - positionX < 50 )
         margin = -50;
 
-      if( _paintRegion )
+      if( _regionPosition && _paintRegion )
       {
+        QPoint regionPos = mapFromGlobal( *_regionPosition );
+        regionPos.setX( std::min( width( ), std::max( 0, regionPos.x( ))));
+        regionPos.setY( std::min( height( ), std::max( 0, regionPos.y( ))));
+
+        int regionPosX = regionPos.x( );
+
         int regionW = _regionWidth * width( );
-        int start = std::max( 0, positionX - regionW );
-        if( ( positionX + regionW ) > width( ) )
+        int start = std::max( 0, regionPosX - regionW );
+        if( ( regionPosX + regionW ) > width( ) )
           start = width( ) - regionW * 2;
 
-        QRect region( std::max( 0, start ),
-                      0,
-                      regionW * 2,
-                      height( ));
+        QRect region( std::max( 0, start ), 0, regionW * 2, height( ));
 
         QPen pen( Qt::NoPen );
         QBrush brush( QColor( 30, 30, 30, 30 ));

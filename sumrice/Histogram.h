@@ -125,8 +125,10 @@ namespace visimpl
     const QGradientStops& gradientStops( void );
 
     virtual void mousePressEvent( QMouseEvent* event_ );
+    virtual void mouseReleaseEvent( QMouseEvent* event_ );
     virtual void mouseMoveEvent( QMouseEvent* event_ );
     void mousePosition( QPoint* mousePosition_ );
+    void regionPosition( QPoint* regionPosition_ );
 
     void regionWidth( float region_ );
     float regionWidth( void );
@@ -146,8 +148,9 @@ namespace visimpl
 signals:
 
     void mousePositionChanged( QPoint point );
-    void mouseClicked( float position );
-    void modifierClicked( void );
+    void mousePressed( QPoint coordinates, float position );
+    void mouseReleased( QPoint coordinates, float position );
+    void mouseModifierPressed( float position,  Qt::KeyboardModifiers modifiers );
 
   protected:
 
@@ -183,6 +186,7 @@ signals:
     GIDUSet _filteredGIDs;
 
     QPoint* _lastMousePosition;
+    QPoint* _regionPosition;
 
     bool _paintRegion;
     float _regionWidth;
