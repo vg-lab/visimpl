@@ -30,6 +30,10 @@ namespace visimpl
   , _normRule( T_NORM_MAX )
   , _repMode( T_REP_DENSE )
   , _lastMousePosition( nullptr )
+  , _paintRegion( false )
+  , _regionWidth( 0.1f )
+  , _gridLinesNumber( 0 )
+  , _firstHistogram( false )
   {
 //    init( );
   }
@@ -52,6 +56,10 @@ namespace visimpl
   , _normRule( T_NORM_MAX )
   , _repMode( T_REP_DENSE )
   , _lastMousePosition( nullptr )
+  , _paintRegion( false )
+  , _regionWidth( 0.1f )
+  , _gridLinesNumber( 0 )
+  , _firstHistogram( false )
   {
 //    init( );
   }
@@ -90,6 +98,10 @@ namespace visimpl
   , _normRule( T_NORM_MAX )
   , _repMode( T_REP_DENSE )
   , _lastMousePosition( nullptr )
+  , _paintRegion( false )
+  , _regionWidth( 0.1f )
+  , _gridLinesNumber( 0 )
+  , _firstHistogram( false )
   {
 //    init( );
   }
@@ -482,6 +494,40 @@ namespace visimpl
     return _normRule;
   }
 
+
+  void MultiLevelHistogram::gridLinesNumber( unsigned int linesNumber )
+  {
+    _gridLinesNumber = linesNumber;
+
+    _mainHistogram._gridLines.clear( );
+
+    std::vector< float > gridLines;
+    if( linesNumber > 0 )
+    {
+
+      float current = 0;
+
+      float delta = 1.0f / float( linesNumber + 1 );
+
+      gridLines.push_back( 0.0f );
+
+      for( unsigned int i = 1; i <= linesNumber; ++i )
+      {
+        current += delta;
+        gridLines.push_back( current );
+      }
+      gridLines.push_back( 1.0f );
+    }
+
+    _mainHistogram._gridLines = gridLines;
+
+  }
+
+  unsigned int MultiLevelHistogram::gridLinesNumber( void )
+  {
+    return _gridLinesNumber;
+  }
+
   void MultiLevelHistogram::representationMode(
       TRepresentation_Mode repMode )
   {
@@ -633,7 +679,6 @@ namespace visimpl
     QPoint position = event_->pos( );
 
     float percentage = position.x( ) / float( width( ));
-    std::cout << this << " release event" << std::endl;
     emit mouseReleased( mapToGlobal( position ), percentage );
   }
 
@@ -674,6 +719,11 @@ namespace visimpl
   void MultiLevelHistogram::paintRegion( bool region )
   {
     _paintRegion = region;
+  }
+
+  void MultiLevelHistogram::firstHistogram( bool first )
+  {
+    _firstHistogram = first;
   }
 
   void MultiLevelHistogram::paintEvent(QPaintEvent* /*e*/)
@@ -734,6 +784,39 @@ namespace visimpl
       penColor = QColor( 0, 0, 0 );
     }
 
+    if( _mainHistogram._gridLines.size( ) > 0 )
+    {
+      for( auto line : _mainHistogram._gridLines )
+      {
+        int positionX = line * width( );
+
+        QPen pen( penColor );
+
+        if( _firstHistogram )
+        {
+          int margin = 5;
+
+          float timeValue = ( _endTime - _startTime ) * line + _startTime;
+
+          QString value = QString::number( timeValue );
+          int valueLength = value.length( ) * 8;
+          if( width( ) - positionX < valueLength )
+            margin = -valueLength;
+          QPoint position ( positionX + margin, currentHeight / 4 );
+          pen.setColor( QColor( 150, 150, 150 ));
+          painter.setPen( pen );
+          painter.drawText( position, value );
+
+        }
+
+        QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
+        pen.setColor( QColor( 177, 50, 177 ));
+        painter.setPen( pen );
+        painter.drawLine( marker );
+      }
+
+    }
+
 
     if( _lastMousePosition )
     {
@@ -758,8 +841,10 @@ namespace visimpl
       int positionX = localPosition.x( );
       int margin = 5;
 
-      if( width( ) - positionX < 50 )
-        margin = -50;
+      QString value = QString::number( valueAt( percentage ));
+      int valueLength = value.length( ) * 10;
+      if( width( ) - positionX < valueLength )
+        margin = -valueLength;
 
       if( _regionPosition && _paintRegion )
       {
