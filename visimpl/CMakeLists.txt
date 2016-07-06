@@ -23,8 +23,7 @@ set(CMAKE_AUTOUIC ON)
 
 
 set(VISIMPL_SOURCES
-  ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
-  visimpl.ui
+  ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp  
   visimpl.cpp
   MainWindow.cpp
   OpenGLWidget.cpp
@@ -37,6 +36,8 @@ set(VISIMPL_SOURCES
   prefr/DirectValuedEmissionNode.cpp
   prefr/DirectValuedUpdater.cpp
   prefr/DirectValuedEmitter.cpp
+  visimpl.ui
+  resources.qrc
 )
 
 set(VISIMPL_HEADERS
@@ -53,22 +54,7 @@ set(VISIMPL_HEADERS
   prefr/DirectValuedEmitter.h  
 )
 
-#set(VISIMPL_MOC_HEADERS
-#  MainWindow.h
-#  OpenGLWidget.h
-#)
-
-#set(VISIMPL_UI_FORMS
-#  ${UIDIR}/
-#)
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-
-set(VISIMPL_RESOURCES
-  ${QRCDIR}/resources.qrc
-)
-
 
 set(VISIMPL_LINK_LIBRARIES
   Qt5::Core

@@ -14,7 +14,7 @@
    <string>StackViz</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../qrc/resources.qrc">
+   <iconset resource="resources.qrc">
     <normaloff>:/icons/qneurolots.ico</normaloff>:/icons/qneurolots.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget"/>

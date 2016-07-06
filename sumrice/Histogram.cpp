@@ -171,7 +171,6 @@ namespace visimpl
         }
         spike++;
         counter++;
-        spike++;
       }
 
       currentTime += deltaTime;

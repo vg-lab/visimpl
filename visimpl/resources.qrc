@@ -1,0 +1,18 @@
+<RCC>
+  <qresource prefix="/">
+    <file>icons/query.png</file>
+    <file>icons/qneurolots.ico</file>
+    <file>icons/wireframe.png</file>
+    <file>icons/open_swc.png</file>
+    <file>icons/close.png</file>
+    <file>icons/open_xml.png</file>
+    <file>icons/open_bc.png</file>
+    <file>icons/colorpicker.png</file>
+    <file>icons/play.png</file>
+    <file>icons/pause.png</file>
+    <file>icons/stop.png</file>
+    <file>icons/repeat.png</file>
+    <file>icons/previous.png</file>
+    <file>icons/next.png</file>
+  </qresource>
+</RCC>
