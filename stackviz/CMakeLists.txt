@@ -22,6 +22,8 @@ set(STACKVIZ_SOURCES
   ${PROJECT_BINARY_DIR}/src/stackviz/version.cpp
   stackviz.cpp
   MainWindow.cpp
+  stackviz.ui
+  resources.qrc
 )
 
 set(STACKVIZ_HEADERS
@@ -30,21 +32,8 @@ set(STACKVIZ_HEADERS
   log.h
 )
 
-set(STACKVIZ_MOC_HEADERS
-  MainWindow.h
-)
-
-set(STACKVIZ_UI_FORMS
-  ${UIDIR}/stackviz.ui
-)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-
-set(STACKVIZ_RESOURCES
-  ${QRCDIR}/resources.qrc
-)
-
 
 set(STACKVIZ_LINK_LIBRARIES
   Qt5::Core
