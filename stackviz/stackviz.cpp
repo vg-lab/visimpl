@@ -25,8 +25,8 @@ int main( int argc, char** argv )
   std::string zeqUri;
   std::string target = std::string( "" );
   std::string report = std::string( "" );
-  visimpl::TDataType dataType = visimpl::TBlueConfig;
-  visimpl::TSimulationType simType = visimpl::TSimSpikes;
+  simil::TDataType dataType = simil::TBlueConfig;
+  simil::TSimulationType simType = simil::TSimSpikes;
 
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
@@ -62,7 +62,7 @@ int main( int argc, char** argv )
       if( ++i < argc )
       {
         networkFile = std::string( argv[ i ]);
-        dataType = visimpl::TBlueConfig;
+        dataType = simil::TBlueConfig;
       }
       else
         usageMessage( argv[0] );
@@ -76,7 +76,7 @@ int main( int argc, char** argv )
         networkFile = std::string( argv[ i ]);
         ++i;
         activityFile = std::string( argv[ i ]);
-        dataType = visimpl::THDF5;
+        dataType = simil::THDF5;
       }
       else
         usageMessage( argv[0] );
@@ -84,13 +84,13 @@ int main( int argc, char** argv )
 
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
-       simType = visimpl::TSimSpikes;
+       simType = simil::TSimSpikes;
     }
     else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
     {
       if(++i < argc )
       {
-         simType = visimpl::TSimVoltages;
+         simType = simil::TSimVoltages;
         report = std::string( argv[ i ]);
       }
       else
@@ -137,10 +137,10 @@ int main( int argc, char** argv )
   if( !networkFile.empty( ))
   switch( dataType )
   {
-    case visimpl::TDataType::TBlueConfig:
+    case simil::TDataType::TBlueConfig:
       mainWindow.openBlueConfig( networkFile, simType, report );
       break;
-    case visimpl::TDataType::THDF5:
+    case simil::TDataType::THDF5:
       mainWindow.openHDF5File( networkFile, simType, activityFile );
       break;
     default:

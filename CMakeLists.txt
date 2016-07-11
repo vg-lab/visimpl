@@ -47,22 +47,19 @@ common_find_package( Qt5OpenGL REQUIRED )
 common_find_package( GLEW REQUIRED SYSTEM )
 common_find_package( OpenGL REQUIRED )
 common_find_package( Eigen3 REQUIRED SYSTEM)
-common_find_package( nsol REQUIRED )
-common_find_package( neurolots REQUIRED )
+common_find_package( ReTo REQUIRED )
+common_find_package( SimIL REQUIRED )
 common_find_package( prefr REQUIRED )
-common_find_package( Brion REQUIRED )
-common_find_package( HDF5 REQUIRED COMPONENTS C CXX )
 common_find_package( Lexis )
 common_find_package( OpenMP )
 
 list( APPEND VISIMPL_DEPENDENT_LIBRARIES 
   OpenGL 
   GLEW 
-  Eigen3 
-  nsol 
-  neurolots 
+  Eigen3  
+  ReTo
+  SimIL
   prefr 
-  Brion 
 )
 
 if (QT5CORE_FOUND)
@@ -107,7 +104,7 @@ common_find_package_post()
 add_subdirectory( sumrice )
 add_subdirectory( visimpl )
 add_subdirectory( stackviz )
-add_subdirectory( examplesh5 )
+#add_subdirectory( examplesh5 )
 
 include(CPackConfig)
 include(DoxygenRule)

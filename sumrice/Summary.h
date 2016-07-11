@@ -10,6 +10,7 @@
 
 #include <brion/brion.h>
 #include <prefr/prefr.h>
+#include <simil/simil.h>
 
 #include <QWidget>
 #include <QGridLayout>
@@ -20,7 +21,6 @@
 
 #include "FocusFrame.h"
 #include "Histogram.h"
-#include "SimulationData.h"
 
 namespace visimpl
 {
@@ -67,7 +67,7 @@ public:
   Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
   virtual ~Summary( ){};
 //  void Init( brion::SpikeReport* _spikes, brion::GIDSet gids );
-  void Init( visimpl::SpikeData* spikes_, brion::GIDSet gids_ );
+  void Init( simil::SpikeData* spikes_, brion::GIDSet gids_ );
   void AddNewHistogram( const visimpl::Selection& selection
 #ifdef VISIMPL_USE_ZEROEQ
                        , bool deferredInsertion = false
@@ -175,7 +175,7 @@ protected:
   float _zoomFactor;
 
 //  brion::SpikeReport* _spikeReport;
-  visimpl::SpikeData* _spikeReport;
+  simil::SpikeData* _spikeReport;
   brion::CompartmentReport* _voltageReport;
 
   GIDUSet _gids;

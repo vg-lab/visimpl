@@ -18,10 +18,10 @@ int main( int argc, char** argv )
   setenv("LANG", "C", 1);
 #endif
 
-  QApplication application(argc,argv);
+  QApplication application( argc, argv );
 
-  visimpl::TSimulationType simType = visimpl::TSimSpikes;
-  visimpl::TDataType dataType = visimpl::TBlueConfig;
+  simil::TSimulationType simType = simil::TSimSpikes;
+  simil::TDataType dataType = simil::TBlueConfig;
 
   std::string networkFile;
   std::string activityFile;
@@ -64,7 +64,7 @@ int main( int argc, char** argv )
       if( ++i < argc )
       {
         networkFile = std::string( argv[ i ]);
-        dataType = visimpl::TBlueConfig;
+        dataType = simil::TBlueConfig;
       }
       else
         usageMessage( argv[0] );
@@ -78,7 +78,7 @@ int main( int argc, char** argv )
         networkFile = std::string( argv[ i ]);
         ++i;
         activityFile = std::string( argv[ i ]);
-        dataType = visimpl::THDF5;
+        dataType = simil::THDF5;
       }
       else
         usageMessage( argv[0] );
@@ -86,13 +86,13 @@ int main( int argc, char** argv )
 
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
-      simType = visimpl::TSimSpikes;
+      simType = simil::TSimSpikes;
     }
     else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
     {
       if(++i < argc )
       {
-        simType = visimpl::TSimVoltages;
+        simType = simil::TSimVoltages;
         report = std::string( argv[ i ]);
       }
       else
@@ -143,10 +143,10 @@ int main( int argc, char** argv )
   if( !networkFile.empty( ))
   switch( dataType )
   {
-    case visimpl::TDataType::TBlueConfig:
+    case simil::TDataType::TBlueConfig:
       mainWindow.openBlueConfig( networkFile, simType, report );
       break;
-    case visimpl::TDataType::THDF5:
+    case simil::TDataType::THDF5:
       mainWindow.openHDF5File( networkFile, simType, activityFile );
       break;
     default:

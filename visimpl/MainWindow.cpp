@@ -104,11 +104,11 @@ void MainWindow::showStatusBarMessage ( const QString& message )
 }
 
 void MainWindow::openBlueConfig( const std::string& fileName,
-                                 visimpl::TSimulationType simulationType,
+                                 simil::TSimulationType simulationType,
                                  const std::string& reportLabel)
 {
   _openGLWidget->loadData( fileName,
-                           visimpl::TDataType::TBlueConfig,
+                           simil::TDataType::TBlueConfig,
                            simulationType, reportLabel );
 
   configurePlayer( );
@@ -128,7 +128,7 @@ void MainWindow::openBlueConfigThroughDialog( void )
   {
     bool ok1, ok2;
     QInputDialog simTypeDialog;
-    visimpl::TSimulationType simType;
+    simil::TSimulationType simType;
     QStringList items = {"Spikes", "Voltages"};
 
     QString text = QInputDialog::getItem(
@@ -140,12 +140,12 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
     if( text == items[0] )
     {
-      simType = visimpl::TSimSpikes;
+      simType = simil::TSimSpikes;
       ok2 = true;
     }
     else
     {
-      simType = visimpl::TSimVoltages;
+      simType = simil::TSimVoltages;
 
       text = QInputDialog::getText(
           this, tr( "Please select report" ),
@@ -171,11 +171,11 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
 
 void MainWindow::openHDF5File( const std::string& networkFile,
-                               visimpl::TSimulationType simulationType,
+                               simil::TSimulationType simulationType,
                                const std::string& activityFile )
 {
   _openGLWidget->loadData( networkFile,
-                           visimpl::TDataType::THDF5,
+                           simil::TDataType::THDF5,
                            simulationType,
                            activityFile );
 
@@ -210,7 +210,7 @@ void MainWindow::openHDF5ThroughDialog( void )
 
   activityFile = path.toStdString( );
 
-  openHDF5File( networkFile, visimpl::TSimSpikes, activityFile );
+  openHDF5File( networkFile, simil::TSimSpikes, activityFile );
 }
 
 void MainWindow::configurePlayer( void )
@@ -225,8 +225,10 @@ void MainWindow::configurePlayer( void )
   _endTimeLabel->setText(
         QString::number( (double)_openGLWidget->player( )->endTime( )));
 
+#ifdef SIMIL_USE_ZEROEQ
   _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+#endif
 
   changeEditorColorMapping( );
   changeEditorSizeFunction( );
@@ -464,13 +466,13 @@ void MainWindow::initSimColorDock( void )
 
 void MainWindow::initSummaryWidget( void )
 {
-  visimpl::TSimulationType simType =
+  simil::TSimulationType simType =
       _openGLWidget->player( )->simulationType( );
 
-  if( simType == visimpl::TSimSpikes )
+  if( simType == simil::TSimSpikes )
   {
-    visimpl::SpikesPlayer* spikesPlayer =
-        dynamic_cast< visimpl::SpikesPlayer* >( _openGLWidget->player( ));
+    simil::SpikesPlayer* spikesPlayer =
+        dynamic_cast< simil::SpikesPlayer* >( _openGLWidget->player( ));
 
     std::cout << "Creating summary..." << std::endl;
 //    GIDUSet gids;
@@ -503,7 +505,7 @@ void MainWindow::Play( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
       _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::PLAY );
 #endif
     }
@@ -519,7 +521,7 @@ void MainWindow::Pause( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::PAUSE );
 #endif
     }
@@ -537,7 +539,7 @@ void MainWindow::Stop( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
       _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::STOP );
 #endif
     }
@@ -555,7 +557,7 @@ void MainWindow::Repeat( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
       _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( repeat ?
                                   zeroeq::gmrv::ENABLE_LOOP :
                                   zeroeq::gmrv::DISABLE_LOOP );
@@ -591,7 +593,7 @@ void MainWindow::PlayAt( float percentage, bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     // Send event
     _openGLWidget->player( )->zeqEvents( )->sendFrame( _simSlider->minimum( ),
                            _simSlider->maximum( ),
@@ -626,7 +628,7 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     // Send event
     _openGLWidget->player( )->zeqEvents( )->sendFrame( _simSlider->minimum( ),
                            _simSlider->maximum( ),
@@ -651,7 +653,7 @@ void MainWindow::Restart( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::BEGIN );
 #endif
     }
@@ -667,7 +669,7 @@ void MainWindow::GoToEnd( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::END );
 #endif
     }

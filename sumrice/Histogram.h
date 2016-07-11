@@ -10,12 +10,11 @@
 
 #include <brion/brion.h>
 #include <prefr/prefr.h>
+#include <simil/simil.h>
 
 #include <unordered_set>
 
 #include <QFrame>
-
-#include "SimulationData.h"
 
 typedef std::unordered_set< uint32_t > GIDUSet;
 typedef utils::InterpolationSet< glm::vec4 > TColorMapper;
@@ -72,13 +71,13 @@ namespace visimpl
     MultiLevelHistogram( void );
     MultiLevelHistogram( const brion::Spikes& spikes, float startTime, float endTime );
 //    MultiLevelHistogram( const brion::SpikeReport& spikeReport );
-    MultiLevelHistogram( const visimpl::SpikeData& spikeReport );
+    MultiLevelHistogram( const simil::SpikeData& spikeReport );
 
     virtual void init( unsigned int binsNumber = 250, float zoomFactor = 1.5f );
 
     void Spikes( const brion::Spikes& spikes, float startTime, float endTime );
 //    void Spikes( const brion::SpikeReport& spikeReport );
-    void Spikes( const visimpl::SpikeData& spikeReport  );
+    void Spikes( const simil::SpikeData& spikeReport  );
 
     void BuildHistogram( THistogram histogram = T_HIST_MAIN );
 

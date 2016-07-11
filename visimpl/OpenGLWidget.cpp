@@ -52,7 +52,7 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _currentClearColor( 20, 20, 20, 0 )
   , _particlesShader( nullptr )
   , _ps( nullptr )
-  , _simulationType( TSimulationType::TSimNetwork )
+  , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
   , _firstFrame( true )
   , _elapsedTimeRenderAcc( 0.0f )
@@ -62,10 +62,10 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
 {
 #ifdef VISIMPL_USE_ZEROEQ
   if ( zeqUri != "" )
-    _camera = new nlrender::Camera( zeqUri );
+    _camera = new reto::Camera( zeqUri );
   else
 #endif
-  _camera = new nlrender::Camera( );
+  _camera = new reto::Camera( );
 
   _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
@@ -113,8 +113,8 @@ OpenGLWidget::~OpenGLWidget( void )
 
 
 void OpenGLWidget::loadData( const std::string& fileName,
-                             const visimpl::TDataType fileType,
-                             TSimulationType simulationType,
+                             const simil::TDataType fileType,
+                             simil::TSimulationType simulationType,
                              const std::string& report)
 {
 
@@ -124,20 +124,20 @@ void OpenGLWidget::loadData( const std::string& fileName,
 
   switch( _simulationType )
   {
-    case TSimSpikes:
+    case simil::TSimSpikes:
     {
       _deltaTime = 0.5f;
 //        _player = new SpikesPlayer( fileName, true );
-      SpikesPlayer* spPlayer = new SpikesPlayer( );
+      simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer( );
       spPlayer->LoadData( fileType, fileName, report );
       _player = spPlayer;
       _player->deltaTime( _deltaTime );
 
       break;
     }
-    case TSimVoltages:
+    case simil::TSimVoltages:
     {
-      _player = new VoltagesPlayer( fileName, report, true);
+      _player = new simil::VoltagesPlayer( fileName, report, true);
       _deltaTime = _player->deltaTime( );
       break;
     }
@@ -147,7 +147,7 @@ void OpenGLWidget::loadData( const std::string& fileName,
   }
 
   float scale = 1.0f;
-  if( fileType == visimpl::THDF5 )
+  if( fileType == simil::THDF5 )
   {
     scale = 500.f;
   }
@@ -157,11 +157,11 @@ void OpenGLWidget::loadData( const std::string& fileName,
 
   switch( fileType )
   {
-    case visimpl::TBlueConfig:
+    case simil::TBlueConfig:
       _playbackSpeed = 5.0f;
       changeSimulationDecayValue( 5.0f );
       break;
-    case visimpl::THDF5:
+    case simil::THDF5:
       _playbackSpeed = 0.05f;
       changeSimulationDecayValue( 1.0f );
       break;
@@ -207,13 +207,14 @@ void OpenGLWidget::configureSimulation( void )
 
   switch( _simulationType )
   {
-    case TSimSpikes:
+    case simil::TSimSpikes:
     {
-      SpikesCRange spikes =
-          dynamic_cast< visimpl::SpikesPlayer* >( _player )->spikesNow( );
+      simil::SpikesCRange spikes =
+          dynamic_cast< simil::SpikesPlayer* >( _player )->spikesNow( );
 
       unsigned int count = 0;
-      for( SpikesCIter spike = spikes.first; spike != spikes.second; spike++)
+      for( simil::SpikesCIter spike = spikes.first;
+           spike != spikes.second; spike++)
       {
         if( _selectedGIDs.find( ( *spike ).second ) != _selectedGIDs.end( )
             || _selectedGIDs.size( ) == 0 || !_showSelection )
@@ -239,10 +240,10 @@ void OpenGLWidget::configureSimulation( void )
 //      std::cout << "Fired " << count << " spikes." << std::endl;
       break;
     }
-    case TSimVoltages:
+    case simil::TSimVoltages:
     {
-      visimpl::VoltagesPlayer* vplayer =
-          dynamic_cast< visimpl::VoltagesPlayer* >(_player);
+      simil::VoltagesPlayer* vplayer =
+          dynamic_cast< simil::VoltagesPlayer* >(_player);
 //      VoltCIter begin = vplayer->begin( );
 //      VoltCIter end = vplayer->end( );
 
@@ -402,12 +403,12 @@ void OpenGLWidget::createParticleSystem( float scale )
 
     switch( _simulationType )
     {
-    case TSimSpikes:
+    case simil::TSimSpikes:
       emissionNode = new prefr::ColorEmissionNode( collection, position,
                                                    glm::vec4( 0, 0, 0, 0 ),
                                                    true );
       break;
-    case TSimVoltages:
+    case simil::TSimVoltages:
       emissionNode = new prefr::DirectValuedEmissionNode(
           collection, position, glm::vec4( 0, 0, 0, 0 ), true );
 
@@ -432,7 +433,7 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   cameraPivot /= i;
 
-  _camera->Pivot( Eigen::Vector3f( cameraPivot.x,
+  _camera->pivot( Eigen::Vector3f( cameraPivot.x,
                                          cameraPivot.y,
                                          cameraPivot.z ));
 
@@ -441,7 +442,7 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   switch( _simulationType )
   {
-    case TSimSpikes:
+    case simil::TSimSpikes:
       emitter = new prefr::CompositeColorEmitter( _ps->particles, 1.f, true );
       std::cout << "Created Spikes Emitter" << std::endl;
       updater = new prefr::CompositeColorUpdater( _ps->particles );
@@ -463,7 +464,7 @@ void OpenGLWidget::createParticleSystem( float scale )
       _prototype->size.Insert( 1.0f, 10.0f );
 
       break;
-    case TSimVoltages:
+    case simil::TSimVoltages:
 
       emitter = new prefr::DirectValuedEmitter( _ps->particles, 1000.f, true );
       std::cout << "Created Voltages Emitter" << std::endl;
@@ -525,10 +526,10 @@ void OpenGLWidget::resetParticles( void )
   {
     switch( _simulationType )
     {
-      case TSimSpikes:
+      case simil::TSimSpikes:
         dynamic_cast< prefr::ColorEmissionNode* >( *node )->killParticles( false );
       break;
-      case TSimVoltages:
+      case simil::TSimVoltages:
         dynamic_cast< prefr::DirectValuedEmissionNode* >( *node )->killParticles( false );
       break;
       default:
@@ -691,7 +692,7 @@ void OpenGLWidget::updateSelection( void )
     Eigen::Vector3f center = ( boundingBoxMax + boundingBoxMin ) * 0.5f;
     float radius = ( boundingBoxMax - center ).norm( );
 
-    _camera->TargetPivotRadius( center, radius );
+    _camera->targetPivotRadius( center, radius );
 
     _ps->Run( true );
     _ps->UpdateUnified( 0.0f  );
@@ -756,19 +757,19 @@ void OpenGLWidget::paintParticles( void )
 
   uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
   glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
-                     _camera->ViewProjectionMatrix( ));
+                     _camera->viewProjectionMatrix( ));
 
   cameraUp = glGetUniformLocation( shader, "cameraUp" );
   cameraRight = glGetUniformLocation( shader, "cameraRight" );
 
-  float* viewM = _camera->ViewMatrix( );
+  float* viewM = _camera->viewMatrix( );
 
   glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
   glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
 
-  glm::vec3 cameraPosition ( _camera->Position( )[ 0 ],
-                             _camera->Position( )[ 1 ],
-                             _camera->Position( )[ 2 ] );
+  glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
+                             _camera->position( )[ 1 ],
+                             _camera->position( )[ 2 ] );
 
 //  bool cameraMoved = ( _lastCameraPosition == cameraPosition );
 
@@ -899,7 +900,7 @@ void OpenGLWidget::paintGL( void )
 
   if ( _paint )
   {
-    _camera->Anim( );
+    _camera->anim( );
 
 //    if ( _neuronsCollection && _focusOnSelection )
 //      _neuronsCollection->Paint( );
@@ -989,7 +990,7 @@ void OpenGLWidget::paintGL( void )
 
 void OpenGLWidget::resizeGL( int w , int h )
 {
-  _camera->Ratio((( double ) w ) / h );
+  _camera->ratio((( double ) w ) / h );
   glViewport( 0, 0, w, h );
 
 
@@ -1037,7 +1038,7 @@ void OpenGLWidget::mouseMoveEvent( QMouseEvent* event_ )
 {
   if( _rotation )
   {
-    _camera->LocalRotation( -( _mouseX - event_->x( )) * 0.01,
+    _camera->localRotation( -( _mouseX - event_->x( )) * 0.01,
                           ( _mouseY - event_->y( )) * 0.01 );
     _mouseX = event_->x( );
     _mouseY = event_->y( );
@@ -1058,9 +1059,9 @@ void OpenGLWidget::wheelEvent( QWheelEvent* event_ )
   int delta = event_->angleDelta( ).y( );
 
   if ( delta > 0 )
-    _camera->Radius( _camera->Radius( ) / 1.1f );
+    _camera->radius( _camera->radius( ) / 1.1f );
   else
-    _camera->Radius( _camera->Radius( ) * 1.1f );
+    _camera->radius( _camera->radius( ) * 1.1f );
 
   update( );
 
@@ -1075,9 +1076,9 @@ void OpenGLWidget::keyPressEvent( QKeyEvent* event_ )
   switch ( event_->key( ))
   {
   case Qt::Key_C:
-    _camera->Pivot( Eigen::Vector3f( 0.0f, 0.0f, 0.0f ));
-    _camera->Radius( 1000.0f );
-    _camera->Rotation( 0.0f, 0.0f );
+    _camera->pivot( Eigen::Vector3f( 0.0f, 0.0f, 0.0f ));
+    _camera->radius( 1000.0f );
+    _camera->rotation( 0.0f, 0.0f );
     update( );
     break;
 
@@ -1177,7 +1178,7 @@ void OpenGLWidget::togglePaintNeurons( void )
 }
 
 
-visimpl::SimulationPlayer* OpenGLWidget::player( )
+simil::SimulationPlayer* OpenGLWidget::player( )
 {
   return _player;
 }

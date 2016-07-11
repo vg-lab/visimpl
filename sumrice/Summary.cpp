@@ -217,7 +217,7 @@ Summary::Summary( QWidget* parent_,
 //  _gids = GIDUSet( gids_.begin( ), gids_.end( ));
 //}
 
-void Summary::Init( visimpl::SpikeData* spikes_, brion::GIDSet gids_ )
+void Summary::Init( simil::SpikeData* spikes_, brion::GIDSet gids_ )
 {
   _spikeReport = spikes_;
   _gids = GIDUSet( gids_.begin( ), gids_.end( ));
@@ -375,6 +375,7 @@ void Summary::AddNewHistogram( const visimpl::Selection& selection
 
 }
 
+#ifdef VISIMPL_USE_ZEROEQ
 void Summary::deferredInsertion( void )
 {
 //  std::cout << "Deferred call " << thread( ) << std::endl;
@@ -458,6 +459,8 @@ void Summary::deferredInsertion( void )
   }
 
 }
+
+#endif
 
 int pixelMargin = 10;
 

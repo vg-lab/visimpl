@@ -10,12 +10,14 @@
 
 // #include "SimulationPlayer.h"
 #include <sumrice/sumrice.h>
+#include <simil/simil.h>
 // #include "SimulationSummaryWidget.h"
 
 // #include "EditorTF/TransferFunctionEditor.h"
 
 #ifdef VISIMPL_USE_ZEROEQ
 #include <zeroeq/zeroeq.h>
+#include <thread>
 #ifdef VISIMPL_USE_LEXIS
 #include <lexis/lexis.h>
 #endif
@@ -45,11 +47,11 @@ public:
   void showStatusBarMessage ( const QString& message );
 
   void openBlueConfig( const std::string& fileName,
-                       visimpl::TSimulationType simulationType,
+                       simil::TSimulationType simulationType,
                        const std::string& report);
 
   void openHDF5File( const std::string& networkFile,
-                     visimpl::TSimulationType simulationType,
+                     simil::TSimulationType simulationType,
                      const std::string& activityFile = "" );
 
 public slots:
@@ -112,12 +114,12 @@ protected:
 
   QString _lastOpenedFileName;
 
-  visimpl::TSimulationType _simulationType;
+  simil::TSimulationType _simulationType;
 
   Summary* _summary;
-  visimpl::SimulationPlayer* _player;
   QTimer _selectionsTimer;
 
+  simil::SimulationPlayer* _player;
 
   // Playback Control
   QDockWidget* _simulationDock;

@@ -3,20 +3,14 @@ set(CMAKE_AUTOMOC ON)
 set(SUMRICE_PUBLIC_HEADERS
   EditorTF/Gradient.h
   EditorTF/ColorPoints.h
-  EditorTF/TransferFunctionEditor.h
-  SimulationPlayer.h
-  ZeqEventsManager.h
+  EditorTF/TransferFunctionEditor.h  
   Summary.h
   Histogram.h
   FocusFrame.h
   CustomSlider.h
   TransferFunctionWidget.h
   ParticleSizeWidget.h
-  log.h
-  types.h
-  H5Network.h
-  H5Activity.h
-  SimulationData.h
+  log.h  
 )
 
 set(SUMRICE_HEADERS
@@ -30,27 +24,16 @@ set(SUMRICE_SOURCES
   ParticleSizeWidget.cpp
   Summary.cpp
   Histogram.cpp
-  FocusFrame.cpp
-  SimulationPlayer.cpp
-  ZeqEventsManager.cpp
-  H5Network.cpp
-  H5Activity.cpp
-  SimulationData.cpp
+  FocusFrame.cpp  
 )
-
-#set(SUMRICE_MOC_HEADERS
-#  EditorTF/ColorPoints.h
-#  EditorTF/TransferFunctionEditor.h
-#  TransferFunctionWidget.h
-#  ParticleSizeWidget.h
-#  Summary.h
-#)
 
 set(SUMRICE_LINK_LIBRARIES
   Qt5::Core
   Qt5::Widgets
   Brion
   Brain
+  ReTo
+  SimIL
   prefr
 )
 

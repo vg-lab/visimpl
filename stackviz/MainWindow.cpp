@@ -62,24 +62,24 @@ void MainWindow::showStatusBarMessage ( const QString& message )
 }
 
 void MainWindow::openBlueConfig( const std::string& fileName,
-                                 visimpl::TSimulationType simulationType,
+                                 simil::TSimulationType simulationType,
                                  const std::string& reportLabel )
 {
   _simulationType = simulationType;
 
   switch( _simulationType )
  {
-   case visimpl::TSimSpikes:
+   case simil::TSimSpikes:
    {
-     visimpl::SpikesPlayer* player = new visimpl::SpikesPlayer( );
-     player->LoadData( visimpl::TDataType::TBlueConfig,  fileName );
+     simil::SpikesPlayer* player = new simil::SpikesPlayer( );
+     player->LoadData( simil::TDataType::TBlueConfig,  fileName );
      _player = player;
 
 //     _player->deltaTime( _deltaTime );
      break;
    }
-   case visimpl::TSimVoltages:
-     _player = new visimpl::VoltagesPlayer( fileName, reportLabel, true);
+   case simil::TSimVoltages:
+     _player = new simil::VoltagesPlayer( fileName, reportLabel, true);
 //     _deltaTime = _player->deltaTime( );
      break;
 
@@ -105,7 +105,7 @@ void MainWindow::openBlueConfigThroughDialog( void )
    {
      bool ok1, ok2;
      QInputDialog simTypeDialog;
-     visimpl::TSimulationType simType;
+     simil::TSimulationType simType;
      QStringList items = {"Spikes", "Voltages"};
 
      QString text = QInputDialog::getItem(
@@ -117,12 +117,12 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
      if( text == items[0] )
      {
-       simType = visimpl::TSimSpikes;
+       simType = simil::TSimSpikes;
        ok2 = true;
      }
      else
      {
-       simType = visimpl::TSimVoltages;
+       simType = simil::TSimVoltages;
 
        text = QInputDialog::getText(
            this, tr( "Please select report" ),
@@ -147,13 +147,13 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
 
 void MainWindow::openHDF5File( const std::string& networkFile,
-                               visimpl::TSimulationType simulationType,
+                               simil::TSimulationType simulationType,
                                const std::string& activityFile )
 {
   _simulationType = simulationType;
 
-  visimpl::SpikesPlayer* player = new visimpl::SpikesPlayer( );
-  player->LoadData( visimpl::TDataType::THDF5,  networkFile, activityFile );
+  simil::SpikesPlayer* player = new simil::SpikesPlayer( );
+  player->LoadData( simil::TDataType::THDF5,  networkFile, activityFile );
   _player = player;
 
   configurePlayer( );
@@ -167,7 +167,7 @@ void MainWindow::configurePlayer( void )
   _endTimeLabel->setText(
         QString::number( (double)_player->endTime( )));
 
-#if VISIMPL_USE_GMRVLEX
+#ifdef SIMIL_USE_ZEROEQ
   _player->connectZeq( _zeqUri );
 
   _player->zeqEvents( )->frameReceived.connect(
@@ -286,50 +286,19 @@ void MainWindow::initPlaybackDock( )
 void MainWindow::initSummaryWidget( )
 {
 
-
-//  unsigned int widthPerColumn = width( ) / _columnsNumber;
-
   _summary = new Summary( nullptr, Summary::T_STACK_EXPANDABLE );
 
-//  _summary->setMinimumHeight( _summary->heightPerRow( ));
-//  _summary->setMinimumWidth( width( ) - widthPerColumn );
-//  _summary->setSizePolicy( QSizePolicy::Maximum,
-//                           QSizePolicy::Preferred );
-
-
-  if( _simulationType == visimpl::TSimSpikes )
+  if( _simulationType == simil::TSimSpikes )
   {
-    visimpl::SpikesPlayer* spikesPlayer =
-        dynamic_cast< visimpl::SpikesPlayer* >( _player);
+    simil::SpikesPlayer* spikesPlayer =
+        dynamic_cast< simil::SpikesPlayer* >( _player);
 
-
-//    GIDUSet gids;
-//    _summary->AddGIDSelection( gids );
     _summary->Init( spikesPlayer->spikeReport( ),
                              spikesPlayer->gids( ));
-//    _summary->setVisible( true );
   }
 
   _stackLayout = new QGridLayout( );
 
-//  _contentWidget = new QWidget( );
-//  _contentWidget->setSizePolicy( QSizePolicy::Expanding,
-//                                QSizePolicy::Expanding );
-//  _contentWidget->setMinimumHeight( _summary->heightPerRow( ) * _summary->histogramsNumber() );
-//  _contentWidget->setMinimumWidth( width( ) - 5 );
-//  QScrollArea* scrollArea = new QScrollArea( );
-//  QVBoxLayout* centralLayout = new QVBoxLayout( );
-
-//  _contentWidget->setLayout( _stackLayout );
-//  _stackLayout->addWidget( _summary, 0, 0, 1, _columnsNumber - 1 );
-//  _stackLayout->addWidget( new QPushButton("Test"), 0, _columnsNumber, 1, 1);
-
-  std::cout << "MainWin width " << width( ) << std::endl;
-//  _summary->setMinimumWidth( width( ) - 5 );
-//  _summary->setMinimumHeight( _summary->heightPerRow( ) *
-//                              _summary->histogramsNumber( ) + 50 );
-
-//  scrollArea->setWidget( _summary );
   this->setCentralWidget( _summary );
 
   connect( _ui->actionAutoNamingSelections, SIGNAL( triggered( )),
@@ -353,7 +322,7 @@ void MainWindow::PlayPause( bool notify )
 
 void MainWindow::Play( bool notify )
 {
-//  playIcon.swap( pauseIcon );
+
   if( _player )
   {
       _player->Play( );
@@ -518,25 +487,17 @@ void MainWindow::GoToEnd( bool notify )
 
 void MainWindow::UpdateSimulationSlider( float percentage )
 {
-//  if( _player->player( )->isPlaying( ))
-  {
+  double currentTime = percentage * ( _player->endTime( ) - _player->startTime( )) + _player->startTime( );
 
-    double currentTime = percentage * ( _player->endTime( ) - _player->startTime( )) + _player->startTime( );
-//    _player->PlayAt( percentage );
-    _startTimeLabel->setText(
-//          QString::number( (double) _player->currentTime( )));
-          QString::number( currentTime ));
+  _startTimeLabel->setText(
 
-//    float percentage = _player->player( )->GetRelativeTime( );
+  QString::number( currentTime ));
 
-    int total = _simSlider->maximum( ) - _simSlider->minimum( );
+  int total = _simSlider->maximum( ) - _simSlider->minimum( );
 
-    int position = percentage * total;
-//    std::cout << "Timer: " << percentage << " * "
-//              << total << " = " << position << std::endl;
+  int position = percentage * total;
 
-    _simSlider->setSliderPosition( position );
-  }
+  _simSlider->setSliderPosition( position );
 }
 
 

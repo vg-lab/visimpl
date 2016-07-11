@@ -75,7 +75,7 @@ namespace visimpl
 ////    init( );
 //  }
 
-  MultiLevelHistogram::MultiLevelHistogram( const visimpl::SpikeData& spikeReport )
+  MultiLevelHistogram::MultiLevelHistogram( const simil::SpikeData& spikeReport )
   : QFrame( nullptr )
   //, _maxValueHistogramLocal( 0 )
   , _spikes( &spikeReport.spikes( ))
@@ -109,7 +109,7 @@ namespace visimpl
 //    _endTime = spikeReport.getEndTime( );
 //  }
 
-  void MultiLevelHistogram::Spikes( const visimpl::SpikeData& spikeReport )
+  void MultiLevelHistogram::Spikes( const simil::SpikeData& spikeReport )
   {
     _spikes = &spikeReport.spikes( );
     _startTime = spikeReport.startTime( );
