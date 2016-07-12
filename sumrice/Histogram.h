@@ -59,6 +59,7 @@ namespace visimpl
       QGradientStops _gradientStops;
       QPolygonF _curveStopsLocal;
       QPolygonF _curveStopsGlobal;
+      std::vector< float > _gridLines;
     };
 
   public:
@@ -111,6 +112,9 @@ namespace visimpl
     void representationMode( TRepresentation_Mode repType );
     TRepresentation_Mode representationMode( void );
 
+    void gridLinesNumber( unsigned int linesNumber );
+    unsigned int gridLinesNumber( void );
+
     unsigned int histogramSize( void ) const;
     unsigned int maxLocal( void );
     unsigned int maxGlobal( void );
@@ -133,6 +137,7 @@ namespace visimpl
     void regionWidth( float region_ );
     float regionWidth( void );
     void paintRegion( bool region = false );
+    void firstHistogram( bool first = false );
 
     unsigned int valueAt( float percentage );
     unsigned int focusValueAt( float percentage );
@@ -190,6 +195,9 @@ signals:
 
     bool _paintRegion;
     float _regionWidth;
+
+    unsigned int _gridLinesNumber;
+    bool _firstHistogram;
   };
 }
 
