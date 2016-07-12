@@ -483,6 +483,9 @@ void MainWindow::initSummaryWidget( void )
 //    _summary->setVisible( true );
 
   }
+
+  connect( _summary, SIGNAL( histogramClicked( float )),
+           this, SLOT( PlayAt( float )));
 }
 
 void MainWindow::PlayPause( bool notify )

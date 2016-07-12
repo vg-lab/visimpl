@@ -632,7 +632,7 @@ namespace visimpl
     QPoint position = event_->pos( );
 
     float percentage = position.x( ) / float( width( ));
-    std::cout << this << " release event" << std::endl;
+//    std::cout << this << " release event" << std::endl;
     emit mouseReleased( mapToGlobal( position ), percentage );
   }
 

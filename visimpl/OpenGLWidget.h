@@ -17,17 +17,13 @@
 #include <reto/reto.h>
 #include <simil/simil.h>
 
-#include "CShader.h"
-
-#include <nlrender/nlrender.h>
-//#include <nsol/nsol.h>
 #include <brion/brion.h>
 #include <brain/brain.h>
 
-//#include "SimulationPlayer.h"
-#include "prefr/ColorEmissionNode.h"
-#include "prefr/ColorOperationPrototype.h"
-// #include "EditorTF/TransferFunctionEditor.h"
+
+#include "prefr/ColorSource.h"
+#include "prefr/ColorOperationModel.h"
+
 #include <sumrice/sumrice.h>
 
 #ifdef VISIMPL_USE_ZEROEQ
@@ -66,7 +62,6 @@ public:
                 const std::string& zeqUri = "" );
   ~OpenGLWidget( void );
 
-  void createNeuronsCollection( void );
   void createParticleSystem( float scale = 1.0f );
   void loadData( const std::string& fileName,
                  const simil::TDataType = simil::TDataType::TBlueConfig,
@@ -162,6 +157,7 @@ protected:
 
 //  neurolots::NeuronsCollection* _neuronsCollection;
   bool _focusOnSelection;
+  bool _pendingSelection;
 
   unsigned int _frameCount;
 
@@ -176,8 +172,9 @@ protected:
   std::chrono::time_point< std::chrono::system_clock > _then;
   std::chrono::time_point< std::chrono::system_clock > _lastFrame;
 
-  CShader* _particlesShader;
-  prefr::ParticleSystem* _ps;
+//  CShader* _particlesShader;
+  reto::ShaderProgram* _particlesShader;
+  prefr::ParticleSystem* _particleSystem;
 
   simil::TSimulationType _simulationType;
   simil::SimulationPlayer* _player;
@@ -186,11 +183,11 @@ protected:
   float _deltaTime;
   bool _firstFrame;
 
-  prefr::ColorOperationPrototype* _prototype;
-  prefr::ColorOperationPrototype* _offPrototype;
+  prefr::ColorOperationModel* _prototype;
+  prefr::ColorOperationModel* _offPrototype;
 
-  std::unordered_map< uint32_t, prefr::EmissionNode* > gidNodesMap;
-  std::unordered_map< prefr::EmissionNode*, uint32_t > nodesGIDMap;
+  std::unordered_map< uint32_t, prefr::Cluster* > gidNodesMap;
+  std::unordered_map< prefr::Cluster*, uint32_t > nodesGIDMap;
 
   float _playbackSpeed;
   float _renderSpeed;

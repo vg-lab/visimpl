@@ -217,7 +217,7 @@ Summary::Summary( QWidget* parent_,
 //  _gids = GIDUSet( gids_.begin( ), gids_.end( ));
 //}
 
-void Summary::Init( simil::SpikeData* spikes_, brion::GIDSet gids_ )
+void Summary::Init( simil::SpikeData* spikes_, const simil::TGIDSet& gids_ )
 {
   _spikeReport = spikes_;
   _gids = GIDUSet( gids_.begin( ), gids_.end( ));
@@ -464,9 +464,18 @@ void Summary::deferredInsertion( void )
 
 int pixelMargin = 10;
 
-void Summary::childHistogramPressed( QPoint position, float /*percentage*/ )
+void Summary::childHistogramPressed( const QPoint& position, float /*percentage*/ )
 {
 
+  if( _stackType == T_STACK_FIXED )
+  {
+
+    QPoint cursorLocalPoint = _mainHistogram->mapFromGlobal( position );
+    float percentage = float( cursorLocalPoint.x( )) / _mainHistogram->width( );
+
+    emit histogramClicked( percentage );
+    return;
+  }
   if( _focusedHistogram != sender( ))
   {
     _focusedHistogram =
@@ -531,24 +540,31 @@ void Summary::childHistogramPressed( QPoint position, float /*percentage*/ )
     }
   }
 
-  std::cout << "Focused mouse pressed" << std::endl;
+//  std::cout << "Focused mouse pressed" << std::endl;
 //  else if
 }
 
-void Summary::childHistogramReleased( QPoint /*position*/, float /*percentage*/ )
+void Summary::childHistogramReleased( const QPoint& /*position*/, float /*percentage*/ )
 {
   _mousePressed = false;
-  std::cout << "Mouse released" << std::endl;
+//  std::cout << "Mouse released" << std::endl;
 }
 
 void Summary::childHistogramClicked( float percentage,
                                      Qt::KeyboardModifiers modifiers )
 {
-  if( modifiers == Qt::ControlModifier )
-    emit histogramClicked(
-        dynamic_cast< visimpl::MultiLevelHistogram* >( sender( )));
-  else if( modifiers == Qt::ShiftModifier )
+  if( _stackType == T_STACK_FIXED )
+  {
     emit histogramClicked( percentage );
+  }
+  else if( _stackType == T_STACK_EXPANDABLE )
+  {
+    if( modifiers == Qt::ControlModifier )
+      emit histogramClicked(
+          dynamic_cast< visimpl::MultiLevelHistogram* >( sender( )));
+    else if( modifiers == Qt::ShiftModifier )
+      emit histogramClicked( percentage );
+  }
 }
 
 void Summary::mouseMoveEvent( QMouseEvent* event_ )
@@ -572,8 +588,11 @@ void Summary::mouseMoveEvent( QMouseEvent* event_ )
 float regionEditMargin = 0.005f;
 int regionEditMarginPixels = 5;
 
-void Summary::SetFocusRegionPosition( QPoint cursorLocalPosition )
+void Summary::SetFocusRegionPosition( const QPoint& cursorLocalPosition )
 {
+  if( _stackType == T_STACK_FIXED )
+    return;
+
   _regionLocalPosition = cursorLocalPosition;
 
   _regionLocalPosition.setX( std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
@@ -606,12 +625,15 @@ void Summary::updateMouseMarker( QPoint point )
   _lastMousePosition = point;
 
   if( _stackType != T_STACK_EXPANDABLE )
+  {
+    _mainHistogram->update( );
     return;
+  }
 
   float invWidth = 1.0f / float( focusedHistogram->width( ));
 
   QPoint cursorLocalPoint = focusedHistogram->mapFromGlobal( point );
-  float percentage = float( cursorLocalPoint.x( )) * invWidth ;
+//  float percentage = float( cursorLocalPoint.x( )) * invWidth ;
 
   if( focusedHistogram == _focusedHistogram )
   {
@@ -620,7 +642,7 @@ void Summary::updateMouseMarker( QPoint point )
       if( _selectedEdgeLower )
       {
         float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointLower ) * invWidth;
-        std::cout << "Difference from edge " << diffPerc << std::endl;
+//        std::cout << "Difference from edge " << diffPerc << std::endl;
 
         _regionWidth -= diffPerc;
 
@@ -640,7 +662,7 @@ void Summary::updateMouseMarker( QPoint point )
       {
 
         float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointUpper ) * invWidth;
-        std::cout << "Difference from edge " << diffPerc << std::endl;
+//        std::cout << "Difference from edge " << diffPerc << std::endl;
 
         _regionWidth += diffPerc;
         _regionWidth = std::max( 0.01f, std::min( 0.5f, _regionWidth ));
@@ -664,7 +686,7 @@ void Summary::updateMouseMarker( QPoint point )
 
         SetFocusRegionPosition( cursorLocalPoint );
 
-        std::cout << "Region position X: " << _regionGlobalPosition.x( );
+//        std::cout << "Region position X: " << _regionGlobalPosition.x( );
 
 
       }
@@ -673,18 +695,18 @@ void Summary::updateMouseMarker( QPoint point )
 
     } // end mousePressed
 
-    std::cout << point.x( ) << " " << _regionEdgePointLower << " "
-    << _regionEdgePointUpper << std::endl;
+//    std::cout << point.x( ) << " " << _regionEdgePointLower << " "
+//    << _regionEdgePointUpper << std::endl;
 
 //        if(( percentage >= _regionEdgeLower - regionEditMargin &&
 //            percentage <= _regionEdgeLower + regionEditMargin ))
     if( abs(cursorLocalPoint.x( ) - _regionEdgePointLower) < regionEditMarginPixels )
     {
       _overRegionEdgeLower = true;
-      std::cout << "Over lower edge " << _regionEdgeLower - regionEditMargin
-                << " >= " << percentage
-                << " <= " << _regionEdgeLower + regionEditMargin
-                << std::endl;
+//      std::cout << "Over lower edge " << _regionEdgeLower - regionEditMargin
+//                << " >= " << percentage
+//                << " <= " << _regionEdgeLower + regionEditMargin
+//                << std::endl;
       QApplication::setOverrideCursor( Qt::SizeHorCursor );
     }
 //        else if(( percentage >= ( _regionEdgeUpper- regionEditMargin ) &&
@@ -692,10 +714,10 @@ void Summary::updateMouseMarker( QPoint point )
     else if( abs(_regionEdgePointUpper - cursorLocalPoint.x( )) < regionEditMarginPixels )
     {
       _overRegionEdgeUpper = true;
-      std::cout << "Over upper edge " << _regionEdgeUpper - regionEditMargin
-                << " >= " << percentage
-                << " <= " << _regionEdgeUpper + regionEditMargin
-                << std::endl;
+//      std::cout << "Over upper edge " << _regionEdgeUpper - regionEditMargin
+//                << " >= " << percentage
+//                << " <= " << _regionEdgeUpper + regionEditMargin
+//                << std::endl;
       QApplication::setOverrideCursor( Qt::SizeHorCursor );
     }
     else

@@ -66,17 +66,16 @@ public:
 
   Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
   virtual ~Summary( ){};
-//  void Init( brion::SpikeReport* _spikes, brion::GIDSet gids );
-  void Init( simil::SpikeData* spikes_, brion::GIDSet gids_ );
+
+  void Init( simil::SpikeData* spikes_, const simil::TGIDSet& gids_ );
+
   void AddNewHistogram( const visimpl::Selection& selection
 #ifdef VISIMPL_USE_ZEROEQ
                        , bool deferredInsertion = false
 #endif
                        );
-//  void CreateSummary( brion::CompartmentReport* _voltages );
 
   virtual void mouseMoveEvent( QMouseEvent* event_ );
-
 
   unsigned int bins( void );
   float zoomFactor( void );
@@ -106,8 +105,8 @@ signals:
 
 protected slots:
 
-  void childHistogramPressed( QPoint, float );
-  void childHistogramReleased( QPoint, float );
+  void childHistogramPressed( const QPoint&, float );
+  void childHistogramReleased( const QPoint&, float );
   void childHistogramClicked( float percentage,
                               Qt::KeyboardModifiers modifiers );
 
@@ -169,7 +168,7 @@ protected:
 
   void UpdateGradientColors( bool replace = false );
 
-  void SetFocusRegionPosition( QPoint localPosition );
+  void SetFocusRegionPosition( const QPoint& localPosition );
 
   unsigned int _bins;
   float _zoomFactor;
