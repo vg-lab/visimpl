@@ -9,7 +9,6 @@ set(SUMRICE_PUBLIC_HEADERS
   FocusFrame.h
   CustomSlider.h
   TransferFunctionWidget.h
-  ParticleSizeWidget.h
   log.h  
 )
 
@@ -21,7 +20,6 @@ set(SUMRICE_SOURCES
   EditorTF/ColorPoints.cpp
   EditorTF/TransferFunctionEditor.cpp
   TransferFunctionWidget.cpp
-  ParticleSizeWidget.cpp
   Summary.cpp
   Histogram.cpp
   FocusFrame.cpp  

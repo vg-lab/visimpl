@@ -23,14 +23,20 @@ QWidget( parent_ )
   _result = new Gradient( );
   _result->setDirection( Gradient::HORIZONTAL );
 
-  _result->setGradientStops( nTGradientFrame->getGradientStops( ));
-  _tResult = gradientFrame->getGradientStops( );
+  _result->setGradientStops( _nTGradientFrame->getGradientStops( ));
+  _tResult = _gradientFrame->getGradientStops( );
+
+  setSizeFunction( _sizeFunction );
 
 //  connect( this, SIGNAL( clicked( void )),
 //           this, SLOT( gradientClicked( void )));
 
   QGridLayout* mainLayout = new QGridLayout( );
-  mainLayout->addWidget( _result );
+  mainLayout->addWidget( _result, 0, 0, 1, 5 );
+
+  // Size labels
+  mainLayout->addWidget( _minValueLabel, 1, 1, 1, 1 );
+  mainLayout->addWidget( _maxValueLabel, 1, 3, 1, 1 );
 
   this->setLayout( mainLayout );
 
@@ -50,13 +56,25 @@ void TransferFunctionWidget::InitDialog( void )
   _discardButton = new QPushButton( "Discard" );
   _previewButton = new QPushButton( "Preview" );
 
-  gradientFrame = new Gradient( );
-  nTGradientFrame = new Gradient( );
+  _gradientFrame = new Gradient( );
+  _nTGradientFrame = new Gradient( );
 
   redGradientFrame = new Gradient( );
   greenGradientFrame = new Gradient( );
   blueGradientFrame = new Gradient( );
   alphaGradientFrame = new Gradient( );
+
+  _maxSizeBox = new QDoubleSpinBox( );
+  _maxSizeBox->setMinimum( 1.0 );
+  _maxSizeBox->setMaximum( 300.0 );
+  _minSizeBox = new QDoubleSpinBox( );
+  _maxSizeBox->setMinimum( 1.0 );
+  _maxSizeBox->setMaximum( 300.0 );
+
+  _minValueLabel = new QLabel( );
+  _maxValueLabel = new QLabel( );
+
+  _sizeFrame = new Gradient( );
 
   unsigned int row = 0;
   unsigned int totalColumns = 6;
@@ -72,10 +90,21 @@ void TransferFunctionWidget::InitDialog( void )
   dialogLayout->addWidget( alphaGradientFrame, row++, 1, 1, totalColumns );
 
   dialogLayout->addWidget( new QLabel( "Result (pure)" ), row, 0, 1, 1 );
-  dialogLayout->addWidget( nTGradientFrame, row++, 1, 1, totalColumns );
+  dialogLayout->addWidget( _nTGradientFrame, row++, 1, 1, totalColumns );
   dialogLayout->addWidget( new QLabel( "Result (alpha)" ), row, 0, 1, 1 );
-  dialogLayout->addWidget( gradientFrame, row++, 1, 1, totalColumns );
+  dialogLayout->addWidget( _gradientFrame, row++, 1, 1, totalColumns );
 
+  dialogLayout->addWidget( new QLabel( "Size" ), row, 0, 1, 1 );
+  dialogLayout->addWidget( _sizeFrame, row++, 1, 1, totalColumns);
+  row++;
+  unsigned int sizeLabels = totalColumns / 3;
+  dialogLayout->addWidget( new QLabel( "Min size:"), row, sizeLabels - 1, 1, 1);
+  dialogLayout->addWidget( _minSizeBox, row, sizeLabels , 1, 1 );
+  sizeLabels *= 2;
+  dialogLayout->addWidget( new QLabel( "Max size:"), row, sizeLabels - 1, 1, 1);
+  dialogLayout->addWidget( _maxSizeBox, row, sizeLabels, 1, 1 );
+
+  row++;
   dialogLayout->addWidget( _discardButton, row, 1, 1, 1 );
   dialogLayout->addWidget( _previewButton, row, 3, 1, 1 );
   dialogLayout->addWidget( _saveButton, row, 5, 1, 1 );
@@ -86,14 +115,14 @@ void TransferFunctionWidget::InitDialog( void )
   QGradientStops stops;
   stops << qMakePair(0.0, QColor(0, 0, 0, 0))
         << qMakePair(1.0, QColor(255, 255, 255, 255));
-  gradientFrame->setDirection(Gradient::HORIZONTAL);
-  gradientFrame->setGradientStops(stops);
+  _gradientFrame->setDirection(Gradient::HORIZONTAL);
+  _gradientFrame->setGradientStops(stops);
 
   QGradientStops ntStops;
   stops << qMakePair(0.0, QColor(0, 0, 0, 255))
         << qMakePair(1.0, QColor(255, 255, 255, 255));
-  nTGradientFrame->setDirection(Gradient::HORIZONTAL);
-  nTGradientFrame->setGradientStops(stops);
+  _nTGradientFrame->setDirection(Gradient::HORIZONTAL);
+  _nTGradientFrame->setGradientStops(stops);
 
   QPolygonF points;
   points << QPointF(0, 0) << QPointF(1, 1);
@@ -113,6 +142,19 @@ void TransferFunctionWidget::InitDialog( void )
   _alphaPoints = new ColorPoints(alphaGradientFrame);
   _alphaPoints->setPoints(points);
   alphaGradientFrame->alphaGradient();
+
+  QGradientStops sizeStops;
+  sizeStops << qMakePair( 0.0, QColor( 127, 127, 127, 127 ))
+            << qMakePair( 1.0, QColor( 127, 127, 127, 127 ));
+  _sizeFrame->setDirection( Gradient::HORIZONTAL );
+  _sizeFrame->setGradientStops( sizeStops );
+
+  QPolygonF sPoints;
+  sPoints << QPointF(0, 0) << QPointF(1, 1);
+
+  _sizePoints = new ColorPoints( _sizeFrame );
+  _sizePoints->setPoints( sPoints );
+
 
   /* Connecting slots */
   connect( _saveButton, SIGNAL( clicked( void )),
@@ -233,7 +275,7 @@ TTransferFunction TransferFunctionWidget::getPreviewColors( void )
 {
   TTransferFunction result;
 
-  QGradientStops stops = gradientFrame->getGradientStops( );
+  QGradientStops stops = _gradientFrame->getGradientStops( );
 
   for( auto stop : stops )
   {
@@ -257,7 +299,7 @@ void TransferFunctionWidget::colorPointsChanged( const QPolygonF &points )
     else if (pointSet == _alphaPoints)
         indexToUpdate = 3;
 
-    QGradientStops stops = gradientFrame->getGradientStops();
+    QGradientStops stops = _gradientFrame->getGradientStops();
 
     stops.resize(points.size());
 
@@ -273,8 +315,9 @@ void TransferFunctionWidget::colorPointsChanged( const QPolygonF &points )
         }
         ntStops[i].second.setAlphaF(1.0);
     }
-    gradientFrame->setGradientStops(stops);
-    nTGradientFrame->setGradientStops( ntStops );
+    _gradientFrame->setGradientStops(stops);
+    _nTGradientFrame->setGradientStops( ntStops );
+    _sizeFrame->setGradientStops( ntStops );
 }
 
 void TransferFunctionWidget::setColorPoints( const TTransferFunction& colors,
@@ -304,10 +347,92 @@ void TransferFunctionWidget::setColorPoints( const TTransferFunction& colors,
 
   if( updateResult )
   {
-    _result->setGradientStops( nTGradientFrame->getGradientStops( ));
-    _tResult = gradientFrame->getGradientStops( );
+    _result->setGradientStops( _nTGradientFrame->getGradientStops( ));
+    _tResult = _gradientFrame->getGradientStops( );
+    _sizeFrame->setGradientStops( _nTGradientFrame->getGradientStops( ));
   }
 }
+
+
+TSizeFunction TransferFunctionWidget::getSizeFunction( void )
+{
+  return _sizeFunction;
+}
+
+TSizeFunction TransferFunctionWidget::getSizePreview( void )
+{
+  return pointsToSizeFunc( _sizePoints->points( ),
+                           _minSizeBox->value( ),
+                           _maxSizeBox->value( ));
+}
+
+TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF& points )
+{
+  return pointsToSizeFunc( points, _minSize, _maxSize );
+}
+
+TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF &points,
+                                                    float minSize,
+                                                    float maxSize )
+{
+
+  TSizeFunction result;
+  float time;
+  float value;
+//  float invHeight = 1.0f / float( height( ));
+//  float invWidth = 1.0f / float( width( ));
+
+  for( auto point : points)
+  {
+    time = point.x( );
+    value = point.y( ) * ( maxSize - minSize) + minSize;
+    result.push_back( std::make_pair( time, value ));
+  }
+
+  return result;
+}
+
+void TransferFunctionWidget::setSizeFunction( const TSizeFunction& sizeFunc )
+{
+
+  _sizeFunction = sizeFunc;
+  QPolygonF result;
+
+  _minSize = std::numeric_limits< float >::max( );
+  _maxSize = std::numeric_limits< float >::min( );
+  for( auto value : sizeFunc )
+  {
+    if( value.second < _minSize )
+      _minSize = value.second;
+
+    if( value.second > _maxSize )
+      _maxSize = value.second;
+  }
+
+  float invTotal = 1.0f / ( _maxSize - _minSize ) ;
+
+//  auto valueIt = sizeFunc.values.begin( );
+  for( auto time : sizeFunc )
+  {
+    result.append( QPointF( time.first, ( time.second - _minSize ) * invTotal ));
+
+//    valueIt++;
+  }
+
+  _sizePoints->setPoints( result, true );
+  _minValueLabel->setText( QString("Min size: ") +
+                           QString::number( double( _minSize ) ));
+
+  _maxValueLabel->setText( QString("Max size: ") +
+                           QString::number( double( _maxSize ) ));
+
+  _minSizeBox->setValue( _minSize );
+  _maxSizeBox->setValue( _maxSize );
+
+  //TODO draw plot on gradient
+  _result->plot( result );
+}
+
 
 void TransferFunctionWidget::gradientClicked( void )
 {
@@ -317,6 +442,7 @@ void TransferFunctionWidget::gradientClicked( void )
   if( !_dialog->isVisible( ))
   {
     setColorPoints( getColors( ), false);
+    setSizeFunction( getSizeFunction( ));
 
     _dialog->show( );
   }
@@ -327,30 +453,46 @@ void TransferFunctionWidget::gradientClicked( void )
   }
 }
 
-void TransferFunctionWidget::buttonClicked( QAbstractButton* button )
-{
-  _dialog->close( );
-
-  if( button == _saveButton )
-  {
-    _result->setGradientStops( nTGradientFrame->getGradientStops( ));
-    _tResult = gradientFrame->getGradientStops( );
-    emit colorChanged( );
-  }
-  else if( button == _discardButton )
-  {
-    if( previewed )
-      emit colorChanged( );
-  }
-}
+//void TransferFunctionWidget::buttonClicked( QAbstractButton* button )
+//{
+//  _dialog->close( );
+//
+//  if( button == _saveButton )
+//  {
+//    _result->setGradientStops( _nTGradientFrame->getGradientStops( ));
+//    _tResult = _gradientFrame->getGradientStops( );
+//    emit colorChanged( );
+//  }
+//  else if( button == _discardButton )
+//  {
+//    if( previewed )
+//      emit colorChanged( );
+//  }
+//}
 
 void TransferFunctionWidget::acceptClicked( void )
 {
   _dialog->close( );
 
-  _result->setGradientStops( nTGradientFrame->getGradientStops( ));
-  _tResult = gradientFrame->getGradientStops( );
+  _result->setGradientStops( _nTGradientFrame->getGradientStops( ));
+  _tResult = _gradientFrame->getGradientStops( );
+  _sizeFrame->setGradientStops( _nTGradientFrame->getGradientStops( ));
+
+  _maxSize = float( _maxSizeBox->value( ));
+  _minSize = float( _minSizeBox->value( ));
+
+  _minValueLabel->setText( QString("Min size: ") +
+                          QString::number( double( _minSize ) ));
+
+  _maxValueLabel->setText( QString("Max size: ") +
+                          QString::number( double( _maxSize ) ));
+
+  _sizeFunction = pointsToSizeFunc( _sizePoints->points( ));
+
+  _result->plot( _sizePoints->points( ));
+
   emit colorChanged( );
+  emit sizeChanged( );
 }
 
 void TransferFunctionWidget::cancelClicked( void )
@@ -358,13 +500,17 @@ void TransferFunctionWidget::cancelClicked( void )
   _dialog->close( );
 
   if( previewed )
+  {
     emit colorChanged( );
+    emit sizeChanged( );
+  }
 }
 
 void TransferFunctionWidget::previewClicked( void )
 {
   previewed = true;
   emit previewColor( );
+  emit sizePreview( );
 }
 
 void TransferFunctionWidget::mousePressEvent(QMouseEvent * event_ )
