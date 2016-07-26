@@ -98,6 +98,8 @@ public:
 
   const GIDUSet& gids( void );
 
+  unsigned int gridLinesNumber( void );
+
 signals:
 
   void histogramClicked( float );
@@ -114,6 +116,8 @@ protected slots:
 
   void colorScaleLocal( int value );
   void colorScaleGlobal( int value );
+
+  void gridLinesNumber( int linesNumber );
 
   void updateMouseMarker( QPoint point );
 
@@ -172,6 +176,8 @@ protected:
 
   unsigned int _bins;
   float _zoomFactor;
+
+  unsigned int _gridLinesNumber;
 
 //  brion::SpikeReport* _spikeReport;
   simil::SpikeData* _spikeReport;
