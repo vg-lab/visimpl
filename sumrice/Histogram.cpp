@@ -797,15 +797,23 @@ namespace visimpl
 
           float timeValue = ( _endTime - _startTime ) * line + _startTime;
 
-          QString value = QString::number( timeValue );
+          QString value = QString::number( ( unsigned int ) timeValue );
           int valueLength = value.length( ) * 8;
           if( width( ) - positionX < valueLength )
             margin = -valueLength;
           QPoint position ( positionX + margin, currentHeight / 4 );
           pen.setColor( QColor( 150, 150, 150 ));
           painter.setPen( pen );
+
+          QFont backFont = painter.font( );
+//          QFont newFont = backFont;
+//
+//          newFont.setPointSize( newFont.pointSize( ) * 1.3f );
+//          painter.setFont( newFont );
+
           painter.drawText( position, value );
 
+//          painter.setFont( backFont );
         }
 
         QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));

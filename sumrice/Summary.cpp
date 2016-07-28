@@ -132,18 +132,19 @@ Summary::Summary( QWidget* parent_,
 
     QSpinBox* binSpinBox = new QSpinBox( );
     binSpinBox->setMinimum( 50 );
-    binSpinBox->setMaximum( 5000 );
+    binSpinBox->setMaximum( 100000 );
     binSpinBox->setSingleStep( 50 );
     binSpinBox->setValue( _bins );
 
     QDoubleSpinBox* zoomFactorSpinBox = new QDoubleSpinBox( );
     zoomFactorSpinBox->setMinimum( 1.0 );
-//    zoomFactorSpinBox->setMaximum( 100.0 );
+    zoomFactorSpinBox->setMaximum( 1000.0 );
     zoomFactorSpinBox->setSingleStep( 0.5 );
     zoomFactorSpinBox->setValue( _zoomFactor );
 
     QSpinBox* gridSpinBox = new QSpinBox( );
     gridSpinBox->setMinimum( 0 );
+    gridSpinBox->setMaximum( 10000 );
     gridSpinBox->setSingleStep( 1 );
     gridSpinBox->setValue( 3 );
 
@@ -301,7 +302,9 @@ void Summary::Init( void )
     mainRow.histogram = _mainHistogram;
     QString labelText = QString( "All");
     mainRow.label = new QLabel( labelText );
+//    mainRow.label->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
     mainRow.checkBox = new QCheckBox( );
+//    mainRow.checkBox->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
 
     unsigned int row = _histograms.size( );
     _mainLayout->addWidget( mainRow.label, row , 0, 1, 1 );
@@ -800,6 +803,13 @@ float Summary::zoomFactor( void )
 void Summary::heightPerRow( unsigned int height_ )
 {
   _heightPerRow = height_;
+
+  for( auto histogram : _histograms )
+  {
+    histogram->setMinimumHeight( _heightPerRow );
+    histogram->setMaximumHeight( _heightPerRow );
+    histogram->update( );
+  }
 }
 
 unsigned int Summary::heightPerRow( void )
