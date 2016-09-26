@@ -356,34 +356,12 @@ void Summary::AddNewHistogram( const visimpl::Selection& selection
 
       _pendingSelections.push_back( selection );
 
-//      if( !_insertionTimer.isActive( ))
-//        _insertionTimer.start( );
-
     }
     else
 #endif
 
     {
-    visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
-//    histogram->filteredGIDs( gids );
-    histogram->colorMapper( _mainHistogram->colorMapper( ));
-//    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
-//    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
-//    histogram->mousePosition( &_lastMousePosition );
-    histogram->setMinimumHeight( _heightPerRow );
-    histogram->setMaximumHeight( _heightPerRow );
-//    histogram->setMinimumWidth( 500 );
-    std::cout << "Thread " << this->thread( ) << std::endl;
-    _mainLayout->addWidget( histogram, _histograms.size( ), 0, _maxColumns - 2, 1 );
-//    _mainLayout->addWidget( histogram );
-    _histograms.push_back( histogram );
-
-    histogram->init( _bins, _zoomFactor );
-//    CreateSummarySpikes( );
-//    UpdateGradientColors( );
-
-    update( );
-
+      InsertSummary( selection );
     }
 
   }
@@ -398,86 +376,88 @@ void Summary::deferredInsertion( void )
 
   if( _pendingSelections.size( ) > 0 )
   {
-    StackRow currentRow;
 
     visimpl::Selection selection = _pendingSelections.front( );
     _pendingSelections.pop_front( );
 
-    QString labelText =
-        QString( "Selection-").append( QString::number( selection.id ));
-
-    bool ok = true;
-    if ( !_autoNameSelection )
-      labelText = QInputDialog::getText( this,
-                                         tr( "Selection Name" ),
-                                         tr( "Please, introduce selection name: "),
-                                         QLineEdit::Normal,
-                                         labelText,
-                                         &ok );
-    if( !ok )
-      return;
-
-    std::cout << "Deferred insertion: " << selection.name
-              << " GIDs: " << selection.gids.size( )
-              << std::endl;
-
-    visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
-    histogram->filteredGIDs( selection.gids );
-    histogram->colorMapper( _mainHistogram->colorMapper( ));
-    histogram->colorScaleLocal( _colorScaleLocal );
-    histogram->colorScaleGlobal( _colorScaleGlobal );
-    histogram->colorLocal( _colorLocal );
-    histogram->colorGlobal( _colorGlobal );
-    histogram->normalizeRule( visimpl::T_NORM_MAX );
-    histogram->representationMode( visimpl::T_REP_CURVE );
-    histogram->regionWidth( _regionWidth );
-    histogram->gridLinesNumber( _gridLinesNumber );
-
-    histogram->setMinimumHeight( _heightPerRow );
-    histogram->setMaximumHeight( _heightPerRow );
-    //    histogram->setMinimumWidth( 500 );
-
-    currentRow.histogram = histogram;
-    currentRow.label = new QLabel( labelText );
-    currentRow.checkBox = new QCheckBox( );
-
-    unsigned int row = _histograms.size( );
-    _mainLayout->addWidget( currentRow.label, row , 0, 1, 1 );
-    _mainLayout->addWidget( histogram, row, 1, 1, _summaryColumns );
-    _mainLayout->addWidget( currentRow.checkBox, row, _maxColumns - 1, 1, 1 );
-
-    _rows.push_back( currentRow );
-
-    histogram->mousePosition( &_lastMousePosition );
-    histogram->regionPosition( &_regionGlobalPosition );
-
-    connect( histogram, SIGNAL( mousePositionChanged( QPoint )),
-             this, SLOT( updateMouseMarker( QPoint )));
-
-    connect( histogram, SIGNAL( mousePressed( QPoint, float )),
-             this, SLOT( childHistogramPressed( QPoint, float )));
-
-    connect( histogram, SIGNAL( mouseReleased( QPoint, float )),
-             this, SLOT( childHistogramReleased( QPoint, float )));
-
-    connect( histogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
-             this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
-
-    _histograms.push_back( histogram );
-
-    histogram->init( _bins, _zoomFactor );
-//    CreateSummarySpikes( );
-//    UpdateGradientColors( );
-
-    GIDUSet tmp;
-    histogram->filteredGIDs( tmp );
-
-    update( );
+    InsertSummary( selection );
   }
 
 }
 
 #endif
+
+void Summary::InsertSummary( const visimpl::Selection& selection )
+{
+  StackRow currentRow;
+
+  QString labelText =
+      QString( "Selection-").append( QString::number( selection.id ));
+
+  bool ok = true;
+  if ( !_autoNameSelection )
+    labelText = QInputDialog::getText( this,
+                                       tr( "Selection Name" ),
+                                       tr( "Please, introduce selection name: "),
+                                       QLineEdit::Normal,
+                                       labelText,
+                                       &ok );
+  if( !ok )
+    return;
+
+  std::cout << "Deferred insertion: " << selection.name
+            << " GIDs: " << selection.gids.size( )
+            << std::endl;
+
+  visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
+  histogram->filteredGIDs( selection.gids );
+  histogram->colorMapper( _mainHistogram->colorMapper( ));
+  histogram->colorScaleLocal( _colorScaleLocal );
+  histogram->colorScaleGlobal( _colorScaleGlobal );
+  histogram->colorLocal( _colorLocal );
+  histogram->colorGlobal( _colorGlobal );
+  histogram->normalizeRule( visimpl::T_NORM_MAX );
+  histogram->representationMode( visimpl::T_REP_CURVE );
+  histogram->regionWidth( _regionWidth );
+  histogram->gridLinesNumber( _gridLinesNumber );
+
+  histogram->setMinimumHeight( _heightPerRow );
+  histogram->setMaximumHeight( _heightPerRow );
+  //    histogram->setMinimumWidth( 500 );
+
+  currentRow.histogram = histogram;
+  currentRow.label = new QLabel( labelText );
+  currentRow.checkBox = new QCheckBox( );
+
+  unsigned int row = _histograms.size( );
+  _mainLayout->addWidget( currentRow.label, row , 0, 1, 1 );
+  _mainLayout->addWidget( histogram, row, 1, 1, _summaryColumns );
+  _mainLayout->addWidget( currentRow.checkBox, row, _maxColumns - 1, 1, 1 );
+
+  _rows.push_back( currentRow );
+
+  histogram->mousePosition( &_lastMousePosition );
+  histogram->regionPosition( &_regionGlobalPosition );
+
+  connect( histogram, SIGNAL( mousePositionChanged( QPoint )),
+           this, SLOT( updateMouseMarker( QPoint )));
+
+  connect( histogram, SIGNAL( mousePressed( QPoint, float )),
+           this, SLOT( childHistogramPressed( QPoint, float )));
+
+  connect( histogram, SIGNAL( mouseReleased( QPoint, float )),
+           this, SLOT( childHistogramReleased( QPoint, float )));
+
+  connect( histogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
+           this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
+
+  _histograms.push_back( histogram );
+
+  histogram->init( _bins, _zoomFactor );
+
+  update( );
+}
+
 
 int pixelMargin = 10;
 

@@ -167,7 +167,7 @@ protected:
   void Init( void );
 
   void CreateSummarySpikes( );
-  void InsertSummarySpikes( const GIDUSet& gids );
+  void InsertSummary( const visimpl::Selection& selection );
 //  void CreateSummaryVoltages( void );
 
   void UpdateGradientColors( bool replace = false );

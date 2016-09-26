@@ -157,6 +157,31 @@ void MainWindow::openHDF5File( const std::string& networkFile,
   _player = player;
 
   configurePlayer( );
+
+  std::vector< unsigned int > sizes = { 300, 4000, 9 };
+  std::vector< uint32_t > artGIDs;
+
+  unsigned int offset = 0;
+  for( auto csize : sizes )
+  {
+    artGIDs.clear( );
+    artGIDs.resize( csize );
+    unsigned int last = 0;
+    for( unsigned int i = 0; i < csize; i++ )
+    {
+      last = i + offset;
+      artGIDs[ i ] = last;
+
+    }
+    visimpl::Selection selection;
+    selection.gids.insert( artGIDs.begin( ), artGIDs.end( ));
+
+    _summary->AddNewHistogram( selection );
+
+    std::cout << "Selection: " << last  << " - " << offset << std::endl;
+
+    offset = last;
+  }
 }
 
 void MainWindow::configurePlayer( void )
