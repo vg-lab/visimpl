@@ -1,11 +1,4 @@
-/*
- * SpineRetParticlePrototype.cpp
- *
- *  Created on: 05/12/2014
- *      Author: sergio
- */
-
-#include "ColorOperationPrototype.h"
+#include "ColorOperationModel.h"
 
 namespace prefr
 {
@@ -22,21 +15,19 @@ namespace prefr
   template< class T>
   T div(const T& lhs, const T& rhs){return lhs / rhs;}
 
-  ColorOperationPrototype::
-  ColorOperationPrototype(float min, float max,
-                            const ParticleCollection& particlesArray,
-                            ColorOperation colorOp)
-  :ParticlePrototype(min, max, particlesArray)
+  ColorOperationModel::ColorOperationModel( float min, float max,
+                                            ColorOperation colorOp)
+  : Model( min, max )
   {
     SetColorOperation(colorOp);
   }
 
 
-  void ColorOperationPrototype::SetColorOperation(ColorOperation colorOp)
+  void ColorOperationModel::SetColorOperation(ColorOperation colorOp)
   {
-    colorOperation = colorOp;
+    _colorOperation = colorOp;
 
-    switch ( colorOperation )
+    switch ( _colorOperation )
     {
       case ColorOperation::ADDITION:
         colorop = add<glm::vec4>;

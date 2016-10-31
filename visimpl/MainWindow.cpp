@@ -358,10 +358,10 @@ void MainWindow::initSimColorDock( void )
 
 //  _tfEditor = new TransferFunctionEditor( );
   _tfWidget = new TransferFunctionWidget( );
-  _tfWidget->setMinimumHeight( 100 );
+  _tfWidget->setMinimumHeight( 150 );
 
-  _psWidget = new ParticleSizeWidget( );
-  _psWidget->setMinimumHeight( 150 );
+//  _psWidget = new ParticleSizeWidget( );
+//  _psWidget->setMinimumHeight( 150 );
 
   _decayBox = new QDoubleSpinBox( );
   _decayBox->setMinimum( 0.01 );
@@ -379,17 +379,11 @@ void MainWindow::initSimColorDock( void )
   QVBoxLayout* verticalLayout = new QVBoxLayout( );
 //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
 
-  QGroupBox* tFunctionGB = new QGroupBox( "Transfer function" );
+  QGroupBox* tFunctionGB = new QGroupBox( "Color and Size transfer function" );
   QVBoxLayout* tfLayout = new QVBoxLayout( );
   tfLayout->addWidget( _tfWidget );
   tFunctionGB->setLayout( tfLayout );
-  tFunctionGB->setMaximumHeight( 130 );
-
-  QGroupBox* sFunctionGB = new QGroupBox( "Size function" );
-  QVBoxLayout* sfLayout = new QVBoxLayout( );
-  sfLayout->addWidget( _psWidget);
-  sFunctionGB->setLayout( sfLayout );
-  sFunctionGB->setMaximumHeight( 200 );
+  tFunctionGB->setMaximumHeight( 250 );
 
   QGroupBox* dFunctionGB = new QGroupBox( "Decay function" );
   QHBoxLayout* dfLayout = new QHBoxLayout( );
@@ -400,7 +394,7 @@ void MainWindow::initSimColorDock( void )
 
   QGroupBox* rFunctionGB = new QGroupBox( "Alpha blending function" );
   QHBoxLayout* rfLayout = new QHBoxLayout( );
-  rfLayout->addWidget( new QLabel( "Alhpa\nBlending: " ));
+  rfLayout->addWidget( new QLabel( "Alpha\nBlending: " ));
   rfLayout->addWidget( _alphaNormalButton );
   rfLayout->addWidget( _alphaAccumulativeButton );
   rFunctionGB->setLayout( rfLayout );
@@ -416,18 +410,9 @@ void MainWindow::initSimColorDock( void )
 
   verticalLayout->setAlignment( Qt::AlignTop );
   verticalLayout->addWidget( tFunctionGB );
-  verticalLayout->addWidget( sFunctionGB );
   verticalLayout->addWidget( dFunctionGB );
   verticalLayout->addWidget( rFunctionGB );
   verticalLayout->addWidget( selFunctionGB  );
-
-
-//  verticalLayout->addWidget( new QLabel( "Transfer function" ));
-//
-//  verticalLayout->addWidget( _tfWidget );
-//
-//  verticalLayout->addWidget( new QLabel( "Size function" ));
-//  verticalLayout->addWidget( _psWidget ) ;
 
   container->setLayout( verticalLayout );
   _simConfigurationDock->setWidget( container );
@@ -440,13 +425,11 @@ void MainWindow::initSimColorDock( void )
 
   connect( _tfWidget, SIGNAL( colorChanged( void )),
            this, SLOT( UpdateSimulationColorMapping( void )));
+  connect( _tfWidget, SIGNAL( colorChanged( void )),
+           this, SLOT( UpdateSimulationSizeFunction( void )));
   connect( _tfWidget, SIGNAL( previewColor( void )),
            this, SLOT( PreviewSimulationColorMapping( void )));
-
-  connect( _psWidget, SIGNAL( sizeChanged( void )),
-           this, SLOT( UpdateSimulationSizeFunction( void )));
-
-  connect( _psWidget, SIGNAL( sizePreview( void )),
+  connect( _tfWidget, SIGNAL( previewColor( void )),
            this, SLOT( PreviewSimulationSizeFunction( void )));
 
   connect( _decayBox, SIGNAL( valueChanged( double )),
@@ -483,6 +466,9 @@ void MainWindow::initSummaryWidget( void )
 //    _summary->setVisible( true );
 
   }
+
+  connect( _summary, SIGNAL( histogramClicked( float )),
+           this, SLOT( PlayAt( float )));
 }
 
 void MainWindow::PlayPause( bool notify )
@@ -702,7 +688,7 @@ void MainWindow::UpdateSimulationColorMapping( void )
 
 //  _openGLWidget->changeSimulationColorMapping( _tfEditor->getColorPoints( ));
   _openGLWidget->changeSimulationColorMapping( _tfWidget->getColors( ));
-  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
+//  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
 }
 
 void MainWindow::PreviewSimulationColorMapping( void )
@@ -714,22 +700,23 @@ void MainWindow::changeEditorColorMapping( void )
 {
 //  _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
   _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
-  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
+//  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
 }
 
 void MainWindow::changeEditorSizeFunction( void )
 {
-  _psWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction() );
+  _tfWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction( ));
+//  _psWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction() );
 }
 
 void MainWindow::UpdateSimulationSizeFunction( void )
 {
-  _openGLWidget->changeSimulationSizeFunction( _psWidget->getSizeFunction( ));
+  _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizeFunction( ));
 }
 
 void MainWindow::PreviewSimulationSizeFunction( void )
 {
-  _openGLWidget->changeSimulationSizeFunction( _psWidget->getSizePreview( ));
+  _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizePreview( ));
 }
 
 void MainWindow::changeEditorDecayValue( void )

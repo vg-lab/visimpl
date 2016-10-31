@@ -42,6 +42,7 @@ Summary::Summary( QWidget* parent_,
 : QWidget( parent_ )
 , _bins( DEFAULT_BINS )
 , _zoomFactor( DEFAULT_ZOOM_FACTOR )
+, _gridLinesNumber( 3 )
 , _spikeReport( nullptr )
 , _voltageReport( nullptr )
 , _mainHistogram( nullptr )
@@ -131,15 +132,21 @@ Summary::Summary( QWidget* parent_,
 
     QSpinBox* binSpinBox = new QSpinBox( );
     binSpinBox->setMinimum( 50 );
-    binSpinBox->setMaximum( 5000 );
+    binSpinBox->setMaximum( 100000 );
     binSpinBox->setSingleStep( 50 );
     binSpinBox->setValue( _bins );
 
     QDoubleSpinBox* zoomFactorSpinBox = new QDoubleSpinBox( );
     zoomFactorSpinBox->setMinimum( 1.0 );
-//    zoomFactorSpinBox->setMaximum( 100.0 );
+    zoomFactorSpinBox->setMaximum( 1000.0 );
     zoomFactorSpinBox->setSingleStep( 0.5 );
     zoomFactorSpinBox->setValue( _zoomFactor );
+
+    QSpinBox* gridSpinBox = new QSpinBox( );
+    gridSpinBox->setMinimum( 0 );
+    gridSpinBox->setMaximum( 10000 );
+    gridSpinBox->setSingleStep( 1 );
+    gridSpinBox->setValue( 3 );
 
   //  unsigned int totalRows = 10;
     footLayout->addWidget( new QLabel( "Local normalization:" ), 0, 0, 1, 1);
@@ -149,6 +156,8 @@ Summary::Summary( QWidget* parent_,
     footLayout->addWidget( new QLabel( "Global normalization:" ), 2, 0, 1, 1);
     footLayout->addWidget( _globalColorWidget, 2, 1, 1, 1 );
     footLayout->addWidget( globalComboBox, 3, 0, 1, 2 );
+    footLayout->addWidget( new QLabel( "Rule lines: " ), 4, 0, 1, 1 );
+    footLayout->addWidget( gridSpinBox, 4, 1, 1, 1 );
 
     footLayout->addWidget( _focusWidget, 0, 2, 5, 7 );
 
@@ -181,6 +190,9 @@ Summary::Summary( QWidget* parent_,
 
     connect( zoomFactorSpinBox, SIGNAL( valueChanged( double )),
              this,  SLOT( zoomFactor( double )));
+
+    connect( gridSpinBox, SIGNAL( valueChanged( int )),
+             this, SLOT( gridLinesNumber( int )));
 
     foot->setLayout( footLayout );
 
@@ -217,7 +229,7 @@ Summary::Summary( QWidget* parent_,
 //  _gids = GIDUSet( gids_.begin( ), gids_.end( ));
 //}
 
-void Summary::Init( simil::SpikeData* spikes_, brion::GIDSet gids_ )
+void Summary::Init( simil::SpikeData* spikes_, const simil::TGIDSet& gids_ )
 {
   _spikeReport = spikes_;
   _gids = GIDUSet( gids_.begin( ), gids_.end( ));
@@ -242,6 +254,8 @@ void Summary::Init( void )
   _mainHistogram->colorGlobal( _colorGlobal );
   _mainHistogram->representationMode( visimpl::T_REP_CURVE );
   _mainHistogram->regionWidth( _regionWidth );
+  _mainHistogram->gridLinesNumber( _gridLinesNumber );
+  _mainHistogram->firstHistogram( true );
   //  _mainHistogram->setMinimumWidth( width( ));
   //  _mainLayout->addWidget( _mainHistogram );
   _focusedHistogram = _mainHistogram;
@@ -288,7 +302,9 @@ void Summary::Init( void )
     mainRow.histogram = _mainHistogram;
     QString labelText = QString( "All");
     mainRow.label = new QLabel( labelText );
+//    mainRow.label->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
     mainRow.checkBox = new QCheckBox( );
+//    mainRow.checkBox->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
 
     unsigned int row = _histograms.size( );
     _mainLayout->addWidget( mainRow.label, row , 0, 1, 1 );
@@ -415,6 +431,7 @@ void Summary::deferredInsertion( void )
     histogram->normalizeRule( visimpl::T_NORM_MAX );
     histogram->representationMode( visimpl::T_REP_CURVE );
     histogram->regionWidth( _regionWidth );
+    histogram->gridLinesNumber( _gridLinesNumber );
 
     histogram->setMinimumHeight( _heightPerRow );
     histogram->setMaximumHeight( _heightPerRow );
@@ -464,9 +481,18 @@ void Summary::deferredInsertion( void )
 
 int pixelMargin = 10;
 
-void Summary::childHistogramPressed( QPoint position, float /*percentage*/ )
+void Summary::childHistogramPressed( const QPoint& position, float /*percentage*/ )
 {
 
+  if( _stackType == T_STACK_FIXED )
+  {
+
+    QPoint cursorLocalPoint = _mainHistogram->mapFromGlobal( position );
+    float percentage = float( cursorLocalPoint.x( )) / _mainHistogram->width( );
+
+    emit histogramClicked( percentage );
+    return;
+  }
   if( _focusedHistogram != sender( ))
   {
     _focusedHistogram =
@@ -531,24 +557,31 @@ void Summary::childHistogramPressed( QPoint position, float /*percentage*/ )
     }
   }
 
-  std::cout << "Focused mouse pressed" << std::endl;
+//  std::cout << "Focused mouse pressed" << std::endl;
 //  else if
 }
 
-void Summary::childHistogramReleased( QPoint /*position*/, float /*percentage*/ )
+void Summary::childHistogramReleased( const QPoint& /*position*/, float /*percentage*/ )
 {
   _mousePressed = false;
-  std::cout << "Mouse released" << std::endl;
+//  std::cout << "Mouse released" << std::endl;
 }
 
 void Summary::childHistogramClicked( float percentage,
                                      Qt::KeyboardModifiers modifiers )
 {
-  if( modifiers == Qt::ControlModifier )
-    emit histogramClicked(
-        dynamic_cast< visimpl::MultiLevelHistogram* >( sender( )));
-  else if( modifiers == Qt::ShiftModifier )
+  if( _stackType == T_STACK_FIXED )
+  {
     emit histogramClicked( percentage );
+  }
+  else if( _stackType == T_STACK_EXPANDABLE )
+  {
+    if( modifiers == Qt::ControlModifier )
+      emit histogramClicked(
+          dynamic_cast< visimpl::MultiLevelHistogram* >( sender( )));
+    else if( modifiers == Qt::ShiftModifier )
+      emit histogramClicked( percentage );
+  }
 }
 
 void Summary::mouseMoveEvent( QMouseEvent* event_ )
@@ -572,8 +605,11 @@ void Summary::mouseMoveEvent( QMouseEvent* event_ )
 float regionEditMargin = 0.005f;
 int regionEditMarginPixels = 5;
 
-void Summary::SetFocusRegionPosition( QPoint cursorLocalPosition )
+void Summary::SetFocusRegionPosition( const QPoint& cursorLocalPosition )
 {
+  if( _stackType == T_STACK_FIXED )
+    return;
+
   _regionLocalPosition = cursorLocalPosition;
 
   _regionLocalPosition.setX( std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
@@ -582,17 +618,11 @@ void Summary::SetFocusRegionPosition( QPoint cursorLocalPosition )
 
   _regionPercentage = float( _regionLocalPosition.x( )) / _focusedHistogram->width( );
 
-  std::cout << " " << _regionLocalPosition.x( ) << " -> " << _regionPercentage << std::endl;
-
 //    _regionPosition = position;
   _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
   _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
   _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
   _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
-  std::cout << "Focus region bounds " << _regionEdgeLower
-            << " " << _regionPercentage
-            << " " << _regionEdgeUpper
-            << std::endl;
 
   _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
   _focusWidget->update( );
@@ -606,12 +636,15 @@ void Summary::updateMouseMarker( QPoint point )
   _lastMousePosition = point;
 
   if( _stackType != T_STACK_EXPANDABLE )
+  {
+    _mainHistogram->update( );
     return;
+  }
 
   float invWidth = 1.0f / float( focusedHistogram->width( ));
 
   QPoint cursorLocalPoint = focusedHistogram->mapFromGlobal( point );
-  float percentage = float( cursorLocalPoint.x( )) * invWidth ;
+//  float percentage = float( cursorLocalPoint.x( )) * invWidth ;
 
   if( focusedHistogram == _focusedHistogram )
   {
@@ -620,7 +653,6 @@ void Summary::updateMouseMarker( QPoint point )
       if( _selectedEdgeLower )
       {
         float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointLower ) * invWidth;
-        std::cout << "Difference from edge " << diffPerc << std::endl;
 
         _regionWidth -= diffPerc;
 
@@ -640,7 +672,6 @@ void Summary::updateMouseMarker( QPoint point )
       {
 
         float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointUpper ) * invWidth;
-        std::cout << "Difference from edge " << diffPerc << std::endl;
 
         _regionWidth += diffPerc;
         _regionWidth = std::max( 0.01f, std::min( 0.5f, _regionWidth ));
@@ -661,11 +692,7 @@ void Summary::updateMouseMarker( QPoint point )
         _regionGlobalPosition = point;
         _regionWidthPixels = _regionWidth * focusedHistogram->width( );
 
-
         SetFocusRegionPosition( cursorLocalPoint );
-
-        std::cout << "Region position X: " << _regionGlobalPosition.x( );
-
 
       }
 
@@ -673,29 +700,16 @@ void Summary::updateMouseMarker( QPoint point )
 
     } // end mousePressed
 
-    std::cout << point.x( ) << " " << _regionEdgePointLower << " "
-    << _regionEdgePointUpper << std::endl;
-
-//        if(( percentage >= _regionEdgeLower - regionEditMargin &&
-//            percentage <= _regionEdgeLower + regionEditMargin ))
     if( abs(cursorLocalPoint.x( ) - _regionEdgePointLower) < regionEditMarginPixels )
     {
       _overRegionEdgeLower = true;
-      std::cout << "Over lower edge " << _regionEdgeLower - regionEditMargin
-                << " >= " << percentage
-                << " <= " << _regionEdgeLower + regionEditMargin
-                << std::endl;
+
       QApplication::setOverrideCursor( Qt::SizeHorCursor );
     }
-//        else if(( percentage >= ( _regionEdgeUpper- regionEditMargin ) &&
-//                  percentage <= ( _regionEdgeUpper + regionEditMargin )))
     else if( abs(_regionEdgePointUpper - cursorLocalPoint.x( )) < regionEditMarginPixels )
     {
       _overRegionEdgeUpper = true;
-      std::cout << "Over upper edge " << _regionEdgeUpper - regionEditMargin
-                << " >= " << percentage
-                << " <= " << _regionEdgeUpper + regionEditMargin
-                << std::endl;
+
       QApplication::setOverrideCursor( Qt::SizeHorCursor );
     }
     else
@@ -789,6 +803,13 @@ float Summary::zoomFactor( void )
 void Summary::heightPerRow( unsigned int height_ )
 {
   _heightPerRow = height_;
+
+  for( auto histogram : _histograms )
+  {
+    histogram->setMinimumHeight( _heightPerRow );
+    histogram->setMaximumHeight( _heightPerRow );
+    histogram->update( );
+  }
 }
 
 unsigned int Summary::heightPerRow( void )
@@ -871,4 +892,20 @@ float Summary::regionWidth( void )
 const GIDUSet& Summary::gids( void )
 {
   return _gids;
+}
+
+void Summary::gridLinesNumber( int linesNumber )
+{
+  _gridLinesNumber = linesNumber;
+
+  for( auto histogram : _histograms )
+  {
+    histogram->gridLinesNumber( linesNumber );
+    histogram->update( );
+  }
+}
+
+unsigned int Summary::gridLinesNumber( void )
+{
+  return _gridLinesNumber;
 }

@@ -129,7 +129,6 @@ private:
   QDockWidget* _simConfigurationDock;
   TransferFunctionEditor* _tfEditor;
   TransferFunctionWidget* _tfWidget;
-  ParticleSizeWidget* _psWidget;
   QDoubleSpinBox* _decayBox;
 
   QPushButton* _clearSelectionButton;
