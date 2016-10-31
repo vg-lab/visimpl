@@ -34,11 +34,11 @@ public:
   void showStatusBarMessage ( const QString& message );
 
   void openBlueConfig( const std::string& fileName,
-                       visimpl::TSimulationType simulationType,
+                       simil::TSimulationType simulationType,
                        const std::string& report);
 
   void openHDF5File( const std::string& networkFile,
-                     visimpl::TSimulationType simulationType,
+                     simil::TSimulationType simulationType,
                      const std::string& activityFile = "" );
 
 
@@ -129,7 +129,6 @@ private:
   QDockWidget* _simConfigurationDock;
   TransferFunctionEditor* _tfEditor;
   TransferFunctionWidget* _tfWidget;
-  ParticleSizeWidget* _psWidget;
   QDoubleSpinBox* _decayBox;
 
   QPushButton* _clearSelectionButton;

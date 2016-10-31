@@ -26,32 +26,26 @@ set(VISIMPL_SOURCES
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp  
   visimpl.cpp
   MainWindow.cpp
-  OpenGLWidget.cpp
-  CShader.cpp  
+  OpenGLWidget.cpp  
   CMakeSetup.rc  
-  prefr/ColorEmissionNode.cpp
-  prefr/ColorOperationPrototype.cpp
-  prefr/CompositeColorEmitter.cpp
+  prefr/ColorSource.cpp
+  prefr/ColorOperationModel.cpp  
   prefr/CompositeColorUpdater.cpp
-  prefr/DirectValuedEmissionNode.cpp
-  prefr/DirectValuedUpdater.cpp
-  prefr/DirectValuedEmitter.cpp
+  prefr/ValuedSource.cpp
+  prefr/ValuedUpdater.cpp  
   visimpl.ui
   resources.qrc
 )
 
 set(VISIMPL_HEADERS
-  ${PROJECT_BINARY_DIR}/include/visimpl/version.h
-  CShader.h
+  ${PROJECT_BINARY_DIR}/include/visimpl/version.h  
   OpenGLWidget.h
   MainWindow.h  
-  prefr/ColorEmissionNode.h
-  prefr/ColorOperationPrototype.h
-  prefr/CompositeColorEmitter.h
+  prefr/ColorSource.h
+  prefr/ColorOperationModel.h
   prefr/CompositeColorUpdater.h
-  prefr/DirectValuedEmissionNode.h
-  prefr/DirectValuedUpdater.h
-  prefr/DirectValuedEmitter.h  
+  prefr/ValuedSource.h
+  prefr/ValuedUpdater.h  
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -60,9 +54,8 @@ set(VISIMPL_LINK_LIBRARIES
   Qt5::Core
   Qt5::Widgets
   Qt5::OpenGL
-  nlfem
-  nlgenerator
-  nlrender
+  ReTo
+  SimIL
   prefr  
   Brion
   sumrice
@@ -96,10 +89,6 @@ endif()
 
 if (BRION_FOUND)
   list(APPEND VISIMPL_LINK_LIBRARIES Brion Brain)
-endif()
-
-if (NEUROLOTS_FOUND)
-  list(APPEND VISIMPL_LINK_LIBRARIES nlrender nlgenerator nlfem )
 endif()
 
 common_application( visimpl GUI ${COMMON_APP_ARGS})

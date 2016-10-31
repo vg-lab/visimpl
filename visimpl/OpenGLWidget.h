@@ -14,18 +14,16 @@
 #define SIM_SLIDER_UPDATE_PERIOD 0.5f
 
 #include <prefr/prefr.h>
+#include <reto/reto.h>
+#include <simil/simil.h>
 
-#include "CShader.h"
-
-#include <nlrender/nlrender.h>
-//#include <nsol/nsol.h>
 #include <brion/brion.h>
 #include <brain/brain.h>
 
-//#include "SimulationPlayer.h"
-#include "prefr/ColorEmissionNode.h"
-#include "prefr/ColorOperationPrototype.h"
-// #include "EditorTF/TransferFunctionEditor.h"
+
+#include "prefr/ColorSource.h"
+#include "prefr/ColorOperationModel.h"
+
 #include <sumrice/sumrice.h>
 
 #ifdef VISIMPL_USE_ZEROEQ
@@ -64,11 +62,10 @@ public:
                 const std::string& zeqUri = "" );
   ~OpenGLWidget( void );
 
-  void createNeuronsCollection( void );
   void createParticleSystem( float scale = 1.0f );
   void loadData( const std::string& fileName,
-                 const visimpl::TDataType = visimpl::TDataType::TBlueConfig,
-                 visimpl::TSimulationType simulationType = visimpl::TSimSpikes,
+                 const simil::TDataType = simil::TDataType::TBlueConfig,
+                 simil::TSimulationType simulationType = simil::TSimSpikes,
                  const std::string& report = std::string( "" ));
 
   void idleUpdate( bool idleUpdate_ = true )
@@ -76,7 +73,7 @@ public:
     _idleUpdate = idleUpdate_;
   }
 
-  visimpl::SimulationPlayer* player( );
+  simil::SimulationPlayer* player( );
   void resetParticles( void );
 
   void SetAlphaBlendingAccumulative( bool accumulative = true );
@@ -155,11 +152,12 @@ protected:
 
   bool _wireframe;
 
-  nlrender::Camera* _camera;
+  reto::Camera* _camera;
   glm::vec3 _lastCameraPosition;
 
 //  neurolots::NeuronsCollection* _neuronsCollection;
   bool _focusOnSelection;
+  bool _pendingSelection;
 
   unsigned int _frameCount;
 
@@ -174,34 +172,22 @@ protected:
   std::chrono::time_point< std::chrono::system_clock > _then;
   std::chrono::time_point< std::chrono::system_clock > _lastFrame;
 
-  CShader* _particlesShader;
-  prefr::ParticleSystem* _ps;
+//  CShader* _particlesShader;
+  reto::ShaderProgram* _particlesShader;
+  prefr::ParticleSystem* _particleSystem;
 
-//  nsol::BBPSDKReader _bbpReader;
-//  nsol::Columns _columns;
-//  nsol::SimulationData _simulationData;
-//  nsol::NeuronsMap _neurons;
+  simil::TSimulationType _simulationType;
+  simil::SimulationPlayer* _player;
 
-//  float currentTime;
-//  bbp::CompartmentReportReader* reader;
-
-  visimpl::TSimulationType _simulationType;
-  visimpl::SimulationPlayer* _player;
   float _maxLife;
   float _deltaTime;
   bool _firstFrame;
 
-  prefr::ColorOperationPrototype* _prototype;
-  prefr::ColorOperationPrototype* _offPrototype;
+  prefr::ColorOperationModel* _prototype;
+  prefr::ColorOperationModel* _offPrototype;
 
-//  brion::BlueConfig* _blueConfig;
-//  brion::SpikeReport* _spikeReport;
-//  brain::Circuit* _circuit;
-//  brion::GIDSet _neuronGIDs;
-//  brion::Spikes* _spikes;
-
-  std::unordered_map< uint32_t, prefr::EmissionNode* > gidNodesMap;
-  std::unordered_map< prefr::EmissionNode*, uint32_t > nodesGIDMap;
+  std::unordered_map< uint32_t, prefr::Cluster* > gidNodesMap;
+  std::unordered_map< prefr::Cluster*, uint32_t > nodesGIDMap;
 
   float _playbackSpeed;
   float _renderSpeed;

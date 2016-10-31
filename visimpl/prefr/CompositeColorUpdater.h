@@ -1,30 +1,27 @@
-/*
- * SpineRetParticleUpdater.h
- *
- *  Created on: 04/12/2014
- *      Author: sgalindo
- */
-
-#ifndef __StillParticleUpdater__
-#define __StillParticleUpdater__
+#ifndef __VISIMPL__COMPOSITECOLORUPDATER__
+#define __VISIMPL__COMPOSITECOLORUPDATER__
 
 #include <prefr/prefr.h>
-#include "ColorEmissionNode.h"
-#include "ColorOperationPrototype.h"
+#include "ColorOperationModel.h"
+#include "ColorSource.h"
 
 namespace prefr
 {
-  class CompositeColorUpdater : public ParticleUpdater
+  class CompositeColorUpdater : public Updater
   {
   public:
 
-    CompositeColorUpdater( const ParticleCollection& particlesArray );
+    CompositeColorUpdater( );
+
     ~CompositeColorUpdater();
 
-    virtual void Update(const tparticle_ptr i, float deltaTime);
+    virtual void Emit( const Cluster& cluster, const tparticle_ptr current );
+
+    virtual void Update( const Cluster& cluster, const tparticle_ptr current,
+                         float deltaTime );
   };
 
 }
 
 
-#endif /* __SpineRetParticleUpdater__ */
+#endif /* __VISIMPL__COMPOSITECOLORUPDATER__ */

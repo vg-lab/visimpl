@@ -104,11 +104,11 @@ void MainWindow::showStatusBarMessage ( const QString& message )
 }
 
 void MainWindow::openBlueConfig( const std::string& fileName,
-                                 visimpl::TSimulationType simulationType,
+                                 simil::TSimulationType simulationType,
                                  const std::string& reportLabel)
 {
   _openGLWidget->loadData( fileName,
-                           visimpl::TDataType::TBlueConfig,
+                           simil::TDataType::TBlueConfig,
                            simulationType, reportLabel );
 
   configurePlayer( );
@@ -128,7 +128,7 @@ void MainWindow::openBlueConfigThroughDialog( void )
   {
     bool ok1, ok2;
     QInputDialog simTypeDialog;
-    visimpl::TSimulationType simType;
+    simil::TSimulationType simType;
     QStringList items = {"Spikes", "Voltages"};
 
     QString text = QInputDialog::getItem(
@@ -140,12 +140,12 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
     if( text == items[0] )
     {
-      simType = visimpl::TSimSpikes;
+      simType = simil::TSimSpikes;
       ok2 = true;
     }
     else
     {
-      simType = visimpl::TSimVoltages;
+      simType = simil::TSimVoltages;
 
       text = QInputDialog::getText(
           this, tr( "Please select report" ),
@@ -171,11 +171,11 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
 
 void MainWindow::openHDF5File( const std::string& networkFile,
-                               visimpl::TSimulationType simulationType,
+                               simil::TSimulationType simulationType,
                                const std::string& activityFile )
 {
   _openGLWidget->loadData( networkFile,
-                           visimpl::TDataType::THDF5,
+                           simil::TDataType::THDF5,
                            simulationType,
                            activityFile );
 
@@ -210,7 +210,7 @@ void MainWindow::openHDF5ThroughDialog( void )
 
   activityFile = path.toStdString( );
 
-  openHDF5File( networkFile, visimpl::TSimSpikes, activityFile );
+  openHDF5File( networkFile, simil::TSimSpikes, activityFile );
 }
 
 void MainWindow::configurePlayer( void )
@@ -225,8 +225,10 @@ void MainWindow::configurePlayer( void )
   _endTimeLabel->setText(
         QString::number( (double)_openGLWidget->player( )->endTime( )));
 
+#ifdef SIMIL_USE_ZEROEQ
   _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+#endif
 
   changeEditorColorMapping( );
   changeEditorSizeFunction( );
@@ -356,10 +358,10 @@ void MainWindow::initSimColorDock( void )
 
 //  _tfEditor = new TransferFunctionEditor( );
   _tfWidget = new TransferFunctionWidget( );
-  _tfWidget->setMinimumHeight( 100 );
+  _tfWidget->setMinimumHeight( 150 );
 
-  _psWidget = new ParticleSizeWidget( );
-  _psWidget->setMinimumHeight( 150 );
+//  _psWidget = new ParticleSizeWidget( );
+//  _psWidget->setMinimumHeight( 150 );
 
   _decayBox = new QDoubleSpinBox( );
   _decayBox->setMinimum( 0.01 );
@@ -377,17 +379,11 @@ void MainWindow::initSimColorDock( void )
   QVBoxLayout* verticalLayout = new QVBoxLayout( );
 //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
 
-  QGroupBox* tFunctionGB = new QGroupBox( "Transfer function" );
+  QGroupBox* tFunctionGB = new QGroupBox( "Color and Size transfer function" );
   QVBoxLayout* tfLayout = new QVBoxLayout( );
   tfLayout->addWidget( _tfWidget );
   tFunctionGB->setLayout( tfLayout );
-  tFunctionGB->setMaximumHeight( 130 );
-
-  QGroupBox* sFunctionGB = new QGroupBox( "Size function" );
-  QVBoxLayout* sfLayout = new QVBoxLayout( );
-  sfLayout->addWidget( _psWidget);
-  sFunctionGB->setLayout( sfLayout );
-  sFunctionGB->setMaximumHeight( 200 );
+  tFunctionGB->setMaximumHeight( 250 );
 
   QGroupBox* dFunctionGB = new QGroupBox( "Decay function" );
   QHBoxLayout* dfLayout = new QHBoxLayout( );
@@ -398,7 +394,7 @@ void MainWindow::initSimColorDock( void )
 
   QGroupBox* rFunctionGB = new QGroupBox( "Alpha blending function" );
   QHBoxLayout* rfLayout = new QHBoxLayout( );
-  rfLayout->addWidget( new QLabel( "Alhpa\nBlending: " ));
+  rfLayout->addWidget( new QLabel( "Alpha\nBlending: " ));
   rfLayout->addWidget( _alphaNormalButton );
   rfLayout->addWidget( _alphaAccumulativeButton );
   rFunctionGB->setLayout( rfLayout );
@@ -414,18 +410,9 @@ void MainWindow::initSimColorDock( void )
 
   verticalLayout->setAlignment( Qt::AlignTop );
   verticalLayout->addWidget( tFunctionGB );
-  verticalLayout->addWidget( sFunctionGB );
   verticalLayout->addWidget( dFunctionGB );
   verticalLayout->addWidget( rFunctionGB );
   verticalLayout->addWidget( selFunctionGB  );
-
-
-//  verticalLayout->addWidget( new QLabel( "Transfer function" ));
-//
-//  verticalLayout->addWidget( _tfWidget );
-//
-//  verticalLayout->addWidget( new QLabel( "Size function" ));
-//  verticalLayout->addWidget( _psWidget ) ;
 
   container->setLayout( verticalLayout );
   _simConfigurationDock->setWidget( container );
@@ -438,13 +425,11 @@ void MainWindow::initSimColorDock( void )
 
   connect( _tfWidget, SIGNAL( colorChanged( void )),
            this, SLOT( UpdateSimulationColorMapping( void )));
+  connect( _tfWidget, SIGNAL( colorChanged( void )),
+           this, SLOT( UpdateSimulationSizeFunction( void )));
   connect( _tfWidget, SIGNAL( previewColor( void )),
            this, SLOT( PreviewSimulationColorMapping( void )));
-
-  connect( _psWidget, SIGNAL( sizeChanged( void )),
-           this, SLOT( UpdateSimulationSizeFunction( void )));
-
-  connect( _psWidget, SIGNAL( sizePreview( void )),
+  connect( _tfWidget, SIGNAL( previewColor( void )),
            this, SLOT( PreviewSimulationSizeFunction( void )));
 
   connect( _decayBox, SIGNAL( valueChanged( double )),
@@ -464,13 +449,13 @@ void MainWindow::initSimColorDock( void )
 
 void MainWindow::initSummaryWidget( void )
 {
-  visimpl::TSimulationType simType =
+  simil::TSimulationType simType =
       _openGLWidget->player( )->simulationType( );
 
-  if( simType == visimpl::TSimSpikes )
+  if( simType == simil::TSimSpikes )
   {
-    visimpl::SpikesPlayer* spikesPlayer =
-        dynamic_cast< visimpl::SpikesPlayer* >( _openGLWidget->player( ));
+    simil::SpikesPlayer* spikesPlayer =
+        dynamic_cast< simil::SpikesPlayer* >( _openGLWidget->player( ));
 
     std::cout << "Creating summary..." << std::endl;
 //    GIDUSet gids;
@@ -481,6 +466,9 @@ void MainWindow::initSummaryWidget( void )
 //    _summary->setVisible( true );
 
   }
+
+  connect( _summary, SIGNAL( histogramClicked( float )),
+           this, SLOT( PlayAt( float )));
 }
 
 void MainWindow::PlayPause( bool notify )
@@ -503,7 +491,7 @@ void MainWindow::Play( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
       _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::PLAY );
 #endif
     }
@@ -519,7 +507,7 @@ void MainWindow::Pause( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::PAUSE );
 #endif
     }
@@ -537,7 +525,7 @@ void MainWindow::Stop( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
       _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::STOP );
 #endif
     }
@@ -555,7 +543,7 @@ void MainWindow::Repeat( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
       _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( repeat ?
                                   zeroeq::gmrv::ENABLE_LOOP :
                                   zeroeq::gmrv::DISABLE_LOOP );
@@ -591,7 +579,7 @@ void MainWindow::PlayAt( float percentage, bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     // Send event
     _openGLWidget->player( )->zeqEvents( )->sendFrame( _simSlider->minimum( ),
                            _simSlider->maximum( ),
@@ -626,7 +614,7 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     // Send event
     _openGLWidget->player( )->zeqEvents( )->sendFrame( _simSlider->minimum( ),
                            _simSlider->maximum( ),
@@ -651,7 +639,7 @@ void MainWindow::Restart( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::BEGIN );
 #endif
     }
@@ -667,7 +655,7 @@ void MainWindow::GoToEnd( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
     _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::END );
 #endif
     }
@@ -700,7 +688,7 @@ void MainWindow::UpdateSimulationColorMapping( void )
 
 //  _openGLWidget->changeSimulationColorMapping( _tfEditor->getColorPoints( ));
   _openGLWidget->changeSimulationColorMapping( _tfWidget->getColors( ));
-  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
+//  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
 }
 
 void MainWindow::PreviewSimulationColorMapping( void )
@@ -712,22 +700,23 @@ void MainWindow::changeEditorColorMapping( void )
 {
 //  _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
   _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
-  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
+//  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
 }
 
 void MainWindow::changeEditorSizeFunction( void )
 {
-  _psWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction() );
+  _tfWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction( ));
+//  _psWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction() );
 }
 
 void MainWindow::UpdateSimulationSizeFunction( void )
 {
-  _openGLWidget->changeSimulationSizeFunction( _psWidget->getSizeFunction( ));
+  _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizeFunction( ));
 }
 
 void MainWindow::PreviewSimulationSizeFunction( void )
 {
-  _openGLWidget->changeSimulationSizeFunction( _psWidget->getSizePreview( ));
+  _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizePreview( ));
 }
 
 void MainWindow::changeEditorDecayValue( void )

@@ -83,7 +83,7 @@ namespace visimpl
 ////    init( );
 //  }
 
-  MultiLevelHistogram::MultiLevelHistogram( const visimpl::SpikeData& spikeReport )
+  MultiLevelHistogram::MultiLevelHistogram( const simil::SpikeData& spikeReport )
   : QFrame( nullptr )
   //, _maxValueHistogramLocal( 0 )
   , _spikes( &spikeReport.spikes( ))
@@ -121,7 +121,7 @@ namespace visimpl
 //    _endTime = spikeReport.getEndTime( );
 //  }
 
-  void MultiLevelHistogram::Spikes( const visimpl::SpikeData& spikeReport )
+  void MultiLevelHistogram::Spikes( const simil::SpikeData& spikeReport )
   {
     _spikes = &spikeReport.spikes( );
     _startTime = spikeReport.startTime( );
@@ -797,15 +797,23 @@ namespace visimpl
 
           float timeValue = ( _endTime - _startTime ) * line + _startTime;
 
-          QString value = QString::number( timeValue );
+          QString value = QString::number( ( unsigned int ) timeValue );
           int valueLength = value.length( ) * 8;
           if( width( ) - positionX < valueLength )
             margin = -valueLength;
           QPoint position ( positionX + margin, currentHeight / 4 );
           pen.setColor( QColor( 150, 150, 150 ));
           painter.setPen( pen );
+
+          QFont backFont = painter.font( );
+//          QFont newFont = backFont;
+//
+//          newFont.setPointSize( newFont.pointSize( ) * 1.3f );
+//          painter.setFont( newFont );
+
           painter.drawText( position, value );
 
+//          painter.setFont( backFont );
         }
 
         QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
