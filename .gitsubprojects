@@ -1,5 +1,5 @@
 # -*- mode: cmake -*-
-git_subproject( Brion https://github.com/BlueBrain/Brion.git master)
-git_subproject( prefr git@gitlab.gmrv.es:nsviz/prefr.git d4c8fff )
-git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git 1e98cb2 )
+git_subproject( Brion https://github.com/BlueBrain/Brion.git 2bb27a1)
+git_subproject( prefr git@gitlab.gmrv.es:nsviz/prefr.git 11ba1f5 )
+git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git ea889f0 )
 git_subproject( ReTo git@gitlab.gmrv.es:nsviz/ReTo.git 58ffed8 )
