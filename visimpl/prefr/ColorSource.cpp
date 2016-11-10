@@ -4,10 +4,10 @@ namespace prefr
 {
 
   ColorSource::ColorSource( float emissionRate,
-                                        const glm::vec3& position_,
-                                        const glm::vec4& color_,
-                                        bool still_ )
-  : PointSource( emissionRate, position_ )
+                            const glm::vec3& position_,
+                            const glm::vec4& color_,
+                            bool still_ )
+  : Source( emissionRate, position_ )
   , _color( color_ )
   , _size ( 0.0f )
   , _still( still_ )
@@ -48,7 +48,7 @@ namespace prefr
     return _size;
   }
 
-  bool ColorSource::Emits( void ) const
+  bool ColorSource::emits( void ) const
   {
     return true;
   }

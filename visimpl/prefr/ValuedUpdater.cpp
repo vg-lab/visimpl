@@ -21,28 +21,22 @@ namespace prefr
 
   void ValuedUpdater::Emit( const Cluster& cluster, const tparticle_ptr current )
   {
-    ColorOperationModel* cProto =
+    ColorOperationModel* model =
             dynamic_cast< ColorOperationModel* >( cluster.model( ));
 
-    ValuedSource* node = dynamic_cast< ValuedSource* >( cluster.source( ));
+    ValuedSource* source = dynamic_cast< ValuedSource* >( cluster.source( ));
 
-    if( cProto && ( !current->alive( )))
+    if( model && ( !current->alive( )))
     {
      current->life( glm::clamp(rand( ) * invRandMax, 0.0f, 1.0f) *
-         cProto->lifeInterval( ) + cProto->minLife( ) );
+         model->lifeInterval( ) + model->minLife( ) );
 
-     current->velocity( node->GetEmissionVelocityDirection( ));
-     current->position( node->GetEmissionPosition( ));
+     SampledValues values;
+     source->sample( &values );
 
-     current->color( glm::clamp(
-         cProto->colorop( node->color( ), cProto->color.GetFirstValue( )),
-         0.0f, 1.0f ));
+     current->position( values.position );
+     current->velocity( values.direction );
 
-     current->velocityModule( cProto->velocity.GetFirstValue( ));
-
-     current->size( cProto->size.GetFirstValue( ));
-
-     current->newborn( false );
     }
   }
 
@@ -62,7 +56,7 @@ namespace prefr
 
     current->alive( cluster.active( ));
 
-    if( current->alive( ) && !current->newborn( ))
+    if( current->alive( ))
     {
       if( !node->still( ))
       {
@@ -80,8 +74,6 @@ namespace prefr
 
       current->size( cProto->size.GetValue( refLife ) + node->size());
     }
-
-    current->newborn( false );
 
   }
 

@@ -313,12 +313,12 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   _offPrototype->size.Insert( 1.0f, 10.0f );
 
-  _particleSystem->AddModel( _offPrototype );
+  _particleSystem->addModel( _offPrototype );
 
 
   _prototype = new prefr::ColorOperationModel( _maxLife, _maxLife );
 
-  _particleSystem->AddModel( _prototype );
+  _particleSystem->addModel( _prototype );
 
 
   prefr::Updater* updater;
@@ -367,6 +367,7 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   prefr::Cluster* cluster;
   prefr::Source* source;
+  prefr::PointSampler* sampler = new prefr::PointSampler( );
 
   int partPerEmitter = 1;
 
@@ -378,6 +379,8 @@ void OpenGLWidget::createParticleSystem( float scale )
   unsigned int i = 0;
   glm::vec3 cameraPivot;
   brion::GIDSetCIter gid = _player->gids( ).begin();
+
+  ;
   for ( auto brionPos : positions )
   {
     cluster = new prefr::Cluster( );
@@ -406,7 +409,6 @@ void OpenGLWidget::createParticleSystem( float scale )
       source = new prefr::ValuedSource( -1.0f, position,
                                         glm::vec4( 0, 0, 0, 0 ),
                                         true );
-
       break;
     default:
       source = nullptr;
@@ -414,10 +416,11 @@ void OpenGLWidget::createParticleSystem( float scale )
       break;
     }
 
+    source->sampler( sampler );
     cluster->source( source );
 
-    _particleSystem->AddSource( source );
-    _particleSystem->AddCluster( cluster, start, partPerEmitter );
+    _particleSystem->addSource( source );
+    _particleSystem->addCluster( cluster, start, partPerEmitter );
 
     cluster->inactiveKillParticles( true );
     source->maxEmissionCycles( 1 );
@@ -437,10 +440,6 @@ void OpenGLWidget::createParticleSystem( float scale )
                                    cameraPivot.y,
                                    cameraPivot.z ));
 
-
-
-
-
   prefr::Sorter* sorter = new prefr::Sorter( );
 
   std::cout << "Created sorter" << std::endl;
@@ -449,11 +448,11 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   std::cout << "Created systems" << std::endl;
 
-  _particleSystem->AddUpdater( updater );
+  _particleSystem->addUpdater( updater );
   _particleSystem->sorter( sorter );
   _particleSystem->renderer( renderer );
 
-  _particleSystem->Start();
+  _particleSystem->start();
 
   resetParticles( );
 
@@ -474,17 +473,15 @@ void OpenGLWidget::resetParticles( void )
       default:
       break;
     }
-    cluster->source( )->Restart( );
+    cluster->source( )->restart( );
   }
-  _particleSystem->Update( 0.0f );
+  _particleSystem->update( 0.0f );
 }
 
 void OpenGLWidget::SetAlphaBlendingAccumulative( bool accumulative )
 {
   _alphaBlendingAccumulative = accumulative;
 }
-
-
 
 void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
 {
@@ -505,7 +502,7 @@ void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors
 
     _prototype->color = gcolors;
 
-    _particleSystem->Update( 0.0f );
+    _particleSystem->update( 0.0f );
   }
 }
 
@@ -540,7 +537,7 @@ void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
     }
     _prototype->size = newSize;
 
-    _particleSystem->Update( 0.0f );
+    _particleSystem->update( 0.0f );
   }
 }
 
@@ -639,7 +636,7 @@ void OpenGLWidget::updateSelection( void )
     _camera->targetPivotRadius( center, radius );
 
     _particleSystem->run( true );
-    _particleSystem->Update( 0.0f );
+    _particleSystem->update( 0.0f );
 
     _pendingSelection = false;
 
@@ -669,7 +666,7 @@ void OpenGLWidget::updateSimulation( void )
   if( _player->isPlaying( ) || _firstFrame )
   {
 
-    _particleSystem->Update( _elapsedTimeRenderAcc );
+    _particleSystem->update( _elapsedTimeRenderAcc );
     _firstFrame = false;
   }
 }
@@ -726,14 +723,14 @@ void OpenGLWidget::paintParticles( void )
 //                << cameraPosition.y << ", "
 //                << cameraPosition.z << std::endl;
 //    std::cout << "Camera moved..." << std::endl;
-    _particleSystem->UpdateCameraDistances( cameraPosition );
+    _particleSystem->updateCameraDistances( cameraPosition );
     
 
     _lastCameraPosition = cameraPosition;
   }
 
-  _particleSystem->UpdateRender( );
-  _particleSystem->Render( );
+  _particleSystem->updateRender( );
+  _particleSystem->render( );
 
   _particlesShader->unuse( );
 

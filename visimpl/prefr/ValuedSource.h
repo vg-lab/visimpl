@@ -6,7 +6,7 @@
 namespace prefr
 {
 
-  class ValuedSource : public PointSource
+  class ValuedSource : public Source
   {
   public:
 

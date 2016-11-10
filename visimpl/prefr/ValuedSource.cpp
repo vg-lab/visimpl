@@ -12,7 +12,7 @@ namespace prefr
 
   ValuedSource::ValuedSource( float emissionRate, const glm::vec3& position_,
                               const glm::vec4& color_, bool still_ )
-  : PointSource( emissionRate, position_ )
+  : Source( emissionRate, position_ )
   , _color( color_ )
   , _size ( 0.0f )
   , _still( still_ )

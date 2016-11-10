@@ -19,11 +19,11 @@ namespace prefr
                                             ColorOperation colorOp)
   : Model( min, max )
   {
-    SetColorOperation(colorOp);
+    setColorOperation(colorOp);
   }
 
 
-  void ColorOperationModel::SetColorOperation(ColorOperation colorOp)
+  void ColorOperationModel::setColorOperation(ColorOperation colorOp)
   {
     _colorOperation = colorOp;
 

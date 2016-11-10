@@ -6,13 +6,12 @@
 namespace prefr
 {
 
-  class ColorSource : public PointSource
+  class ColorSource : public Source
   {
   public:
 
-
     ColorSource( float emissionRate, const glm::vec3& _position,
-                       const glm::vec4& color, bool still = false);
+                 const glm::vec4& color, bool still = false);
     virtual ~ColorSource();
 
     virtual void color( const glm::vec4& color );
@@ -24,7 +23,7 @@ namespace prefr
     virtual void size( float size );
     virtual float size( void);
 
-    virtual bool Emits() const;
+    virtual bool emits() const;
 
   protected:
 

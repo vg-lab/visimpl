@@ -23,7 +23,7 @@ namespace prefr
     ColorOperationModel( float min, float max,
                          ColorOperation colorOp = ADDITION );
 
-    void SetColorOperation( ColorOperation colorOp );
+    void setColorOperation( ColorOperation colorOp );
 
   protected:
 

@@ -10,69 +10,55 @@ namespace prefr
   CompositeColorUpdater::~CompositeColorUpdater()
   {}
 
-  void CompositeColorUpdater::Emit( const Cluster& cluster,
-                                    const tparticle_ptr current )
+  void CompositeColorUpdater::emitParticle( const Cluster& cluster,
+                                            const tparticle_ptr current )
   {
 
-    ColorOperationModel* cProto =
+    ColorOperationModel* model =
         dynamic_cast< ColorOperationModel* >( cluster.model( ));
 
-    ColorSource* node =
+    ColorSource* source =
         dynamic_cast< ColorSource* >( cluster.source( ));
 
     if( !current->alive( ))
     {
-      current->life( cProto->minLife( ));
+      current->life( model->minLife( ));
 
       current->alive( true );
 
-      current->velocity( node->GetEmissionVelocityDirection( ));
-      current->position( node->GetEmissionPosition( ));
+      SampledValues values;
+      source->sample( &values );
 
-      current->color( glm::clamp(
-          cProto->colorop( node->color( ), cProto->color.GetValue( 1.f )),
-          0.0f, 1.0f ));
+      current->position( values.position );
+      current->velocity( values.direction );
 
-      current->velocityModule( cProto->velocity.GetValue( 0.f ));
-
-      current->size( cProto->size.GetValue( 0.f ));
-
-//
-//      std::cout << "E Particle: " << current->id( )
-//                << " life " << current->life( )
-//                << " color " << current->color( ).x
-//                << ", " << current->color( ).y
-//                << ", " << current->color( ).z
-//                << std::endl;
-
-      current->newborn( true );
     }
   }
 
-  void CompositeColorUpdater::Update( const Cluster& cluster,
+  void CompositeColorUpdater::updateParticle( const Cluster& cluster,
                                       const tparticle_ptr current,
                                       float deltaTime )
   {
-    ColorOperationModel* cProto =
+    ColorOperationModel* model =
         dynamic_cast< ColorOperationModel* >( cluster.model( ));
 
-    ColorSource* node =
+    ColorSource* source =
         dynamic_cast< ColorSource* >( cluster.source( ));
 
     float refLife = 0;
 
-    if (current->alive( ))
+    if( current->alive( ))
     {
 
       current->life( std::max(0.0f, current->life( ) - deltaTime ));
 
-      refLife = 1.0f - glm::clamp( current->life( ) * cProto->inverseMaxLife( ),
+      refLife = 1.0f - glm::clamp( current->life( ) * model->inverseMaxLife( ),
                                    0.0f, 1.0f );
 
-      if( !node->still( ))
+      if( !source->still( ))
       {
 
-        current->velocityModule( cProto->velocity.GetValue( refLife ));
+        current->velocityModule( model->velocity.GetValue( refLife ));
 
         current->position( current->position( )
                            + current->velocity( ) * current->velocityModule( ) *
@@ -80,21 +66,11 @@ namespace prefr
       }
 
       current->color( glm::clamp(
-          cProto->colorop( node->color( ), cProto->color.GetValue( refLife )),
+          model->colorop( source->color( ), model->color.GetValue( refLife )),
           0.0f, 1.0f ));
 
-      current->size( cProto->size.GetValue( refLife ) + node->size( ));
-
-//      if( current->newborn( ))
-//      std::cout << "Particle: " << current->id( )
-//                << " life " << current->life( ) << " - " << refLife
-//                << " color " << current->color( ).x
-//                << ", " << current->color( ).y
-//                << ", " << current->color( ).z
-//                << std::endl;
+      current->size( model->size.GetValue( refLife ) + source->size( ));
     }
-
-    current->newborn( false );
 
   }
 
