@@ -42,16 +42,17 @@ option(VISIMPL_WITH_GMRVLEX "VISIMPL_WITH_GMRVLEX" ON)
 common_find_package( Qt5Core 5.4 REQUIRED )
 common_find_package( Qt5Gui 5.4 REQUIRED )
 common_find_package( Qt5Widgets 5.4 REQUIRED )
-common_find_package( nvidiaOpenGL )
 common_find_package( Qt5OpenGL REQUIRED )
 common_find_package( GLEW REQUIRED SYSTEM )
 common_find_package( OpenGL REQUIRED )
 common_find_package( Eigen3 REQUIRED SYSTEM)
+common_find_package( HDF5 REQUIRED COMPONENTS C CXX )
 common_find_package( ReTo REQUIRED )
 common_find_package( SimIL REQUIRED )
 common_find_package( prefr REQUIRED )
 common_find_package( Lexis )
 common_find_package( OpenMP )
+
 
 list( APPEND VISIMPL_DEPENDENT_LIBRARIES 
   OpenGL 
