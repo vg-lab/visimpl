@@ -1,5 +1,14 @@
-#ifndef __QNEUROLOTS__OPENGLWIDGET__
-#define __QNEUROLOTS__OPENGLWIDGET__
+/*
+ * @file  OpenGLWidget.h
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
+ */
+
+#ifndef __VISIMPL__OPENGLWIDGET__
+#define __VISIMPL__OPENGLWIDGET__
 
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
@@ -7,7 +16,7 @@
 #include <chrono>
 #include <unordered_set>
 
-#define NEUROLOTS_SKIP_GLEW_INCLUDE 1
+#define VISIMPL_SKIP_GLEW_INCLUDE 1
 
 #define PREFR_SKIP_GLEW_INCLUDE 1
 
@@ -155,7 +164,6 @@ protected:
   reto::Camera* _camera;
   glm::vec3 _lastCameraPosition;
 
-//  neurolots::NeuronsCollection* _neuronsCollection;
   bool _focusOnSelection;
   bool _pendingSelection;
 
@@ -172,7 +180,6 @@ protected:
   std::chrono::time_point< std::chrono::system_clock > _then;
   std::chrono::time_point< std::chrono::system_clock > _lastFrame;
 
-//  CShader* _particlesShader;
   reto::ShaderProgram* _particlesShader;
   prefr::ParticleSystem* _particleSystem;
 
@@ -202,4 +209,4 @@ protected:
 
 };
 
-#endif // __QNEUROLOTS__OPENGLWIDGET__
+#endif // __VISIMPL__OPENGLWIDGET__

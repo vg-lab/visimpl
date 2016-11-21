@@ -1,3 +1,10 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#   ViSimpl
+#   2015-2016 (c) ViSimpl / Universidad Rey Juan Carlos
+#   sergio.galindo@urjc.es
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 add_definitions(-DVISIMPL_SKIP_GLEW_INCLUDE )
 
 set(PROJECT_VERSION_ABI ${${PROJECT_NAME}_VERSION_ABI})
@@ -41,6 +48,7 @@ set(VISIMPL_HEADERS
   ${PROJECT_BINARY_DIR}/include/visimpl/version.h  
   OpenGLWidget.h
   MainWindow.h  
+  prefr/PrefrShaders.h
   prefr/ColorSource.h
   prefr/ColorOperationModel.h
   prefr/CompositeColorUpdater.h
@@ -60,6 +68,7 @@ set(VISIMPL_LINK_LIBRARIES
   Brion
   sumrice
 )
+
 
 if ( NOT DEFAULT_CONTEXT_OPENGL_MAJOR )
   set( DEFAULT_CONTEXT_OPENGL_MAJOR 3 )

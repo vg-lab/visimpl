@@ -1,3 +1,12 @@
+/*
+ * @file  ValuedSource.h
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
+ */
+
 #ifndef __VISIMPL__VALUEDSOURCE__
 #define __VISIMPL__VALUEDSOURCE__
 

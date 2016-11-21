@@ -1,7 +1,7 @@
 /*
  * @file	types.h
  * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es> 
+ * @author Pablo Toharia Rabasco  <pablo.toharia@urjc.es>
  * @date
  * @remarks Copyright (c) GMRV/URJC. All rights reserved.
  *					Do not distribute without further notice.

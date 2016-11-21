@@ -1,0 +1,5 @@
+ViSimpl
+
+Copyright (c) 2015-2016 Grupo de Modelado y Realidad Virtual (GMRV),
+                        Universidad Rey Juan Carlos, Spain
+All rights reserved.

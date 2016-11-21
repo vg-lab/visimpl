@@ -1,3 +1,12 @@
+/*
+ * @file  MainWindow.cpp
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
+ */
+
 #include "MainWindow.h"
 #include <QDebug>
 #include <QFileDialog>
@@ -585,8 +594,8 @@ void MainWindow::_setZeqUri( const std::string& uri_ )
 
   _subscriber->subscribe(
       lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
-      [&]( const void* data, const size_t size )
-      { _onSelectionEvent( lexis::data::SelectedIDs::create( data, size ));});
+      [&]( const void* data_, const size_t size_ )
+      { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
 
 //  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
   _thread = new std::thread( [&]() { while( true ) _subscriber->receive( 10000 );});

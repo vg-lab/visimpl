@@ -1,8 +1,10 @@
 /*
- * CustomSlider.h
- *
- *  Created on: 11 de dic. de 2015
- *      Author: sgalindo
+ * @file  CustomSlider.h
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
  */
 
 #ifndef __QT_CUSTOMSLIDER_H__

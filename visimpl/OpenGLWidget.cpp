@@ -1,3 +1,12 @@
+/*
+ * @file  OpenGLWidget.cpp
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
+ */
+
 #include "OpenGLWidget.h"
 #include <QOpenGLContext>
 #include <QMouseEvent>
@@ -13,6 +22,7 @@
 
 #include "MainWindow.h"
 
+#include "prefr/PrefrShaders.h"
 #include "prefr/ColorSource.h"
 
 #include "prefr/CompositeColorUpdater.h"
@@ -281,29 +291,11 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   const brion::Vector3fs& positions = _player->positions( );
 
-  std::string prefrShadersPath;
-
-  if ( getenv( "PREFR_SHADERS_PATH" ) == nullptr )
-  {
-    std::cerr << "Environment Variable PREFR_SHADERS_PATH not defined"
-              << std::endl;
-    exit(-1);
-  }
-  else
-    prefrShadersPath = std::string( getenv( "PREFR_SHADERS_PATH" ));
-
-  std::string vertPath, fragPath;
-  fragPath = vertPath = std::string( prefrShadersPath );
-  vertPath.append( "/GL-vert.glsl" );
-  fragPath.append( "/GL-frag.glsl" );
   _particlesShader = new reto::ShaderProgram( );
-  _particlesShader->load( vertPath, fragPath );
+  _particlesShader->loadVertexShaderFromText( prefr::prefrVertexShader );
+  _particlesShader->loadFragmentShaderFromText( prefr::prefrFragmentShader );
   _particlesShader->create( );
   _particlesShader->link( );
-
-  std::cout << "Loading shaders: " << std::endl;
-  std::cout << "- Vertex: " << vertPath.c_str( ) << std::endl;
-  std::cout << "- Fragments: " << fragPath.c_str( ) << std::endl;
 
   _offPrototype = new prefr::ColorOperationModel( _maxLife, _maxLife );
 

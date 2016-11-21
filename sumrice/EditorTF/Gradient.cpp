@@ -1,3 +1,12 @@
+/*
+ * @file  Gradient.cpp
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
+ */
+
 #include <QPainter>
 #include <QBrush>
 

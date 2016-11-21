@@ -1,10 +1,11 @@
 /*
- * Histogram.h
- *
- *  Created on: 11 de mar. de 2016
- *      Author: sgalindo
+ * @file  Histogram.h
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
  */
-
 #ifndef __HISTOGRAM_H__
 #define __HISTOGRAM_H__
 

@@ -1,9 +1,12 @@
 /*
- * ColorMapperWidget.h
- *
- *  Created on: 2 de mar. de 2016
- *      Author: sgalindo
+ * @file  TransferFunctionWidget.h
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
  */
+
 #ifndef __TRANSFERFUNCTIONWIDGET_H__
 #define __TRANSFERFUNCTIONWIDGET_H__
 

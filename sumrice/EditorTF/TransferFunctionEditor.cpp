@@ -1,13 +1,11 @@
 /*
-
-        Ecole Polytechnique Federale de Lausanne
-        Brain Mind Institute,
-        Blue Brain Project
-        (c) 2006. All rights reserved.
-
-        Authors: Juan Bautista Hernando Vieites
-
-*/
+ * @file  TransferFuncionEditor.cpp
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
+ */
 
 #include "TransferFunctionEditor.h"
 #include "ColorPoints.h"
