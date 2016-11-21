@@ -1,11 +1,12 @@
-/**
- * @file    error.h
+/*
+ * @file  log.h
  * @brief
- * @author  Pablo Toharia <pablo.toharia@urjc.es>
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
  * @date
  * @remarks Copyright (c) GMRV/URJC. All rights reserved.
-            Do not distribute without further notice.
+ *          Do not distribute without further notice.
  */
+
 #ifndef __STACKVIZ_ERROR__
 #define __STACKVIZ_ERROR__
 

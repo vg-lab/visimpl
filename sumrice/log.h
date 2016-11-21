@@ -1,11 +1,12 @@
 /**
- * @file    error.h
+ * @file    log.h
  * @brief
  * @author  Pablo Toharia <pablo.toharia@urjc.es>
  * @date
  * @remarks Copyright (c) GMRV/URJC. All rights reserved.
             Do not distribute without further notice.
  */
+
 #ifndef __VISIMPL_ERROR__
 #define __VISIMPL_ERROR__
 

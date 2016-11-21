@@ -1,3 +1,10 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#   ViSimpl
+#   2015-2016 (c) ViSimpl / Universidad Rey Juan Carlos
+#   sergio.galindo@urjc.es
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 set(CMAKE_AUTOMOC ON)
 
 set(SUMRICE_PUBLIC_HEADERS

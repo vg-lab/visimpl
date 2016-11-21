@@ -1,3 +1,10 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#   ViSimpl
+#   2015-2016 (c) ViSimpl / Universidad Rey Juan Carlos
+#   sergio.galindo@urjc.es
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 add_definitions(-DVISIMPL_SKIP_GLEW_INCLUDE )
 
 set(PROJECT_VERSION_ABI ${${PROJECT_NAME}_VERSION_ABI})

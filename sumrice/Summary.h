@@ -1,8 +1,10 @@
 /*
- * SimulationSummaryWidget.h
- *
- *  Created on: 16 de feb. de 2016
- *      Author: sgalindo
+ * @file  Summary.h
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
  */
 
 #ifndef __SIMULATIONSUMMARYWIDGET_H__

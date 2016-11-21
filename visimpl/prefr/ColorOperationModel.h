@@ -1,3 +1,12 @@
+/*
+ * @file  ColorOperationModel.h
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
+ */
+
 #ifndef __VISIMPL__COLOROPERATIONMODEL__
 #define __VISIMPL__COLOROPERATIONMODEL__
 

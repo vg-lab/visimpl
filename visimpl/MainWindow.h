@@ -1,3 +1,12 @@
+/*
+ * @file  MainWindow.h
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
+ */
+
 #include <QMainWindow>
 #include <QDockWidget>
 #include <QPushButton>
@@ -6,12 +15,8 @@
 #include <QRadioButton>
 
 #include "OpenGLWidget.h"
-//#include "SimulationPlayer.h"
 
 #include <sumrice/sumrice.h>
-// #include "SimulationSummaryWidget.h"
-
-// #include "EditorTF/TransferFunctionEditor.h"
 
 #include "ui_visimpl.h"
 
@@ -72,7 +77,6 @@ public slots:
 
   void AlphaBlendingToggled( void );
 
-
 protected slots:
 
 #ifdef VISIMPL_USE_ZEROEQ
@@ -92,7 +96,6 @@ protected:
 
   void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr  );
   void _setZeqUri( const std::string& );
-//  static void* _Subscriber( void* subscriber );
 
   bool _zeqConnection;
 
@@ -100,8 +103,6 @@ protected:
   zeroeq::Subscriber* _subscriber;
 
   std::thread* _thread;
-//  pthread_t _subscriberThread;
-
 
 #endif
 

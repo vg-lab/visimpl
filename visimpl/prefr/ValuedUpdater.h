@@ -1,12 +1,14 @@
 /*
- * SpineRetParticleUpdater.h
- *
- *  Created on: 04/12/2014
- *      Author: sgalindo
+ * @file  ValuedUpdater.h
+ * @brief
+ * @author Sergio E. Galindo <sergio.galindo@urjc.es>
+ * @date
+ * @remarks Copyright (c) GMRV/URJC. All rights reserved.
+ *          Do not distribute without further notice.
  */
 
-#ifndef __DirectValuedUpdater__
-#define __DirectValuedUpdater__
+#ifndef __ValuedUpdater__
+#define __ValuedUpdater__
 
 #include <prefr/prefr.h>
 #include "ColorOperationModel.h"
@@ -31,4 +33,4 @@ namespace prefr
 }
 
 
-#endif /* __SpineRetParticleUpdater__ */
+#endif /* __ValuedUpdater__ */
