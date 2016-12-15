@@ -17,11 +17,14 @@
 
 #include <thread>
 
+#include <sumrice/sumrice.h>
+
 MainWindow::MainWindow( QWidget* parent_ )
-  : QMainWindow( parent_ )
-  // , _lastOpenedFileName( "" )
-  , _ui( new Ui::MainWindow )
-  // , _player( nullptr )
+: QMainWindow( parent_ )
+// , _lastOpenedFileName( "" )
+, _subsetEventManager( nullptr )
+, _ui( new Ui::MainWindow )
+// , _player( nullptr )
 {
   _ui->setupUi( this );
 
@@ -72,7 +75,8 @@ void MainWindow::showStatusBarMessage ( const QString& message )
 
 void MainWindow::openBlueConfig( const std::string& fileName,
                                  simil::TSimulationType simulationType,
-                                 const std::string& reportLabel )
+                                 const std::string& reportLabel,
+                                 const std::string& subsetEventFile )
 {
   _simulationType = simulationType;
 
@@ -97,9 +101,24 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
  }
 
+  openSubsetEventFile( subsetEventFile, false );
+
   configurePlayer( );
+  initSummaryWidget( );
 
 }
+
+void MainWindow::openSubsetEventFile( const std::string& filePath,
+                                      bool append )
+{
+  if( filePath.empty( ))
+    return;
+
+  _subsetEventManager = new simil::SubsetEventManager( );
+  _subsetEventManager->loadJSON( filePath, append );
+
+}
+
 
 void MainWindow::openBlueConfigThroughDialog( void )
 {
@@ -157,7 +176,8 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
 void MainWindow::openHDF5File( const std::string& networkFile,
                                simil::TSimulationType simulationType,
-                               const std::string& activityFile )
+                               const std::string& activityFile,
+                               const std::string& subsetEventFile )
 {
   _simulationType = simulationType;
 
@@ -165,7 +185,10 @@ void MainWindow::openHDF5File( const std::string& networkFile,
   player->LoadData( simil::TDataType::THDF5,  networkFile, activityFile );
   _player = player;
 
+  openSubsetEventFile( subsetEventFile, false );
+
   configurePlayer( );
+  initSummaryWidget( );
 }
 
 void MainWindow::configurePlayer( void )
@@ -187,7 +210,7 @@ void MainWindow::configurePlayer( void )
 #endif
 
  // changeEditorColorMapping( );
-  initSummaryWidget( );
+
 }
 
 void MainWindow::initPlaybackDock( )
@@ -295,7 +318,7 @@ void MainWindow::initPlaybackDock( )
 void MainWindow::initSummaryWidget( )
 {
 
-  _summary = new Summary( nullptr, Summary::T_STACK_EXPANDABLE );
+  _summary = new visimpl::Summary( nullptr, visimpl::T_STACK_EXPANDABLE );
 
   if( _simulationType == simil::TSimSpikes )
   {
@@ -303,7 +326,8 @@ void MainWindow::initSummaryWidget( )
         dynamic_cast< simil::SpikesPlayer* >( _player);
 
     _summary->Init( spikesPlayer->spikeReport( ),
-                             spikesPlayer->gids( ));
+                    spikesPlayer->gids( ),
+                    _subsetEventManager );
   }
 
   _stackLayout = new QGridLayout( );
@@ -562,7 +586,7 @@ void MainWindow::UpdateSimulationSlider( float percentage )
 
   void MainWindow::HistogramClicked( visimpl::MultiLevelHistogram* histogram )
   {
-    const GIDUSet* selection;
+    const visimpl::GIDUSet* selection;
 
     if( histogram->filteredGIDs( ).size( ) == 0)
       selection = &_summary->gids( );
@@ -620,7 +644,7 @@ void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
   std::vector< uint32_t > ids = std::move( selected->getIdsVector( ));
   std::cout << "Received selection with " << ids.size( ) << " elements" << std::endl;
 
-  GIDUSet selectedSet( ids.begin( ), ids.end( ));
+  visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
 
   if( _summary )
   {

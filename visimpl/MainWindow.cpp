@@ -21,6 +21,8 @@
 
 #include <thread>
 
+#include <sumrice/sumrice.h>
+
 MainWindow::MainWindow( QWidget* parent_,
                         bool updateOnIdle )
   : QMainWindow( parent_ )
@@ -342,7 +344,7 @@ void MainWindow::initPlaybackDock( void )
 //  connect( _simSlider, SIGNAL( sliderMoved( )),
 //             this, SLOT( PlayAt( )));
 
-  _summary = new Summary( nullptr, Summary::T_STACK_FIXED );
+  _summary = new visimpl::Summary( nullptr, visimpl::T_STACK_FIXED );
 //  _summary->setVisible( false );
   _summary->setMinimumHeight( 50 );
 
@@ -856,7 +858,7 @@ void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
 
 
 
-    GIDUSet selectedSet( ids.begin( ), ids.end( ));
+    visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
 
     if( selectedSet.size( ) == 0 )
       return;

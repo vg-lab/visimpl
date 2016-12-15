@@ -32,8 +32,9 @@ int main( int argc, char** argv )
   std::string networkFile;
   std::string activityFile;
   std::string zeqUri;
-  std::string target = std::string( "" );
-  std::string report = std::string( "" );
+  std::string target ( "" );
+  std::string report ( "" );
+  std::string subsetEventFile( "" );
   simil::TDataType dataType = simil::TBlueConfig;
   simil::TSimulationType simType = simil::TSimSpikes;
 
@@ -106,6 +107,16 @@ int main( int argc, char** argv )
         usageMessage( argv[0] );
     }
 
+    if( strcmp( argv[ i ], "-se" ) == 0 )
+    {
+      if( ++i < argc )
+      {
+        subsetEventFile = std::string( argv[ i ]);
+      }
+      else
+        usageMessage( argv[ 0 ]);
+    }
+
     if ( strcmp( argv[i], "--fullscreen" ) == 0 ||
          strcmp( argv[i],"-fs") == 0 )
     {
@@ -147,10 +158,12 @@ int main( int argc, char** argv )
   switch( dataType )
   {
     case simil::TDataType::TBlueConfig:
-      mainWindow.openBlueConfig( networkFile, simType, report );
+      mainWindow.openBlueConfig( networkFile, simType, report,
+                                 subsetEventFile );
       break;
     case simil::TDataType::THDF5:
-      mainWindow.openHDF5File( networkFile, simType, activityFile );
+      mainWindow.openHDF5File( networkFile, simType, activityFile,
+                               subsetEventFile );
       break;
     default:
       break;

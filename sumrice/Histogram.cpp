@@ -35,7 +35,8 @@ namespace visimpl
   , _paintRegion( false )
   , _regionWidth( 0.1f )
   , _gridLinesNumber( 0 )
-  , _firstHistogram( false )
+  , _paintTimeline( false )
+  , _timeFrames( nullptr )
   {
 //    init( );
   }
@@ -61,7 +62,7 @@ namespace visimpl
   , _paintRegion( false )
   , _regionWidth( 0.1f )
   , _gridLinesNumber( 0 )
-  , _firstHistogram( false )
+  , _paintTimeline( false )
   {
 //    init( );
   }
@@ -103,7 +104,7 @@ namespace visimpl
   , _paintRegion( false )
   , _regionWidth( 0.1f )
   , _gridLinesNumber( 0 )
-  , _firstHistogram( false )
+  , _paintTimeline( false )
   {
 //    init( );
   }
@@ -702,9 +703,11 @@ namespace visimpl
     _lastMousePosition = mousePosition_;
   }
 
-  void MultiLevelHistogram::regionPosition( QPoint* regionPosition_ )
+//  void MultiLevelHistogram::regionPosition( QPoint* regionPosition_ )
+  void MultiLevelHistogram::regionPosition( float* regionPercentage )
   {
-    _regionPosition = regionPosition_;
+//    _regionPosition = regionPosition_;
+    _regionPercentage = regionPercentage;
   }
 
   void MultiLevelHistogram::regionWidth( float region_ )
@@ -724,7 +727,7 @@ namespace visimpl
 
   void MultiLevelHistogram::firstHistogram( bool first )
   {
-    _firstHistogram = first;
+    _paintTimeline = first;
   }
 
   void MultiLevelHistogram::paintEvent(QPaintEvent* /*e*/)
@@ -793,7 +796,7 @@ namespace visimpl
 
         QPen pen( penColor );
 
-        if( _firstHistogram )
+        if( _paintTimeline )
         {
           int margin = 5;
 
@@ -855,13 +858,10 @@ namespace visimpl
       if( width( ) - positionX < valueLength )
         margin = -valueLength;
 
-      if( _regionPosition && _paintRegion )
+      if( _regionPercentage && _paintRegion )
       {
-        QPoint regionPos = mapFromGlobal( *_regionPosition );
-        regionPos.setX( std::min( width( ), std::max( 0, regionPos.x( ))));
-        regionPos.setY( std::min( height( ), std::max( 0, regionPos.y( ))));
 
-        int regionPosX = regionPos.x( );
+        int regionPosX = width( ) * ( *_regionPercentage );
 
         int regionW = _regionWidth * width( );
         int start = std::max( 0, regionPosX - regionW );
@@ -887,6 +887,30 @@ namespace visimpl
       pen.setColor( QColor( 177, 50, 50 ));
       painter.setPen( pen );
       painter.drawLine( marker );
+    }
+
+    if( _timeFrames )
+    {
+      for( auto timeFrame : *_timeFrames )
+      {
+        QColor color = timeFrame.color;
+
+        unsigned int left = timeFrame.startPercentage * width( );
+        unsigned int right = timeFrame.endPercentage * width( );
+
+        QPainterPath tfPath;
+
+        tfPath.moveTo( left, 0 );
+        tfPath.lineTo( left, height( ));
+        tfPath.lineTo( right, height( ) );
+        tfPath.lineTo( right, 0 );
+        tfPath.closeSubpath( );
+
+        color.setAlpha( 50 );
+        painter.setBrush( QBrush( color, Qt::SolidPattern));
+        painter.setPen( Qt::NoPen );
+        painter.drawPath( tfPath );
+      }
     }
 
   }

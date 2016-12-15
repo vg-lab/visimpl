@@ -118,7 +118,7 @@ private:
 
   Ui::MainWindow* _ui;
   OpenGLWidget* _openGLWidget;
-  Summary* _summary;
+  visimpl::Summary* _summary;
 
   QDockWidget* _simulationDock;
   QSlider* _simSlider;

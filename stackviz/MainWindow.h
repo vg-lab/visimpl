@@ -57,11 +57,16 @@ public:
 
   void openBlueConfig( const std::string& fileName,
                        simil::TSimulationType simulationType,
-                       const std::string& report);
+                       const std::string& report,
+                       const std::string& subsetEventFile = "" );
 
   void openHDF5File( const std::string& networkFile,
                      simil::TSimulationType simulationType,
-                     const std::string& activityFile = "" );
+                     const std::string& activityFile = "",
+                     const std::string& subsetEventFile = "" );
+
+  void openSubsetEventFile( const std::string& fileName,
+                            bool append = false );
 
 public slots:
 
@@ -125,10 +130,12 @@ protected:
 
   simil::TSimulationType _simulationType;
 
-  Summary* _summary;
+  visimpl::Summary* _summary;
   QTimer _selectionsTimer;
 
   simil::SimulationPlayer* _player;
+
+  simil::SubsetEventManager* _subsetEventManager;
 
   // Playback Control
   QDockWidget* _simulationDock;
