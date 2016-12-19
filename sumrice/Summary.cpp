@@ -985,7 +985,83 @@ namespace visimpl
 
   void Summary::removeSelections( void )
   {
+    std::vector< unsigned int > toDelete;
 
+    unsigned int counter = _rows.size( ) - 1;
+    for( unsigned int i = 0; i < _rows.size( ); ++i )
+    {
+      auto& summaryRow = _rows[ counter ];
+
+      if( summaryRow.checkBox->isChecked( ))
+      {
+        _mainLayout->removeWidget( summaryRow.label );
+        _mainLayout->removeWidget( summaryRow.histogram );
+        _mainLayout->removeWidget( summaryRow.checkBox );
+
+        delete summaryRow.label;
+        delete summaryRow.histogram;
+        delete summaryRow.checkBox;
+
+        _histograms.erase( _histograms.begin( ) + counter );
+
+        toDelete.push_back( counter );
+      }
+
+      --counter;
+    }
+
+    for( unsigned int i = 0; i < toDelete.size( ); ++i )
+      _rows.erase( _rows.begin( ) + toDelete[ i ]);
+
+    counter = 0;
+    for( auto histogram : _histograms )
+    {
+      histogram->firstHistogram( counter == 0 );
+      ++counter;
+
+      histogram->update( );
+    }
+
+    toDelete.clear( );
+
+    counter = _subsetRows.size( ) - 1;
+    for( unsigned int i = 0; i < _subsetRows.size( ); ++i )
+    {
+      auto& timeFrameRow = _subsetRows[ counter ];
+
+      if( timeFrameRow.checkBox->isChecked( ))
+      {
+        _subsetLayout->removeWidget( timeFrameRow.label );
+        _subsetLayout->removeWidget( timeFrameRow.widget );
+        _subsetLayout->removeWidget( timeFrameRow.checkBox );
+
+        delete timeFrameRow.label;
+        delete timeFrameRow.widget;
+        delete timeFrameRow.checkBox;
+
+        _timeFrames.erase( _timeFrames.begin( ) + counter );
+        _subsetEventWidgets.erase( _subsetEventWidgets.begin( ) + counter );
+
+        toDelete.push_back( counter );
+      }
+
+      --counter;
+    }
+
+    for( unsigned int i = 0; i < toDelete.size( ); ++i )
+      _subsetRows.erase(
+          _subsetRows.begin( ) + toDelete[ i ]);
+
+    counter = 0;
+    for( auto timeFrame : _subsetEventWidgets )
+    {
+      timeFrame->index( counter );
+      ++counter;
+
+      timeFrame->update( );
+    }
+
+    update( );
   }
 
   void Summary::colorScaleLocal( int value )
