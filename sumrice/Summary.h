@@ -150,6 +150,25 @@ namespace visimpl
 
     };
 
+    struct TimeFrameRow
+    {
+    public:
+
+      TimeFrameRow( )
+      : widget( nullptr )
+      , label( nullptr )
+      , checkBox( nullptr )
+      { }
+
+      ~TimeFrameRow( )
+      { }
+
+      visimpl::SubsetEventWidget* widget;
+      QLabel* label;
+      QCheckBox* checkBox;
+
+    };
+
   #ifdef VISIMPL_USE_ZEROEQ
 
   protected slots:
@@ -167,6 +186,9 @@ namespace visimpl
   protected:
 
     void Init( void );
+
+    void insertSubset( const Selection& selection );
+    void insertSubset( const std::string& name, const GIDUSet& subset );
 
     void CreateSummarySpikes( );
     void InsertSummarySpikes( const GIDUSet& gids );
@@ -222,7 +244,8 @@ namespace visimpl
     std::vector< TimeFrame > _timeFrames;
     QGridLayout* _subsetLayout;
     QScrollArea* _subsetScroll;
-    SubsetEventWidget* _subsetEventWidget;
+    std::vector< SubsetEventWidget* > _subsetEventWidgets;
+    std::vector< TimeFrameRow > _subsetRows;
 
     bool _syncScrollsVertically;
 

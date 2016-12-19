@@ -33,6 +33,7 @@ namespace visimpl
     void timeFrames( std::vector< TimeFrame >* timeFrames );
     std::vector< TimeFrame >* timeFrames( void );
 
+    void index( unsigned int index_ );
 
   protected:
 
@@ -41,6 +42,7 @@ namespace visimpl
 //    simil::SubsetEventManager* _subsetEventMngr;
     std::vector< TimeFrame >* _timeFrames;
 
+    unsigned int _index;
     unsigned int _heightPerRow;
     unsigned int _columns;
     unsigned int _centralColumns;

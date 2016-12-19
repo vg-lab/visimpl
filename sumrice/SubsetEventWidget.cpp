@@ -43,34 +43,53 @@ namespace visimpl
     unsigned int counter = 0;
     for( auto timeFrame : *_timeFrames )
     {
+      if( counter > _index )
+        break;
+
       QColor color = timeFrame.color;
 
-      unsigned int up = ( _heightPerRow * counter ) + _margin;
-      unsigned int down = ( _heightPerRow * ( counter + 1 )) - _margin;
+      unsigned int up = /*( _heightPerRow * counter ) + */ _margin;
+      unsigned int down = /* ( _heightPerRow * ( counter + 1 )) - */ totalHeight - _margin;
       unsigned int left = timeFrame.startPercentage * totalWidth;
       unsigned int right = timeFrame.endPercentage * totalWidth;
 
       QPainterPath path;
-      path.moveTo( left, up );
-      path.lineTo( left, down );
-      path.lineTo( right, down );
-      path.lineTo( right, up );
-      path.closeSubpath( );
+      if( counter == _index )
+      {
+        path.moveTo( left, up );
+        path.lineTo( left, down );
+        path.lineTo( right, down );
+        path.lineTo( right, up );
+        path.closeSubpath( );
 
-      painter.setBrush( QBrush( color, Qt::SolidPattern));
+        painter.setBrush( QBrush( color, Qt::SolidPattern ));
 
-      painter.drawPath( path );
+        painter.drawPath( path );
 
-      path.moveTo( left, down );
-      path.lineTo( left, totalHeight );
-      path.lineTo( right, totalHeight );
-      path.lineTo( right, down );
-      path.closeSubpath( );
+        path.moveTo( left, down );
+        path.lineTo( left, totalHeight );
+        path.lineTo( right, totalHeight );
+        path.lineTo( right, down );
+        path.closeSubpath( );
 
-      color.setAlpha( 50 );
-      painter.setBrush( QBrush( color, Qt::SolidPattern));
+        color.setAlpha( 50 );
+        painter.setBrush( QBrush( color, Qt::SolidPattern ));
 
-      painter.drawPath( path );
+        painter.drawPath( path );
+      }
+      else
+      {
+        path.moveTo( left, 0 );
+        path.lineTo( left, totalHeight );
+        path.lineTo( right, totalHeight );
+        path.lineTo( right, 0 );
+        path.closeSubpath( );
+
+        color.setAlpha( 50 );
+        painter.setBrush( QBrush( color, Qt::SolidPattern ));
+
+        painter.drawPath( path );
+      }
 
       ++counter;
     }
@@ -84,6 +103,11 @@ namespace visimpl
   std::vector< TimeFrame >* SubsetEventWidget::timeFrames( void )
   {
     return _timeFrames;
+  }
+
+  void SubsetEventWidget::index( unsigned int index_ )
+  {
+    _index = index_;
   }
 
 }
