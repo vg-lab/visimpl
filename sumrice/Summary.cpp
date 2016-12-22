@@ -389,7 +389,7 @@ namespace visimpl
         _timeFrames.push_back( timeFrame );
 
         QLabel* label = new QLabel( timeFrame.name.c_str( ));
-        label->setMinimumHeight( _heightPerRow );
+        label->setMinimumHeight( 20 );
         label->setMinimumWidth( _maxLabelWidth );
         label->setMaximumWidth( _maxLabelWidth );
         label->setToolTip( timeFrame.name.c_str( ));
@@ -1060,6 +1060,9 @@ namespace visimpl
 
       timeFrame->update( );
     }
+
+    if( _subsetRows.size( ) == 0 )
+      _subsetScroll->setVisible( false );
 
     update( );
   }

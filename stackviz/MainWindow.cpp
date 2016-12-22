@@ -62,9 +62,6 @@ void MainWindow::init( const std::string& zeqUri )
 MainWindow::~MainWindow( void )
 {
   delete _ui;
-
-  if( _thread )
-    delete _thread;
 }
 
 

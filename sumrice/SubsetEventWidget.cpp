@@ -22,7 +22,7 @@ namespace visimpl
   , _heightPerRow( 50 )
   , _columns( 20 )
   , _centralColumns( _columns - 2)
-  , _margin( 5 )
+  , _margin( 20 )
   {
 
   }
