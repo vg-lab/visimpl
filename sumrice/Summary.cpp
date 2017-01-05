@@ -18,6 +18,7 @@
 #include <QSpinBox>
 #include <QScrollBar>
 #include <QApplication>
+#include <QSplitter>
 
 unsigned int visimpl::Selection::_counter = 0;
 
@@ -246,9 +247,10 @@ namespace visimpl
       connect( _histogramScroll->horizontalScrollBar( ),
                SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
 
-      upperLayout->addWidget( _subsetScroll );
-  //    upperLayout->addWidget( header );
-      upperLayout->addWidget( _histogramScroll );
+      auto splitter = new QSplitter( Qt::Vertical, this );
+      splitter->addWidget( _subsetScroll );
+      splitter->addWidget( _histogramScroll );
+      upperLayout->addWidget( splitter );
       upperLayout->addWidget( foot );
     //  upperLayout->addWidget( _body );
 
@@ -265,6 +267,21 @@ namespace visimpl
 
   #endif
     }
+
+    // Fill the palette with ColorbBewer qualitative palette with 10 classes
+    // but rearranging to have consecutive colors with different hue.
+    _subsetEventColorPalette.reserve( 10 );
+    _subsetEventColorPalette.push_back( QColor( "#a6cee3" ));
+    _subsetEventColorPalette.push_back( QColor( "#b2df8a" ));
+    _subsetEventColorPalette.push_back( QColor( "#fb9a99" ));
+    _subsetEventColorPalette.push_back( QColor( "#fdbf6f" ));
+    _subsetEventColorPalette.push_back( QColor( "#cab2d6" ));
+    _subsetEventColorPalette.push_back( QColor( "#1f78b4" ));
+    _subsetEventColorPalette.push_back( QColor( "#33a02c" ));
+    _subsetEventColorPalette.push_back( QColor( "#e31a1c" ));
+    _subsetEventColorPalette.push_back( QColor( "#ff7f00" ));
+    _subsetEventColorPalette.push_back( QColor( "#6a3d9a" ));
+
   }
 
   void Summary::Init( simil::SpikeData* spikes_,
@@ -375,15 +392,15 @@ namespace visimpl
         timeFrame.endPercentage =
             ( it->second.second - _spikeReport->startTime( )) * invTotal;
 
-        QColor color( rand( ) % 256, rand( ) % 256, rand( ) % 256, 255 );
-        timeFrame.color = color;
+        timeFrame.color = _subsetEventColorPalette[
+          counter %  _subsetEventColorPalette.size( ) ];
 
         std::cout << "Region from " << timeFrame.startPercentage
                   << " to " << timeFrame.endPercentage
                   << std::endl;
-        std::cout << "Using color: " << color.red( )
-                      << ", " << color.green( )
-                      << ", " << color.blue( )
+        std::cout << "Using color: " << timeFrame.color.red( )
+                      << ", " << timeFrame.color.green( )
+                      << ", " << timeFrame.color.blue( )
                       << std::endl;
 
         _timeFrames.push_back( timeFrame );
