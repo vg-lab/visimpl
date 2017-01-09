@@ -364,23 +364,39 @@ namespace visimpl
 
       float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
 
+      float startPercentage;
+      float endPercentage;
+
       unsigned int counter = 0;
       for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
       {
         TimeFrame timeFrame;
         timeFrame.name = it->first;
-        timeFrame.startPercentage =
-            ( it->second.first - _spikeReport->startTime( )) * invTotal;
 
-        timeFrame.endPercentage =
-            ( it->second.second - _spikeReport->startTime( )) * invTotal;
+//        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
+
+        for( auto time : it->second )
+        {
+
+          startPercentage =
+              ( time.first - _spikeReport->startTime( )) * invTotal;
+
+          endPercentage =
+              ( time.second - _spikeReport->startTime( )) * invTotal;
+
+          timeFrame.percentages.push_back(
+              std::make_pair( startPercentage, endPercentage ));
+
+//          std::cout << "Region from " << startPercentage
+//                            << " to " << endPercentage
+//                            << std::endl;
+
+        }
 
         QColor color( rand( ) % 256, rand( ) % 256, rand( ) % 256, 255 );
         timeFrame.color = color;
 
-        std::cout << "Region from " << timeFrame.startPercentage
-                  << " to " << timeFrame.endPercentage
-                  << std::endl;
+
         std::cout << "Using color: " << color.red( )
                       << ", " << color.green( )
                       << ", " << color.blue( )

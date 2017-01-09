@@ -50,45 +50,71 @@ namespace visimpl
 
       unsigned int up = /*( _heightPerRow * counter ) + */ _margin;
       unsigned int down = /* ( _heightPerRow * ( counter + 1 )) - */ totalHeight - _margin;
-      unsigned int left = timeFrame.startPercentage * totalWidth;
-      unsigned int right = timeFrame.endPercentage * totalWidth;
 
-      QPainterPath path;
+      unsigned int left;
+      unsigned int right;
+
       if( counter == _index )
       {
-        path.moveTo( left, up );
-        path.lineTo( left, down );
-        path.lineTo( right, down );
-        path.lineTo( right, up );
-        path.closeSubpath( );
+//        unsigned int chunk = 0;
+        for( auto timeFrameChunk : timeFrame.percentages )
+        {
+          QPainterPath path;
+//          std::cout << "Painting " << counter
+//                    << " chunk " << chunk
+//                    << " from " << timeFrameChunk.first
+//                    << " to " << timeFrameChunk.second
+//                    << std::endl;
 
-        painter.setBrush( QBrush( color, Qt::SolidPattern ));
+          left = timeFrameChunk.first * totalWidth;
+          right = timeFrameChunk.second * totalWidth;
 
-        painter.drawPath( path );
+          path.moveTo( left, up );
+          path.lineTo( left, down );
+          path.lineTo( right, down );
+          path.lineTo( right, up );
+          path.closeSubpath( );
 
-        path.moveTo( left, down );
-        path.lineTo( left, totalHeight );
-        path.lineTo( right, totalHeight );
-        path.lineTo( right, down );
-        path.closeSubpath( );
+          color.setAlpha( 255 );
+          painter.setBrush( QBrush( color, Qt::SolidPattern ));
 
-        color.setAlpha( 50 );
-        painter.setBrush( QBrush( color, Qt::SolidPattern ));
+          painter.drawPath( path );
 
-        painter.drawPath( path );
+          path.moveTo( left, down );
+          path.lineTo( left, totalHeight );
+          path.lineTo( right, totalHeight );
+          path.lineTo( right, down );
+          path.closeSubpath( );
+
+          color.setAlpha( 50 );
+          painter.setBrush( QBrush( color, Qt::SolidPattern ));
+
+          painter.drawPath( path );
+
+//          chunk++;
+        }
       }
       else
       {
-        path.moveTo( left, 0 );
-        path.lineTo( left, totalHeight );
-        path.lineTo( right, totalHeight );
-        path.lineTo( right, 0 );
-        path.closeSubpath( );
-
         color.setAlpha( 50 );
         painter.setBrush( QBrush( color, Qt::SolidPattern ));
 
-        painter.drawPath( path );
+        for( auto timeFrameChunk : timeFrame.percentages )
+        {
+            QPainterPath path;
+
+          left = timeFrameChunk.first * totalWidth;
+          right = timeFrameChunk.second * totalWidth;
+
+          path.moveTo( left, 0 );
+          path.lineTo( left, totalHeight );
+          path.lineTo( right, totalHeight );
+          path.lineTo( right, 0 );
+          path.closeSubpath( );
+
+
+          painter.drawPath( path );
+        }
       }
 
       ++counter;

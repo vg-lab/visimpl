@@ -41,8 +41,10 @@ namespace visimpl
   {
     std::string name;
     QColor color;
-    float startPercentage;
-    float endPercentage;
+
+    std::vector< std::pair< float, float >> percentages;
+//    float startPercentage;
+//    float endPercentage;
   };
 
   typedef enum
