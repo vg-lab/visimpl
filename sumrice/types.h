@@ -30,6 +30,8 @@ namespace visimpl
   typedef std::unordered_set< uint32_t > GIDUSet;
   typedef utils::InterpolationSet< glm::vec4 > TColorMapper;
 
+
+
   typedef enum
   {
     T_STACK_FIXED = 0,
@@ -80,6 +82,8 @@ namespace visimpl
     T_REP_CURVE
 
   } TRepresentation_Mode;
+
+
 }
 
 

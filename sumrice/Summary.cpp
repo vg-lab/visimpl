@@ -379,10 +379,12 @@ namespace visimpl
         {
 
           startPercentage =
-              ( time.first - _spikeReport->startTime( )) * invTotal;
+              std::max( 0.0f,
+                        ( time.first - _spikeReport->startTime( )) * invTotal);
 
           endPercentage =
-              ( time.second - _spikeReport->startTime( )) * invTotal;
+              std::min( 1.0f,
+                        ( time.second - _spikeReport->startTime( )) * invTotal);
 
           timeFrame.percentages.push_back(
               std::make_pair( startPercentage, endPercentage ));
@@ -444,7 +446,8 @@ namespace visimpl
     }
     else
     {
-      _subsetScroll->setVisible( false );
+      if( _subsetScroll )
+        _subsetScroll->setVisible( false );
     }
 
   //  CreateSummarySpikes( );

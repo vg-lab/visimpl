@@ -898,12 +898,12 @@ namespace visimpl
         unsigned int left;
         unsigned int right;
 
-        QPainterPath tfPath;
-
         for( auto timeFrameChunk : timeFrame.percentages )
         {
           left = timeFrameChunk.first * width( );
           right = timeFrameChunk.second * width( );
+
+          QPainterPath tfPath;
 
           tfPath.moveTo( left, 0 );
           tfPath.lineTo( left, height( ));
