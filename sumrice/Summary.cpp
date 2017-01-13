@@ -61,7 +61,7 @@ namespace visimpl
   , _colorLocal( 0, 0, 128, 50 )
   , _colorGlobal( 255, 0, 0, 100 )
   , _subsetEventManager( nullptr )
-  , _subsetLayout( nullptr )
+  , _timeFramesLayout( nullptr )
   , _subsetScroll( nullptr )
   , _syncScrollsVertically( true )
   , _heightPerRow( 50 )
@@ -97,14 +97,14 @@ namespace visimpl
       QVBoxLayout* upperLayout = new QVBoxLayout( );
       upperLayout->setAlignment( Qt::AlignTop );
 
-      _subsetLayout = new QGridLayout( );
-      _subsetLayout->setAlignment( Qt::AlignTop );
-      _subsetLayout->setVerticalSpacing( 0 );
+      _timeFramesLayout = new QGridLayout( );
+      _timeFramesLayout->setAlignment( Qt::AlignTop );
+      _timeFramesLayout->setVerticalSpacing( 0 );
 
       _subsetScroll = new QScrollArea();
       QWidget* subsetWidget = new QWidget( );
 
-      subsetWidget->setLayout( _subsetLayout );
+      subsetWidget->setLayout( _timeFramesLayout );
       _subsetScroll->setWidget( subsetWidget );
       _subsetScroll->setWidgetResizable( true );
       _subsetScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
@@ -429,9 +429,9 @@ namespace visimpl
         _subsetRows.push_back( row );
         _subsetEventWidgets.push_back( subsetWidget );
 
-        _subsetLayout->addWidget( label, counter, 0, 1, 1 );
-        _subsetLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
-        _subsetLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
+        _timeFramesLayout->addWidget( label, counter, 0, 1, 1 );
+        _timeFramesLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
+        _timeFramesLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
 
       }
 
@@ -639,6 +639,9 @@ namespace visimpl
     }
     if( _focusedHistogram != sender( ))
     {
+      if( !_focusedHistogram )
+        _regionWidth = 20.0f / _histogramScroll->width( );
+
       _focusedHistogram =
               dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
 
@@ -781,16 +784,25 @@ namespace visimpl
         QPoint( _focusedHistogram->width( ) * _regionPercentage,
                 _focusedHistogram->height( ) * 0.5f );
 
+//    std::cout << "Focus width: " << _focusedHistogram->width( ) << std::endl;
+
     _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
 
-    _regionLocalPosition.setX( std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
+    _regionLocalPosition.setX(
+        std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
+
     _regionLocalPosition.setX( std::min( _regionLocalPosition.x(  ),
                           _focusedHistogram->width( ) - _regionWidthPixels));
 
   //    _regionPosition = position;
-    _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
+    _regionEdgeLower = std::max( _regionPercentage - _regionWidth,
+                                 _regionWidth );
+
     _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-    _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
+
+    _regionEdgeUpper = std::min( _regionPercentage + _regionWidth,
+                                 1.0f - _regionWidth);
+
     _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
 
     _focusWidget->update( );
@@ -825,7 +837,11 @@ namespace visimpl
 
           _regionWidth -= diffPerc;
 
-          _regionWidth = std::max( 0.01f, std::min( 0.5f, _regionWidth ));
+          float regionMinSize = 5.0f / focusedHistogram->width( );
+
+//          std::cout << "Min size: " << regionMinSize << std::endl;
+
+          _regionWidth = std::max( regionMinSize, std::min( 0.5f, _regionWidth ));
 
           _regionWidthPixels = _regionWidth * focusedHistogram->width( );
 
@@ -845,16 +861,28 @@ namespace visimpl
           float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointUpper ) * invWidth;
 
           _regionWidth += diffPerc;
-          _regionWidth = std::max( 0.01f, std::min( 0.5f, _regionWidth ));
+
+          float regionMinSize = 5.0f / focusedHistogram->width( );
+
+//          std::cout << "Min size: " << regionMinSize << std::endl;
+
+          _regionWidth = std::max( regionMinSize,
+                                   std::min( 0.5f, _regionWidth ));
 
           _regionWidthPixels = _regionWidth * focusedHistogram->width( );
 
-          _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
+          _regionEdgeLower = std::max( _regionPercentage - _regionWidth,
+                                       _regionWidth );
+
           _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-          _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
+
+          _regionEdgeUpper = std::min( _regionPercentage + _regionWidth,
+                                       1.0f - _regionWidth);
+
           _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
 
-          _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+          _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage,
+                                    _regionWidth );
           _focusWidget->update( );
 
           QApplication::setOverrideCursor( Qt::SizeHorCursor );
@@ -1050,9 +1078,9 @@ namespace visimpl
 
       if( timeFrameRow.checkBox->isChecked( ))
       {
-        _subsetLayout->removeWidget( timeFrameRow.label );
-        _subsetLayout->removeWidget( timeFrameRow.widget );
-        _subsetLayout->removeWidget( timeFrameRow.checkBox );
+        _timeFramesLayout->removeWidget( timeFrameRow.label );
+        _timeFramesLayout->removeWidget( timeFrameRow.widget );
+        _timeFramesLayout->removeWidget( timeFrameRow.checkBox );
 
         delete timeFrameRow.label;
         delete timeFrameRow.widget;
@@ -1175,16 +1203,22 @@ namespace visimpl
     {
 
       _currentCentralMinWidth = _mainHistogram->width( );
-      _currentCentralMinWidth += event_->delta( );
+      _currentCentralMinWidth += event_->delta( ) * 3;
 
       if( _currentCentralMinWidth < 200 )
         _currentCentralMinWidth = 200;
 
       for( auto histogram : _histograms )
+      {
         histogram->setMinimumWidth( _currentCentralMinWidth );
+//        histogram->update( );
+      }
 
       for( auto subsetEventWidget : _subsetEventWidgets )
+      {
         subsetEventWidget->setMinimumWidth( _currentCentralMinWidth );
+//        subsetEventWidget->update( );
+      }
 
       updateRegionBounds( );
 
