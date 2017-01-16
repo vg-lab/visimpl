@@ -61,6 +61,55 @@ void TransferFunctionWidget::InitDialog( void )
   _dialog->setWindowModality( Qt::NonModal );
   _dialog->setMinimumSize( 800, 600 );
 
+  _presetsComboBox = new QComboBox( _dialog );
+  {
+    QGradientStops stops;
+
+    stops.clear( );
+    stops << qMakePair( 0.0,  QColor::fromRgbF( 0.0, 1.0, 0.0, 0.05 ))
+          << qMakePair( 0.35, QColor::fromRgbF( 1.0, 0.0, 0.0, 0.2  ))
+          << qMakePair( 0.7,  QColor::fromRgbF( 1.0, 1.0, 0.0, 0.2  ))
+          << qMakePair( 1.0,  QColor::fromRgbF( 0.0, 0.0, 1.0, 0.2  ));
+    _presets.push_back( Preset( "Default [ multi-hue]", stops ));
+
+     stops.clear( );
+    stops << qMakePair( 0.0, QColor( 255, 0, 0, 127 ))
+          << qMakePair( 1.0, QColor( 0, 0, 255, 127 ));
+    _presets.push_back( Preset( "Red-blue [ multi-hue]", stops ));
+
+    stops.clear( );
+    stops << qMakePair( 0.0, QColor( 255, 0, 0, 127 ))
+          << qMakePair( 1.0, QColor( 0, 255, 0, 127 ));
+    _presets.push_back( Preset( "Red-green [ multi-hue]", stops ));
+
+    stops.clear( );
+    stops << qMakePair( 0.0, QColor( 255, 0, 0, 50 ))
+          << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
+    _presets.push_back( Preset( "Red [ mono-hue]", stops ));
+
+    stops.clear( );
+    stops << qMakePair( 0.0, QColor( 0, 255, 0, 50 ))
+          << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
+    _presets.push_back( Preset( "Green [ mono-hue]", stops ));
+
+    stops.clear( );
+    stops << qMakePair( 0.0, QColor( 0, 0, 255, 50 ))
+          << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
+    _presets.push_back( Preset( "Blue [ mono-hue]", stops ));
+
+    stops.clear( );
+    stops << qMakePair( 0.0, QColor::fromHsv( 60, 255, 255, 50 ))
+          << qMakePair( 1.0, QColor::fromHsv( 60, 128, 128,  0 ))
+          << qMakePair( 1.0, QColor::fromHsv( 60,   0,   0,  0 ));
+    _presets.push_back( Preset( "Yellow [ mono-hue]", stops ));
+
+    for ( const auto& preset : _presets )
+      _presetsComboBox->addItem( preset.name( ));
+
+    connect( _presetsComboBox, SIGNAL( currentIndexChanged( int )),
+             this, SLOT( presetSelected( int )));
+  }
+
   _saveButton = new QPushButton( "Save" );
   _discardButton = new QPushButton( "Discard" );
   _previewButton = new QPushButton( "Preview" );
@@ -88,6 +137,10 @@ void TransferFunctionWidget::InitDialog( void )
   unsigned int row = 0;
   unsigned int totalColumns = 6;
   QGridLayout* dialogLayout = new QGridLayout( );
+
+  // Presets
+  dialogLayout->addWidget( new QLabel( "Presets:" ), row, 1, 1, 1 );
+  dialogLayout->addWidget( _presetsComboBox, row++, 2, 1, 3 );
 
   dialogLayout->addWidget( new QLabel( "Red" ), row, 0, 1, 1 );
   dialogLayout->addWidget( redGradientFrame, row++, 1, 1, totalColumns );
@@ -528,4 +581,33 @@ void TransferFunctionWidget::mousePressEvent(QMouseEvent * event_ )
   {
     emit gradientClicked( );
   }
+}
+
+void TransferFunctionWidget::presetSelected( int presetIdx )
+{
+  std::cout << "Selected "
+            << _presets[ presetIdx ].name( ).toUtf8( ).constData( )
+            << std::endl;
+  const auto& stops = _presets[ presetIdx ].stops( );
+//  _gradientFrame->setGradientStops( stops );
+  QPolygonF redPoints;
+  QPolygonF greenPoints;
+  QPolygonF bluePoints;
+  QPolygonF alphaPoints;
+  for( const auto stop : stops )
+  {
+    redPoints.append( QPointF( stop.first, stop.second.redF( )));
+    greenPoints.append( QPointF( stop.first, stop.second.greenF( )));
+    bluePoints.append( QPointF( stop.first, stop.second.blueF( )));
+    alphaPoints.append( QPointF( stop.first, stop.second.alphaF( )));
+
+  }
+  _redPoints->setPoints( redPoints, true );
+  _greenPoints->setPoints( greenPoints, true );
+  _bluePoints->setPoints( bluePoints, true );
+  _alphaPoints->setPoints( alphaPoints, true );
+
+  _result->setGradientStops( _nTGradientFrame->getGradientStops( ));
+  _tResult = _gradientFrame->getGradientStops( );
+  _sizeFrame->setGradientStops( _nTGradientFrame->getGradientStops( ));
 }

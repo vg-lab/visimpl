@@ -17,6 +17,7 @@
 #include <QMouseEvent>
 #include <QDoubleSpinBox>
 #include <QLabel>
+#include <QComboBox>
 
 #include "EditorTF/ColorPoints.h"
 #include "EditorTF/Gradient.h"
@@ -26,6 +27,22 @@ class TransferFunctionWidget : public QWidget
   Q_OBJECT;
 
 public:
+
+  class Preset
+  {
+  public:
+    Preset( const QString& name_, const QGradientStops& stops_ )
+      : _name( name_ )
+      , _stops( stops_ )
+    {
+    }
+    const QString& name( ) const { return _name; }
+    const QGradientStops& stops( ) const { return _stops; }
+  protected:
+    QString _name;
+    QGradientStops _stops;
+  };
+
   TransferFunctionWidget( QWidget* parent = 0 );
   virtual ~TransferFunctionWidget( );
 
@@ -53,6 +70,8 @@ protected slots:
   void previewClicked( void );
 
   void colorPointsChanged( const QPolygonF &points );
+
+  void presetSelected( int presetIdx );
 
 signals:
 
@@ -103,6 +122,7 @@ protected:
   Gradient* alphaGradientFrame;
 
   QWidget* _dialog;
+  QComboBox* _presetsComboBox;
   QPushButton* _saveButton;
   QPushButton* _discardButton;
   QPushButton* _previewButton;
@@ -110,6 +130,8 @@ protected:
 
   Gradient* _result;
   QGradientStops _tResult;
+
+  std::vector< Preset > _presets;
 };
 
 
