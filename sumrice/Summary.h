@@ -276,6 +276,8 @@ namespace visimpl
 
     bool _autoNameSelection;
 
+    std::vector< QColor > _subsetEventColorPalette;
+
   };
 
 }
