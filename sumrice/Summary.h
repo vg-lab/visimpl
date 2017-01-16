@@ -242,7 +242,7 @@ namespace visimpl
 
     simil::SubsetEventManager* _subsetEventManager;
     std::vector< TimeFrame > _timeFrames;
-    QGridLayout* _subsetLayout;
+    QGridLayout* _timeFramesLayout;
     QScrollArea* _subsetScroll;
     std::vector< SubsetEventWidget* > _subsetEventWidgets;
     std::vector< TimeFrameRow > _subsetRows;

@@ -895,21 +895,27 @@ namespace visimpl
       {
         QColor color = timeFrame.color;
 
-        unsigned int left = timeFrame.startPercentage * width( );
-        unsigned int right = timeFrame.endPercentage * width( );
+        unsigned int left;
+        unsigned int right;
 
-        QPainterPath tfPath;
+        for( auto timeFrameChunk : timeFrame.percentages )
+        {
+          left = timeFrameChunk.first * width( );
+          right = timeFrameChunk.second * width( );
 
-        tfPath.moveTo( left, 0 );
-        tfPath.lineTo( left, height( ));
-        tfPath.lineTo( right, height( ) );
-        tfPath.lineTo( right, 0 );
-        tfPath.closeSubpath( );
+          QPainterPath tfPath;
 
-        color.setAlpha( 50 );
-        painter.setBrush( QBrush( color, Qt::SolidPattern));
-        painter.setPen( Qt::NoPen );
-        painter.drawPath( tfPath );
+          tfPath.moveTo( left, 0 );
+          tfPath.lineTo( left, height( ));
+          tfPath.lineTo( right, height( ) );
+          tfPath.lineTo( right, 0 );
+          tfPath.closeSubpath( );
+
+          color.setAlpha( 50 );
+          painter.setBrush( QBrush( color, Qt::SolidPattern));
+          painter.setPen( Qt::NoPen );
+          painter.drawPath( tfPath );
+        }
       }
     }
 

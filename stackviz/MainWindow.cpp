@@ -112,8 +112,21 @@ void MainWindow::openSubsetEventFile( const std::string& filePath,
     return;
 
   _subsetEventManager = new simil::SubsetEventManager( );
-  _subsetEventManager->loadJSON( filePath, append );
 
+  if( filePath.find( "json" ) != std::string::npos )
+  {
+    std::cout << "Loading JSON file: " << filePath << std::endl;
+    _subsetEventManager->loadJSON( filePath, append );
+  }
+  else if( filePath.find( "h5" ) != std::string::npos )
+  {
+    std::cout << "Loading H5 file: " << filePath << std::endl;
+    _subsetEventManager->loadH5( filePath, append );
+  }
+  else
+  {
+    std::cout << "Subset Events file not found: " << filePath << std::endl;
+  }
 }
 
 
