@@ -20,18 +20,24 @@ namespace visimpl
 {
   MultiLevelHistogram::MultiLevelHistogram( )
   : QFrame( nullptr )
-  //, _maxValueHistogramLocal( 0 )
+  , _bins( 250 )
+  , _zoomFactor( 1.5f )
+  , _spikes( nullptr )
   , _startTime( 0.0f )
   , _endTime( 0.0f )
+  , _player( nullptr )
   , _scaleFuncLocal( nullptr )
   , _scaleFuncGlobal( nullptr )
   , _colorScaleLocal( T_COLOR_LINEAR )
   , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
+  , _colorLocal( "#e31a1c" )
+  , _colorGlobal( "#1f78b4" )
   , _prevColorScaleLocal( T_COLOR_UNDEFINED )
   , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
   , _normRule( T_NORM_MAX )
   , _repMode( T_REP_DENSE )
   , _lastMousePosition( nullptr )
+  , _regionPercentage( nullptr )
   , _paintRegion( false )
   , _regionWidth( 0.1f )
   , _gridLinesNumber( 0 )
@@ -46,83 +52,71 @@ namespace visimpl
                                  float startTime,
                                  float endTime )
   : QFrame( nullptr )
-  //, _maxValueHistogramLocal( 0 )
+  , _bins( 250 )
+  , _zoomFactor( 1.5f )
   , _spikes( &spikes )
   , _startTime( startTime )
   , _endTime( endTime )
+  , _player( nullptr )
   , _scaleFuncLocal( nullptr )
   , _scaleFuncGlobal( nullptr )
   , _colorScaleLocal( T_COLOR_LINEAR )
   , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
+  , _colorLocal( "#e31a1c" )
+  , _colorGlobal( "#1f78b4" )
   , _prevColorScaleLocal( T_COLOR_UNDEFINED )
   , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
   , _normRule( T_NORM_MAX )
   , _repMode( T_REP_DENSE )
   , _lastMousePosition( nullptr )
+  , _regionPercentage( nullptr )
   , _paintRegion( false )
   , _regionWidth( 0.1f )
   , _gridLinesNumber( 0 )
   , _paintTimeline( false )
+  , _timeFrames( nullptr )
   {
 //    init( );
   }
-
-//  MultiLevelHistogram::MultiLevelHistogram( const brion::SpikeReport& spikeReport )
-//  : QFrame( nullptr )
-//  //, _maxValueHistogramLocal( 0 )
-//  , _spikes( &spikeReport.getSpikes( ))
-//  , _startTime( spikeReport.getStartTime( ))
-//  , _endTime( spikeReport.getEndTime( ))
-//  , _scaleFuncLocal( nullptr )
-//  , _scaleFuncGlobal( nullptr )
-//  , _colorScaleLocal( T_COLOR_LINEAR )
-//  , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
-//  , _prevColorScaleLocal( T_COLOR_UNDEFINED )
-//  , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
-//  , _normRule( T_NORM_MAX )
-//  , _repMode( T_REP_DENSE )
-//  , _lastMousePosition( nullptr )
-//  {
-////    init( );
-//  }
 
   MultiLevelHistogram::MultiLevelHistogram( const simil::SpikeData& spikeReport )
   : QFrame( nullptr )
-  //, _maxValueHistogramLocal( 0 )
+  , _bins( 250 )
+  , _zoomFactor( 1.5f )
   , _spikes( &spikeReport.spikes( ))
   , _startTime( spikeReport.startTime( ))
   , _endTime( spikeReport.endTime( ))
+  , _player( nullptr )
   , _scaleFuncLocal( nullptr )
   , _scaleFuncGlobal( nullptr )
   , _colorScaleLocal( T_COLOR_LINEAR )
   , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
+  , _colorLocal( "#e31a1c" )
+  , _colorGlobal( "#1f78b4" )
   , _prevColorScaleLocal( T_COLOR_UNDEFINED )
   , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
   , _normRule( T_NORM_MAX )
   , _repMode( T_REP_DENSE )
   , _lastMousePosition( nullptr )
+  , _regionPercentage( nullptr )
   , _paintRegion( false )
   , _regionWidth( 0.1f )
   , _gridLinesNumber( 0 )
   , _paintTimeline( false )
+  , _timeFrames( nullptr )
   {
 //    init( );
   }
 
 
-  void MultiLevelHistogram::Spikes( const brion::Spikes& spikes, float startTime, float endTime )
+  void MultiLevelHistogram::Spikes( const brion::Spikes& spikes,
+                                    float startTime,
+                                    float endTime )
   {
     _spikes = &spikes;
     _startTime = startTime;
     _endTime = endTime;
   }
-
-//  void MultiLevelHistogram::Spikes( const brion::SpikeReport& spikeReport )
-//  {
-//    _spikes = &spikeReport.getSpikes( );
-//    _startTime = spikeReport.getStartTime( );
-//    _endTime = spikeReport.getEndTime( );
-//  }
 
   void MultiLevelHistogram::Spikes( const simil::SpikeData& spikeReport )
   {
@@ -139,18 +133,6 @@ namespace visimpl
     colorScaleLocal( _colorScaleLocal );
     colorScaleGlobal( _colorScaleGlobal );
 
-
-  //  QPixmap pixmap(20, 20);
-  //  QPainter painter(&pixmap);
-  //  painter.fillRect(0, 0, 10, 10, Qt::lightGray);
-  //  painter.fillRect(10, 10, 10, 10, Qt::lightGray);
-  //  painter.fillRect(0, 10, 10, 10, Qt::darkGray);
-  //  painter.fillRect(10, 0, 10, 10, Qt::darkGray);
-  //  painter.end();
-  //  QPalette pal = palette();
-  //  pal.setBrush(backgroundRole(), QBrush(pixmap));
-  //  setPalette(pal);
-  //  setAutoFillBackground(true);
     _paintRegion = false;
     setMouseTracking( true );
   }
@@ -195,13 +177,13 @@ namespace visimpl
     std::cout << "Total spikes: " << counter << std::endl;
 
     unsigned int cont = 0;
-    unsigned int maxPos = 0;
+//    unsigned int maxPos = 0;
     for( auto bin: *histogram )
     {
       if( bin > histogram->_maxValueHistogramLocal )
       {
         histogram->_maxValueHistogramLocal = bin;
-        maxPos = cont;
+//        maxPos = cont;
       }
       cont++;
     }
@@ -218,10 +200,6 @@ namespace visimpl
         }
       }
     }
-
-    std::cout << "Bin with local maximum value " << histogram->_maxValueHistogramLocal
-              << " at " << maxPos
-              << std::endl;
 
     CalculateColors( histogramNumber );
 
@@ -302,7 +280,7 @@ namespace visimpl
       {
         percentage = _scaleFuncLocal( float( bin ), maxValue );
         percentage = std::max< float >( std::min< float > (1.0f, percentage ), 0.0f);
-    //    std::cout << percentage << std::endl;
+
         glm::vec4 color = _colorMapper.GetValue( percentage );
         stops << qMakePair( relativeTime, QColor( color.r, color.g, color.b, color.a ));
 
@@ -359,8 +337,6 @@ namespace visimpl
       histogram->_curveStopsGlobal = auxGlobal;
 
       histogram->_curveStopsLocal = auxLocal;
-
-
     }
   }
 
@@ -369,7 +345,6 @@ namespace visimpl
     if( _bins == binsNumber )
       return;
 
-    std::cout << "Bins number: " << binsNumber << std::endl;
     _bins = binsNumber;
 
     _mainHistogram.clear( );
@@ -690,9 +665,6 @@ namespace visimpl
 
     QPoint position = event_->pos( );
 
-  //  position.setX( position.x( ) + x( ));
-  //  position.setY( position.y( ) + y( ));
-  //  QRect rect = geometry( );
     position = mapToGlobal( position );
 
     emit mousePositionChanged( position );
@@ -703,10 +675,8 @@ namespace visimpl
     _lastMousePosition = mousePosition_;
   }
 
-//  void MultiLevelHistogram::regionPosition( QPoint* regionPosition_ )
   void MultiLevelHistogram::regionPosition( float* regionPercentage )
   {
-//    _regionPosition = regionPosition_;
     _regionPercentage = regionPercentage;
   }
 
@@ -730,7 +700,7 @@ namespace visimpl
     _paintTimeline = first;
   }
 
-  void MultiLevelHistogram::paintEvent(QPaintEvent* /*e*/)
+  void MultiLevelHistogram::paintEvent( QPaintEvent* /*e*/)
   {
     QPainter painter( this );
     unsigned int currentHeight = height( );
@@ -739,7 +709,6 @@ namespace visimpl
 
     if( _repMode == T_REP_DENSE )
     {
-    //  std::cout << "Painting... " << this << std::endl;
       QLinearGradient gradient( 0, 0, width( ), 0 );
 
       QRect area = rect();
@@ -779,10 +748,15 @@ namespace visimpl
       }
       globalPath.lineTo( width( ), height( ) );
 
-      painter.setBrush( QBrush( QColor( 255, 0, 0, 100 ), Qt::SolidPattern));
+      QColor globalColor( _colorGlobal );
+      globalColor.setAlpha( 100 );
+      painter.setBrush( QBrush( globalColor, Qt::SolidPattern));
       painter.setPen( Qt::NoPen );
       painter.drawPath( globalPath );
-      painter.setBrush( QBrush( QColor( 0, 0, 128, 50 ), Qt::SolidPattern));
+
+      QColor localColor( _colorLocal );
+      localColor.setAlpha( 100 );
+      painter.setBrush( QBrush( localColor, Qt::SolidPattern));
       painter.drawPath( path );
 
       penColor = QColor( 0, 0, 0 );
@@ -811,14 +785,9 @@ namespace visimpl
           painter.setPen( pen );
 
           QFont backFont = painter.font( );
-//          QFont newFont = backFont;
-//
-//          newFont.setPointSize( newFont.pointSize( ) * 1.3f );
-//          painter.setFont( newFont );
 
           painter.drawText( position, value );
 
-//          painter.setFont( backFont );
         }
 
         QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
@@ -837,19 +806,8 @@ namespace visimpl
       localPosition.setX( std::min( width( ), std::max( 0, localPosition.x( ))));
       localPosition.setY( std::min( height( ), std::max( 0, localPosition.y( ))));
 
-//      if( localPosition.x( ) > width( ))
-//        localPosition.setX( width( ));
-//      else if ( localPosition.x( ) < 0 )
-//        localPosition.setX( 0 );
-//
-//      if( localPosition.y( ) > height( ))
-//        localPosition.setY( height( ));
-//      else if ( localPosition.y( ) < 0 )
-//        localPosition.setY( 0 );
-
-
       float percentage = float( localPosition.x( )) / float( width( ));
-  //    percentage = std::min( 1.0f, std::max( 0.0f, percentage));
+
       int positionX = localPosition.x( );
       int margin = 5;
 
@@ -872,6 +830,9 @@ namespace visimpl
 
         QPen pen( Qt::NoPen );
         QBrush brush( QColor( 30, 30, 30, 30 ));
+
+        painter.setBrush( brush );
+        painter.setPen( QColor( 0, 0, 0, 200 ));
         painter.drawRect( region );
       }
 
@@ -889,9 +850,9 @@ namespace visimpl
       painter.drawLine( marker );
     }
 
-    if( _timeFrames )
+    if( _timeFrames && _repMode == T_REP_CURVE )
     {
-      for( auto timeFrame : *_timeFrames )
+      for( const auto& timeFrame : *_timeFrames )
       {
         QColor color = timeFrame.color;
 

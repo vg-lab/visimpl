@@ -22,7 +22,7 @@
 
 unsigned int visimpl::Selection::_counter = 0;
 
-unsigned int DEFAULT_BINS = 250;
+unsigned int DEFAULT_BINS = 2500;
 float DEFAULT_ZOOM_FACTOR = 1.5f;
 
 static QString colorScaleToString( visimpl::TColorScale colorScale )
@@ -51,6 +51,7 @@ namespace visimpl
   , _gridLinesNumber( 3 )
   , _spikeReport( nullptr )
   , _voltageReport( nullptr )
+  , _player( nullptr )
   , _mainHistogram( nullptr )
   , _detailHistogram( nullptr )
   , _focusedHistogram( nullptr )
@@ -271,14 +272,16 @@ namespace visimpl
     // Fill the palette with ColorbBewer qualitative palette with 10 classes
     // but rearranging to have consecutive colors with different hue.
     _subsetEventColorPalette.reserve( 10 );
-    _subsetEventColorPalette.push_back( QColor( "#a6cee3" ));
+//    _subsetEventColorPalette.push_back( QColor( "#a6cee3" ));
     _subsetEventColorPalette.push_back( QColor( "#b2df8a" ));
-    _subsetEventColorPalette.push_back( QColor( "#fb9a99" ));
+//    _subsetEventColorPalette.push_back( QColor( "#fb9a99" ));
     _subsetEventColorPalette.push_back( QColor( "#fdbf6f" ));
     _subsetEventColorPalette.push_back( QColor( "#cab2d6" ));
-    _subsetEventColorPalette.push_back( QColor( "#1f78b4" ));
+    _subsetEventColorPalette.push_back( QColor( "#b15928" ));
+    _subsetEventColorPalette.push_back( QColor( "#ffff99" ));
+//    _subsetEventColorPalette.push_back( QColor( "#1f78b4" ));
     _subsetEventColorPalette.push_back( QColor( "#33a02c" ));
-    _subsetEventColorPalette.push_back( QColor( "#e31a1c" ));
+//    _subsetEventColorPalette.push_back( QColor( "#e31a1c" ));
     _subsetEventColorPalette.push_back( QColor( "#ff7f00" ));
     _subsetEventColorPalette.push_back( QColor( "#6a3d9a" ));
 

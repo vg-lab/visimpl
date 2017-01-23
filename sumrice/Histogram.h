@@ -152,6 +152,8 @@ signals:
     float _startTime;
     float _endTime;
 
+    simil::SimulationPlayer* _player;
+
     float (*_scaleFuncLocal)( float value, float maxValue);
     float (*_scaleFuncGlobal)( float value, float maxValue);
 

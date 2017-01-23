@@ -210,6 +210,8 @@ namespace visimpl
     simil::SpikeData* _spikeReport;
     brion::CompartmentReport* _voltageReport;
 
+    simil::SimulationPlayer* _player;
+
     GIDUSet _gids;
 
     visimpl::MultiLevelHistogram* _mainHistogram;

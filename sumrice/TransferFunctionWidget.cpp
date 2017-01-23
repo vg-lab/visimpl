@@ -84,7 +84,8 @@ void TransferFunctionWidget::InitDialog( void )
 
     stops.clear( );
     stops << qMakePair( 0.0, QColor( 255, 0, 0, 50 ))
-          << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
+          << qMakePair( 0.1, QColor( 255, 0, 0, 200 ))
+          << qMakePair( 1.0, QColor( 0, 0, 0, 20 ));
     _presets.push_back( Preset( "Red [ mono-hue]", stops ));
 
     stops.clear( );
