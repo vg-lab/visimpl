@@ -115,6 +115,8 @@ namespace visimpl
 //    void regionPosition( QPoint* regionPosition_ );
     void regionPosition( float* regionPercentage );
 
+    void simPlayer( simil::SimulationPlayer* player );
+
     void regionWidth( float region_ );
     float regionWidth( void );
     void paintRegion( bool region = false );
@@ -130,6 +132,8 @@ namespace visimpl
 
     QPolygonF focusLocalFunction( void ) const;
     QPolygonF focusGlobalFunction( void ) const;
+
+    void fillPlots( bool fillPlots_ );
 
 signals:
 
@@ -169,6 +173,8 @@ signals:
     TNormalize_Rule _normRule;
     TRepresentation_Mode _repMode;
 
+    bool _fillPlots;
+
     utils::InterpolationSet< glm::vec4 > _colorMapper;
 
     GIDUSet _filteredGIDs;
@@ -182,6 +188,9 @@ signals:
 
     unsigned int _gridLinesNumber;
     bool _paintTimeline;
+
+    unsigned int _pixelsPerCharacter;
+    unsigned int _pixelMargin;
 
     std::vector< TimeFrame >* _timeFrames;
   };

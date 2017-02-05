@@ -99,10 +99,22 @@ namespace visimpl
 
     unsigned int gridLinesNumber( void );
 
+    void simulationPlayer( simil::SimulationPlayer* player );
+
+    void repaintHistograms( void );
+
   signals:
 
     void histogramClicked( float );
     void histogramClicked( visimpl::MultiLevelHistogram* );
+
+  public slots:
+
+    void bins( int bins_ );
+    void zoomFactor( double zoom );
+    void fillPlots( bool fillPlots_ );
+
+    void toggleAutoNameSelections( void );
 
   protected slots:
 
@@ -120,15 +132,6 @@ namespace visimpl
 
     void updateMouseMarker( QPoint point );
 
-  public slots:
-
-    void bins( int bins_ );
-    void zoomFactor( double zoom );
-
-    void toggleAutoNameSelections( void )
-    {
-      _autoNameSelection = !_autoNameSelection;
-    }
   protected:
 
     struct StackRow
@@ -277,6 +280,7 @@ namespace visimpl
     float _regionEdgeUpper;
 
     bool _autoNameSelection;
+    bool _fillPlots;
 
     std::vector< QColor > _subsetEventColorPalette;
 

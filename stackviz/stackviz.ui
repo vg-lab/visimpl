@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>23</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -47,6 +47,7 @@
      <string>Options</string>
     </property>
     <addaction name="actionAutoNamingSelections"/>
+    <addaction name="actionFill_Plots"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
@@ -82,7 +83,7 @@
   </action>
   <action name="actionOpenBlueConfig">
    <property name="icon">
-    <iconset resource="../qrc/resources.qrc">
+    <iconset resource="resources.qrc">
      <normaloff>:/icons/open_bc.png</normaloff>:/icons/open_bc.png</iconset>
    </property>
    <property name="text">
@@ -100,7 +101,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="../qrc/resources.qrc">
+    <iconset resource="resources.qrc">
      <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>
    </property>
    <property name="text">
@@ -130,9 +131,20 @@
     <string>Ctrl+A</string>
    </property>
   </action>
+  <action name="actionFill_Plots">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Fill Plots</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle line/fill plots</string>
+   </property>
+  </action>
  </widget>
  <resources>
-  <include location="../qrc/resources.qrc"/>
+  <include location="resources.qrc"/>
  </resources>
  <connections/>
 </ui>

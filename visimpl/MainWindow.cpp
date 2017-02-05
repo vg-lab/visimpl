@@ -269,7 +269,7 @@ void MainWindow::initPlaybackDock( void )
 //  QPushButton* playButton = new QPushButton( );
   _playButton = new QPushButton( );
   _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
-                             QSizePolicy::MinimumExpanding );
+                              QSizePolicy::MinimumExpanding );
   QPushButton* stopButton = new QPushButton( );
   QPushButton* nextButton = new QPushButton( );
   QPushButton* prevButton = new QPushButton( );

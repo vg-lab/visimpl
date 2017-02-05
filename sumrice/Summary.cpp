@@ -314,6 +314,7 @@ namespace visimpl
     _mainHistogram->gridLinesNumber( _gridLinesNumber );
     _mainHistogram->firstHistogram( true );
     _mainHistogram->setMinimumWidth( _currentCentralMinWidth );
+    _mainHistogram->simPlayer( _player );
     _focusedHistogram = _mainHistogram;
 
       TColorMapper colorMapper;
@@ -593,6 +594,8 @@ namespace visimpl
     histogram->setMaximumHeight( _heightPerRow );
     histogram->setMinimumWidth( _currentCentralMinWidth );
     //    histogram->setMinimumWidth( 500 );
+
+    histogram->simPlayer( _player );
 
     histogram->_timeFrames = &_timeFrames;
 
@@ -1012,6 +1015,25 @@ namespace visimpl
     }
   }
 
+  void Summary::fillPlots( bool fillPlots_ )
+  {
+    _fillPlots = fillPlots_;
+
+    for( auto histogram : _histograms )
+    {
+      histogram->fillPlots( _fillPlots );
+      histogram->update( );
+    }
+
+    _focusWidget->fillPlots( _fillPlots );
+    _focusWidget->update( );
+  }
+
+  void Summary::toggleAutoNameSelections( void )
+  {
+    _autoNameSelection = !_autoNameSelection;
+  }
+
   unsigned int Summary::bins( void )
   {
     return _bins;
@@ -1209,6 +1231,20 @@ namespace visimpl
   unsigned int Summary::gridLinesNumber( void )
   {
     return _gridLinesNumber;
+  }
+
+  void Summary::simulationPlayer( simil::SimulationPlayer* player )
+  {
+    _player = player;
+
+    for( auto histogram : _histograms )
+      histogram->simPlayer( _player );
+  }
+
+  void Summary::repaintHistograms( void )
+  {
+    for( auto histogram : _histograms )
+      histogram->update( );
   }
 
   void Summary::wheelEvent( QWheelEvent* event_ )

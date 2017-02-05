@@ -20,7 +20,7 @@
 
 #define PREFR_SKIP_GLEW_INCLUDE 1
 
-#define SIM_SLIDER_UPDATE_PERIOD 0.5f
+#define SIM_SLIDER_UPDATE_PERIOD 0.25f
 
 #include <prefr/prefr.h>
 #include <reto/reto.h>
@@ -170,7 +170,8 @@ protected:
   unsigned int _frameCount;
 
   int _mouseX, _mouseY;
-  bool _rotation, _translation;
+  bool _rotation;
+  bool _translation;
 
   bool _idleUpdate;
   bool _paint;

@@ -36,12 +36,15 @@ namespace visimpl
   , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
   , _normRule( T_NORM_MAX )
   , _repMode( T_REP_DENSE )
+  , _fillPlots( true )
   , _lastMousePosition( nullptr )
   , _regionPercentage( nullptr )
   , _paintRegion( false )
   , _regionWidth( 0.1f )
   , _gridLinesNumber( 0 )
   , _paintTimeline( false )
+  , _pixelsPerCharacter( 10 )
+  , _pixelMargin( 5 )
   , _timeFrames( nullptr )
   {
 //    init( );
@@ -68,12 +71,15 @@ namespace visimpl
   , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
   , _normRule( T_NORM_MAX )
   , _repMode( T_REP_DENSE )
+  , _fillPlots( true )
   , _lastMousePosition( nullptr )
   , _regionPercentage( nullptr )
   , _paintRegion( false )
   , _regionWidth( 0.1f )
   , _gridLinesNumber( 0 )
   , _paintTimeline( false )
+  , _pixelsPerCharacter( 8 )
+  , _pixelMargin( 5 )
   , _timeFrames( nullptr )
   {
 //    init( );
@@ -97,12 +103,15 @@ namespace visimpl
   , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
   , _normRule( T_NORM_MAX )
   , _repMode( T_REP_DENSE )
+  , _fillPlots( true )
   , _lastMousePosition( nullptr )
   , _regionPercentage( nullptr )
   , _paintRegion( false )
   , _regionWidth( 0.1f )
   , _gridLinesNumber( 0 )
   , _paintTimeline( false )
+  , _pixelsPerCharacter( 8 )
+  , _pixelMargin( 5 )
   , _timeFrames( nullptr )
   {
 //    init( );
@@ -632,6 +641,11 @@ namespace visimpl
     return _focusHistogram._curveStopsGlobal;
   }
 
+  void MultiLevelHistogram::fillPlots( bool fillPlots_ )
+  {
+    _fillPlots = fillPlots_;
+  }
+
   void MultiLevelHistogram::mousePressEvent( QMouseEvent* event_ )
   {
     QFrame::mousePressEvent( event_ );
@@ -678,6 +692,11 @@ namespace visimpl
   void MultiLevelHistogram::regionPosition( float* regionPercentage )
   {
     _regionPercentage = regionPercentage;
+  }
+
+  void MultiLevelHistogram::simPlayer( simil::SimulationPlayer* player )
+  {
+    _player = player;
   }
 
   void MultiLevelHistogram::regionWidth( float region_ )
@@ -732,13 +751,13 @@ namespace visimpl
       painter.fillRect( rect( ), QBrush( QColor( 255, 255, 255, 255 ),
                                          Qt::SolidPattern ));
 
-      QPainterPath path;
-      path.moveTo( 0, height( ) );
+      QPainterPath localPath;
+      localPath.moveTo( 0, height( ) );
       for( auto point : _mainHistogram._curveStopsLocal )
       {
-        path.lineTo( QPoint( point.x( ) * width( ), point.y( ) * height( )));
+        localPath.lineTo( QPoint( point.x( ) * width( ), point.y( ) * height( )));
       }
-      path.lineTo( width( ), height( ) );
+      localPath.lineTo( width( ), height( ) );
 
       QPainterPath globalPath;
       globalPath.moveTo( 0, height( ) );
@@ -749,15 +768,37 @@ namespace visimpl
       globalPath.lineTo( width( ), height( ) );
 
       QColor globalColor( _colorGlobal );
-      globalColor.setAlpha( 100 );
-      painter.setBrush( QBrush( globalColor, Qt::SolidPattern));
-      painter.setPen( Qt::NoPen );
-      painter.drawPath( globalPath );
+
 
       QColor localColor( _colorLocal );
-      localColor.setAlpha( 100 );
-      painter.setBrush( QBrush( localColor, Qt::SolidPattern));
-      painter.drawPath( path );
+
+
+      if( _fillPlots )
+      {
+        globalColor.setAlpha( 50 );
+        localColor.setAlpha( 50 );
+
+        painter.setBrush( QBrush( globalColor, Qt::SolidPattern));
+        painter.setPen( Qt::NoPen );
+        painter.drawPath( globalPath );
+
+        painter.setBrush( QBrush( localColor, Qt::SolidPattern));
+        painter.setPen( Qt::NoPen );
+        painter.drawPath( localPath );
+      }
+      else
+      {
+        globalColor.setAlpha( 100 );
+        localColor.setAlpha( 100 );
+
+        painter.setBrush( Qt::NoBrush );
+        painter.setPen( QPen( globalColor, Qt::SolidLine ));
+        painter.drawPath( globalPath );
+
+        painter.setBrush( Qt::NoBrush );
+        painter.setPen( QPen( localColor, Qt::SolidLine ));
+        painter.drawPath( localPath );
+      }
 
       penColor = QColor( 0, 0, 0 );
     }
@@ -772,15 +813,14 @@ namespace visimpl
 
         if( _paintTimeline )
         {
-          int margin = 5;
 
           float timeValue = ( _endTime - _startTime ) * line + _startTime;
 
           QString value = QString::number( ( unsigned int ) timeValue );
-          int valueLength = value.length( ) * 8;
+          int valueLength = value.length( ) * _pixelsPerCharacter;
           if( width( ) - positionX < valueLength )
-            margin = -valueLength;
-          QPoint position ( positionX + margin, currentHeight / 4 );
+            _pixelMargin = -valueLength;
+          QPoint position ( positionX + _pixelMargin, currentHeight * 0.25 );
           pen.setColor( QColor( 150, 150, 150 ));
           painter.setPen( pen );
 
@@ -839,8 +879,8 @@ namespace visimpl
       QPen pen( penColor );
       painter.setPen( pen );
 
-      currentHeight = currentHeight / 2;
-      QPoint position ( positionX + margin, currentHeight );
+//      currentHeight = currentHeight / 2;
+      QPoint position ( positionX + margin, height( ) * 0.75f );
 
       painter.drawText( position, QString::number( valueAt( percentage )));
 
@@ -877,6 +917,33 @@ namespace visimpl
           painter.setPen( Qt::NoPen );
           painter.drawPath( tfPath );
         }
+      }
+    }
+
+    if( _player )
+    {
+      int lineX = _player->GetRelativeTime( ) * width( );
+
+      QLine simMarkerLine( QPoint( lineX, 0), QPoint( lineX, height( )));
+
+      QPen pen( QColor( 0, 0, 0, 255 ));
+      painter.setPen( pen );
+      painter.drawLine( simMarkerLine );
+
+      if( _paintTimeline )
+      {
+        QString value = QString::number(_player->currentTime( ));
+
+        int valueLength = value.length( ) * _pixelsPerCharacter;
+        if( width( ) - lineX < valueLength )
+          _pixelMargin = -valueLength;
+        QPoint position ( lineX + _pixelMargin, height( ) * 0.5f );
+        pen.setColor( QColor( 150, 150, 150 ));
+        painter.setPen( pen );
+
+        QFont backFont = painter.font( );
+
+        painter.drawText( position, value );
       }
     }
 

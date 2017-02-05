@@ -15,13 +15,16 @@ FocusFrame::FocusFrame( QWidget* parent_ )
 : QFrame( parent_ )
 , _visibleStart( 0.0f )
 , _width( 0.0f )
+, _offset( 0.0f )
+, _currentPosition( 0 )
 , _firstPointLocal( 0 )
 , _lastPointLocal( 0 )
 , _firstPointGlobal( 0 )
 , _lastPointGlobal( 0 )
-{
-
-}
+, _colorLocal( "#e31a1c" )
+, _colorGlobal( "#1f78b4" )
+, _fillPlots( true )
+{ }
 
 
 void FocusFrame::viewRegion( const visimpl::MultiLevelHistogram& histogram,
@@ -111,12 +114,35 @@ void FocusFrame::paintEvent( QPaintEvent* /*event_*/ )
   }
   pathLocal.lineTo( width( ), height( ));
 
-  painter.setPen( Qt::NoPen );
-  painter.setBrush( QBrush( QColor( 255, 0, 0, 100 ), Qt::SolidPattern));
-  painter.drawPath( pathGlobal );
+  QColor globalColor( _colorGlobal );
+  QColor localColor( _colorLocal );
 
-  painter.setBrush( QBrush( QColor( 0, 0, 128, 50 ), Qt::SolidPattern));
-  painter.drawPath( pathLocal );
+  if( _fillPlots )
+  {
+    globalColor.setAlpha( 50 );
+    localColor.setAlpha( 50 );
+
+    painter.setPen( Qt::NoPen );
+    painter.setBrush( QBrush( globalColor, Qt::SolidPattern ));
+    painter.drawPath( pathGlobal );
+
+    painter.setBrush( QBrush( _colorLocal, Qt::SolidPattern ));
+    painter.drawPath( pathLocal );
+
+  }
+  else
+  {
+    globalColor.setAlpha( 100 );
+    localColor.setAlpha( 100 );
+
+    painter.setBrush( Qt::NoBrush );
+    painter.setPen( QPen( globalColor, Qt::SolidPattern ));
+    painter.drawPath( pathGlobal );
+
+    painter.setPen( QPen( localColor, Qt::SolidPattern ));
+    painter.drawPath( pathLocal );
+
+  }
 
   float markerPos = ( _currentPosition - _firstPointLocal ) /
                   float( _lastPointLocal - _firstPointLocal - 1 );
@@ -147,4 +173,9 @@ QColor FocusFrame::colorGlobal( void )
 void FocusFrame::colorGlobal( const QColor& color )
 {
   _colorGlobal = color;
+}
+
+void FocusFrame::fillPlots( bool fillPlots_ )
+{
+  _fillPlots = fillPlots_;
 }

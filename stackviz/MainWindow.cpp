@@ -338,6 +338,7 @@ void MainWindow::initSummaryWidget( )
     _summary->Init( spikesPlayer->spikeReport( ),
                     spikesPlayer->gids( ),
                     _subsetEventManager );
+    _summary->simulationPlayer( _player );
   }
 
   _stackLayout = new QGridLayout( );
@@ -346,6 +347,10 @@ void MainWindow::initSummaryWidget( )
 
   connect( _ui->actionAutoNamingSelections, SIGNAL( triggered( )),
            _summary, SLOT( toggleAutoNameSelections( )));
+
+  _ui->actionFill_Plots->setChecked( true );
+  connect( _ui->actionFill_Plots, SIGNAL( triggered( bool )),
+           _summary, SLOT( fillPlots( bool )));
 
   connect( _summary, SIGNAL( histogramClicked( float )),
            this, SLOT( PlayAt( float )));
@@ -541,6 +546,8 @@ void MainWindow::UpdateSimulationSlider( float percentage )
   int position = percentage * total;
 
   _simSlider->setSliderPosition( position );
+
+  _summary->repaintHistograms( );
 }
 
 

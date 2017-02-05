@@ -47,6 +47,8 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _fpsLabel( this )
   , _showFps( false )
   , _wireframe( false )
+  , _camera( nullptr )
+  , _lastCameraPosition( 0, 0, 0)
   , _focusOnSelection( paintNeurons_ )
   , _pendingSelection( false )
   , _frameCount( 0 )
@@ -67,6 +69,8 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   , _elapsedTimeRenderAcc( 0.0f )
   , _elapsedTimeSliderAcc( 0.0f )
   , _elapsedTimeSimAcc( 0.0f )
+  , _alphaBlendingAccumulative( false )
+  , _showSelection( false )
 
 {
 #ifdef VISIMPL_USE_ZEROEQ
