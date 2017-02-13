@@ -197,6 +197,10 @@ void MainWindow::openHDF5File( const std::string& networkFile,
 
   openSubsetEventFile( subsetEventFile, false );
 
+  simil::CorrelationComputer cc( player, _subsetEventManager );
+  std::cout << "------------------------------------- Starting correlation computing." << std::endl;
+  cc.compute( );
+
   configurePlayer( );
   initSummaryWidget( );
 }

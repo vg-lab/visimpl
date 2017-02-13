@@ -60,6 +60,7 @@ public slots:
   void PlayAt( bool notify = true );
   void PlayAt( float, bool notify = true );
   void PlayAt( int, bool notify = true );
+  void requestPlayAt( float );
   void Restart( bool notify = true );
   void GoToEnd( bool notify = true );
 

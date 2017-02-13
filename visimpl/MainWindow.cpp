@@ -239,6 +239,10 @@ void MainWindow::configurePlayer( void )
 #ifdef SIMIL_USE_ZEROEQ
   _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+
+  _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
+      boost::bind( &MainWindow::requestPlayAt, this, _1 ));
+
 #endif
 
   changeEditorColorMapping( );
@@ -564,6 +568,11 @@ void MainWindow::Repeat( bool notify )
   }
 }
 
+void MainWindow::requestPlayAt( float percentage )
+{
+  PlayAt( percentage, false );
+}
+
 void MainWindow::PlayAt( bool notify )
 {
   if( _openGLWidget )
@@ -582,7 +591,7 @@ void MainWindow::PlayAt( float percentage, bool notify )
 
     _simSlider->setSliderPosition( sliderPosition );
 
-    _openGLWidget->resetParticles( );
+//    _openGLWidget->resetParticles( );
 
     _playButton->setIcon( _pauseIcon );
 
@@ -617,7 +626,7 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
 
     _simSlider->setSliderPosition( sliderPosition );
 
-    _openGLWidget->resetParticles( );
+//    _openGLWidget->resetParticles( );
 
     _playButton->setIcon( _pauseIcon );
 

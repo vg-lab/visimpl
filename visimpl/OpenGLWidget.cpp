@@ -759,7 +759,7 @@ void OpenGLWidget::paintGL( void )
 
   if ( _paint )
   {
-    _camera->anim( );
+//    _camera->anim( );
 
     if ( _particleSystem )
     {
@@ -1053,6 +1053,9 @@ void OpenGLWidget::PlayAt( float percentage )
   if( _player )
   {
     _particleSystem->run( false );
+
+    resetParticles( );
+
     std::cout << "Play at " << percentage << std::endl;
     _player->PlayAt( percentage );
     _particleSystem->run( true );

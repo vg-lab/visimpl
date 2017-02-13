@@ -381,7 +381,7 @@ namespace visimpl
     {
       _subsetScroll->setVisible( true );
 
-      simil::TimeFrameRange timeFrames = _subsetEventManager->timeFrames( );
+      simil::EventRange timeFrames = _subsetEventManager->events( );
 
       float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
 
