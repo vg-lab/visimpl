@@ -135,7 +135,9 @@ protected:
 
   simil::SimulationPlayer* _player;
 
-  simil::SubsetEventManager* _subsetEventManager;
+//  simil::SubsetEventManager* _subsetEventManager;
+
+  bool _autoAddAvailableSubsets;
 
   // Playback Control
   QDockWidget* _simulationDock;

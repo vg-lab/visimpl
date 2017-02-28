@@ -473,12 +473,9 @@ void MainWindow::initSummaryWidget( void )
         dynamic_cast< simil::SpikesPlayer* >( _openGLWidget->player( ));
 
     std::cout << "Creating summary..." << std::endl;
-//    GIDUSet gids;
-//    _summary->AddGIDSelection( gids );
-    _summary->Init( spikesPlayer->spikeReport( ),
-                             spikesPlayer->gids( ));
-//    _summary->bins( 5000 );
-//    _summary->setVisible( true );
+
+    _summary->Init( spikesPlayer->data( ));
+
 
   }
 

@@ -22,7 +22,6 @@
 MainWindow::MainWindow( QWidget* parent_ )
 : QMainWindow( parent_ )
 // , _lastOpenedFileName( "" )
-, _subsetEventManager( nullptr )
 , _ui( new Ui::MainWindow )
 // , _player( nullptr )
 {
@@ -98,7 +97,7 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
  }
 
-  openSubsetEventFile( subsetEventFile, false );
+  openSubsetEventFile( subsetEventFile, true );
 
   configurePlayer( );
   initSummaryWidget( );
@@ -106,22 +105,24 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 }
 
 void MainWindow::openSubsetEventFile( const std::string& filePath,
-                                      bool append )
+                                      bool /*append*/ )
 {
   if( filePath.empty( ))
     return;
 
-  _subsetEventManager = new simil::SubsetEventManager( );
+//  if( !append )
+//    _player->data( )->subsetsEvents( )->clear( );
+//  _subsetEventManager = new simil::SubsetEventManager( );
 
   if( filePath.find( "json" ) != std::string::npos )
   {
     std::cout << "Loading JSON file: " << filePath << std::endl;
-    _subsetEventManager->loadJSON( filePath, append );
+    _player->data( )->subsetsEvents( )->loadJSON( filePath );
   }
   else if( filePath.find( "h5" ) != std::string::npos )
   {
     std::cout << "Loading H5 file: " << filePath << std::endl;
-    _subsetEventManager->loadH5( filePath, append );
+    _player->data( )->subsetsEvents( )->loadH5( filePath );
   }
   else
   {
@@ -195,11 +196,10 @@ void MainWindow::openHDF5File( const std::string& networkFile,
   player->LoadData( simil::TDataType::THDF5,  networkFile, activityFile );
   _player = player;
 
-  openSubsetEventFile( subsetEventFile, false );
-
-  simil::CorrelationComputer cc( player, _subsetEventManager );
-  std::cout << "------------------------------------- Starting correlation computing." << std::endl;
-  cc.compute( );
+  if( !subsetEventFile.empty( ))
+  {
+    openSubsetEventFile( subsetEventFile, false );
+  }
 
   configurePlayer( );
   initSummaryWidget( );
@@ -339,10 +339,14 @@ void MainWindow::initSummaryWidget( )
     simil::SpikesPlayer* spikesPlayer =
         dynamic_cast< simil::SpikesPlayer* >( _player);
 
-    _summary->Init( spikesPlayer->spikeReport( ),
-                    spikesPlayer->gids( ),
-                    _subsetEventManager );
+    _summary->Init( spikesPlayer->data( ));
     _summary->simulationPlayer( _player );
+
+
+    simil::CorrelationComputer cc( spikesPlayer->data( ) );
+    std::cout << "---------Starting correlation computing." << std::endl;
+    cc.compute( "grclayer", "pattern_0" );
+
   }
 
   _stackLayout = new QGridLayout( );

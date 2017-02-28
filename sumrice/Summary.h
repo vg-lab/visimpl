@@ -64,9 +64,7 @@ namespace visimpl
     Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
     virtual ~Summary( ){};
 
-    void Init( simil::SpikeData* spikes_,
-               const simil::TGIDSet& gids_,
-               simil::SubsetEventManager* subsets_ = nullptr );
+    void Init( simil::SimulationData* data_ );
 
     void AddNewHistogram( const visimpl::Selection& selection
   #ifdef VISIMPL_USE_ZEROEQ
@@ -210,6 +208,7 @@ namespace visimpl
     unsigned int _gridLinesNumber;
 
   //  brion::SpikeReport* _spikeReport;
+    simil::SimulationData* _simData;
     simil::SpikeData* _spikeReport;
     brion::CompartmentReport* _voltageReport;
 
@@ -245,7 +244,7 @@ namespace visimpl
     QLabel* _globalMaxLabel;
     QLabel* _localMaxLabel;
 
-    simil::SubsetEventManager* _subsetEventManager;
+//    simil::SubsetEventManager* _subsetEventManager;
     std::vector< TimeFrame > _timeFrames;
     QGridLayout* _timeFramesLayout;
     QScrollArea* _subsetScroll;
@@ -281,6 +280,10 @@ namespace visimpl
 
     bool _autoNameSelection;
     bool _fillPlots;
+    bool _autoAddEvents;
+    bool _autoAddEventSubset;
+    bool _autoCalculateCorrelations;
+    float _defaultCorrelationDeltaTime;
 
     std::vector< QColor > _subsetEventColorPalette;
 

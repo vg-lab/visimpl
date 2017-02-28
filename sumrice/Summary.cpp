@@ -49,6 +49,7 @@ namespace visimpl
   , _bins( DEFAULT_BINS )
   , _zoomFactor( DEFAULT_ZOOM_FACTOR )
   , _gridLinesNumber( 3 )
+  , _simData( nullptr )
   , _spikeReport( nullptr )
   , _voltageReport( nullptr )
   , _player( nullptr )
@@ -62,7 +63,6 @@ namespace visimpl
   , _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
   , _colorLocal( 0, 0, 128, 50 )
   , _colorGlobal( 255, 0, 0, 100 )
-  , _subsetEventManager( nullptr )
   , _timeFramesLayout( nullptr )
   , _subsetScroll( nullptr )
   , _syncScrollsVertically( true )
@@ -81,6 +81,11 @@ namespace visimpl
   , _regionEdgePointUpper( -1 )
   , _regionEdgeUpper( 0.0f )
   , _autoNameSelection( false )
+  , _fillPlots( true )
+  , _autoAddEvents( true )
+  , _autoAddEventSubset( true )
+  , _autoCalculateCorrelations( true )
+  , _defaultCorrelationDeltaTime( 0.125f )
   {
 
     setMouseTracking( true );
@@ -287,20 +292,39 @@ namespace visimpl
 
   }
 
-  void Summary::Init( simil::SpikeData* spikes_,
-                      const simil::TGIDSet& gids_,
-                      simil::SubsetEventManager* subsetEventMng )
+  void Summary::Init( simil::SimulationData* data_ )
   {
-    _spikeReport = spikes_;
-    _gids = GIDUSet( gids_.begin( ), gids_.end( ));
 
-    _subsetEventManager = subsetEventMng;
+    _simData = data_;
+
+    switch( data_->simulationType( ))
+    {
+      case simil::TSimSpikes:
+      {
+        simil::SpikeData* spikeData = dynamic_cast< simil::SpikeData* >( _simData );
+        _spikeReport = spikeData;
+
+        break;
+      }
+      case simil::TSimVoltages:
+        break;
+      default:
+        break;
+    }
+
+    _gids = GIDUSet( data_->gids( ).begin( ), data_->gids( ).end( ));
+
+
+
+
 
     Init( );
   }
 
   void Summary::Init( void )
   {
+    if( !_spikeReport )
+      return;
 
     _mainHistogram = new visimpl::MultiLevelHistogram( *_spikeReport );
     _mainHistogram->setMinimumHeight( _heightPerRow );
@@ -377,87 +401,94 @@ namespace visimpl
 
     _mainHistogram->init( _bins, _zoomFactor );
 
-    if( _subsetEventManager )
+    if( _simData->subsetsEvents( ))
     {
-      _subsetScroll->setVisible( true );
 
-      simil::EventRange timeFrames = _subsetEventManager->events( );
-
-      float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
-
-      float startPercentage;
-      float endPercentage;
-
-      unsigned int counter = 0;
-      for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
+      if( _autoAddEvents && _simData->subsetsEvents( )->numEvents( ) > 0 )
       {
-        TimeFrame timeFrame;
-        timeFrame.name = it->first;
+        _subsetScroll->setVisible( true );
 
-//        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
+        simil::EventRange timeFrames = _simData->subsetsEvents( )->events( );
 
-        for( auto time : it->second )
+        float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
+
+        float startPercentage;
+        float endPercentage;
+
+        unsigned int counter = 0;
+        for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
         {
+          TimeFrame timeFrame;
+          timeFrame.name = it->first;
 
-          startPercentage =
-              std::max( 0.0f,
-                        ( time.first - _spikeReport->startTime( )) * invTotal);
+  //        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
 
-          endPercentage =
-              std::min( 1.0f,
-                        ( time.second - _spikeReport->startTime( )) * invTotal);
+          for( auto time : it->second )
+          {
 
-          timeFrame.percentages.push_back(
-              std::make_pair( startPercentage, endPercentage ));
+            startPercentage =
+                std::max( 0.0f,
+                          ( time.first - _spikeReport->startTime( )) * invTotal);
 
-//          std::cout << "Region from " << startPercentage
-//                            << " to " << endPercentage
-//                            << std::endl;
+            endPercentage =
+                std::min( 1.0f,
+                          ( time.second - _spikeReport->startTime( )) * invTotal);
+
+            timeFrame.percentages.push_back(
+                std::make_pair( startPercentage, endPercentage ));
+
+  //          std::cout << "Region from " << startPercentage
+  //                            << " to " << endPercentage
+  //                            << std::endl;
+
+          }
+
+          timeFrame.color = _subsetEventColorPalette[
+            counter %  _subsetEventColorPalette.size( ) ];
+
+          _timeFrames.push_back( timeFrame );
+
+          QLabel* label = new QLabel( timeFrame.name.c_str( ));
+          label->setMinimumHeight( 20 );
+          label->setMinimumWidth( _maxLabelWidth );
+          label->setMaximumWidth( _maxLabelWidth );
+          label->setToolTip( timeFrame.name.c_str( ));
+
+          SubsetEventWidget* subsetWidget = new SubsetEventWidget( );
+          subsetWidget->setSizePolicy( QSizePolicy::Expanding,
+                                             QSizePolicy::Expanding );
+          subsetWidget->timeFrames( &_timeFrames );
+          subsetWidget->setMinimumWidth( _currentCentralMinWidth );
+          subsetWidget->index( counter );
+
+          QCheckBox* checkbox = new QCheckBox();
+
+          TimeFrameRow row;
+          row.widget = subsetWidget;
+          row.label = label;
+          row.checkBox = checkbox;
+
+          _subsetRows.push_back( row );
+          _subsetEventWidgets.push_back( subsetWidget );
+
+          _timeFramesLayout->addWidget( label, counter, 0, 1, 1 );
+          _timeFramesLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
+          _timeFramesLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
 
         }
-
-        timeFrame.color = _subsetEventColorPalette[
-          counter %  _subsetEventColorPalette.size( ) ];
-
-        _timeFrames.push_back( timeFrame );
-
-        QLabel* label = new QLabel( timeFrame.name.c_str( ));
-        label->setMinimumHeight( 20 );
-        label->setMinimumWidth( _maxLabelWidth );
-        label->setMaximumWidth( _maxLabelWidth );
-        label->setToolTip( timeFrame.name.c_str( ));
-
-        SubsetEventWidget* subsetWidget = new SubsetEventWidget( );
-        subsetWidget->setSizePolicy( QSizePolicy::Expanding,
-                                           QSizePolicy::Expanding );
-        subsetWidget->timeFrames( &_timeFrames );
-        subsetWidget->setMinimumWidth( _currentCentralMinWidth );
-        subsetWidget->index( counter );
-
-        QCheckBox* checkbox = new QCheckBox();
-
-        TimeFrameRow row;
-        row.widget = subsetWidget;
-        row.label = label;
-        row.checkBox = checkbox;
-
-        _subsetRows.push_back( row );
-        _subsetEventWidgets.push_back( subsetWidget );
-
-        _timeFramesLayout->addWidget( label, counter, 0, 1, 1 );
-        _timeFramesLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
-        _timeFramesLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
-
       }
 
-      simil::GIDMapRange subsets = _subsetEventManager->subsets( );
-
-      for( auto it = subsets.first; it != subsets.second; ++it )
+      if( _autoAddEventSubset )
       {
-        GIDUSet subset( it->second.begin( ), it->second.end( ));
-        insertSubset( it->first, subset );
-      }
+        simil::SubsetMapRange subsets =
+            _spikeReport->subsetsEvents( )->subsets( );
 
+        for( auto it = subsets.first; it != subsets.second; ++it )
+        {
+          GIDUSet subset( it->second.begin( ), it->second.end( ));
+          insertSubset( it->first, subset );
+        }
+      }
     }
     else
     {
