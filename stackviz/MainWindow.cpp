@@ -12,6 +12,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
+#include <QInputDialog>
 
 #include <boost/bind.hpp>
 
@@ -21,9 +22,30 @@
 
 MainWindow::MainWindow( QWidget* parent_ )
 : QMainWindow( parent_ )
-// , _lastOpenedFileName( "" )
 , _ui( new Ui::MainWindow )
-// , _player( nullptr )
+, _lastOpenedFileName( "" )
+, _simulationType( simil::TSimNetwork )
+, _summary( nullptr )
+, _player( nullptr )
+, _autoAddAvailableSubsets( true )
+, _simulationDock( nullptr )
+, _playButton( nullptr )
+, _simSlider( nullptr )
+, _repeatButton( nullptr )
+, _goToButton( nullptr )
+, _playing( false )
+, _startTimeLabel( nullptr )
+, _endTimeLabel( nullptr )
+#ifdef VISIMPL_USE_ZEROEQ
+, _zeqConnection( false )
+, _subscriber( nullptr )
+, _publisher( nullptr )
+, _thread( nullptr )
+#endif
+, _contentWidget( nullptr )
+, _stackLayout( nullptr )
+, _columnsNumber( 3 )
+, resizingEnabled( true )
 {
   _ui->setupUi( this );
 
@@ -223,6 +245,12 @@ void MainWindow::configurePlayer( void )
       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
 #endif
 
+//  simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
+//
+//  for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
+//  {
+//    cc.compute( "grclayer", event );
+//  }
  // changeEditorColorMapping( );
 
 }
@@ -258,6 +286,9 @@ void MainWindow::initPlaybackDock( )
   _repeatButton = new QPushButton( );
   _repeatButton->setCheckable( true );
   _repeatButton->setChecked( false );
+
+  _goToButton = new QPushButton( );
+  _goToButton->setText( QString( "Play at..." ));
 
 //  QIcon playIcon;
 //  QIcon pauseIcon;
@@ -303,6 +334,7 @@ void MainWindow::initPlaybackDock( )
   dockLayout->addWidget( _playButton, row, 9, 2, 2 );
   dockLayout->addWidget( stopButton, row, 11, 1, 1 );
   dockLayout->addWidget( nextButton, row, 12, 1, 1 );
+  dockLayout->addWidget( _goToButton, row, 13, 1, 1 );
 
   connect( _playButton, SIGNAL( clicked( )),
            this, SLOT( PlayPause( )));
@@ -322,6 +354,9 @@ void MainWindow::initPlaybackDock( )
   connect( _simSlider, SIGNAL( sliderPressed( )),
            this, SLOT( PlayAt( )));
 
+  connect( _goToButton, SIGNAL( clicked( )),
+           this, SLOT( playAtButtonClicked( )));
+
   _simulationDock->setWidget( content );
   this->addDockWidget( Qt::BottomDockWidgetArea,
                        _simulationDock );
@@ -332,7 +367,7 @@ void MainWindow::initPlaybackDock( )
 void MainWindow::initSummaryWidget( )
 {
 
-  _summary = new visimpl::Summary( nullptr, visimpl::T_STACK_EXPANDABLE );
+  _summary = new visimpl::Summary( this, visimpl::T_STACK_EXPANDABLE );
 
   if( _simulationType == simil::TSimSpikes )
   {
@@ -341,11 +376,6 @@ void MainWindow::initSummaryWidget( )
 
     _summary->Init( spikesPlayer->data( ));
     _summary->simulationPlayer( _player );
-
-
-    simil::CorrelationComputer cc( spikesPlayer->data( ) );
-    std::cout << "---------Starting correlation computing." << std::endl;
-    cc.compute( "grclayer", "pattern_0" );
 
   }
 
@@ -629,6 +659,29 @@ void MainWindow::UpdateSimulationSlider( float percentage )
 
 //    std::cout << "Sending selection of size " << selected.size( ) << std::endl;
     _publisher->publish( lexis::data::SelectedIDs( selected ));
+  }
+
+
+  void MainWindow::playAtButtonClicked( void )
+  {
+    bool ok;
+    double result =
+        QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
+                                 tr( "Simulation time" ),
+                                 ( double )_player->currentTime( ),
+                                 ( double )_player->data( )->startTime( ),
+                                 ( double )_player->data( )->endTime( ),
+                                 3, &ok, Qt::Popup );
+
+    if( ok )
+    {
+      float percentage = ( result - _player->data( )->startTime( )) /
+          ( _player->data( )->endTime( ) - _player->data( )->startTime( ));
+
+      percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
+
+      PlayAt( percentage, true );
+    }
   }
 
 #endif

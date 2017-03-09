@@ -25,10 +25,30 @@
 
 MainWindow::MainWindow( QWidget* parent_,
                         bool updateOnIdle )
-  : QMainWindow( parent_ )
-  , _lastOpenedFileName( "" )
-  , _ui( new Ui::MainWindow )
-  , _openGLWidget( nullptr )
+: QMainWindow( parent_ )
+#ifdef VISIMPL_USE_GMRVLEX
+, _zeqConnection( false )
+, _subscriber( nullptr )
+, _thread( nullptr )
+#endif
+, _ui( new Ui::MainWindow )
+, _lastOpenedFileName( "" )
+, _openGLWidget( nullptr )
+, _summary( nullptr )
+, _simulationDock( nullptr )
+, _simSlider( nullptr )
+, _playButton( nullptr )
+, _startTimeLabel( nullptr )
+, _endTimeLabel( nullptr )
+, _repeatButton( nullptr )
+, _simConfigurationDock( nullptr )
+, _tfEditor( nullptr )
+, _tfWidget( nullptr )
+, _decayBox( nullptr )
+, _clearSelectionButton( nullptr )
+, _selectionSizeLabel( nullptr )
+, _alphaNormalButton( nullptr )
+, _alphaAccumulativeButton( nullptr )
 {
   _ui->setupUi( this );
 
@@ -282,6 +302,9 @@ void MainWindow::initPlaybackDock( void )
   _repeatButton->setCheckable( true );
   _repeatButton->setChecked( false );
 
+  _goToButton = new QPushButton( );
+  _goToButton->setText( QString( "Play at..." ));
+
 //  QIcon playIcon;
 //  QIcon pauseIcon;
   QIcon stopIcon;
@@ -326,6 +349,7 @@ void MainWindow::initPlaybackDock( void )
   dockLayout->addWidget( _playButton, row, 9, 2, 2 );
   dockLayout->addWidget( stopButton, row, 11, 1, 1 );
   dockLayout->addWidget( nextButton, row, 12, 1, 1 );
+  dockLayout->addWidget( _goToButton, row, 13, 1, 1 );
 
   connect( _playButton, SIGNAL( clicked( )),
            this, SLOT( PlayPause( )));
@@ -344,6 +368,9 @@ void MainWindow::initPlaybackDock( void )
 
   connect( _simSlider, SIGNAL( sliderPressed( )),
            this, SLOT( PlayAt( )));
+
+  connect( _goToButton, SIGNAL( clicked( )),
+           this, SLOT( playAtButtonClicked( )));
 
 //  connect( _simSlider, SIGNAL( sliderMoved( )),
 //             this, SLOT( PlayAt( )));
@@ -848,6 +875,29 @@ void MainWindow::ClearSelection( void )
 
     _clearSelectionButton->setEnabled( false );
     _selectionSizeLabel->setText( "0" );
+  }
+}
+
+void MainWindow::playAtButtonClicked( void )
+{
+  bool ok;
+  double result =
+      QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
+                               tr( "Simulation time" ),
+                               ( double )_openGLWidget->player( )->currentTime( ),
+                               ( double )_openGLWidget->player( )->data( )->startTime( ),
+                               ( double )_openGLWidget->player( )->data( )->endTime( ),
+                               3, &ok, Qt::Popup );
+
+  if( ok )
+  {
+    float percentage = ( result - _openGLWidget->player( )->startTime( )) /
+        ( _openGLWidget->player( )->endTime( ) -
+            _openGLWidget->player( )->startTime( ));
+
+    percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
+
+    PlayAt( percentage, true );
   }
 }
 

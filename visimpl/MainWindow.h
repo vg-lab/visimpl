@@ -90,6 +90,7 @@ protected slots:
 #endif
 
   void ClearSelection( void );
+  void playAtButtonClicked( void );
 
 protected:
 
@@ -107,6 +108,8 @@ protected:
 
 #endif
 
+  Ui::MainWindow* _ui;
+
   QString _lastOpenedFileName;
   QIcon _playIcon;
   QIcon _pauseIcon;
@@ -117,7 +120,6 @@ private:
   void initSimColorDock( void );
   void initSummaryWidget( void );
 
-  Ui::MainWindow* _ui;
   OpenGLWidget* _openGLWidget;
   visimpl::Summary* _summary;
 
@@ -127,6 +129,7 @@ private:
   QLabel* _startTimeLabel;
   QLabel* _endTimeLabel;
   QPushButton* _repeatButton;
+  QPushButton* _goToButton;
 
   QDockWidget* _simConfigurationDock;
   TransferFunctionEditor* _tfEditor;

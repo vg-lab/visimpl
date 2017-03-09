@@ -129,20 +129,21 @@ namespace visimpl
     void gridLinesNumber( int linesNumber );
 
     void updateMouseMarker( QPoint point );
+    void moveScrollSync( int newPos );
 
   protected:
 
-    struct StackRow
+    struct HistogramRow
     {
     public:
 
-      StackRow( )
+      HistogramRow( )
       : histogram( nullptr )
       , label( nullptr )
       , checkBox( nullptr )
       { }
 
-      ~StackRow( )
+      ~HistogramRow( )
       { }
 
       visimpl::MultiLevelHistogram* histogram;
@@ -151,17 +152,17 @@ namespace visimpl
 
     };
 
-    struct TimeFrameRow
+    struct EventRow
     {
     public:
 
-      TimeFrameRow( )
+      EventRow( )
       : widget( nullptr )
       , label( nullptr )
       , checkBox( nullptr )
       { }
 
-      ~TimeFrameRow( )
+      ~EventRow( )
       { }
 
       visimpl::SubsetEventWidget* widget;
@@ -175,7 +176,6 @@ namespace visimpl
   protected slots:
 
     void deferredInsertion( void );
-    void moveScrollSync( int newPos );
 
   protected:
 
@@ -232,7 +232,7 @@ namespace visimpl
     QColor _colorGlobal;
 
     std::vector< visimpl::MultiLevelHistogram* > _histograms;
-    std::vector< StackRow > _rows;
+    std::vector< HistogramRow > _rows;
 
     FocusFrame* _focusWidget;
 
@@ -247,9 +247,9 @@ namespace visimpl
 //    simil::SubsetEventManager* _subsetEventManager;
     std::vector< TimeFrame > _timeFrames;
     QGridLayout* _timeFramesLayout;
-    QScrollArea* _subsetScroll;
+    QScrollArea* _eventScroll;
     std::vector< SubsetEventWidget* > _subsetEventWidgets;
-    std::vector< TimeFrameRow > _subsetRows;
+    std::vector< EventRow > _subsetRows;
 
     bool _syncScrollsVertically;
 

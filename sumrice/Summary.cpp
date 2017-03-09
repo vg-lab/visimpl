@@ -64,7 +64,7 @@ namespace visimpl
   , _colorLocal( 0, 0, 128, 50 )
   , _colorGlobal( 255, 0, 0, 100 )
   , _timeFramesLayout( nullptr )
-  , _subsetScroll( nullptr )
+  , _eventScroll( nullptr )
   , _syncScrollsVertically( true )
   , _heightPerRow( 50 )
   , _maxLabelWidth( 100 )
@@ -83,7 +83,7 @@ namespace visimpl
   , _autoNameSelection( false )
   , _fillPlots( true )
   , _autoAddEvents( true )
-  , _autoAddEventSubset( true )
+  , _autoAddEventSubset( false )
   , _autoCalculateCorrelations( true )
   , _defaultCorrelationDeltaTime( 0.125f )
   {
@@ -108,17 +108,17 @@ namespace visimpl
       _timeFramesLayout->setAlignment( Qt::AlignTop );
       _timeFramesLayout->setVerticalSpacing( 0 );
 
-      _subsetScroll = new QScrollArea();
+      _eventScroll = new QScrollArea();
       QWidget* subsetWidget = new QWidget( );
 
       subsetWidget->setLayout( _timeFramesLayout );
-      _subsetScroll->setWidget( subsetWidget );
-      _subsetScroll->setWidgetResizable( true );
-      _subsetScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-      _subsetScroll->setVisible( false );
-      _subsetScroll->setMaximumHeight( 200 );
+      _eventScroll->setWidget( subsetWidget );
+      _eventScroll->setWidgetResizable( true );
+      _eventScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _eventScroll->setVisible( false );
+      _eventScroll->setMaximumHeight( 200 );
 
-      connect( _subsetScroll->horizontalScrollBar( ),
+      connect( _eventScroll->horizontalScrollBar( ),
                SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
 
       QWidget* header = new QWidget( );
@@ -254,7 +254,7 @@ namespace visimpl
                SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
 
       auto splitter = new QSplitter( Qt::Vertical, this );
-      splitter->addWidget( _subsetScroll );
+      splitter->addWidget( _eventScroll );
       splitter->addWidget( _histogramScroll );
       upperLayout->addWidget( splitter );
       upperLayout->addWidget( foot );
@@ -366,7 +366,7 @@ namespace visimpl
     else if( _stackType == T_STACK_EXPANDABLE )
     {
 
-      StackRow mainRow;
+      HistogramRow mainRow;
 
       mainRow.histogram = _mainHistogram;
       mainRow.histogram->_timeFrames = &_timeFrames;
@@ -406,7 +406,7 @@ namespace visimpl
 
       if( _autoAddEvents && _simData->subsetsEvents( )->numEvents( ) > 0 )
       {
-        _subsetScroll->setVisible( true );
+        _eventScroll->setVisible( true );
 
         simil::EventRange timeFrames = _simData->subsetsEvents( )->events( );
 
@@ -463,7 +463,7 @@ namespace visimpl
 
           QCheckBox* checkbox = new QCheckBox();
 
-          TimeFrameRow row;
+          EventRow row;
           row.widget = subsetWidget;
           row.label = label;
           row.checkBox = checkbox;
@@ -492,8 +492,8 @@ namespace visimpl
     }
     else
     {
-      if( _subsetScroll )
-        _subsetScroll->setVisible( false );
+      if( _eventScroll )
+        _eventScroll->setVisible( false );
     }
 
   //  CreateSummarySpikes( );
@@ -605,7 +605,7 @@ namespace visimpl
 
   void Summary::insertSubset( const std::string& name, const GIDUSet& subset )
   {
-    StackRow currentRow;
+    HistogramRow currentRow;
 
     visimpl::MultiLevelHistogram* histogram =
         new visimpl::MultiLevelHistogram( *_spikeReport );
@@ -720,7 +720,7 @@ namespace visimpl
     {
 
       _regionGlobalPosition = position;
-      _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
+      _regionWidthPixels = _regionWidth * nativeParentWidget( )->width( );
 
 
        SetFocusRegionPosition( cursorLocalPoint );
@@ -834,7 +834,7 @@ namespace visimpl
 
 //    std::cout << "Focus width: " << _focusedHistogram->width( ) << std::endl;
 
-    _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
+    _regionWidthPixels = _regionWidth * nativeParentWidget( )->width( );
 
     _regionLocalPosition.setX(
         std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
@@ -1176,7 +1176,7 @@ namespace visimpl
     }
 
     if( _subsetRows.size( ) == 0 )
-      _subsetScroll->setVisible( false );
+      _eventScroll->setVisible( false );
 
     update( );
   }
@@ -1301,6 +1301,14 @@ namespace visimpl
 //        subsetEventWidget->update( );
       }
 
+      int pos = 0;
+      if( sender( ) == _histogramScroll )
+        pos = _eventScroll->horizontalScrollBar( )->value( );
+      else
+        pos = _eventScroll->horizontalScrollBar( )->value( );
+
+      moveScrollSync( pos );
+
       updateRegionBounds( );
 
       event_->accept( );
@@ -1314,7 +1322,7 @@ namespace visimpl
   {
     if( _syncScrollsVertically )
     {
-        _subsetScroll->horizontalScrollBar( )->setValue( newPos );
+        _eventScroll->horizontalScrollBar( )->setValue( newPos );
         _histogramScroll->horizontalScrollBar( )->setValue( newPos );
     }
   }

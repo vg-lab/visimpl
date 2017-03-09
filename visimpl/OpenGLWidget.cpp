@@ -40,38 +40,38 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
                             zeqUri
 #endif
   )
-  : QOpenGLWidget( parent_, windowsFlags_ )
+: QOpenGLWidget( parent_, windowsFlags_ )
 #ifdef VISIMPL_USE_ZEROEQ
-  , _zeqUri( zeqUri )
+, _zeqUri( zeqUri )
 #endif
-  , _fpsLabel( this )
-  , _showFps( false )
-  , _wireframe( false )
-  , _camera( nullptr )
-  , _lastCameraPosition( 0, 0, 0)
-  , _focusOnSelection( paintNeurons_ )
-  , _pendingSelection( false )
-  , _frameCount( 0 )
-  , _mouseX( 0 )
-  , _mouseY( 0 )
-  , _rotation( false )
-  , _translation( false )
-  , _idleUpdate( true )
-  , _paint( false )
-  , _currentClearColor( 20, 20, 20, 0 )
-  , _particlesShader( nullptr )
-  , _particleSystem( nullptr )
-  , _simulationType( simil::TSimulationType::TSimNetwork )
-  , _player( nullptr )
-  , _firstFrame( true )
-  , _prototype( nullptr )
-  , _offPrototype( nullptr )
-  , _elapsedTimeRenderAcc( 0.0f )
-  , _elapsedTimeSliderAcc( 0.0f )
-  , _elapsedTimeSimAcc( 0.0f )
-  , _alphaBlendingAccumulative( false )
-  , _showSelection( false )
-
+, _fpsLabel( this )
+, _showFps( false )
+, _wireframe( false )
+, _camera( nullptr )
+, _lastCameraPosition( 0, 0, 0)
+, _focusOnSelection( paintNeurons_ )
+, _pendingSelection( false )
+, _frameCount( 0 )
+, _mouseX( 0 )
+, _mouseY( 0 )
+, _rotation( false )
+, _translation( false )
+, _idleUpdate( true )
+, _paint( false )
+, _currentClearColor( 20, 20, 20, 0 )
+, _particlesShader( nullptr )
+, _particleSystem( nullptr )
+, _simulationType( simil::TSimulationType::TSimNetwork )
+, _player( nullptr )
+, _firstFrame( true )
+, _prototype( nullptr )
+, _offPrototype( nullptr )
+, _elapsedTimeRenderAcc( 0.0f )
+, _elapsedTimeSliderAcc( 0.0f )
+, _elapsedTimeSimAcc( 0.0f )
+, _alphaBlendingAccumulative( false )
+, _showSelection( false )
+, _resetParticles( false )
 {
 #ifdef VISIMPL_USE_ZEROEQ
   if ( zeqUri != "" )
@@ -291,7 +291,7 @@ void OpenGLWidget::createParticleSystem( float scale )
   _particleSystem->renderDeadParticles( true );
 
   //TODO
-  _particleSystem->parallel( true );
+  _particleSystem->parallel( false );
 
   const brion::Vector3fs& positions = _player->positions( );
 
@@ -450,12 +450,16 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   _particleSystem->start();
 
-  resetParticles( );
+
+  _resetParticles = true;
+//  resetParticles( );
 
 }
 
 void OpenGLWidget::resetParticles( void )
 {
+  _particleSystem->run( false );
+
   for( auto cluster : _particleSystem->clusters( ))
   {
     switch( _simulationType )
@@ -471,6 +475,9 @@ void OpenGLWidget::resetParticles( void )
     }
     cluster->source( )->restart( );
   }
+
+  _particleSystem->run( true );
+
   _particleSystem->update( 0.0f );
 }
 
@@ -592,7 +599,7 @@ void ExpandBoundingBox( Eigen::Vector3f& minBounds,
 
 void OpenGLWidget::updateSelection( void )
 {
-  if( _particleSystem && _pendingSelection )
+  if( _particleSystem /*&& _pendingSelection*/ )
   {
     _particleSystem->run( false );
 
@@ -634,7 +641,7 @@ void OpenGLWidget::updateSelection( void )
     _particleSystem->run( true );
     _particleSystem->update( 0.0f );
 
-    _pendingSelection = false;
+//    _pendingSelection = false;
 
   }
 }
@@ -757,9 +764,14 @@ void OpenGLWidget::paintGL( void )
 
   updateSelection( );
 
+  if( _resetParticles )
+    resetParticles( );
+
+  _resetParticles = false;
+
   if ( _paint )
   {
-//    _camera->anim( );
+    _camera->anim( );
 
     if ( _particleSystem )
     {
@@ -1035,7 +1047,8 @@ void OpenGLWidget::Stop( void )
   if( _player )
   {
     _player->Stop( );
-    resetParticles( );
+    _resetParticles = true;
+//    resetParticles( );
     _firstFrame = true;
   }
 }
@@ -1054,7 +1067,8 @@ void OpenGLWidget::PlayAt( float percentage )
   {
     _particleSystem->run( false );
 
-    resetParticles( );
+//    resetParticles( );
+    _resetParticles = true;
 
     std::cout << "Play at " << percentage << std::endl;
     _player->PlayAt( percentage );
@@ -1070,7 +1084,8 @@ void OpenGLWidget::Restart( void )
     _player->Stop( );
     if( playing )
       _player->Play( );
-    resetParticles( );
+//    resetParticles( );
+    _resetParticles = true;
     _firstFrame = true;
   }
 }

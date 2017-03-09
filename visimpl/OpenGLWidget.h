@@ -208,6 +208,8 @@ protected:
   bool _alphaBlendingAccumulative;
   bool _showSelection;
 
+  bool _resetParticles;
+
 };
 
 #endif // __VISIMPL__OPENGLWIDGET__
