@@ -1,8 +1,8 @@
 <RCC>
   <qresource prefix="/">
     <file>icons/query.png</file>
-    <file>icons/qneurolots.ico</file>
     <file>icons/wireframe.png</file>
+    <file>icons/visimpl-icon-square.png</file>
     <file>icons/open_swc.png</file>
     <file>icons/close.png</file>
     <file>icons/open_xml.png</file>

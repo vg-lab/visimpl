@@ -164,6 +164,9 @@ protected:
   reto::Camera* _camera;
   glm::vec3 _lastCameraPosition;
 
+  glm::vec3 _boundingBoxMin;
+  glm::vec3 _boundingBoxMax;
+
   bool _focusOnSelection;
   bool _pendingSelection;
 
@@ -209,6 +212,7 @@ protected:
   bool _showSelection;
 
   bool _resetParticles;
+  bool _updateSelection;
 
 };
 

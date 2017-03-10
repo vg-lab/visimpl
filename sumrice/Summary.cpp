@@ -83,7 +83,7 @@ namespace visimpl
   , _autoNameSelection( false )
   , _fillPlots( true )
   , _autoAddEvents( true )
-  , _autoAddEventSubset( false )
+  , _autoAddEventSubset( true )
   , _autoCalculateCorrelations( true )
   , _defaultCorrelationDeltaTime( 0.125f )
   {
@@ -341,21 +341,21 @@ namespace visimpl
     _mainHistogram->simPlayer( _player );
     _focusedHistogram = _mainHistogram;
 
-      TColorMapper colorMapper;
-      colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
-      colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
-      colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
-      colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
-      colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
+    TColorMapper colorMapper;
+    colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
+    colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
+    colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
+    colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
+    colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
 
-      _mainHistogram->colorMapper( colorMapper );
+    _mainHistogram->colorMapper( colorMapper );
 
-      _mainHistogram->mousePosition( &_lastMousePosition );
-      _mainHistogram->regionPosition( &_regionPercentage );
-      connect( _mainHistogram, SIGNAL( mousePositionChanged( QPoint )),
-               this, SLOT( updateMouseMarker( QPoint )));
+    _mainHistogram->mousePosition( &_lastMousePosition );
+    _mainHistogram->regionPosition( &_regionPercentage );
+    connect( _mainHistogram, SIGNAL( mousePositionChanged( QPoint )),
+             this, SLOT( updateMouseMarker( QPoint )));
 
-
+    _mainHistogram->init( _bins, _zoomFactor );
 
     if( _stackType == T_STACK_FIXED)
     {
@@ -387,115 +387,113 @@ namespace visimpl
       _rows.push_back( mainRow );
       _histograms.push_back( _mainHistogram );
 
-    }
-    //  AddGIDSelection( gids );
 
-    connect( _mainHistogram, SIGNAL( mousePressed( QPoint, float )),
-             this, SLOT( childHistogramPressed( QPoint, float )));
+      //  AddGIDSelection( gids );
 
-    connect( _mainHistogram, SIGNAL( mouseReleased( QPoint, float )),
-             this, SLOT( childHistogramReleased( QPoint, float )));
+      connect( _mainHistogram, SIGNAL( mousePressed( QPoint, float )),
+               this, SLOT( childHistogramPressed( QPoint, float )));
 
-    connect( _mainHistogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
-             this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
+      connect( _mainHistogram, SIGNAL( mouseReleased( QPoint, float )),
+               this, SLOT( childHistogramReleased( QPoint, float )));
 
-    _mainHistogram->init( _bins, _zoomFactor );
+      connect( _mainHistogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
+               this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
 
-    if( _simData->subsetsEvents( ))
-    {
-
-      if( _autoAddEvents && _simData->subsetsEvents( )->numEvents( ) > 0 )
+      if( _simData->subsetsEvents( ))
       {
-        _eventScroll->setVisible( true );
 
-        simil::EventRange timeFrames = _simData->subsetsEvents( )->events( );
-
-        float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
-
-        float startPercentage;
-        float endPercentage;
-
-        unsigned int counter = 0;
-        for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
+        if( _autoAddEvents && _simData->subsetsEvents( )->numEvents( ) > 0 )
         {
-          TimeFrame timeFrame;
-          timeFrame.name = it->first;
+          _eventScroll->setVisible( true );
 
-  //        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
+          simil::EventRange timeFrames = _simData->subsetsEvents( )->events( );
 
-          for( auto time : it->second )
+          float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
+
+          float startPercentage;
+          float endPercentage;
+
+          unsigned int counter = 0;
+          for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
           {
+            TimeFrame timeFrame;
+            timeFrame.name = it->first;
 
-            startPercentage =
-                std::max( 0.0f,
-                          ( time.first - _spikeReport->startTime( )) * invTotal);
+    //        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
 
-            endPercentage =
-                std::min( 1.0f,
-                          ( time.second - _spikeReport->startTime( )) * invTotal);
+            for( auto time : it->second )
+            {
 
-            timeFrame.percentages.push_back(
-                std::make_pair( startPercentage, endPercentage ));
+              startPercentage =
+                  std::max( 0.0f,
+                            ( time.first - _spikeReport->startTime( )) * invTotal);
 
-  //          std::cout << "Region from " << startPercentage
-  //                            << " to " << endPercentage
-  //                            << std::endl;
+              endPercentage =
+                  std::min( 1.0f,
+                            ( time.second - _spikeReport->startTime( )) * invTotal);
+
+              timeFrame.percentages.push_back(
+                  std::make_pair( startPercentage, endPercentage ));
+
+    //          std::cout << "Region from " << startPercentage
+    //                            << " to " << endPercentage
+    //                            << std::endl;
+
+            }
+
+            timeFrame.color = _subsetEventColorPalette[
+              counter %  _subsetEventColorPalette.size( ) ];
+
+            _timeFrames.push_back( timeFrame );
+
+            QLabel* label = new QLabel( timeFrame.name.c_str( ));
+            label->setMinimumHeight( 20 );
+            label->setMinimumWidth( _maxLabelWidth );
+            label->setMaximumWidth( _maxLabelWidth );
+            label->setToolTip( timeFrame.name.c_str( ));
+
+            SubsetEventWidget* subsetWidget = new SubsetEventWidget( );
+            subsetWidget->setSizePolicy( QSizePolicy::Expanding,
+                                               QSizePolicy::Expanding );
+            subsetWidget->timeFrames( &_timeFrames );
+            subsetWidget->setMinimumWidth( _currentCentralMinWidth );
+            subsetWidget->index( counter );
+
+            QCheckBox* checkbox = new QCheckBox();
+
+            EventRow eventrow;
+            eventrow.widget = subsetWidget;
+            eventrow.label = label;
+            eventrow.checkBox = checkbox;
+
+            _subsetRows.push_back( eventrow );
+            _subsetEventWidgets.push_back( subsetWidget );
+
+            _timeFramesLayout->addWidget( label, counter, 0, 1, 1 );
+            _timeFramesLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
+            _timeFramesLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
 
           }
-
-          timeFrame.color = _subsetEventColorPalette[
-            counter %  _subsetEventColorPalette.size( ) ];
-
-          _timeFrames.push_back( timeFrame );
-
-          QLabel* label = new QLabel( timeFrame.name.c_str( ));
-          label->setMinimumHeight( 20 );
-          label->setMinimumWidth( _maxLabelWidth );
-          label->setMaximumWidth( _maxLabelWidth );
-          label->setToolTip( timeFrame.name.c_str( ));
-
-          SubsetEventWidget* subsetWidget = new SubsetEventWidget( );
-          subsetWidget->setSizePolicy( QSizePolicy::Expanding,
-                                             QSizePolicy::Expanding );
-          subsetWidget->timeFrames( &_timeFrames );
-          subsetWidget->setMinimumWidth( _currentCentralMinWidth );
-          subsetWidget->index( counter );
-
-          QCheckBox* checkbox = new QCheckBox();
-
-          EventRow row;
-          row.widget = subsetWidget;
-          row.label = label;
-          row.checkBox = checkbox;
-
-          _subsetRows.push_back( row );
-          _subsetEventWidgets.push_back( subsetWidget );
-
-          _timeFramesLayout->addWidget( label, counter, 0, 1, 1 );
-          _timeFramesLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
-          _timeFramesLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
-
         }
-      }
 
-      if( _autoAddEventSubset )
-      {
-        simil::SubsetMapRange subsets =
-            _spikeReport->subsetsEvents( )->subsets( );
-
-        for( auto it = subsets.first; it != subsets.second; ++it )
+        if( _autoAddEventSubset )
         {
-          GIDUSet subset( it->second.begin( ), it->second.end( ));
-          insertSubset( it->first, subset );
+          simil::SubsetMapRange subsets =
+              _spikeReport->subsetsEvents( )->subsets( );
+
+          for( auto it = subsets.first; it != subsets.second; ++it )
+          {
+            GIDUSet subset( it->second.begin( ), it->second.end( ));
+            insertSubset( it->first, subset );
+          }
         }
       }
+      else
+      {
+        if( _eventScroll )
+          _eventScroll->setVisible( false );
+      }
     }
-    else
-    {
-      if( _eventScroll )
-        _eventScroll->setVisible( false );
-    }
-
   //  CreateSummarySpikes( );
   //  UpdateGradientColors( );
     update( );
@@ -532,26 +530,26 @@ namespace visimpl
   #endif
 
       {
-      visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
-  //    histogram->filteredGIDs( gids );
-      histogram->colorMapper( _mainHistogram->colorMapper( ));
-  //    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
-  //    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
-  //    histogram->mousePosition( &_lastMousePosition );
-      histogram->setMinimumHeight( _heightPerRow );
-      histogram->setMaximumHeight( _heightPerRow );
-  //    histogram->setMinimumWidth( 500 );
-      std::cout << "Thread " << this->thread( ) << std::endl;
-      _mainLayout->addWidget( histogram, _histograms.size( ), 0, _maxColumns - 2, 1 );
-  //    _mainLayout->addWidget( histogram );
-      _histograms.push_back( histogram );
-
-      histogram->init( _bins, _zoomFactor );
-  //    CreateSummarySpikes( );
-  //    UpdateGradientColors( );
-
-      update( );
-
+//      visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
+//  //    histogram->filteredGIDs( gids );
+//      histogram->colorMapper( _mainHistogram->colorMapper( ));
+//  //    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
+//  //    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
+//  //    histogram->mousePosition( &_lastMousePosition );
+//      histogram->setMinimumHeight( _heightPerRow );
+//      histogram->setMaximumHeight( _heightPerRow );
+//  //    histogram->setMinimumWidth( 500 );
+//      std::cout << "Thread " << this->thread( ) << std::endl;
+//      _mainLayout->addWidget( histogram, _histograms.size( ), 0, _maxColumns - 2, 1 );
+//  //    _mainLayout->addWidget( histogram );
+//      _histograms.push_back( histogram );
+//
+//      histogram->init( _bins, _zoomFactor );
+//  //    CreateSummarySpikes( );
+//  //    UpdateGradientColors( );
+//
+//      update( );
+        insertSubset( selection );
       }
 
     }

@@ -99,6 +99,9 @@ void MainWindow::init( const std::string& zeqUri )
   connect( _ui->actionOpenSWCFile, SIGNAL( triggered( )),
            this, SLOT( openHDF5ThroughDialog( )));
 
+  connect( _ui->actionHome, SIGNAL( triggered( )),
+           _openGLWidget, SLOT( updateSelection( )));
+
 #ifdef VISIMPL_USE_ZEROEQ
   _ui->actionShowSelection->setEnabled( true );
   _ui->actionShowSelection->setChecked( true );
