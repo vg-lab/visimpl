@@ -72,6 +72,8 @@ public slots:
 
   void openBlueConfigThroughDialog( void );
 
+  void aboutDialog( void );
+
   void PlayPause( bool notify = true );
   void Play( bool notify = true );
   void Pause( bool notify = true );
@@ -94,6 +96,8 @@ protected slots:
 
   void HistogramClicked( visimpl::MultiLevelHistogram* );
 
+  void playAtButtonClicked( void );
+
 #endif
 
   void loadComplete( void );
@@ -103,28 +107,18 @@ protected:
   void resizeEvent(QResizeEvent * event);
   void configurePlayer( void );
 
+  void initSummaryWidget( void );
+  void initPlaybackDock( void );
+
+
 #ifdef VISIMPL_USE_ZEROEQ
 
   void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected );
   void _setZeqUri( const std::string& );
-//  static void* _Subscriber( void* subscriber );
-
-  bool _zeqConnection;
-
-  std::string _zeqUri;
-
-  servus::URI _uri;
-  zeroeq::Subscriber* _subscriber;
-  zeroeq::Publisher* _publisher;
-
-//  pthread_t _subscriberThread;
-
-  std::thread* _thread;
 
 #endif
 
-  void initSummaryWidget( void );
-  void initPlaybackDock( void );
+  Ui::MainWindow* _ui;
 
   QString _lastOpenedFileName;
 
@@ -135,13 +129,16 @@ protected:
 
   simil::SimulationPlayer* _player;
 
-  simil::SubsetEventManager* _subsetEventManager;
+//  simil::SubsetEventManager* _subsetEventManager;
+
+  bool _autoAddAvailableSubsets;
 
   // Playback Control
   QDockWidget* _simulationDock;
   QPushButton* _playButton;
   CustomSlider* _simSlider;
   QPushButton* _repeatButton;
+  QPushButton* _goToButton;
   bool _playing;
 
   QIcon _playIcon;
@@ -150,9 +147,21 @@ protected:
   QLabel* _startTimeLabel;
   QLabel* _endTimeLabel;
 
-private:
+#ifdef VISIMPL_USE_ZEROEQ
 
-  Ui::MainWindow* _ui;
+  bool _zeqConnection;
+
+  std::string _zeqUri;
+
+  servus::URI _uri;
+  zeroeq::Subscriber* _subscriber;
+  zeroeq::Publisher* _publisher;
+
+  std::thread* _thread;
+
+#endif
+
+private:
 
   QWidget* _contentWidget;
   QGridLayout* _stackLayout;

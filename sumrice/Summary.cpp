@@ -22,7 +22,7 @@
 
 unsigned int visimpl::Selection::_counter = 0;
 
-unsigned int DEFAULT_BINS = 250;
+unsigned int DEFAULT_BINS = 2500;
 float DEFAULT_ZOOM_FACTOR = 1.5f;
 
 static QString colorScaleToString( visimpl::TColorScale colorScale )
@@ -49,8 +49,10 @@ namespace visimpl
   , _bins( DEFAULT_BINS )
   , _zoomFactor( DEFAULT_ZOOM_FACTOR )
   , _gridLinesNumber( 3 )
+  , _simData( nullptr )
   , _spikeReport( nullptr )
   , _voltageReport( nullptr )
+  , _player( nullptr )
   , _mainHistogram( nullptr )
   , _detailHistogram( nullptr )
   , _focusedHistogram( nullptr )
@@ -61,9 +63,8 @@ namespace visimpl
   , _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
   , _colorLocal( 0, 0, 128, 50 )
   , _colorGlobal( 255, 0, 0, 100 )
-  , _subsetEventManager( nullptr )
   , _timeFramesLayout( nullptr )
-  , _subsetScroll( nullptr )
+  , _eventScroll( nullptr )
   , _syncScrollsVertically( true )
   , _heightPerRow( 50 )
   , _maxLabelWidth( 100 )
@@ -80,6 +81,11 @@ namespace visimpl
   , _regionEdgePointUpper( -1 )
   , _regionEdgeUpper( 0.0f )
   , _autoNameSelection( false )
+  , _fillPlots( true )
+  , _autoAddEvents( true )
+  , _autoAddEventSubset( true )
+  , _autoCalculateCorrelations( true )
+  , _defaultCorrelationDeltaTime( 0.125f )
   {
 
     setMouseTracking( true );
@@ -102,17 +108,17 @@ namespace visimpl
       _timeFramesLayout->setAlignment( Qt::AlignTop );
       _timeFramesLayout->setVerticalSpacing( 0 );
 
-      _subsetScroll = new QScrollArea();
+      _eventScroll = new QScrollArea();
       QWidget* subsetWidget = new QWidget( );
 
       subsetWidget->setLayout( _timeFramesLayout );
-      _subsetScroll->setWidget( subsetWidget );
-      _subsetScroll->setWidgetResizable( true );
-      _subsetScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-      _subsetScroll->setVisible( false );
-      _subsetScroll->setMaximumHeight( 200 );
+      _eventScroll->setWidget( subsetWidget );
+      _eventScroll->setWidgetResizable( true );
+      _eventScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _eventScroll->setVisible( false );
+      _eventScroll->setMaximumHeight( 200 );
 
-      connect( _subsetScroll->horizontalScrollBar( ),
+      connect( _eventScroll->horizontalScrollBar( ),
                SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
 
       QWidget* header = new QWidget( );
@@ -248,7 +254,7 @@ namespace visimpl
                SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
 
       auto splitter = new QSplitter( Qt::Vertical, this );
-      splitter->addWidget( _subsetScroll );
+      splitter->addWidget( _eventScroll );
       splitter->addWidget( _histogramScroll );
       upperLayout->addWidget( splitter );
       upperLayout->addWidget( foot );
@@ -271,33 +277,54 @@ namespace visimpl
     // Fill the palette with ColorbBewer qualitative palette with 10 classes
     // but rearranging to have consecutive colors with different hue.
     _subsetEventColorPalette.reserve( 10 );
-    _subsetEventColorPalette.push_back( QColor( "#a6cee3" ));
+//    _subsetEventColorPalette.push_back( QColor( "#a6cee3" ));
     _subsetEventColorPalette.push_back( QColor( "#b2df8a" ));
-    _subsetEventColorPalette.push_back( QColor( "#fb9a99" ));
+//    _subsetEventColorPalette.push_back( QColor( "#fb9a99" ));
     _subsetEventColorPalette.push_back( QColor( "#fdbf6f" ));
     _subsetEventColorPalette.push_back( QColor( "#cab2d6" ));
-    _subsetEventColorPalette.push_back( QColor( "#1f78b4" ));
+    _subsetEventColorPalette.push_back( QColor( "#b15928" ));
+    _subsetEventColorPalette.push_back( QColor( "#ffff99" ));
+//    _subsetEventColorPalette.push_back( QColor( "#1f78b4" ));
     _subsetEventColorPalette.push_back( QColor( "#33a02c" ));
-    _subsetEventColorPalette.push_back( QColor( "#e31a1c" ));
+//    _subsetEventColorPalette.push_back( QColor( "#e31a1c" ));
     _subsetEventColorPalette.push_back( QColor( "#ff7f00" ));
     _subsetEventColorPalette.push_back( QColor( "#6a3d9a" ));
 
   }
 
-  void Summary::Init( simil::SpikeData* spikes_,
-                      const simil::TGIDSet& gids_,
-                      simil::SubsetEventManager* subsetEventMng )
+  void Summary::Init( simil::SimulationData* data_ )
   {
-    _spikeReport = spikes_;
-    _gids = GIDUSet( gids_.begin( ), gids_.end( ));
 
-    _subsetEventManager = subsetEventMng;
+    _simData = data_;
+
+    switch( data_->simulationType( ))
+    {
+      case simil::TSimSpikes:
+      {
+        simil::SpikeData* spikeData = dynamic_cast< simil::SpikeData* >( _simData );
+        _spikeReport = spikeData;
+
+        break;
+      }
+      case simil::TSimVoltages:
+        break;
+      default:
+        break;
+    }
+
+    _gids = GIDUSet( data_->gids( ).begin( ), data_->gids( ).end( ));
+
+
+
+
 
     Init( );
   }
 
   void Summary::Init( void )
   {
+    if( !_spikeReport )
+      return;
 
     _mainHistogram = new visimpl::MultiLevelHistogram( *_spikeReport );
     _mainHistogram->setMinimumHeight( _heightPerRow );
@@ -311,23 +338,24 @@ namespace visimpl
     _mainHistogram->gridLinesNumber( _gridLinesNumber );
     _mainHistogram->firstHistogram( true );
     _mainHistogram->setMinimumWidth( _currentCentralMinWidth );
-    _focusedHistogram = _mainHistogram;
+    _mainHistogram->simPlayer( _player );
+//    _focusedHistogram = _mainHistogram;
 
-      TColorMapper colorMapper;
-      colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
-      colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
-      colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
-      colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
-      colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
+    TColorMapper colorMapper;
+    colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
+    colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
+    colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
+    colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
+    colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
 
-      _mainHistogram->colorMapper( colorMapper );
+    _mainHistogram->colorMapper( colorMapper );
 
-      _mainHistogram->mousePosition( &_lastMousePosition );
-      _mainHistogram->regionPosition( &_regionPercentage );
-      connect( _mainHistogram, SIGNAL( mousePositionChanged( QPoint )),
-               this, SLOT( updateMouseMarker( QPoint )));
+    _mainHistogram->mousePosition( &_lastMousePosition );
+    _mainHistogram->regionPosition( &_regionPercentage );
+    connect( _mainHistogram, SIGNAL( mousePositionChanged( QPoint )),
+             this, SLOT( updateMouseMarker( QPoint )));
 
-
+    _mainHistogram->init( _bins, _zoomFactor );
 
     if( _stackType == T_STACK_FIXED)
     {
@@ -338,7 +366,7 @@ namespace visimpl
     else if( _stackType == T_STACK_EXPANDABLE )
     {
 
-      StackRow mainRow;
+      HistogramRow mainRow;
 
       mainRow.histogram = _mainHistogram;
       mainRow.histogram->_timeFrames = &_timeFrames;
@@ -359,108 +387,113 @@ namespace visimpl
       _rows.push_back( mainRow );
       _histograms.push_back( _mainHistogram );
 
-    }
-    //  AddGIDSelection( gids );
 
-    connect( _mainHistogram, SIGNAL( mousePressed( QPoint, float )),
-             this, SLOT( childHistogramPressed( QPoint, float )));
+      //  AddGIDSelection( gids );
 
-    connect( _mainHistogram, SIGNAL( mouseReleased( QPoint, float )),
-             this, SLOT( childHistogramReleased( QPoint, float )));
+      connect( _mainHistogram, SIGNAL( mousePressed( QPoint, float )),
+               this, SLOT( childHistogramPressed( QPoint, float )));
 
-    connect( _mainHistogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
-             this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
+      connect( _mainHistogram, SIGNAL( mouseReleased( QPoint, float )),
+               this, SLOT( childHistogramReleased( QPoint, float )));
 
-    _mainHistogram->init( _bins, _zoomFactor );
+      connect( _mainHistogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
+               this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
 
-    if( _subsetEventManager )
-    {
-      _subsetScroll->setVisible( true );
-
-      simil::TimeFrameRange timeFrames = _subsetEventManager->timeFrames( );
-
-      float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
-
-      float startPercentage;
-      float endPercentage;
-
-      unsigned int counter = 0;
-      for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
+      if( _simData->subsetsEvents( ))
       {
-        TimeFrame timeFrame;
-        timeFrame.name = it->first;
 
-//        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
-
-        for( auto time : it->second )
+        if( _autoAddEvents && _simData->subsetsEvents( )->numEvents( ) > 0 )
         {
+          _eventScroll->setVisible( true );
 
-          startPercentage =
-              std::max( 0.0f,
-                        ( time.first - _spikeReport->startTime( )) * invTotal);
+          simil::EventRange timeFrames = _simData->subsetsEvents( )->events( );
 
-          endPercentage =
-              std::min( 1.0f,
-                        ( time.second - _spikeReport->startTime( )) * invTotal);
+          float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
 
-          timeFrame.percentages.push_back(
-              std::make_pair( startPercentage, endPercentage ));
+          float startPercentage;
+          float endPercentage;
 
-//          std::cout << "Region from " << startPercentage
-//                            << " to " << endPercentage
-//                            << std::endl;
+          unsigned int counter = 0;
+          for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
+          {
+            TimeFrame timeFrame;
+            timeFrame.name = it->first;
 
+    //        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
+
+            for( auto time : it->second )
+            {
+
+              startPercentage =
+                  std::max( 0.0f,
+                            ( time.first - _spikeReport->startTime( )) * invTotal);
+
+              endPercentage =
+                  std::min( 1.0f,
+                            ( time.second - _spikeReport->startTime( )) * invTotal);
+
+              timeFrame.percentages.push_back(
+                  std::make_pair( startPercentage, endPercentage ));
+
+    //          std::cout << "Region from " << startPercentage
+    //                            << " to " << endPercentage
+    //                            << std::endl;
+
+            }
+
+            timeFrame.color = _subsetEventColorPalette[
+              counter %  _subsetEventColorPalette.size( ) ];
+
+            _timeFrames.push_back( timeFrame );
+
+            QLabel* label = new QLabel( timeFrame.name.c_str( ));
+            label->setMinimumHeight( 20 );
+            label->setMinimumWidth( _maxLabelWidth );
+            label->setMaximumWidth( _maxLabelWidth );
+            label->setToolTip( timeFrame.name.c_str( ));
+
+            SubsetEventWidget* subsetWidget = new SubsetEventWidget( );
+            subsetWidget->setSizePolicy( QSizePolicy::Expanding,
+                                               QSizePolicy::Expanding );
+            subsetWidget->timeFrames( &_timeFrames );
+            subsetWidget->setMinimumWidth( _currentCentralMinWidth );
+            subsetWidget->index( counter );
+
+            QCheckBox* checkbox = new QCheckBox();
+
+            EventRow eventrow;
+            eventrow.widget = subsetWidget;
+            eventrow.label = label;
+            eventrow.checkBox = checkbox;
+
+            _subsetRows.push_back( eventrow );
+            _subsetEventWidgets.push_back( subsetWidget );
+
+            _timeFramesLayout->addWidget( label, counter, 0, 1, 1 );
+            _timeFramesLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
+            _timeFramesLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
+
+          }
         }
 
-        timeFrame.color = _subsetEventColorPalette[
-          counter %  _subsetEventColorPalette.size( ) ];
+        if( _autoAddEventSubset )
+        {
+          simil::SubsetMapRange subsets =
+              _spikeReport->subsetsEvents( )->subsets( );
 
-        _timeFrames.push_back( timeFrame );
-
-        QLabel* label = new QLabel( timeFrame.name.c_str( ));
-        label->setMinimumHeight( 20 );
-        label->setMinimumWidth( _maxLabelWidth );
-        label->setMaximumWidth( _maxLabelWidth );
-        label->setToolTip( timeFrame.name.c_str( ));
-
-        SubsetEventWidget* subsetWidget = new SubsetEventWidget( );
-        subsetWidget->setSizePolicy( QSizePolicy::Expanding,
-                                           QSizePolicy::Expanding );
-        subsetWidget->timeFrames( &_timeFrames );
-        subsetWidget->setMinimumWidth( _currentCentralMinWidth );
-        subsetWidget->index( counter );
-
-        QCheckBox* checkbox = new QCheckBox();
-
-        TimeFrameRow row;
-        row.widget = subsetWidget;
-        row.label = label;
-        row.checkBox = checkbox;
-
-        _subsetRows.push_back( row );
-        _subsetEventWidgets.push_back( subsetWidget );
-
-        _timeFramesLayout->addWidget( label, counter, 0, 1, 1 );
-        _timeFramesLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
-        _timeFramesLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
-
+          for( auto it = subsets.first; it != subsets.second; ++it )
+          {
+            GIDUSet subset( it->second.begin( ), it->second.end( ));
+            insertSubset( it->first, subset );
+          }
+        }
       }
-
-      simil::GIDMapRange subsets = _subsetEventManager->subsets( );
-
-      for( auto it = subsets.first; it != subsets.second; ++it )
+      else
       {
-        GIDUSet subset( it->second.begin( ), it->second.end( ));
-        insertSubset( it->first, subset );
+        if( _eventScroll )
+          _eventScroll->setVisible( false );
       }
-
     }
-    else
-    {
-      if( _subsetScroll )
-        _subsetScroll->setVisible( false );
-    }
-
   //  CreateSummarySpikes( );
   //  UpdateGradientColors( );
     update( );
@@ -497,26 +530,26 @@ namespace visimpl
   #endif
 
       {
-      visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
-  //    histogram->filteredGIDs( gids );
-      histogram->colorMapper( _mainHistogram->colorMapper( ));
-  //    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
-  //    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
-  //    histogram->mousePosition( &_lastMousePosition );
-      histogram->setMinimumHeight( _heightPerRow );
-      histogram->setMaximumHeight( _heightPerRow );
-  //    histogram->setMinimumWidth( 500 );
-      std::cout << "Thread " << this->thread( ) << std::endl;
-      _mainLayout->addWidget( histogram, _histograms.size( ), 0, _maxColumns - 2, 1 );
-  //    _mainLayout->addWidget( histogram );
-      _histograms.push_back( histogram );
-
-      histogram->init( _bins, _zoomFactor );
-  //    CreateSummarySpikes( );
-  //    UpdateGradientColors( );
-
-      update( );
-
+//      visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
+//  //    histogram->filteredGIDs( gids );
+//      histogram->colorMapper( _mainHistogram->colorMapper( ));
+//  //    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
+//  //    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
+//  //    histogram->mousePosition( &_lastMousePosition );
+//      histogram->setMinimumHeight( _heightPerRow );
+//      histogram->setMaximumHeight( _heightPerRow );
+//  //    histogram->setMinimumWidth( 500 );
+//      std::cout << "Thread " << this->thread( ) << std::endl;
+//      _mainLayout->addWidget( histogram, _histograms.size( ), 0, _maxColumns - 2, 1 );
+//  //    _mainLayout->addWidget( histogram );
+//      _histograms.push_back( histogram );
+//
+//      histogram->init( _bins, _zoomFactor );
+//  //    CreateSummarySpikes( );
+//  //    UpdateGradientColors( );
+//
+//      update( );
+        insertSubset( selection );
       }
 
     }
@@ -570,7 +603,7 @@ namespace visimpl
 
   void Summary::insertSubset( const std::string& name, const GIDUSet& subset )
   {
-    StackRow currentRow;
+    HistogramRow currentRow;
 
     visimpl::MultiLevelHistogram* histogram =
         new visimpl::MultiLevelHistogram( *_spikeReport );
@@ -590,6 +623,8 @@ namespace visimpl
     histogram->setMaximumHeight( _heightPerRow );
     histogram->setMinimumWidth( _currentCentralMinWidth );
     //    histogram->setMinimumWidth( 500 );
+
+    histogram->simPlayer( _player );
 
     histogram->_timeFrames = &_timeFrames;
 
@@ -648,10 +683,11 @@ namespace visimpl
       emit histogramClicked( percentage );
       return;
     }
+
     if( _focusedHistogram != sender( ))
     {
-      if( !_focusedHistogram )
-        _regionWidth = 20.0f / _histogramScroll->width( );
+//      if( !_focusedHistogram )
+//        _regionWidth = 10.0f / nativeParentWidget( )->width( );
 
       _focusedHistogram =
               dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
@@ -676,8 +712,8 @@ namespace visimpl
     else if( _overRegionEdgeUpper )
     {
       std::cout << "Selected upper edge" << std::endl;
-      _selectedEdgeUpper = true;
       _selectedEdgeLower = false;
+      _selectedEdgeUpper = true;
     }
     else
     {
@@ -688,33 +724,15 @@ namespace visimpl
 
        SetFocusRegionPosition( cursorLocalPoint );
 
-  //    _regionGlobalPosition.setX( std::max( _regionWidthPixels, cursorLocalPoint.x(  )));
-  //    _regionGlobalPosition.setX( std::min( cursorLocalPoint.x(  ),
-  //                          _focusedHistogram->width( ) - _regionWidthPixels));
-  //
-  //    //TODO
-  //    _regionPercentage = percentage;
-  //    _regionEdgeLower = std::max( percentage - _regionWidth, _regionWidth );
-  //    _regionEdgePointLower = _regionGlobalPosition.x( ) - _regionWidthPixels;
-  //    _regionEdgeUpper = std::min( percentage + _regionWidth, _regionWidth );
-  //    _regionEdgePointUpper = _regionGlobalPosition.x( ) + _regionWidthPixels;
-  //    std::cout << "Focus region bounds " << _regionEdgeLower
-  //              << " " << percentage
-  //              << " " << _regionEdgeUpper
-  //              << std::endl;
-
       _selectedEdgeLower = _selectedEdgeUpper = false;
     }
 
     _mousePressed = true;
 
-    if( _stackType == T_STACK_EXPANDABLE )
+    for( auto histogram : _histograms )
     {
-      for( auto histogram : _histograms )
-      {
-          histogram->paintRegion( histogram == _focusedHistogram );
-        histogram->update( );
-      }
+      histogram->paintRegion( histogram == _focusedHistogram );
+      histogram->update( );
     }
 
   //  std::cout << "Focused mouse pressed" << std::endl;
@@ -779,11 +797,7 @@ namespace visimpl
 
     _regionPercentage = float( _regionLocalPosition.x( )) / _focusedHistogram->width( );
 
-  //    _regionPosition = position;
-    _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
-    _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-    _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
-    _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
+    calculateRegionBounds( );
 
     _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
     _focusWidget->update( );
@@ -791,33 +805,38 @@ namespace visimpl
 
   void Summary::updateRegionBounds( void )
   {
-    _regionLocalPosition =
-        QPoint( _focusedHistogram->width( ) * _regionPercentage,
-                _focusedHistogram->height( ) * 0.5f );
+    if( _focusedHistogram )
+    {
+      _regionLocalPosition =
+          QPoint( _focusedHistogram->width( ) * _regionPercentage,
+                  _focusedHistogram->height( ) * 0.5f );
 
-//    std::cout << "Focus width: " << _focusedHistogram->width( ) << std::endl;
+  //    std::cout << "Focus width: " << _focusedHistogram->width( ) << std::endl;
 
-    _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
+      _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
 
-    _regionLocalPosition.setX(
-        std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
+      _regionLocalPosition.setX(
+          std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
 
-    _regionLocalPosition.setX( std::min( _regionLocalPosition.x(  ),
-                          _focusedHistogram->width( ) - _regionWidthPixels));
+      _regionLocalPosition.setX( std::min( _regionLocalPosition.x(  ),
+                            _focusedHistogram->width( ) - _regionWidthPixels));
 
-  //    _regionPosition = position;
-    _regionEdgeLower = std::max( _regionPercentage - _regionWidth,
-                                 _regionWidth );
+    //    _regionPosition = position;
+      calculateRegionBounds( );
 
+      _focusWidget->update( );
+    }
+  }
+
+  void Summary::calculateRegionBounds( void )
+  {
+    _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
     _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-
-    _regionEdgeUpper = std::min( _regionPercentage + _regionWidth,
-                                 1.0f - _regionWidth);
-
+    _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
     _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
 
-    _focusWidget->update( );
   }
+
 
   void Summary::updateMouseMarker( QPoint point )
   {
@@ -854,14 +873,11 @@ namespace visimpl
 
           _regionWidth = std::max( regionMinSize, std::min( 0.5f, _regionWidth ));
 
-          _regionWidthPixels = _regionWidth * focusedHistogram->width( );
+          _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
 
-          _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
-          _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-          _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
-          _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
+          calculateRegionBounds( );
 
-           _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+          _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
           _focusWidget->update( );
 
           QApplication::setOverrideCursor( Qt::SizeHorCursor );
@@ -880,17 +896,9 @@ namespace visimpl
           _regionWidth = std::max( regionMinSize,
                                    std::min( 0.5f, _regionWidth ));
 
-          _regionWidthPixels = _regionWidth * focusedHistogram->width( );
+          _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
 
-          _regionEdgeLower = std::max( _regionPercentage - _regionWidth,
-                                       _regionWidth );
-
-          _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-
-          _regionEdgeUpper = std::min( _regionPercentage + _regionWidth,
-                                       1.0f - _regionWidth);
-
-          _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
+          calculateRegionBounds( );
 
           _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage,
                                     _regionWidth );
@@ -1009,6 +1017,25 @@ namespace visimpl
     }
   }
 
+  void Summary::fillPlots( bool fillPlots_ )
+  {
+    _fillPlots = fillPlots_;
+
+    for( auto histogram : _histograms )
+    {
+      histogram->fillPlots( _fillPlots );
+      histogram->update( );
+    }
+
+    _focusWidget->fillPlots( _fillPlots );
+    _focusWidget->update( );
+  }
+
+  void Summary::toggleAutoNameSelections( void )
+  {
+    _autoNameSelection = !_autoNameSelection;
+  }
+
   unsigned int Summary::bins( void )
   {
     return _bins;
@@ -1120,7 +1147,7 @@ namespace visimpl
     }
 
     if( _subsetRows.size( ) == 0 )
-      _subsetScroll->setVisible( false );
+      _eventScroll->setVisible( false );
 
     update( );
   }
@@ -1208,6 +1235,20 @@ namespace visimpl
     return _gridLinesNumber;
   }
 
+  void Summary::simulationPlayer( simil::SimulationPlayer* player )
+  {
+    _player = player;
+
+    for( auto histogram : _histograms )
+      histogram->simPlayer( _player );
+  }
+
+  void Summary::repaintHistograms( void )
+  {
+    for( auto histogram : _histograms )
+      histogram->update( );
+  }
+
   void Summary::wheelEvent( QWheelEvent* event_ )
   {
     if( event_->modifiers( ).testFlag( Qt::ControlModifier ))
@@ -1231,6 +1272,14 @@ namespace visimpl
 //        subsetEventWidget->update( );
       }
 
+      int pos = 0;
+      if( sender( ) == _histogramScroll )
+        pos = _eventScroll->horizontalScrollBar( )->value( );
+      else
+        pos = _eventScroll->horizontalScrollBar( )->value( );
+
+      moveScrollSync( pos );
+
       updateRegionBounds( );
 
       event_->accept( );
@@ -1244,7 +1293,7 @@ namespace visimpl
   {
     if( _syncScrollsVertically )
     {
-        _subsetScroll->horizontalScrollBar( )->setValue( newPos );
+        _eventScroll->horizontalScrollBar( )->setValue( newPos );
         _histogramScroll->horizontalScrollBar( )->setValue( newPos );
     }
   }

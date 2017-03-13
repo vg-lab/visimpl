@@ -64,9 +64,7 @@ namespace visimpl
     Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
     virtual ~Summary( ){};
 
-    void Init( simil::SpikeData* spikes_,
-               const simil::TGIDSet& gids_,
-               simil::SubsetEventManager* subsets_ = nullptr );
+    void Init( simil::SimulationData* data_ );
 
     void AddNewHistogram( const visimpl::Selection& selection
   #ifdef VISIMPL_USE_ZEROEQ
@@ -99,10 +97,22 @@ namespace visimpl
 
     unsigned int gridLinesNumber( void );
 
+    void simulationPlayer( simil::SimulationPlayer* player );
+
+    void repaintHistograms( void );
+
   signals:
 
     void histogramClicked( float );
     void histogramClicked( visimpl::MultiLevelHistogram* );
+
+  public slots:
+
+    void bins( int bins_ );
+    void zoomFactor( double zoom );
+    void fillPlots( bool fillPlots_ );
+
+    void toggleAutoNameSelections( void );
 
   protected slots:
 
@@ -119,29 +129,21 @@ namespace visimpl
     void gridLinesNumber( int linesNumber );
 
     void updateMouseMarker( QPoint point );
+    void moveScrollSync( int newPos );
 
-  public slots:
-
-    void bins( int bins_ );
-    void zoomFactor( double zoom );
-
-    void toggleAutoNameSelections( void )
-    {
-      _autoNameSelection = !_autoNameSelection;
-    }
   protected:
 
-    struct StackRow
+    struct HistogramRow
     {
     public:
 
-      StackRow( )
+      HistogramRow( )
       : histogram( nullptr )
       , label( nullptr )
       , checkBox( nullptr )
       { }
 
-      ~StackRow( )
+      ~HistogramRow( )
       { }
 
       visimpl::MultiLevelHistogram* histogram;
@@ -150,17 +152,17 @@ namespace visimpl
 
     };
 
-    struct TimeFrameRow
+    struct EventRow
     {
     public:
 
-      TimeFrameRow( )
+      EventRow( )
       : widget( nullptr )
       , label( nullptr )
       , checkBox( nullptr )
       { }
 
-      ~TimeFrameRow( )
+      ~EventRow( )
       { }
 
       visimpl::SubsetEventWidget* widget;
@@ -174,7 +176,6 @@ namespace visimpl
   protected slots:
 
     void deferredInsertion( void );
-    void moveScrollSync( int newPos );
 
   protected:
 
@@ -197,6 +198,7 @@ namespace visimpl
     void UpdateGradientColors( bool replace = false );
 
     void updateRegionBounds( void );
+    void calculateRegionBounds( void );
     void SetFocusRegionPosition( const QPoint& localPosition );
 
     virtual void wheelEvent( QWheelEvent* event );
@@ -207,8 +209,11 @@ namespace visimpl
     unsigned int _gridLinesNumber;
 
   //  brion::SpikeReport* _spikeReport;
+    simil::SimulationData* _simData;
     simil::SpikeData* _spikeReport;
     brion::CompartmentReport* _voltageReport;
+
+    simil::SimulationPlayer* _player;
 
     GIDUSet _gids;
 
@@ -228,7 +233,7 @@ namespace visimpl
     QColor _colorGlobal;
 
     std::vector< visimpl::MultiLevelHistogram* > _histograms;
-    std::vector< StackRow > _rows;
+    std::vector< HistogramRow > _rows;
 
     FocusFrame* _focusWidget;
 
@@ -240,12 +245,12 @@ namespace visimpl
     QLabel* _globalMaxLabel;
     QLabel* _localMaxLabel;
 
-    simil::SubsetEventManager* _subsetEventManager;
+//    simil::SubsetEventManager* _subsetEventManager;
     std::vector< TimeFrame > _timeFrames;
     QGridLayout* _timeFramesLayout;
-    QScrollArea* _subsetScroll;
+    QScrollArea* _eventScroll;
     std::vector< SubsetEventWidget* > _subsetEventWidgets;
-    std::vector< TimeFrameRow > _subsetRows;
+    std::vector< EventRow > _subsetRows;
 
     bool _syncScrollsVertically;
 
@@ -275,6 +280,11 @@ namespace visimpl
     float _regionEdgeUpper;
 
     bool _autoNameSelection;
+    bool _fillPlots;
+    bool _autoAddEvents;
+    bool _autoAddEventSubset;
+    bool _autoCalculateCorrelations;
+    float _defaultCorrelationDeltaTime;
 
     std::vector< QColor > _subsetEventColorPalette;
 
