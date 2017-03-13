@@ -72,6 +72,8 @@ public slots:
 
   void openBlueConfigThroughDialog( void );
 
+  void aboutDialog( void );
+
   void PlayPause( bool notify = true );
   void Play( bool notify = true );
   void Pause( bool notify = true );

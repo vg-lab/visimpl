@@ -7,12 +7,16 @@
  *          Do not distribute without further notice.
  */
 
+#include <visimpl/version.h>
+
 #include "MainWindow.h"
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
 #include <QGroupBox>
+#include <QShortcut>
+#include <QMessageBox>
 // #include "qt/CustomSlider.h"
 
 #ifdef VISIMPL_USE_GMRVLEX
@@ -62,9 +66,6 @@ MainWindow::MainWindow( QWidget* parent_,
   _ui->actionOpenBlueConfig->setEnabled( false );
 #endif
 
-  connect( _ui->actionQuit, SIGNAL( triggered( )),
-           QApplication::instance(), SLOT( quit( )));
-
 }
 
 void MainWindow::init( const std::string& zeqUri )
@@ -93,11 +94,13 @@ void MainWindow::init( const std::string& zeqUri )
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
            this, SLOT( openBlueConfigThroughDialog( )));
 
-  connect( _ui->actionOpenXMLScene, SIGNAL( triggered( )),
-           this, SLOT( openXMLSceneThroughDialog( )));
+  connect( _ui->actionQuit, SIGNAL( triggered( )),
+           QApplication::instance(), SLOT( quit( )));
 
-  connect( _ui->actionOpenSWCFile, SIGNAL( triggered( )),
-           this, SLOT( openHDF5ThroughDialog( )));
+  // Connect about dialog
+  connect( _ui->actionAbout, SIGNAL( triggered( )),
+           this, SLOT( aboutDialog( )));
+
 
   connect( _ui->actionHome, SIGNAL( triggered( )),
            _openGLWidget, SLOT( updateSelection( )));
@@ -246,6 +249,30 @@ void MainWindow::openHDF5ThroughDialog( void )
 
   openHDF5File( networkFile, simil::TSimSpikes, activityFile );
 }
+
+void MainWindow::aboutDialog( void )
+{
+
+
+  QMessageBox::about(
+    this, tr("About ViSimpl"),
+    tr("<p><BIG><b>ViSimpl - SimPart</b></BIG><br><br>") +
+    tr( "version " ) +
+    tr( visimpl::Version::getString( ).c_str( )) +
+    tr( " (" ) +
+    tr( std::to_string( visimpl::Version::getRevision( )).c_str( )) +
+    tr( ")" ) +
+    tr ("<br><br>GMRV - Universidad Rey Juan Carlos<br><br>"
+        "<a href=www.gmrv.es>www.gmrv.es</a><br>"
+        "<a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
+        "<br>(c) 2015. Universidad Rey Juan Carlos<br><br>"
+        "<img src=':/icons/logoGMRV.png' > &nbsp; &nbsp;"
+        "<img src=':/icons/logoURJC.png' >"
+        "</p>"
+        ""));
+
+}
+
 
 void MainWindow::configurePlayer( void )
 {

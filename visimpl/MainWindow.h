@@ -52,6 +52,8 @@ public slots:
   void openBlueConfigThroughDialog( void );
   void openHDF5ThroughDialog( void );
 
+  void aboutDialog( void );
+
   void PlayPause( bool notify = true );
   void Play( bool notify = true );
   void Pause( bool notify = true );

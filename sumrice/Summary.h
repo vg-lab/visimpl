@@ -198,6 +198,7 @@ namespace visimpl
     void UpdateGradientColors( bool replace = false );
 
     void updateRegionBounds( void );
+    void calculateRegionBounds( void );
     void SetFocusRegionPosition( const QPoint& localPosition );
 
     virtual void wheelEvent( QWheelEvent* event );

@@ -339,7 +339,7 @@ namespace visimpl
     _mainHistogram->firstHistogram( true );
     _mainHistogram->setMinimumWidth( _currentCentralMinWidth );
     _mainHistogram->simPlayer( _player );
-    _focusedHistogram = _mainHistogram;
+//    _focusedHistogram = _mainHistogram;
 
     TColorMapper colorMapper;
     colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
@@ -683,10 +683,11 @@ namespace visimpl
       emit histogramClicked( percentage );
       return;
     }
+
     if( _focusedHistogram != sender( ))
     {
-      if( !_focusedHistogram )
-        _regionWidth = 20.0f / _histogramScroll->width( );
+//      if( !_focusedHistogram )
+//        _regionWidth = 10.0f / nativeParentWidget( )->width( );
 
       _focusedHistogram =
               dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
@@ -711,45 +712,27 @@ namespace visimpl
     else if( _overRegionEdgeUpper )
     {
       std::cout << "Selected upper edge" << std::endl;
-      _selectedEdgeUpper = true;
       _selectedEdgeLower = false;
+      _selectedEdgeUpper = true;
     }
     else
     {
 
       _regionGlobalPosition = position;
-      _regionWidthPixels = _regionWidth * nativeParentWidget( )->width( );
+      _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
 
 
        SetFocusRegionPosition( cursorLocalPoint );
-
-  //    _regionGlobalPosition.setX( std::max( _regionWidthPixels, cursorLocalPoint.x(  )));
-  //    _regionGlobalPosition.setX( std::min( cursorLocalPoint.x(  ),
-  //                          _focusedHistogram->width( ) - _regionWidthPixels));
-  //
-  //    //TODO
-  //    _regionPercentage = percentage;
-  //    _regionEdgeLower = std::max( percentage - _regionWidth, _regionWidth );
-  //    _regionEdgePointLower = _regionGlobalPosition.x( ) - _regionWidthPixels;
-  //    _regionEdgeUpper = std::min( percentage + _regionWidth, _regionWidth );
-  //    _regionEdgePointUpper = _regionGlobalPosition.x( ) + _regionWidthPixels;
-  //    std::cout << "Focus region bounds " << _regionEdgeLower
-  //              << " " << percentage
-  //              << " " << _regionEdgeUpper
-  //              << std::endl;
 
       _selectedEdgeLower = _selectedEdgeUpper = false;
     }
 
     _mousePressed = true;
 
-    if( _stackType == T_STACK_EXPANDABLE )
+    for( auto histogram : _histograms )
     {
-      for( auto histogram : _histograms )
-      {
-          histogram->paintRegion( histogram == _focusedHistogram );
-        histogram->update( );
-      }
+      histogram->paintRegion( histogram == _focusedHistogram );
+      histogram->update( );
     }
 
   //  std::cout << "Focused mouse pressed" << std::endl;
@@ -814,11 +797,7 @@ namespace visimpl
 
     _regionPercentage = float( _regionLocalPosition.x( )) / _focusedHistogram->width( );
 
-  //    _regionPosition = position;
-    _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
-    _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-    _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
-    _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
+    calculateRegionBounds( );
 
     _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
     _focusWidget->update( );
@@ -826,33 +805,38 @@ namespace visimpl
 
   void Summary::updateRegionBounds( void )
   {
-    _regionLocalPosition =
-        QPoint( _focusedHistogram->width( ) * _regionPercentage,
-                _focusedHistogram->height( ) * 0.5f );
+    if( _focusedHistogram )
+    {
+      _regionLocalPosition =
+          QPoint( _focusedHistogram->width( ) * _regionPercentage,
+                  _focusedHistogram->height( ) * 0.5f );
 
-//    std::cout << "Focus width: " << _focusedHistogram->width( ) << std::endl;
+  //    std::cout << "Focus width: " << _focusedHistogram->width( ) << std::endl;
 
-    _regionWidthPixels = _regionWidth * nativeParentWidget( )->width( );
+      _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
 
-    _regionLocalPosition.setX(
-        std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
+      _regionLocalPosition.setX(
+          std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
 
-    _regionLocalPosition.setX( std::min( _regionLocalPosition.x(  ),
-                          _focusedHistogram->width( ) - _regionWidthPixels));
+      _regionLocalPosition.setX( std::min( _regionLocalPosition.x(  ),
+                            _focusedHistogram->width( ) - _regionWidthPixels));
 
-  //    _regionPosition = position;
-    _regionEdgeLower = std::max( _regionPercentage - _regionWidth,
-                                 _regionWidth );
+    //    _regionPosition = position;
+      calculateRegionBounds( );
 
+      _focusWidget->update( );
+    }
+  }
+
+  void Summary::calculateRegionBounds( void )
+  {
+    _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
     _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-
-    _regionEdgeUpper = std::min( _regionPercentage + _regionWidth,
-                                 1.0f - _regionWidth);
-
+    _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
     _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
 
-    _focusWidget->update( );
   }
+
 
   void Summary::updateMouseMarker( QPoint point )
   {
@@ -889,14 +873,11 @@ namespace visimpl
 
           _regionWidth = std::max( regionMinSize, std::min( 0.5f, _regionWidth ));
 
-          _regionWidthPixels = _regionWidth * focusedHistogram->width( );
+          _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
 
-          _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
-          _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-          _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
-          _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
+          calculateRegionBounds( );
 
-           _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+          _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
           _focusWidget->update( );
 
           QApplication::setOverrideCursor( Qt::SizeHorCursor );
@@ -915,17 +896,9 @@ namespace visimpl
           _regionWidth = std::max( regionMinSize,
                                    std::min( 0.5f, _regionWidth ));
 
-          _regionWidthPixels = _regionWidth * focusedHistogram->width( );
+          _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
 
-          _regionEdgeLower = std::max( _regionPercentage - _regionWidth,
-                                       _regionWidth );
-
-          _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
-
-          _regionEdgeUpper = std::min( _regionPercentage + _regionWidth,
-                                       1.0f - _regionWidth);
-
-          _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
+          calculateRegionBounds( );
 
           _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage,
                                     _regionWidth );

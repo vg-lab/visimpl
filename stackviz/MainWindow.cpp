@@ -7,12 +7,16 @@
  *          Do not distribute without further notice.
  */
 
+#include <stackviz/version.h>
+
 #include "MainWindow.h"
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
 #include <QInputDialog>
+#include <QMessageBox>
+#include <QShortcut>
 
 #include <boost/bind.hpp>
 
@@ -57,6 +61,10 @@ MainWindow::MainWindow( QWidget* parent_ )
 
   connect( _ui->actionQuit, SIGNAL( triggered( )),
            QApplication::instance(), SLOT( quit( )));
+
+  // Connect about dialog
+  connect( _ui->actionAbout, SIGNAL( triggered( )),
+           this, SLOT( aboutDialog( )));
 
   _columnsNumber = 100;
   resizingEnabled = false;
@@ -203,6 +211,28 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
    }
 #endif
+
+}
+
+void MainWindow::aboutDialog( void )
+{
+
+  QMessageBox::about(
+    this, tr("About ViSimpl"),
+    tr("<p><BIG><b>ViSimpl - StackViz</b></BIG><br><br>") +
+    tr( "version " ) +
+    tr( stackviz::Version::getString( ).c_str( )) +
+    tr( " (" ) +
+    tr( std::to_string( stackviz::Version::getRevision( )).c_str( )) +
+    tr( ")" ) +
+    tr ("<br><br>GMRV - Universidad Rey Juan Carlos<br><br>"
+        "<a href=www.gmrv.es>www.gmrv.es</a><br>"
+        "<a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
+        "<br>(c) 2015. Universidad Rey Juan Carlos<br><br>"
+        "<img src=':/icons/logoGMRV.png' > &nbsp; &nbsp;"
+        "<img src=':/icons/logoURJC.png' >"
+        "</p>"
+        ""));
 
 }
 
@@ -391,27 +421,27 @@ void MainWindow::initSummaryWidget( )
   connect( _summary, SIGNAL( histogramClicked( visimpl::MultiLevelHistogram* )),
              this, SLOT( HistogramClicked( visimpl::MultiLevelHistogram* )));
 
-  simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
-
-  for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
-  {
-    cc.compute( "grclayer", event );
-  }
-
-  for( auto name : cc.correlationNames( ))
-  {
-    simil::Correlation* correlation = cc.correlation( name );
-
-    visimpl::Selection selection;
-    selection.name = name;
-    for( auto value : correlation->values )
-    {
-      if( value.second.hit > 0.7f )
-        selection.gids.insert( value.first );
-    }
-
-    _summary->AddNewHistogram( selection );
-  }
+//  simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
+//
+//  for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
+//  {
+//    cc.compute( "grclayer", event );
+//  }
+//
+//  for( auto name : cc.correlationNames( ))
+//  {
+//    simil::Correlation* correlation = cc.correlation( name );
+//
+//    visimpl::Selection selection;
+//    selection.name = name;
+//    for( auto value : correlation->values )
+//    {
+//      if( value.second.hit > 0.7f )
+//        selection.gids.insert( value.first );
+//    }
+//
+//    _summary->AddNewHistogram( selection );
+//  }
 }
 
 void MainWindow::PlayPause( bool notify )
