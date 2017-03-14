@@ -39,6 +39,7 @@ include(Common)
 option(VISIMPL_WITH_ZEQ "VISIMPL_WITH_ZEQ" ON)
 option(VISIMPL_WITH_GMRVLEX "VISIMPL_WITH_GMRVLEX" ON)
 
+common_find_package( GLM REQUIRED SYSTEM )
 common_find_package( Qt5Core 5.4 REQUIRED )
 common_find_package( Qt5Gui 5.4 REQUIRED )
 common_find_package( Qt5Widgets 5.4 REQUIRED )
