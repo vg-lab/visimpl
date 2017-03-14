@@ -52,6 +52,8 @@ public slots:
   void openBlueConfigThroughDialog( void );
   void openHDF5ThroughDialog( void );
 
+  void aboutDialog( void );
+
   void PlayPause( bool notify = true );
   void Play( bool notify = true );
   void Pause( bool notify = true );
@@ -60,6 +62,7 @@ public slots:
   void PlayAt( bool notify = true );
   void PlayAt( float, bool notify = true );
   void PlayAt( int, bool notify = true );
+  void requestPlayAt( float );
   void Restart( bool notify = true );
   void GoToEnd( bool notify = true );
 
@@ -89,6 +92,7 @@ protected slots:
 #endif
 
   void ClearSelection( void );
+  void playAtButtonClicked( void );
 
 protected:
 
@@ -106,6 +110,8 @@ protected:
 
 #endif
 
+  Ui::MainWindow* _ui;
+
   QString _lastOpenedFileName;
   QIcon _playIcon;
   QIcon _pauseIcon;
@@ -116,9 +122,8 @@ private:
   void initSimColorDock( void );
   void initSummaryWidget( void );
 
-  Ui::MainWindow* _ui;
   OpenGLWidget* _openGLWidget;
-  Summary* _summary;
+  visimpl::Summary* _summary;
 
   QDockWidget* _simulationDock;
   QSlider* _simSlider;
@@ -126,6 +131,7 @@ private:
   QLabel* _startTimeLabel;
   QLabel* _endTimeLabel;
   QPushButton* _repeatButton;
+  QPushButton* _goToButton;
 
   QDockWidget* _simConfigurationDock;
   TransferFunctionEditor* _tfEditor;

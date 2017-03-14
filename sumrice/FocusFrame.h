@@ -33,6 +33,8 @@ public:
   QColor colorGlobal( void );
   void colorGlobal( const QColor& );
 
+  void fillPlots( bool fillPlots_ );
+
 protected:
 
   QPolygonF _curveLocal;
@@ -50,6 +52,9 @@ protected:
 
   QColor _colorLocal;
   QColor _colorGlobal;
+
+  bool _fillPlots;
+
 };
 
 

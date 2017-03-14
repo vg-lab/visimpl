@@ -27,16 +27,16 @@ set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 
 set(STACKVIZ_SOURCES
   ${PROJECT_BINARY_DIR}/src/stackviz/version.cpp
-  stackviz.cpp
-  MainWindow.cpp
   stackviz.ui
   resources.qrc
+  stackviz.cpp
+  MainWindow.cpp
 )
 
 set(STACKVIZ_HEADERS
   ${PROJECT_BINARY_DIR}/include/stackviz/version.h
   MainWindow.h
-  log.h
+  log.h  
 )
 
 

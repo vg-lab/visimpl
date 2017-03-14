@@ -40,34 +40,39 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
                             zeqUri
 #endif
   )
-  : QOpenGLWidget( parent_, windowsFlags_ )
+: QOpenGLWidget( parent_, windowsFlags_ )
 #ifdef VISIMPL_USE_ZEROEQ
-  , _zeqUri( zeqUri )
+, _zeqUri( zeqUri )
 #endif
-  , _fpsLabel( this )
-  , _showFps( false )
-  , _wireframe( false )
-  , _focusOnSelection( paintNeurons_ )
-  , _pendingSelection( false )
-  , _frameCount( 0 )
-  , _mouseX( 0 )
-  , _mouseY( 0 )
-  , _rotation( false )
-  , _translation( false )
-  , _idleUpdate( true )
-  , _paint( false )
-  , _currentClearColor( 20, 20, 20, 0 )
-  , _particlesShader( nullptr )
-  , _particleSystem( nullptr )
-  , _simulationType( simil::TSimulationType::TSimNetwork )
-  , _player( nullptr )
-  , _firstFrame( true )
-  , _prototype( nullptr )
-  , _offPrototype( nullptr )
-  , _elapsedTimeRenderAcc( 0.0f )
-  , _elapsedTimeSliderAcc( 0.0f )
-  , _elapsedTimeSimAcc( 0.0f )
-
+, _fpsLabel( this )
+, _showFps( false )
+, _wireframe( false )
+, _camera( nullptr )
+, _lastCameraPosition( 0, 0, 0)
+, _focusOnSelection( paintNeurons_ )
+, _pendingSelection( false )
+, _frameCount( 0 )
+, _mouseX( 0 )
+, _mouseY( 0 )
+, _rotation( false )
+, _translation( false )
+, _idleUpdate( true )
+, _paint( false )
+, _currentClearColor( 20, 20, 20, 0 )
+, _particlesShader( nullptr )
+, _particleSystem( nullptr )
+, _simulationType( simil::TSimulationType::TSimNetwork )
+, _player( nullptr )
+, _firstFrame( true )
+, _prototype( nullptr )
+, _offPrototype( nullptr )
+, _elapsedTimeRenderAcc( 0.0f )
+, _elapsedTimeSliderAcc( 0.0f )
+, _elapsedTimeSimAcc( 0.0f )
+, _alphaBlendingAccumulative( false )
+, _showSelection( false )
+, _resetParticles( false )
+, _updateSelection( false )
 {
 #ifdef VISIMPL_USE_ZEROEQ
   if ( zeqUri != "" )
@@ -75,6 +80,8 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
   else
 #endif
   _camera = new reto::Camera( );
+
+  _camera->animDuration( 0.5f );
 
   _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
@@ -275,6 +282,18 @@ void OpenGLWidget::configureSimulation( void )
 
 }
 
+
+void expandBoundingBox( glm::vec3& minBounds,
+                        glm::vec3& maxBounds,
+                        const glm::vec3& position)
+{
+  for( unsigned int i = 0; i < 3; ++i )
+  {
+    minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
+    maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
+  }
+}
+
 void OpenGLWidget::createParticleSystem( float scale )
 {
   makeCurrent( );
@@ -372,7 +391,14 @@ void OpenGLWidget::createParticleSystem( float scale )
   glm::vec3 cameraPivot;
   brion::GIDSetCIter gid = _player->gids( ).begin();
 
-  ;
+
+  glm::vec3 boundingBoxMin( std::numeric_limits< float >::max( ),
+                            std::numeric_limits< float >::max( ),
+                            std::numeric_limits< float >::max( ));
+  glm::vec3 boundingBoxMax( std::numeric_limits< float >::min( ),
+                            std::numeric_limits< float >::min( ),
+                            std::numeric_limits< float >::min( ));
+
   for ( auto brionPos : positions )
   {
     cluster = new prefr::Cluster( );
@@ -387,6 +413,7 @@ void OpenGLWidget::createParticleSystem( float scale )
       position *= scale;
 
     cameraPivot += position;
+    expandBoundingBox( boundingBoxMin, boundingBoxMax, position );
 
     start = i * partPerEmitter;
 
@@ -432,6 +459,12 @@ void OpenGLWidget::createParticleSystem( float scale )
                                    cameraPivot.y,
                                    cameraPivot.z ));
 
+//  glm::vec3 center = ( boundingBoxMax + boundingBoxMin ) * 0.5f;
+//  float radius = glm::length( boundingBoxMax - center );
+//
+//  _camera->pivot( Eigen::Vector3f( center.x, center.y, center.z ));
+//  _camera->radius( radius );
+
   prefr::Sorter* sorter = new prefr::Sorter( );
 
   std::cout << "Created sorter" << std::endl;
@@ -446,12 +479,16 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   _particleSystem->start();
 
-  resetParticles( );
+
+  _resetParticles = true;
+//  resetParticles( );
 
 }
 
 void OpenGLWidget::resetParticles( void )
 {
+  _particleSystem->run( false );
+
   for( auto cluster : _particleSystem->clusters( ))
   {
     switch( _simulationType )
@@ -467,6 +504,9 @@ void OpenGLWidget::resetParticles( void )
     }
     cluster->source( )->restart( );
   }
+
+  _particleSystem->run( true );
+
   _particleSystem->update( 0.0f );
 }
 
@@ -569,37 +609,28 @@ void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
   {
     _selectedGIDs = gids;
     _pendingSelection = true;
+    _updateSelection = true;
   }
   std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
 
 }
 
 
-void ExpandBoundingBox( Eigen::Vector3f& minBounds,
-                        Eigen::Vector3f& maxBounds,
-                        const glm::vec3& position)
-{
-  for( unsigned int i = 0; i < 3; ++i )
-  {
-    minBounds( i ) = std::min( minBounds( i ), position[ i ] );
-    maxBounds( i ) = std::max( maxBounds( i ), position[ i ] );
-  }
-}
-
 void OpenGLWidget::updateSelection( void )
 {
-  if( _particleSystem && _pendingSelection )
+  if( _particleSystem /*&& _pendingSelection*/ )
   {
     _particleSystem->run( false );
 
     bool baseOn = !_showSelection || _selectedGIDs.size( ) == 0;
 
-    Eigen::Vector3f boundingBoxMin( std::numeric_limits< float >::max( ),
-                                    std::numeric_limits< float >::max( ),
-                                    std::numeric_limits< float >::max( ));
-    Eigen::Vector3f boundingBoxMax( std::numeric_limits< float >::min( ),
-                                    std::numeric_limits< float >::min( ),
-                                    std::numeric_limits< float >::min( ));
+    _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),
+                                 std::numeric_limits< float >::max( ),
+                                 std::numeric_limits< float >::max( ));
+
+    _boundingBoxMax = glm::vec3( std::numeric_limits< float >::min( ),
+                                 std::numeric_limits< float >::min( ),
+                                 std::numeric_limits< float >::min( ));
 
     for( auto cluster : _particleSystem->clusters( ))
     {
@@ -616,23 +647,28 @@ void OpenGLWidget::updateSelection( void )
       for( prefr::tparticle particle = cluster->particles( ).begin( );
            particle != cluster->particles( ).end( ); ++particle)
       {
-        ExpandBoundingBox( boundingBoxMin,
-                           boundingBoxMax,
+        expandBoundingBox( _boundingBoxMin,
+                           _boundingBoxMax,
                            particle.position( ));
       }
     }
 
-    Eigen::Vector3f center = ( boundingBoxMax + boundingBoxMin ) * 0.5f;
-    float radius = ( boundingBoxMax - center ).norm( );
+    glm::vec3 center = ( _boundingBoxMax + _boundingBoxMin ) * 0.5f;
+    float side = glm::length( _boundingBoxMax - center );
+    float radius = side / std::tan( _camera->fov( ));
 
-    _camera->targetPivotRadius( center, radius );
+//    _camera->pivot( Eigen::Vector3f( center.x, center.y, center.z ));
+//    _camera->radius( radius );
+    _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),
+                                radius );
 
     _particleSystem->run( true );
     _particleSystem->update( 0.0f );
 
-    _pendingSelection = false;
-
+//    _pendingSelection = false;
+    _updateSelection = false;
   }
+
 }
 
 void OpenGLWidget::showSelection( bool showSelection_ )
@@ -647,7 +683,8 @@ void OpenGLWidget::showSelection( bool showSelection_ )
 void OpenGLWidget::ClearSelection( void )
 {
   _selectedGIDs.clear( );
-  updateSelection( );
+  _updateSelection = true;
+//  updateSelection( );
 }
 
 #endif
@@ -751,7 +788,13 @@ void OpenGLWidget::paintGL( void )
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
 
-  updateSelection( );
+  if( _updateSelection )
+    updateSelection( );
+
+  if( _resetParticles )
+    resetParticles( );
+
+  _resetParticles = false;
 
   if ( _paint )
   {
@@ -900,13 +943,14 @@ void OpenGLWidget::mouseMoveEvent( QMouseEvent* event_ )
 
 void OpenGLWidget::wheelEvent( QWheelEvent* event_ )
 {
-
   int delta = event_->angleDelta( ).y( );
 
   if ( delta > 0 )
-    _camera->radius( _camera->radius( ) / 1.1f );
+    _camera->radius( _camera->radius( ) / 1.3f );
   else
-    _camera->radius( _camera->radius( ) * 1.1f );
+    _camera->radius( _camera->radius( ) * 1.3f );
+
+//  std::cout << "Camera radius " << _camera->radius( ) << std::endl;
 
   update( );
 
@@ -916,15 +960,10 @@ void OpenGLWidget::wheelEvent( QWheelEvent* event_ )
 
 void OpenGLWidget::keyPressEvent( QKeyEvent* event_ )
 {
-  makeCurrent( );
-
   switch ( event_->key( ))
   {
   case Qt::Key_C:
-    _camera->pivot( Eigen::Vector3f( 0.0f, 0.0f, 0.0f ));
-    _camera->radius( 1000.0f );
-    _camera->rotation( 0.0f, 0.0f );
-    update( );
+      _updateSelection = true;
     break;
   }
 }
@@ -1031,7 +1070,8 @@ void OpenGLWidget::Stop( void )
   if( _player )
   {
     _player->Stop( );
-    resetParticles( );
+    _resetParticles = true;
+//    resetParticles( );
     _firstFrame = true;
   }
 }
@@ -1049,6 +1089,10 @@ void OpenGLWidget::PlayAt( float percentage )
   if( _player )
   {
     _particleSystem->run( false );
+
+//    resetParticles( );
+    _resetParticles = true;
+
     std::cout << "Play at " << percentage << std::endl;
     _player->PlayAt( percentage );
     _particleSystem->run( true );
@@ -1063,7 +1107,8 @@ void OpenGLWidget::Restart( void )
     _player->Stop( );
     if( playing )
       _player->Play( );
-    resetParticles( );
+//    resetParticles( );
+    _resetParticles = true;
     _firstFrame = true;
   }
 }

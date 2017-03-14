@@ -17,34 +17,14 @@
 
 #include <QFrame>
 
-typedef std::unordered_set< uint32_t > GIDUSet;
-typedef utils::InterpolationSet< glm::vec4 > TColorMapper;
+#include "types.h"
 
 namespace visimpl
 {
-  typedef enum
-  {
-    T_COLOR_LINEAR = 0,
-//    T_COLOR_EXPONENTIAL,
-    T_COLOR_LOGARITHMIC,
-    T_COLOR_UNDEFINED
-  } TColorScale;
-
-  typedef enum
-  {
-    T_NORM_GLOBAL = 0,
-    T_NORM_MAX
-  } TNormalize_Rule;
-
-  typedef enum
-  {
-    T_REP_DENSE = 0,
-    T_REP_CURVE
-
-  } TRepresentation_Mode;
 
   class MultiLevelHistogram : public QFrame
   {
+    friend class Summary;
 
     Q_OBJECT;
 
@@ -132,7 +112,10 @@ namespace visimpl
     virtual void mouseReleaseEvent( QMouseEvent* event_ );
     virtual void mouseMoveEvent( QMouseEvent* event_ );
     void mousePosition( QPoint* mousePosition_ );
-    void regionPosition( QPoint* regionPosition_ );
+//    void regionPosition( QPoint* regionPosition_ );
+    void regionPosition( float* regionPercentage );
+
+    void simPlayer( simil::SimulationPlayer* player );
 
     void regionWidth( float region_ );
     float regionWidth( void );
@@ -150,6 +133,8 @@ namespace visimpl
     QPolygonF focusLocalFunction( void ) const;
     QPolygonF focusGlobalFunction( void ) const;
 
+    void fillPlots( bool fillPlots_ );
+
 signals:
 
     void mousePositionChanged( QPoint point );
@@ -159,7 +144,7 @@ signals:
 
   protected:
 
-    virtual void paintEvent(QPaintEvent* event);
+    virtual void paintEvent( QPaintEvent* event );
 
     Histogram _mainHistogram;
     Histogram _focusHistogram;
@@ -170,6 +155,8 @@ signals:
     const brion::Spikes* _spikes;
     float _startTime;
     float _endTime;
+
+    simil::SimulationPlayer* _player;
 
     float (*_scaleFuncLocal)( float value, float maxValue);
     float (*_scaleFuncGlobal)( float value, float maxValue);
@@ -186,18 +173,26 @@ signals:
     TNormalize_Rule _normRule;
     TRepresentation_Mode _repMode;
 
+    bool _fillPlots;
+
     utils::InterpolationSet< glm::vec4 > _colorMapper;
 
     GIDUSet _filteredGIDs;
 
     QPoint* _lastMousePosition;
-    QPoint* _regionPosition;
+//    QPoint* _regionPosition;
+    float* _regionPercentage;
 
     bool _paintRegion;
     float _regionWidth;
 
     unsigned int _gridLinesNumber;
-    bool _firstHistogram;
+    bool _paintTimeline;
+
+    unsigned int _pixelsPerCharacter;
+    unsigned int _pixelMargin;
+
+    std::vector< TimeFrame >* _timeFrames;
   };
 }
 

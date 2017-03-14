@@ -16,7 +16,8 @@ set(SUMRICE_PUBLIC_HEADERS
   FocusFrame.h
   CustomSlider.h
   TransferFunctionWidget.h
-  log.h  
+  log.h
+  SubsetEventWidget.h  
 )
 
 set(SUMRICE_HEADERS
@@ -29,7 +30,8 @@ set(SUMRICE_SOURCES
   TransferFunctionWidget.cpp
   Summary.cpp
   Histogram.cpp
-  FocusFrame.cpp  
+  FocusFrame.cpp
+  SubsetEventWidget.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES

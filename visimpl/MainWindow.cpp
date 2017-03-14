@@ -7,12 +7,16 @@
  *          Do not distribute without further notice.
  */
 
+#include <visimpl/version.h>
+
 #include "MainWindow.h"
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
 #include <QGroupBox>
+#include <QShortcut>
+#include <QMessageBox>
 // #include "qt/CustomSlider.h"
 
 #ifdef VISIMPL_USE_GMRVLEX
@@ -21,12 +25,34 @@
 
 #include <thread>
 
+#include <sumrice/sumrice.h>
+
 MainWindow::MainWindow( QWidget* parent_,
                         bool updateOnIdle )
-  : QMainWindow( parent_ )
-  , _lastOpenedFileName( "" )
-  , _ui( new Ui::MainWindow )
-  , _openGLWidget( nullptr )
+: QMainWindow( parent_ )
+#ifdef VISIMPL_USE_GMRVLEX
+, _zeqConnection( false )
+, _subscriber( nullptr )
+, _thread( nullptr )
+#endif
+, _ui( new Ui::MainWindow )
+, _lastOpenedFileName( "" )
+, _openGLWidget( nullptr )
+, _summary( nullptr )
+, _simulationDock( nullptr )
+, _simSlider( nullptr )
+, _playButton( nullptr )
+, _startTimeLabel( nullptr )
+, _endTimeLabel( nullptr )
+, _repeatButton( nullptr )
+, _simConfigurationDock( nullptr )
+, _tfEditor( nullptr )
+, _tfWidget( nullptr )
+, _decayBox( nullptr )
+, _clearSelectionButton( nullptr )
+, _selectionSizeLabel( nullptr )
+, _alphaNormalButton( nullptr )
+, _alphaAccumulativeButton( nullptr )
 {
   _ui->setupUi( this );
 
@@ -39,9 +65,6 @@ MainWindow::MainWindow( QWidget* parent_,
 #else
   _ui->actionOpenBlueConfig->setEnabled( false );
 #endif
-
-  connect( _ui->actionQuit, SIGNAL( triggered( )),
-           QApplication::instance(), SLOT( quit( )));
 
 }
 
@@ -71,11 +94,16 @@ void MainWindow::init( const std::string& zeqUri )
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
            this, SLOT( openBlueConfigThroughDialog( )));
 
-  connect( _ui->actionOpenXMLScene, SIGNAL( triggered( )),
-           this, SLOT( openXMLSceneThroughDialog( )));
+  connect( _ui->actionQuit, SIGNAL( triggered( )),
+           QApplication::instance(), SLOT( quit( )));
 
-  connect( _ui->actionOpenSWCFile, SIGNAL( triggered( )),
-           this, SLOT( openHDF5ThroughDialog( )));
+  // Connect about dialog
+  connect( _ui->actionAbout, SIGNAL( triggered( )),
+           this, SLOT( aboutDialog( )));
+
+
+  connect( _ui->actionHome, SIGNAL( triggered( )),
+           _openGLWidget, SLOT( updateSelection( )));
 
 #ifdef VISIMPL_USE_ZEROEQ
   _ui->actionShowSelection->setEnabled( true );
@@ -222,6 +250,30 @@ void MainWindow::openHDF5ThroughDialog( void )
   openHDF5File( networkFile, simil::TSimSpikes, activityFile );
 }
 
+void MainWindow::aboutDialog( void )
+{
+
+
+  QMessageBox::about(
+    this, tr("About ViSimpl"),
+    tr("<p><BIG><b>ViSimpl - SimPart</b></BIG><br><br>") +
+    tr( "version " ) +
+    tr( visimpl::Version::getString( ).c_str( )) +
+    tr( " (" ) +
+    tr( std::to_string( visimpl::Version::getRevision( )).c_str( )) +
+    tr( ")" ) +
+    tr ("<br><br>GMRV - Universidad Rey Juan Carlos<br><br>"
+        "<a href=www.gmrv.es>www.gmrv.es</a><br>"
+        "<a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
+        "<br>(c) 2015. Universidad Rey Juan Carlos<br><br>"
+        "<img src=':/icons/logoGMRV.png' > &nbsp; &nbsp;"
+        "<img src=':/icons/logoURJC.png' >"
+        "</p>"
+        ""));
+
+}
+
+
 void MainWindow::configurePlayer( void )
 {
   connect( _openGLWidget, SIGNAL( updateSlider( float )),
@@ -237,6 +289,10 @@ void MainWindow::configurePlayer( void )
 #ifdef SIMIL_USE_ZEROEQ
   _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+
+  _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
+      boost::bind( &MainWindow::requestPlayAt, this, _1 ));
+
 #endif
 
   changeEditorColorMapping( );
@@ -267,7 +323,7 @@ void MainWindow::initPlaybackDock( void )
 //  QPushButton* playButton = new QPushButton( );
   _playButton = new QPushButton( );
   _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
-                             QSizePolicy::MinimumExpanding );
+                              QSizePolicy::MinimumExpanding );
   QPushButton* stopButton = new QPushButton( );
   QPushButton* nextButton = new QPushButton( );
   QPushButton* prevButton = new QPushButton( );
@@ -275,6 +331,9 @@ void MainWindow::initPlaybackDock( void )
   _repeatButton = new QPushButton( );
   _repeatButton->setCheckable( true );
   _repeatButton->setChecked( false );
+
+  _goToButton = new QPushButton( );
+  _goToButton->setText( QString( "Play at..." ));
 
 //  QIcon playIcon;
 //  QIcon pauseIcon;
@@ -320,6 +379,7 @@ void MainWindow::initPlaybackDock( void )
   dockLayout->addWidget( _playButton, row, 9, 2, 2 );
   dockLayout->addWidget( stopButton, row, 11, 1, 1 );
   dockLayout->addWidget( nextButton, row, 12, 1, 1 );
+  dockLayout->addWidget( _goToButton, row, 13, 1, 1 );
 
   connect( _playButton, SIGNAL( clicked( )),
            this, SLOT( PlayPause( )));
@@ -339,10 +399,13 @@ void MainWindow::initPlaybackDock( void )
   connect( _simSlider, SIGNAL( sliderPressed( )),
            this, SLOT( PlayAt( )));
 
+  connect( _goToButton, SIGNAL( clicked( )),
+           this, SLOT( playAtButtonClicked( )));
+
 //  connect( _simSlider, SIGNAL( sliderMoved( )),
 //             this, SLOT( PlayAt( )));
 
-  _summary = new Summary( nullptr, Summary::T_STACK_FIXED );
+  _summary = new visimpl::Summary( nullptr, visimpl::T_STACK_FIXED );
 //  _summary->setVisible( false );
   _summary->setMinimumHeight( 50 );
 
@@ -467,12 +530,9 @@ void MainWindow::initSummaryWidget( void )
         dynamic_cast< simil::SpikesPlayer* >( _openGLWidget->player( ));
 
     std::cout << "Creating summary..." << std::endl;
-//    GIDUSet gids;
-//    _summary->AddGIDSelection( gids );
-    _summary->Init( spikesPlayer->spikeReport( ),
-                             spikesPlayer->gids( ));
-//    _summary->bins( 5000 );
-//    _summary->setVisible( true );
+
+    _summary->Init( spikesPlayer->data( ));
+
 
   }
 
@@ -562,6 +622,11 @@ void MainWindow::Repeat( bool notify )
   }
 }
 
+void MainWindow::requestPlayAt( float percentage )
+{
+  PlayAt( percentage, false );
+}
+
 void MainWindow::PlayAt( bool notify )
 {
   if( _openGLWidget )
@@ -580,7 +645,7 @@ void MainWindow::PlayAt( float percentage, bool notify )
 
     _simSlider->setSliderPosition( sliderPosition );
 
-    _openGLWidget->resetParticles( );
+//    _openGLWidget->resetParticles( );
 
     _playButton->setIcon( _pauseIcon );
 
@@ -615,7 +680,7 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
 
     _simSlider->setSliderPosition( sliderPosition );
 
-    _openGLWidget->resetParticles( );
+//    _openGLWidget->resetParticles( );
 
     _playButton->setIcon( _pauseIcon );
 
@@ -843,6 +908,29 @@ void MainWindow::ClearSelection( void )
   }
 }
 
+void MainWindow::playAtButtonClicked( void )
+{
+  bool ok;
+  double result =
+      QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
+                               tr( "Simulation time" ),
+                               ( double )_openGLWidget->player( )->currentTime( ),
+                               ( double )_openGLWidget->player( )->data( )->startTime( ),
+                               ( double )_openGLWidget->player( )->data( )->endTime( ),
+                               3, &ok, Qt::Popup );
+
+  if( ok )
+  {
+    float percentage = ( result - _openGLWidget->player( )->startTime( )) /
+        ( _openGLWidget->player( )->endTime( ) -
+            _openGLWidget->player( )->startTime( ));
+
+    percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
+
+    PlayAt( percentage, true );
+  }
+}
+
 void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
 {
 
@@ -856,7 +944,7 @@ void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
 
 
 
-    GIDUSet selectedSet( ids.begin( ), ids.end( ));
+    visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
 
     if( selectedSet.size( ) == 0 )
       return;

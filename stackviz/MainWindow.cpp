@@ -7,21 +7,49 @@
  *          Do not distribute without further notice.
  */
 
+#include <stackviz/version.h>
+
 #include "MainWindow.h"
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
+#include <QInputDialog>
+#include <QMessageBox>
+#include <QShortcut>
 
 #include <boost/bind.hpp>
 
 #include <thread>
 
+#include <sumrice/sumrice.h>
+
 MainWindow::MainWindow( QWidget* parent_ )
-  : QMainWindow( parent_ )
-  // , _lastOpenedFileName( "" )
-  , _ui( new Ui::MainWindow )
-  // , _player( nullptr )
+: QMainWindow( parent_ )
+, _ui( new Ui::MainWindow )
+, _lastOpenedFileName( "" )
+, _simulationType( simil::TSimNetwork )
+, _summary( nullptr )
+, _player( nullptr )
+, _autoAddAvailableSubsets( true )
+, _simulationDock( nullptr )
+, _playButton( nullptr )
+, _simSlider( nullptr )
+, _repeatButton( nullptr )
+, _goToButton( nullptr )
+, _playing( false )
+, _startTimeLabel( nullptr )
+, _endTimeLabel( nullptr )
+#ifdef VISIMPL_USE_ZEROEQ
+, _zeqConnection( false )
+, _subscriber( nullptr )
+, _publisher( nullptr )
+, _thread( nullptr )
+#endif
+, _contentWidget( nullptr )
+, _stackLayout( nullptr )
+, _columnsNumber( 3 )
+, resizingEnabled( true )
 {
   _ui->setupUi( this );
 
@@ -33,6 +61,10 @@ MainWindow::MainWindow( QWidget* parent_ )
 
   connect( _ui->actionQuit, SIGNAL( triggered( )),
            QApplication::instance(), SLOT( quit( )));
+
+  // Connect about dialog
+  connect( _ui->actionAbout, SIGNAL( triggered( )),
+           this, SLOT( aboutDialog( )));
 
   _columnsNumber = 100;
   resizingEnabled = false;
@@ -59,9 +91,6 @@ void MainWindow::init( const std::string& zeqUri )
 MainWindow::~MainWindow( void )
 {
   delete _ui;
-
-  if( _thread )
-    delete _thread;
 }
 
 
@@ -72,7 +101,8 @@ void MainWindow::showStatusBarMessage ( const QString& message )
 
 void MainWindow::openBlueConfig( const std::string& fileName,
                                  simil::TSimulationType simulationType,
-                                 const std::string& reportLabel )
+                                 const std::string& reportLabel,
+                                 const std::string& subsetEventFile )
 {
   _simulationType = simulationType;
 
@@ -97,9 +127,39 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
  }
 
+  openSubsetEventFile( subsetEventFile, true );
+
   configurePlayer( );
+  initSummaryWidget( );
 
 }
+
+void MainWindow::openSubsetEventFile( const std::string& filePath,
+                                      bool /*append*/ )
+{
+  if( filePath.empty( ))
+    return;
+
+//  if( !append )
+//    _player->data( )->subsetsEvents( )->clear( );
+//  _subsetEventManager = new simil::SubsetEventManager( );
+
+  if( filePath.find( "json" ) != std::string::npos )
+  {
+    std::cout << "Loading JSON file: " << filePath << std::endl;
+    _player->data( )->subsetsEvents( )->loadJSON( filePath );
+  }
+  else if( filePath.find( "h5" ) != std::string::npos )
+  {
+    std::cout << "Loading H5 file: " << filePath << std::endl;
+    _player->data( )->subsetsEvents( )->loadH5( filePath );
+  }
+  else
+  {
+    std::cout << "Subset Events file not found: " << filePath << std::endl;
+  }
+}
+
 
 void MainWindow::openBlueConfigThroughDialog( void )
 {
@@ -154,10 +214,33 @@ void MainWindow::openBlueConfigThroughDialog( void )
 
 }
 
+void MainWindow::aboutDialog( void )
+{
+
+  QMessageBox::about(
+    this, tr("About ViSimpl"),
+    tr("<p><BIG><b>ViSimpl - StackViz</b></BIG><br><br>") +
+    tr( "version " ) +
+    tr( stackviz::Version::getString( ).c_str( )) +
+    tr( " (" ) +
+    tr( std::to_string( stackviz::Version::getRevision( )).c_str( )) +
+    tr( ")" ) +
+    tr ("<br><br>GMRV - Universidad Rey Juan Carlos<br><br>"
+        "<a href=www.gmrv.es>www.gmrv.es</a><br>"
+        "<a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
+        "<br>(c) 2015. Universidad Rey Juan Carlos<br><br>"
+        "<img src=':/icons/logoGMRV.png' > &nbsp; &nbsp;"
+        "<img src=':/icons/logoURJC.png' >"
+        "</p>"
+        ""));
+
+}
+
 
 void MainWindow::openHDF5File( const std::string& networkFile,
                                simil::TSimulationType simulationType,
-                               const std::string& activityFile )
+                               const std::string& activityFile,
+                               const std::string& subsetEventFile )
 {
   _simulationType = simulationType;
 
@@ -165,7 +248,13 @@ void MainWindow::openHDF5File( const std::string& networkFile,
   player->LoadData( simil::TDataType::THDF5,  networkFile, activityFile );
   _player = player;
 
+  if( !subsetEventFile.empty( ))
+  {
+    openSubsetEventFile( subsetEventFile, false );
+  }
+
   configurePlayer( );
+  initSummaryWidget( );
 }
 
 void MainWindow::configurePlayer( void )
@@ -186,8 +275,9 @@ void MainWindow::configurePlayer( void )
       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
 #endif
 
+
  // changeEditorColorMapping( );
-  initSummaryWidget( );
+
 }
 
 void MainWindow::initPlaybackDock( )
@@ -221,6 +311,9 @@ void MainWindow::initPlaybackDock( )
   _repeatButton = new QPushButton( );
   _repeatButton->setCheckable( true );
   _repeatButton->setChecked( false );
+
+  _goToButton = new QPushButton( );
+  _goToButton->setText( QString( "Play at..." ));
 
 //  QIcon playIcon;
 //  QIcon pauseIcon;
@@ -266,6 +359,7 @@ void MainWindow::initPlaybackDock( )
   dockLayout->addWidget( _playButton, row, 9, 2, 2 );
   dockLayout->addWidget( stopButton, row, 11, 1, 1 );
   dockLayout->addWidget( nextButton, row, 12, 1, 1 );
+  dockLayout->addWidget( _goToButton, row, 13, 1, 1 );
 
   connect( _playButton, SIGNAL( clicked( )),
            this, SLOT( PlayPause( )));
@@ -285,6 +379,9 @@ void MainWindow::initPlaybackDock( )
   connect( _simSlider, SIGNAL( sliderPressed( )),
            this, SLOT( PlayAt( )));
 
+  connect( _goToButton, SIGNAL( clicked( )),
+           this, SLOT( playAtButtonClicked( )));
+
   _simulationDock->setWidget( content );
   this->addDockWidget( Qt::BottomDockWidgetArea,
                        _simulationDock );
@@ -295,15 +392,16 @@ void MainWindow::initPlaybackDock( )
 void MainWindow::initSummaryWidget( )
 {
 
-  _summary = new Summary( nullptr, Summary::T_STACK_EXPANDABLE );
+  _summary = new visimpl::Summary( this, visimpl::T_STACK_EXPANDABLE );
 
   if( _simulationType == simil::TSimSpikes )
   {
     simil::SpikesPlayer* spikesPlayer =
         dynamic_cast< simil::SpikesPlayer* >( _player);
 
-    _summary->Init( spikesPlayer->spikeReport( ),
-                             spikesPlayer->gids( ));
+    _summary->Init( spikesPlayer->data( ));
+    _summary->simulationPlayer( _player );
+
   }
 
   _stackLayout = new QGridLayout( );
@@ -313,12 +411,37 @@ void MainWindow::initSummaryWidget( )
   connect( _ui->actionAutoNamingSelections, SIGNAL( triggered( )),
            _summary, SLOT( toggleAutoNameSelections( )));
 
+  _ui->actionFill_Plots->setChecked( true );
+  connect( _ui->actionFill_Plots, SIGNAL( triggered( bool )),
+           _summary, SLOT( fillPlots( bool )));
+
   connect( _summary, SIGNAL( histogramClicked( float )),
            this, SLOT( PlayAt( float )));
 
   connect( _summary, SIGNAL( histogramClicked( visimpl::MultiLevelHistogram* )),
              this, SLOT( HistogramClicked( visimpl::MultiLevelHistogram* )));
 
+  simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
+
+  for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
+  {
+    cc.compute( "grclayer", event );
+  }
+
+  for( auto name : cc.correlationNames( ))
+  {
+    simil::Correlation* correlation = cc.correlation( name );
+
+    visimpl::Selection selection;
+    selection.name = name;
+    for( auto value : correlation->values )
+    {
+      if( value.second.hit > 0.7f )
+        selection.gids.insert( value.first );
+    }
+
+    _summary->AddNewHistogram( selection );
+  }
 }
 
 void MainWindow::PlayPause( bool notify )
@@ -507,6 +630,9 @@ void MainWindow::UpdateSimulationSlider( float percentage )
   int position = percentage * total;
 
   _simSlider->setSliderPosition( position );
+
+  if( _summary )
+    _summary->repaintHistograms( );
 }
 
 
@@ -562,7 +688,7 @@ void MainWindow::UpdateSimulationSlider( float percentage )
 
   void MainWindow::HistogramClicked( visimpl::MultiLevelHistogram* histogram )
   {
-    const GIDUSet* selection;
+    const visimpl::GIDUSet* selection;
 
     if( histogram->filteredGIDs( ).size( ) == 0)
       selection = &_summary->gids( );
@@ -580,6 +706,29 @@ void MainWindow::UpdateSimulationSlider( float percentage )
 
 //    std::cout << "Sending selection of size " << selected.size( ) << std::endl;
     _publisher->publish( lexis::data::SelectedIDs( selected ));
+  }
+
+
+  void MainWindow::playAtButtonClicked( void )
+  {
+    bool ok;
+    double result =
+        QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
+                                 tr( "Simulation time" ),
+                                 ( double )_player->currentTime( ),
+                                 ( double )_player->data( )->startTime( ),
+                                 ( double )_player->data( )->endTime( ),
+                                 3, &ok, Qt::Popup );
+
+    if( ok )
+    {
+      float percentage = ( result - _player->data( )->startTime( )) /
+          ( _player->data( )->endTime( ) - _player->data( )->startTime( ));
+
+      percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
+
+      PlayAt( percentage, true );
+    }
   }
 
 #endif
@@ -620,7 +769,7 @@ void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
   std::vector< uint32_t > ids = std::move( selected->getIdsVector( ));
   std::cout << "Received selection with " << ids.size( ) << " elements" << std::endl;
 
-  GIDUSet selectedSet( ids.begin( ), ids.end( ));
+  visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
 
   if( _summary )
   {

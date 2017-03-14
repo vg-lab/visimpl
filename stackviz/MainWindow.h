@@ -57,15 +57,22 @@ public:
 
   void openBlueConfig( const std::string& fileName,
                        simil::TSimulationType simulationType,
-                       const std::string& report);
+                       const std::string& report,
+                       const std::string& subsetEventFile = "" );
 
   void openHDF5File( const std::string& networkFile,
                      simil::TSimulationType simulationType,
-                     const std::string& activityFile = "" );
+                     const std::string& activityFile = "",
+                     const std::string& subsetEventFile = "" );
+
+  void openSubsetEventFile( const std::string& fileName,
+                            bool append = false );
 
 public slots:
 
   void openBlueConfigThroughDialog( void );
+
+  void aboutDialog( void );
 
   void PlayPause( bool notify = true );
   void Play( bool notify = true );
@@ -89,6 +96,8 @@ protected slots:
 
   void HistogramClicked( visimpl::MultiLevelHistogram* );
 
+  void playAtButtonClicked( void );
+
 #endif
 
   void loadComplete( void );
@@ -98,11 +107,47 @@ protected:
   void resizeEvent(QResizeEvent * event);
   void configurePlayer( void );
 
+  void initSummaryWidget( void );
+  void initPlaybackDock( void );
+
+
 #ifdef VISIMPL_USE_ZEROEQ
 
   void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected );
   void _setZeqUri( const std::string& );
-//  static void* _Subscriber( void* subscriber );
+
+#endif
+
+  Ui::MainWindow* _ui;
+
+  QString _lastOpenedFileName;
+
+  simil::TSimulationType _simulationType;
+
+  visimpl::Summary* _summary;
+  QTimer _selectionsTimer;
+
+  simil::SimulationPlayer* _player;
+
+//  simil::SubsetEventManager* _subsetEventManager;
+
+  bool _autoAddAvailableSubsets;
+
+  // Playback Control
+  QDockWidget* _simulationDock;
+  QPushButton* _playButton;
+  CustomSlider* _simSlider;
+  QPushButton* _repeatButton;
+  QPushButton* _goToButton;
+  bool _playing;
+
+  QIcon _playIcon;
+  QIcon _pauseIcon;
+
+  QLabel* _startTimeLabel;
+  QLabel* _endTimeLabel;
+
+#ifdef VISIMPL_USE_ZEROEQ
 
   bool _zeqConnection;
 
@@ -112,40 +157,11 @@ protected:
   zeroeq::Subscriber* _subscriber;
   zeroeq::Publisher* _publisher;
 
-//  pthread_t _subscriberThread;
-
   std::thread* _thread;
 
 #endif
 
-  void initSummaryWidget( void );
-  void initPlaybackDock( void );
-
-  QString _lastOpenedFileName;
-
-  simil::TSimulationType _simulationType;
-
-  Summary* _summary;
-  QTimer _selectionsTimer;
-
-  simil::SimulationPlayer* _player;
-
-  // Playback Control
-  QDockWidget* _simulationDock;
-  QPushButton* _playButton;
-  CustomSlider* _simSlider;
-  QPushButton* _repeatButton;
-  bool _playing;
-
-  QIcon _playIcon;
-  QIcon _pauseIcon;
-
-  QLabel* _startTimeLabel;
-  QLabel* _endTimeLabel;
-
 private:
-
-  Ui::MainWindow* _ui;
 
   QWidget* _contentWidget;
   QGridLayout* _stackLayout;
