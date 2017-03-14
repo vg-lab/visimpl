@@ -421,27 +421,27 @@ void MainWindow::initSummaryWidget( )
   connect( _summary, SIGNAL( histogramClicked( visimpl::MultiLevelHistogram* )),
              this, SLOT( HistogramClicked( visimpl::MultiLevelHistogram* )));
 
-//  simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
-//
-//  for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
-//  {
-//    cc.compute( "grclayer", event );
-//  }
-//
-//  for( auto name : cc.correlationNames( ))
-//  {
-//    simil::Correlation* correlation = cc.correlation( name );
-//
-//    visimpl::Selection selection;
-//    selection.name = name;
-//    for( auto value : correlation->values )
-//    {
-//      if( value.second.hit > 0.7f )
-//        selection.gids.insert( value.first );
-//    }
-//
-//    _summary->AddNewHistogram( selection );
-//  }
+  simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
+
+  for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
+  {
+    cc.compute( "grclayer", event );
+  }
+
+  for( auto name : cc.correlationNames( ))
+  {
+    simil::Correlation* correlation = cc.correlation( name );
+
+    visimpl::Selection selection;
+    selection.name = name;
+    for( auto value : correlation->values )
+    {
+      if( value.second.hit > 0.7f )
+        selection.gids.insert( value.first );
+    }
+
+    _summary->AddNewHistogram( selection );
+  }
 }
 
 void MainWindow::PlayPause( bool notify )
