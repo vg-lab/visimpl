@@ -153,8 +153,13 @@ void OpenGLWidget::loadData( const std::string& fileName,
     }
     case simil::TSimVoltages:
     {
+#ifdef SIMIL_USE_BRION
       _player = new simil::VoltagesPlayer( fileName, report, true);
       _deltaTime = _player->deltaTime( );
+#else
+      std::cerr << "Error: simil without Brion support." << std::endl;
+      exit( -1 );
+#endif
       break;
     }
     default:
@@ -184,8 +189,9 @@ void OpenGLWidget::loadData( const std::string& fileName,
   }
 
   createParticleSystem( scale );
+#ifdef VISIMPL_USE_ZEROEQ
   _player->connectZeq( _zeqUri );
-
+#endif
   this->_paint = true;
   update( );
 
@@ -249,6 +255,7 @@ void OpenGLWidget::configureSimulation( void )
     }
     case simil::TSimVoltages:
     {
+#ifdef SIMIL_USE_BRION
       simil::VoltagesPlayer* vplayer =
           dynamic_cast< simil::VoltagesPlayer* >(_player);
 
@@ -273,7 +280,10 @@ void OpenGLWidget::configureSimulation( void )
 
         counter++;
       }
-
+#else
+      std::cerr << "Error: SimIL without BRion support." << std::endl;
+      exit( -1 );
+#endif
       break;
     }
     default:
@@ -308,7 +318,7 @@ void OpenGLWidget::createParticleSystem( float scale )
   //TODO
   _particleSystem->parallel( true );
 
-  const brion::Vector3fs& positions = _player->positions( );
+  const TPosVect& positions = _player->positions( );
 
   _particlesShader = new reto::ShaderProgram( );
   _particlesShader->loadVertexShaderFromText( prefr::prefrVertexShader );
@@ -389,7 +399,7 @@ void OpenGLWidget::createParticleSystem( float scale )
 
   unsigned int i = 0;
   glm::vec3 cameraPivot;
-  brion::GIDSetCIter gid = _player->gids( ).begin();
+  TGIDSet::const_iterator gid = _player->gids( ).begin();
 
 
   glm::vec3 boundingBoxMin( std::numeric_limits< float >::max( ),
@@ -601,8 +611,6 @@ float OpenGLWidget::getSimulationDecayValue( void )
   return _prototype->maxLife( );
 }
 
-#ifdef VISIMPL_USE_ZEROEQ
-
 void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
 {
   if( gids.size( ) > 0 )
@@ -680,14 +688,12 @@ void OpenGLWidget::showSelection( bool showSelection_ )
 
 }
 
-void OpenGLWidget::ClearSelection( void )
+void OpenGLWidget::clearSelection( void )
 {
   _selectedGIDs.clear( );
   _updateSelection = true;
 //  updateSelection( );
 }
-
-#endif
 
 
 void OpenGLWidget::updateSimulation( void )

@@ -28,6 +28,13 @@ if( CMAKE_BUILD_TYPE MATCHES "Debug" )
   add_definitions(-DDEBUG)
 endif()
 
+if( VISIMPL_OPTIONALS_AS_REQUIRED )
+  set( VISIMPL_OPTS_FIND_ARGS "REQUIRED" )
+else()
+  set( VISIMPL_OPTS_FIND_ARGS "" )
+endif()
+
+
 include(GitExternal)
 
 # description
@@ -60,20 +67,11 @@ list( APPEND VISIMPL_DEPENDENT_LIBRARIES
   Eigen3  
   ReTo
   SimIL
-  prefr 
+  prefr
+  Qt5Core
+  Qt5Widgets
+  Qt5OpenGL
 )
-
-if( QT5CORE_FOUND )
-  list( APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5Core )
-endif( )
-
-if( QT5WIDGETS_FOUND )
-  list( APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5Widgets )
-endif( )
-
-if( QT5OPENGL_FOUND )
-  list( APPEND VISIMPL_DEPENDENT_LIBRARIES Qt5OpenGL )
-endif( )
 
 if( OPENMP_FOUND )
   list( APPEND VISIMPL_DEPENDENT_LIBRARIES OpenMP )
@@ -83,20 +81,20 @@ if( VISIMPL_WITH_ZEQ )
   common_find_package( ZeroEQ )
   if ( ZEROEQ_FOUND )
     list( APPEND VISIMPL_DEPENDENT_LIBRARIES ZeroEQ )
-    common_find_package( Threads REQUIRED )
+    common_find_package( Threads ${SIMIL_OPTS_FIND_ARGS} )
     list( APPEND VISIMPL_DEPENDENT_LIBRARIES Threads )
-    
-    common_find_package( Lexis )
+
+    common_find_package( Lexis  ${SIMIL_OPTS_FIND_ARGS} )
     if( LEXIS_FOUND )
       list( APPEND VISIMPL_DEPENDENT_LIBRARIES Lexis )
     endif( )
-    
+
     if( VISIMPL_WITH_GMRVLEX )
-    common_find_package( gmrvlex )
+    common_find_package( gmrvlex  ${SIMIL_OPTS_FIND_ARGS} )
     if ( GMRVLEX_FOUND )
       list( APPEND VISIMPL_DEPENDENT_LIBRARIES gmrvlex )
     endif( )
-  endif( )    
+  endif( )
   endif( )
 endif( )
 common_find_package_post()

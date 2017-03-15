@@ -10,7 +10,6 @@
 #ifndef __SIMULATIONSUMMARYWIDGET_H__
 #define __SIMULATIONSUMMARYWIDGET_H__
 
-#include <brion/brion.h>
 #include <prefr/prefr.h>
 #include <simil/simil.h>
 
@@ -211,7 +210,6 @@ namespace visimpl
   //  brion::SpikeReport* _spikeReport;
     simil::SimulationData* _simData;
     simil::SpikeData* _spikeReport;
-    brion::CompartmentReport* _voltageReport;
 
     simil::SimulationPlayer* _player;
 

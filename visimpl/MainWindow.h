@@ -18,7 +18,7 @@
 
 #include <sumrice/sumrice.h>
 
-#include "ui_visimpl.h"
+#include <ui_visimpl.h>
 
 namespace Ui
 {
@@ -80,9 +80,10 @@ public slots:
 
   void AlphaBlendingToggled( void );
 
-protected slots:
 
 #ifdef VISIMPL_USE_ZEROEQ
+
+  protected slots:
 
 #ifdef VISIMPL_USE_GMRVLEX
 
@@ -96,11 +97,8 @@ protected slots:
 
 protected:
 
-  void configurePlayer( void );
-
-  void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr  );
+  void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
   void _setZeqUri( const std::string& );
-
   bool _zeqConnection;
 
   std::string _uri;
@@ -108,7 +106,10 @@ protected:
 
   std::thread* _thread;
 
-#endif
+#endif // VISIMPL_USE_ZEROEQ
+
+protected:
+  void configurePlayer( void );
 
   Ui::MainWindow* _ui;
 

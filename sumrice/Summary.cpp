@@ -51,7 +51,6 @@ namespace visimpl
   , _gridLinesNumber( 3 )
   , _simData( nullptr )
   , _spikeReport( nullptr )
-  , _voltageReport( nullptr )
   , _player( nullptr )
   , _mainHistogram( nullptr )
   , _detailHistogram( nullptr )
