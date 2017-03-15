@@ -47,7 +47,6 @@ set(STACKVIZ_LINK_LIBRARIES
   Qt5::Widgets
   Qt5::OpenGL
   prefr  
-  Brion
   sumrice
 )
 

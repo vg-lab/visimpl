@@ -37,8 +37,6 @@ set(SUMRICE_SOURCES
 set(SUMRICE_LINK_LIBRARIES
   Qt5::Core
   Qt5::Widgets
-  Brion
-  Brain
   ReTo
   SimIL
   prefr

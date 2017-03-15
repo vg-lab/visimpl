@@ -71,7 +71,11 @@ MainWindow::MainWindow( QWidget* parent_ )
 //  QTimer::singleShot( 0, this, SLOT( loadComplete( )));
 }
 
-void MainWindow::init( const std::string& zeqUri )
+void MainWindow::init( const std::string&
+#ifdef VISIMPL_USE_ZEROEQ
+                       zeqUri
+#endif
+  )
 {
 
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
@@ -104,6 +108,8 @@ void MainWindow::openBlueConfig( const std::string& fileName,
                                  const std::string& reportLabel,
                                  const std::string& subsetEventFile )
 {
+  ( void ) reportLabel;
+
   _simulationType = simulationType;
 
   switch( _simulationType )
@@ -118,7 +124,12 @@ void MainWindow::openBlueConfig( const std::string& fileName,
      break;
    }
    case simil::TSimVoltages:
+#ifdef SIMIL_USE_BRION
      _player = new simil::VoltagesPlayer( fileName, reportLabel, true);
+#else
+     std::cerr << "SimIL without Brion support." << std::endl;
+     exit( -1 );
+#endif
 //     _deltaTime = _player->deltaTime( );
      break;
 

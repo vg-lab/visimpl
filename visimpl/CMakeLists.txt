@@ -30,30 +30,30 @@ set(CMAKE_AUTOUIC ON)
 
 
 set(VISIMPL_SOURCES
-  ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp  
+  ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
   visimpl.cpp
   MainWindow.cpp
-  OpenGLWidget.cpp  
-  CMakeSetup.rc  
+  OpenGLWidget.cpp
+  CMakeSetup.rc
   prefr/ColorSource.cpp
-  prefr/ColorOperationModel.cpp  
+  prefr/ColorOperationModel.cpp
   prefr/CompositeColorUpdater.cpp
   prefr/ValuedSource.cpp
-  prefr/ValuedUpdater.cpp  
+  prefr/ValuedUpdater.cpp
   visimpl.ui
   resources.qrc
 )
 
 set(VISIMPL_HEADERS
-  ${PROJECT_BINARY_DIR}/include/visimpl/version.h  
+  ${PROJECT_BINARY_DIR}/include/visimpl/version.h
   OpenGLWidget.h
-  MainWindow.h  
+  MainWindow.h
   prefr/PrefrShaders.h
   prefr/ColorSource.h
   prefr/ColorOperationModel.h
   prefr/CompositeColorUpdater.h
   prefr/ValuedSource.h
-  prefr/ValuedUpdater.h  
+  prefr/ValuedUpdater.h
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -64,8 +64,7 @@ set(VISIMPL_LINK_LIBRARIES
   Qt5::OpenGL
   ReTo
   SimIL
-  prefr  
-  Brion
+  prefr
   sumrice
 )
 

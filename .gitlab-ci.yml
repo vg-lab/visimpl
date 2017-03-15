@@ -7,9 +7,8 @@ Ubuntu-Optional-Deps:
   - date
   - hostname
   - uname -a
-  - export CMAKE_EXTRA_TARGETS="install"
+  - export CMAKE_EXTRA_ARGS=-DVISIMPL_OPTIONALS_AS_REQUIRED=ON
   - export BUILD_OPTIONALS_SUBPROJECTS=1
-  - export CMAKE_EXTRA_ARGS=-DNEUROSCHEME_OPTIONALS_AS_REQUIRED=ON
   - export BUILD_GENERATOR="Ninja"
   - bash .gitlab-ci.sh
  tags:
@@ -33,8 +32,8 @@ OSX-Optional-Deps:
   - hostname
   - uname -a
   - module load Qt-5.4
+  - export CMAKE_EXTRA_ARGS="-DVISIMPL_OPTIONALS_AS_REQUIRED=ON -DGLUT_glut_LIBRARY=/usr/local/Cellar/freeglut/2.8.1/lib/libglut.dylib"
   - export BUILD_OPTIONALS_SUBPROJECTS=1
-  #- export CMAKE_EXTRA_ARGS=""
   - export BUILD_GENERATOR="Ninja"
   - export CMAKE_OSX_ARCHITECTURES=x86_64
   - bash .gitlab-ci.sh
@@ -48,20 +47,21 @@ OSX-Subproject:
   - hostname
   - uname -a
   - module load Qt-5.4
+  - export CMAKE_EXTRA_ARGS=-DGLUT_glut_LIBRARY=/usr/local/Cellar/freeglut/2.8.1/lib/libglut.dylib
   - export BUILD_GENERATOR="Ninja";
   - export CMAKE_OSX_ARCHITECTURES=x86_64
   - bash .gitlab-ci.sh
  tags:
   - osx
 
-Win7:
- stage: build
- script:
-  - call %ENVFILESDIR%\Boost-1.56-vs12-x64.bat
-  - call %ENVFILESDIR%\Qt-5.4.bat
-  - set JAMBS_TARGETS=eigen
-  - set BUILD_GENERATOR=Visual Studio 12 Win64
-  - set PATH=%PATH%;"c:\\Program Files (x86)\\Git\\bin"
-  - bash.exe --login .gitlab-ci.sh
- tags:
-  - win7
+# Win7:
+#  stage: build
+#  script:
+#   - call %ENVFILESDIR%\Boost-1.56-vs12-x64.bat
+#   - call %ENVFILESDIR%\Qt-5.4.bat
+#   - set JAMBS_TARGETS=eigen
+#   - set BUILD_GENERATOR=Visual Studio 12 Win64
+#   - set PATH=%PATH%;"c:\\Program Files (x86)\\Git\\bin"
+#   - bash.exe --login .gitlab-ci.sh
+#  tags:
+#   - win7

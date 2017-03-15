@@ -26,10 +26,6 @@
 #include <reto/reto.h>
 #include <simil/simil.h>
 
-#include <brion/brion.h>
-#include <brain/brain.h>
-
-
 #include "prefr/ColorSource.h"
 #include "prefr/ColorOperationModel.h"
 
@@ -118,15 +114,10 @@ public slots:
   void changeSimulationDecayValue( float value );
   float getSimulationDecayValue( void );
 
-#ifdef VISIMPL_USE_ZEROEQ
-
   void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
   void showSelection( bool );
   void updateSelection( void );
-
-  void ClearSelection( void );
-
-#endif
+  void clearSelection( void );
 
 protected slots:
 
@@ -149,9 +140,10 @@ protected:
   void updateSimulation( void );
   void paintParticles( void );
 
+  std::unordered_set< uint32_t > _selectedGIDs;
+
 #ifdef VISIMPL_USE_ZEROEQ
 
-  std::unordered_set< uint32_t > _selectedGIDs;
   std::string _zeqUri;
 
 #endif

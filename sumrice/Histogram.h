@@ -9,7 +9,6 @@
 #ifndef __HISTOGRAM_H__
 #define __HISTOGRAM_H__
 
-#include <brion/brion.h>
 #include <prefr/prefr.h>
 #include <simil/simil.h>
 
@@ -51,13 +50,13 @@ namespace visimpl
     } THistogram;
 
     MultiLevelHistogram( void );
-    MultiLevelHistogram( const brion::Spikes& spikes, float startTime, float endTime );
+    MultiLevelHistogram( const TSpikes& spikes, float startTime, float endTime );
 //    MultiLevelHistogram( const brion::SpikeReport& spikeReport );
     MultiLevelHistogram( const simil::SpikeData& spikeReport );
 
     virtual void init( unsigned int binsNumber = 250, float zoomFactor = 1.5f );
 
-    void Spikes( const brion::Spikes& spikes, float startTime, float endTime );
+    void Spikes( const TSpikes& spikes, float startTime, float endTime );
 //    void Spikes( const brion::SpikeReport& spikeReport );
     void Spikes( const simil::SpikeData& spikeReport  );
 
@@ -152,7 +151,7 @@ signals:
     unsigned int _bins;
     float _zoomFactor;
 
-    const brion::Spikes* _spikes;
+    const TSpikes* _spikes;
     float _startTime;
     float _endTime;
 

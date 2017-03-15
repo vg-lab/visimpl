@@ -1,5 +1,7 @@
 # -*- mode: cmake -*-
-git_subproject( Brion https://github.com/BlueBrain/Brion.git 2bb27a1)
-git_subproject( prefr git@gitlab.gmrv.es:nsviz/prefr.git 1a3eeb9 )
-git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git 7c8e76f )
+# git_subproject( ZeroEQ https://github.com/HBPVIS/ZeroEQ 3babd4f )
+# git_subproject( Lexis https://github.com/HBPVIS/Lexis.git 617eedb )
+# git_subproject( gmrvlex git@gitlab.gmrv.es:nsviz/gmrvlex.git c20b194 )
 git_subproject( ReTo git@gitlab.gmrv.es:nsviz/ReTo.git 491e23c )
+git_subproject( prefr git@gitlab.gmrv.es:nsviz/prefr.git 1a3eeb9 )
+git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git f37123fc )
