@@ -72,7 +72,7 @@ MainWindow::MainWindow( QWidget* parent_ )
 }
 
 void MainWindow::init( const std::string&
-#ifdef VISIMPL_USER_ZEROEQ
+#ifdef VISIMPL_USE_ZEROEQ
                        zeqUri
 #endif
   )

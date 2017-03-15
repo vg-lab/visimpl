@@ -901,7 +901,7 @@ void MainWindow::ClearSelection( void )
 {
   if( _openGLWidget )
   {
-    _openGLWidget->ClearSelection( );
+    _openGLWidget->clearSelection( );
 
     _clearSelectionButton->setEnabled( false );
     _selectionSizeLabel->setText( "0" );
