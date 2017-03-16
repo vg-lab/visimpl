@@ -598,7 +598,7 @@ namespace visimpl
   unsigned int MultiLevelHistogram::valueAt( float percentage )
   {
     unsigned int position =
-        std::max( 0.0f, std::min( 1.0f, percentage * _mainHistogram.size( )));
+        std::max( 0.0f, std::min( 1.0f, percentage)) * _mainHistogram.size( );
 
     if( position >= _mainHistogram.size( ))
       position = _mainHistogram.size( ) - 1;
