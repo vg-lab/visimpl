@@ -51,7 +51,7 @@ namespace visimpl
   }
 
 
-  MultiLevelHistogram::MultiLevelHistogram( const TSpikes& spikes,
+  MultiLevelHistogram::MultiLevelHistogram( const simil::TSpikes& spikes,
                                  float startTime,
                                  float endTime )
   : QFrame( nullptr )
@@ -118,7 +118,7 @@ namespace visimpl
   }
 
 
-  void MultiLevelHistogram::Spikes( const TSpikes& spikes,
+  void MultiLevelHistogram::Spikes( const simil::TSpikes& spikes,
                                     float startTime,
                                     float endTime )
   {
