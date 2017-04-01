@@ -16,11 +16,15 @@
 
 #include <QMouseEvent>
 
+#ifdef VISIMPL_USE_OPENMP
+#include <omp.h>
+#endif
+
 namespace visimpl
 {
   MultiLevelHistogram::MultiLevelHistogram( )
   : QFrame( nullptr )
-  , _bins( 250 )
+  , _bins( 50 )
   , _zoomFactor( 1.5f )
   , _spikes( nullptr )
   , _startTime( 0.0f )
@@ -51,11 +55,11 @@ namespace visimpl
   }
 
 
-  MultiLevelHistogram::MultiLevelHistogram( const simil::TSpikes& spikes,
+  MultiLevelHistogram::MultiLevelHistogram( const simil::Spikes& spikes,
                                  float startTime,
                                  float endTime )
   : QFrame( nullptr )
-  , _bins( 250 )
+  , _bins( 50 )
   , _zoomFactor( 1.5f )
   , _spikes( &spikes )
   , _startTime( startTime )
@@ -87,7 +91,7 @@ namespace visimpl
 
   MultiLevelHistogram::MultiLevelHistogram( const simil::SpikeData& spikeReport )
   : QFrame( nullptr )
-  , _bins( 250 )
+  , _bins( 50 )
   , _zoomFactor( 1.5f )
   , _spikes( &spikeReport.spikes( ))
   , _startTime( spikeReport.startTime( ))
@@ -118,7 +122,7 @@ namespace visimpl
   }
 
 
-  void MultiLevelHistogram::Spikes( const simil::TSpikes& spikes,
+  void MultiLevelHistogram::Spikes( const simil::Spikes& spikes,
                                     float startTime,
                                     float endTime )
   {
@@ -149,6 +153,7 @@ namespace visimpl
   void MultiLevelHistogram::BuildHistogram( THistogram histogramNumber )
   {
     Histogram* histogram = &_mainHistogram;
+//    Histogram* aux = new Histogram( *histogram );
 
     if( histogramNumber == T_HIST_FOCUS )
       histogram = &_focusHistogram;
@@ -159,7 +164,7 @@ namespace visimpl
 
     bool filter = _filteredGIDs.size( ) > 0;
 
-    unsigned int counter = 0;
+#ifndef VISIMPL_USE_OPENMP
 
     float deltaTime = ( totalTime ) / histogram->size( );
     float currentTime = _startTime + deltaTime;
@@ -176,14 +181,53 @@ namespace visimpl
           bin++;
         }
         spike++;
-        counter++;
       }
 
       currentTime += deltaTime;
       globalIt++;
     }
 
-    std::cout << "Total spikes: " << counter << std::endl;
+#else
+
+    std::cout << "Parallel build " << histogram << std::endl;
+
+    float invTotalTime = 1.0f / totalTime;
+    unsigned int numThreads = 2;
+
+    omp_set_dynamic( 0 );
+    omp_set_num_threads( numThreads );
+    const auto& references = _spikes->refData( );
+    for( int i = 0; i < ( int ) references.size( ); i++)
+    {
+      simil::TSpikes::const_iterator spikeIt = references[ i ];
+
+      float endTime = ( i < ( ( int )references.size( ) - 1 )) ?
+                      references[ i + 1]->first :
+                      _endTime;
+
+      int bin;
+      while( spikeIt->first < endTime && spikeIt != _spikes->end( ))
+      {
+
+        float perc =
+            std::max( 0.0f,
+                      std::min( 1.0f, ( spikeIt->first - _startTime )* invTotalTime ));
+        bin = perc * histogram->size( );
+
+//        if( bin == 0 )
+//          std::cout << "Spike " << spikeIt->first
+//                    << " " << perc
+//                    << " " << bin
+//                    << std::endl;
+
+        ( *histogram )[ bin ]++;
+
+        ++spikeIt;
+      }
+
+    }
+
+#endif // VISIMPL_USE_OPENMP
 
     unsigned int cont = 0;
 //    unsigned int maxPos = 0;

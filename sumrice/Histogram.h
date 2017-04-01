@@ -50,7 +50,7 @@ namespace visimpl
     } THistogram;
 
     MultiLevelHistogram( void );
-    MultiLevelHistogram( const simil::TSpikes& spikes,
+    MultiLevelHistogram( const simil::Spikes& spikes,
                          float startTime,
                          float endTime );
 
@@ -58,7 +58,7 @@ namespace visimpl
 
     virtual void init( unsigned int binsNumber = 250, float zoomFactor = 1.5f );
 
-    void Spikes( const simil::TSpikes& spikes, float startTime, float endTime );
+    void Spikes( const simil::Spikes& spikes, float startTime, float endTime );
 
     void Spikes( const simil::SpikeData& spikeReport  );
 
@@ -153,7 +153,7 @@ signals:
     unsigned int _bins;
     float _zoomFactor;
 
-    const simil::TSpikes* _spikes;
+    const simil::Spikes* _spikes;
     float _startTime;
     float _endTime;
 
