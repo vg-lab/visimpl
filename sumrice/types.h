@@ -17,6 +17,7 @@
 #include <unordered_set>
 
 #include <QColor>
+#include <QPainterPath>
 
 #include <prefr/prefr.h>
 #include <vmmlib/vmmlib.h>
@@ -38,14 +39,16 @@ namespace visimpl
 
   } TStackType;
 
-  struct TimeFrame
+  struct TEvent
   {
     std::string name;
     QColor color;
 
     std::vector< std::pair< float, float >> percentages;
-//    float startPercentage;
-//    float endPercentage;
+
+    std::vector< QPainterPath > _cachedCustomSolidRep;
+    std::vector< QPainterPath > _cachedCustomTransRep;
+    std::vector< QPainterPath > _cachedCommonRep;
   };
 
   typedef enum

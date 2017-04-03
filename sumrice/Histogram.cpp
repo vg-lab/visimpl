@@ -49,7 +49,7 @@ namespace visimpl
   , _paintTimeline( false )
   , _pixelsPerCharacter( 10 )
   , _pixelMargin( 5 )
-  , _timeFrames( nullptr )
+  , _events( nullptr )
   {
 //    init( );
   }
@@ -84,7 +84,7 @@ namespace visimpl
   , _paintTimeline( false )
   , _pixelsPerCharacter( 8 )
   , _pixelMargin( 5 )
-  , _timeFrames( nullptr )
+  , _events( nullptr )
   {
 //    init( );
   }
@@ -116,7 +116,7 @@ namespace visimpl
   , _paintTimeline( false )
   , _pixelsPerCharacter( 8 )
   , _pixelMargin( 5 )
-  , _timeFrames( nullptr )
+  , _events( nullptr )
   {
 //    init( );
   }
@@ -933,33 +933,17 @@ namespace visimpl
       painter.drawLine( marker );
     }
 
-    if( _timeFrames && _repMode == T_REP_CURVE )
+    if( _events && _repMode == T_REP_CURVE )
     {
-      for( const auto& timeFrame : *_timeFrames )
+      for( const auto& timeFrame : *_events )
       {
         QColor color = timeFrame.color;
 
-        unsigned int left;
-        unsigned int right;
-
-        for( auto timeFrameChunk : timeFrame.percentages )
-        {
-          left = timeFrameChunk.first * width( );
-          right = timeFrameChunk.second * width( );
-
-          QPainterPath tfPath;
-
-          tfPath.moveTo( left, 0 );
-          tfPath.lineTo( left, height( ));
-          tfPath.lineTo( right, height( ) );
-          tfPath.lineTo( right, 0 );
-          tfPath.closeSubpath( );
-
-          color.setAlpha( 50 );
-          painter.setBrush( QBrush( color, Qt::SolidPattern));
-          painter.setPen( Qt::NoPen );
-          painter.drawPath( tfPath );
-        }
+        color.setAlpha( 50 );
+        painter.setBrush( QBrush( color, Qt::SolidPattern));
+        painter.setPen( Qt::NoPen );
+        for( const auto& p : timeFrame._cachedCommonRep )
+          painter.drawPath( p );
       }
     }
 

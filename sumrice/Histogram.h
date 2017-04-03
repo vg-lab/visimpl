@@ -198,7 +198,8 @@ signals:
     unsigned int _pixelsPerCharacter;
     unsigned int _pixelMargin;
 
-    std::vector< TimeFrame >* _timeFrames;
+    std::vector< TEvent >* _events;
+    std::vector< QPainterPath >* _cachedEventGraphs;
   };
 }
 
