@@ -38,6 +38,10 @@ namespace visimpl
       QGradientStops _gradientStops;
       QPolygonF _curveStopsLocal;
       QPolygonF _curveStopsGlobal;
+
+      QPainterPath _cachedLocalRep;
+      QPainterPath _cachedGlobalRep;
+
       std::vector< float > _gridLines;
     };
 
@@ -145,6 +149,7 @@ signals:
 
   protected:
 
+    virtual void resizeEvent( QResizeEvent* event );
     virtual void paintEvent( QPaintEvent* event );
 
     Histogram _mainHistogram;

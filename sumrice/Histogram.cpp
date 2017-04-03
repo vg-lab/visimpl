@@ -170,13 +170,11 @@ namespace visimpl
     float currentTime = _startTime + deltaTime;
 
     auto spike = _spikes->begin( );
-    std::vector< unsigned int >::iterator globalIt = globalHistogram.begin( );
     for( unsigned int& bin: *histogram )
     {
       while( spike != _spikes->end( ) && spike->first <= currentTime )
       {
-        ( *globalIt )++;
-        if( !filter ||  _filteredGIDs.find( spike->second ) != _filteredGIDs.end( ))
+        if( !filter || _filteredGIDs.find( spike->second ) != _filteredGIDs.end( ))
         {
           bin++;
         }
@@ -184,7 +182,6 @@ namespace visimpl
       }
 
       currentTime += deltaTime;
-      globalIt++;
     }
 
 #else
@@ -209,19 +206,15 @@ namespace visimpl
       while( spikeIt->first < endTime && spikeIt != _spikes->end( ))
       {
 
-        float perc =
-            std::max( 0.0f,
-                      std::min( 1.0f, ( spikeIt->first - _startTime )* invTotalTime ));
-        bin = perc * histogram->size( );
+        if( !filter || _filteredGIDs.find( spikeIt->second ) != _filteredGIDs.end( ))
+        {
+          float perc =
+              std::max( 0.0f,
+                        std::min( 1.0f, ( spikeIt->first - _startTime )* invTotalTime ));
+          bin = perc * histogram->size( );
 
-//        if( bin == 0 )
-//          std::cout << "Spike " << spikeIt->first
-//                    << " " << perc
-//                    << " " << bin
-//                    << std::endl;
-
-        ( *histogram )[ bin ]++;
-
+          ( *histogram )[ bin ]++;
+        }
         ++spikeIt;
       }
 
@@ -764,6 +757,29 @@ namespace visimpl
     _paintTimeline = first;
   }
 
+  void MultiLevelHistogram::resizeEvent( QResizeEvent* /*event*/ )
+  {
+    _mainHistogram._cachedLocalRep = QPainterPath( );
+    _mainHistogram._cachedGlobalRep = QPainterPath( );
+
+    _mainHistogram._cachedLocalRep.moveTo( 0, height( ) );
+    for( auto point : _mainHistogram._curveStopsLocal )
+    {
+      _mainHistogram._cachedLocalRep.lineTo( QPoint( point.x( ) * width( ),
+                                                     point.y( ) * height( )));
+    }
+    _mainHistogram._cachedLocalRep.lineTo( width( ), height( ) );
+
+    _mainHistogram._cachedGlobalRep.moveTo( 0, height( ) );
+    for( auto point : _mainHistogram._curveStopsGlobal )
+    {
+      _mainHistogram._cachedGlobalRep.lineTo( QPoint( point.x( ) * width( ),
+                                                      point.y( ) * height( )));
+    }
+    _mainHistogram._cachedGlobalRep.lineTo( width( ), height( ) );
+
+  }
+
   void MultiLevelHistogram::paintEvent( QPaintEvent* /*e*/)
   {
     QPainter painter( this );
@@ -796,25 +812,7 @@ namespace visimpl
       painter.fillRect( rect( ), QBrush( QColor( 255, 255, 255, 255 ),
                                          Qt::SolidPattern ));
 
-      QPainterPath localPath;
-      localPath.moveTo( 0, height( ) );
-      for( auto point : _mainHistogram._curveStopsLocal )
-      {
-        localPath.lineTo( QPoint( point.x( ) * width( ), point.y( ) * height( )));
-      }
-      localPath.lineTo( width( ), height( ) );
-
-      QPainterPath globalPath;
-      globalPath.moveTo( 0, height( ) );
-      for( auto point : _mainHistogram._curveStopsGlobal )
-      {
-        globalPath.lineTo( QPoint( point.x( ) * width( ), point.y( ) * height( )));
-      }
-      globalPath.lineTo( width( ), height( ) );
-
       QColor globalColor( _colorGlobal );
-
-
       QColor localColor( _colorLocal );
 
 
@@ -825,11 +823,11 @@ namespace visimpl
 
         painter.setBrush( QBrush( globalColor, Qt::SolidPattern));
         painter.setPen( Qt::NoPen );
-        painter.drawPath( globalPath );
+        painter.drawPath( _mainHistogram._cachedGlobalRep );
 
         painter.setBrush( QBrush( localColor, Qt::SolidPattern));
         painter.setPen( Qt::NoPen );
-        painter.drawPath( localPath );
+        painter.drawPath( _mainHistogram._cachedLocalRep );
       }
       else
       {
@@ -838,11 +836,11 @@ namespace visimpl
 
         painter.setBrush( Qt::NoBrush );
         painter.setPen( QPen( globalColor, Qt::SolidLine ));
-        painter.drawPath( globalPath );
+        painter.drawPath( _mainHistogram._cachedGlobalRep );
 
         painter.setBrush( Qt::NoBrush );
         painter.setPen( QPen( localColor, Qt::SolidLine ));
-        painter.drawPath( localPath );
+        painter.drawPath( _mainHistogram._cachedLocalRep );
       }
 
       penColor = QColor( 0, 0, 0 );
