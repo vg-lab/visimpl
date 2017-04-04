@@ -83,6 +83,13 @@ void MainWindow::init( const std::string&
 
   initPlaybackDock( );
 
+  connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool )),
+             _ui->actionTogglePlaybackDock, SLOT( setChecked( bool )));
+
+  connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( )),
+           this, SLOT( togglePlaybackDock( )));
+
+
 
   #ifdef VISIMPL_USE_ZEROEQ
 
@@ -247,6 +254,16 @@ void MainWindow::aboutDialog( void )
 
 }
 
+void MainWindow::togglePlaybackDock( void )
+{
+  if( _ui->actionTogglePlaybackDock->isChecked( ))
+    _simulationDock->show( );
+  else
+    _simulationDock->close( );
+
+
+  update( );
+}
 
 void MainWindow::openHDF5File( const std::string& networkFile,
                                simil::TSimulationType simulationType,

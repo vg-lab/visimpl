@@ -53,6 +53,8 @@ public slots:
   void openHDF5ThroughDialog( void );
 
   void aboutDialog( void );
+  void togglePlaybackDock( void );
+  void toggleSimConfigDock( void );
 
   void PlayPause( bool notify = true );
   void Play( bool notify = true );

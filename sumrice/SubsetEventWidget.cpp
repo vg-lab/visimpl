@@ -46,8 +46,6 @@ namespace visimpl
       unsigned int left;
       unsigned int right;
 
-
-
       e._cachedCustomSolidRep.clear( );
       e._cachedCustomTransRep.clear( );
       e._cachedCommonRep.clear( );

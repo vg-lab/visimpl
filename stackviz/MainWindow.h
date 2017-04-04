@@ -73,6 +73,7 @@ public slots:
   void openBlueConfigThroughDialog( void );
 
   void aboutDialog( void );
+  void togglePlaybackDock( void );
 
   void PlayPause( bool notify = true );
   void Play( bool notify = true );

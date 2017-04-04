@@ -122,6 +122,20 @@ void MainWindow::init( const std::string& zeqUri )
   initPlaybackDock( );
   initSimColorDock( );
 
+  connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool )),
+             _ui->actionTogglePlaybackDock, SLOT( setChecked( bool )));
+
+  connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( )),
+           this, SLOT( togglePlaybackDock( )));
+
+  connect( _simConfigurationDock->toggleViewAction( ), SIGNAL( toggled( bool )),
+             _ui->actionToggleSimConfigDock, SLOT( setChecked( bool )));
+
+  connect( _ui->actionToggleSimConfigDock, SIGNAL( triggered( )),
+           this, SLOT( toggleSimConfigDock( )));
+
+
+
   #ifdef VISIMPL_USE_ZEROEQ
 
   _setZeqUri( zeqUri );
@@ -273,6 +287,25 @@ void MainWindow::aboutDialog( void )
 
 }
 
+void MainWindow::togglePlaybackDock( void )
+{
+  if( _ui->actionTogglePlaybackDock->isChecked( ))
+    _simulationDock->show( );
+  else
+    _simulationDock->close( );
+
+  update( );
+}
+
+void MainWindow::toggleSimConfigDock( void )
+{
+  if( _ui->actionToggleSimConfigDock->isChecked( ))
+    _simConfigurationDock->show( );
+  else
+    _simConfigurationDock->close( );
+
+  update( );
+}
 
 void MainWindow::configurePlayer( void )
 {
@@ -533,11 +566,9 @@ void MainWindow::initSummaryWidget( void )
 
     _summary->Init( spikesPlayer->data( ));
 
-
+    _summary->simulationPlayer( _openGLWidget->player( ));
   }
 
-  connect( _summary, SIGNAL( histogramClicked( float )),
-           this, SLOT( PlayAt( float )));
 }
 
 void MainWindow::PlayPause( bool notify )
@@ -753,6 +784,9 @@ void MainWindow::UpdateSimulationSlider( float percentage )
 //              << total << " = " << position << std::endl;
 
     _simSlider->setSliderPosition( position );
+
+    if( _summary )
+      _summary->repaintHistograms( );
   }
 }
 

@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="/">
+    <file>icons/menu-play.png</file>
     <file>icons/visimpl-icon-square.png</file>
     <file>icons/logoGMRV.png</file>
     <file>icons/logoURJC.png</file>

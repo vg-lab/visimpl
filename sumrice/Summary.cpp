@@ -360,7 +360,11 @@ namespace visimpl
     {
       _mainLayout->addWidget( _mainHistogram, 0, 1, 1, 1 );
       _mainHistogram->paintRegion( false );
+      _mainHistogram->simPlayer( _player );
       _histograms.push_back( _mainHistogram );
+
+      connect( _mainHistogram, SIGNAL( mousePressed( QPoint, float )),
+               this, SLOT( childHistogramPressed( QPoint, float )));
     }
     else if( _stackType == T_STACK_EXPANDABLE )
     {
