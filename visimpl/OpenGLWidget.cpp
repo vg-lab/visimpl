@@ -63,9 +63,18 @@ OpenGLWidget::OpenGLWidget( QWidget* parent_,
 , _particleSystem( nullptr )
 , _simulationType( simil::TSimulationType::TSimNetwork )
 , _player( nullptr )
+, _maxLife( 0.0f )
+, _deltaTime( 0.0f )
+, _simDeltaTime( 0.125f )
+, _timeStepsPerSecond( 2.0f )
+, _simTimePerSecond( 0.5f )
 , _firstFrame( true )
 , _prototype( nullptr )
 , _offPrototype( nullptr )
+, _playbackSpeed( 0.0f )
+, _renderSpeed( 0.0f )
+, _simPeriod( 0.0f )
+, _renderPeriod( 0.0f )
 , _elapsedTimeRenderAcc( 0.0f )
 , _elapsedTimeSliderAcc( 0.0f )
 , _elapsedTimeSimAcc( 0.0f )
@@ -177,6 +186,9 @@ void OpenGLWidget::loadData( const std::string& fileName,
   {
     case simil::TBlueConfig:
       _playbackSpeed = 5.0f;
+
+      simulationDeltaTime( 0.5f );
+      simulationStepsPerSecond( 2.0f );
       changeSimulationDecayValue( 5.0f );
       break;
     case simil::THDF5:
@@ -520,96 +532,7 @@ void OpenGLWidget::resetParticles( void )
   _particleSystem->update( 0.0f );
 }
 
-void OpenGLWidget::SetAlphaBlendingAccumulative( bool accumulative )
-{
-  _alphaBlendingAccumulative = accumulative;
-}
 
-void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
-{
-
-  if( _particleSystem )
-  {
-
-    prefr::vectortvec4 gcolors;
-
-    for( auto c : colors )
-    {
-      glm::vec4 gColor( c.second.red( ) / 255.0f,
-                        c.second.green( ) / 255.0f,
-                        c.second.blue( ) / 255.0f,
-                        c.second.alpha( ) / 255.0f );
-      gcolors.Insert( c.first, gColor );
-    }
-
-    _prototype->color = gcolors;
-
-    _particleSystem->update( 0.0f );
-  }
-}
-
-TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
-{
-  TTransferFunction result;
-
-  if( _particleSystem )
-  {
-    prefr::vectortvec4 colors = _prototype->color;
-
-    for( unsigned int i = 0; i < colors.size; i++ )
-    {
-      glm::vec4 c = colors.values[ i ];
-      QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
-      result.push_back( std::make_pair( colors.times[ i ], color ));
-    }
-  }
-
-  return result;
-}
-
-void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
-{
-  if( _particleSystem )
-  {
-    utils::InterpolationSet< float > newSize;
-    for( auto s : sizes )
-    {
-      std::cout << s.first << " " << s.second << std::endl;
-      newSize.Insert( s.first, s.second );
-    }
-    _prototype->size = newSize;
-
-    _particleSystem->update( 0.0f );
-  }
-}
-
-TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
-{
-  TSizeFunction result;
-  if( _particleSystem )
-  {
-    auto v = _prototype->size.values.begin( );
-    for( auto s : _prototype->size.times)
-    {
-      result.push_back( std::make_pair( s, *v ));
-      v++;
-    }
-  }
-  return result;
-}
-
-void OpenGLWidget::changeSimulationDecayValue( float value )
-{
-  _maxLife = value;
-
-  if( _prototype)
-    _prototype->setLife( value, value );
-}
-
-float OpenGLWidget::getSimulationDecayValue( void )
-{
-  return _prototype->maxLife( );
-}
 
 void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
 {
@@ -696,12 +619,12 @@ void OpenGLWidget::clearSelection( void )
 }
 
 
-void OpenGLWidget::updateSimulation( void )
+void OpenGLWidget::updateParticles( float renderDelta )
 {
   if( _player->isPlaying( ) || _firstFrame )
   {
 
-    _particleSystem->update( _elapsedTimeRenderAcc );
+    _particleSystem->update( renderDelta );
     _firstFrame = false;
   }
 }
@@ -784,6 +707,7 @@ void OpenGLWidget::paintGL( void )
 
   _deltaTime = elapsedMilliseconds * 0.001f;
 
+  _elapsedTimeSimAcc += _deltaTime;
   _elapsedTimeRenderAcc += _deltaTime;
   _elapsedTimeSliderAcc += _deltaTime;
 
@@ -809,14 +733,20 @@ void OpenGLWidget::paintGL( void )
     if ( _particleSystem )
     {
 
+      if( _elapsedTimeSimAcc >= _simPeriod )
+      {
+        configureSimulation( );
+
+        _elapsedTimeSimAcc = 0.0f;
+      }
+
       if( _elapsedTimeRenderAcc >= _renderPeriod )
       {
-        _elapsedTimeSimAcc = _elapsedTimeRenderAcc * _playbackSpeed;
+        float renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond;
 
-        _player->deltaTime( _elapsedTimeSimAcc );
+//        _player->deltaTime( _elapsedTimeSimAcc );
 
-        configureSimulation( );
-        updateSimulation( );
+        updateParticles( renderDelta );
         _elapsedTimeRenderAcc = 0.0f;
       }
 
@@ -1124,6 +1054,124 @@ void OpenGLWidget::GoToEnd( void )
 
 }
 
+void OpenGLWidget::SetAlphaBlendingAccumulative( bool accumulative )
+{
+  _alphaBlendingAccumulative = accumulative;
+}
+
+void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
+{
+
+  if( _particleSystem )
+  {
+
+    prefr::vectortvec4 gcolors;
+
+    for( auto c : colors )
+    {
+      glm::vec4 gColor( c.second.red( ) / 255.0f,
+                        c.second.green( ) / 255.0f,
+                        c.second.blue( ) / 255.0f,
+                        c.second.alpha( ) / 255.0f );
+      gcolors.Insert( c.first, gColor );
+    }
+
+    _prototype->color = gcolors;
+
+    _particleSystem->update( 0.0f );
+  }
+}
+
+TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
+{
+  TTransferFunction result;
+
+  if( _particleSystem )
+  {
+    prefr::vectortvec4 colors = _prototype->color;
+
+    for( unsigned int i = 0; i < colors.size; i++ )
+    {
+      glm::vec4 c = colors.values[ i ];
+      QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
+      result.push_back( std::make_pair( colors.times[ i ], color ));
+    }
+  }
+
+  return result;
+}
+
+void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
+{
+  if( _particleSystem )
+  {
+    utils::InterpolationSet< float > newSize;
+    for( auto s : sizes )
+    {
+      std::cout << s.first << " " << s.second << std::endl;
+      newSize.Insert( s.first, s.second );
+    }
+    _prototype->size = newSize;
+
+    _particleSystem->update( 0.0f );
+  }
+}
+
+TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
+{
+  TSizeFunction result;
+  if( _particleSystem )
+  {
+    auto v = _prototype->size.values.begin( );
+    for( auto s : _prototype->size.times)
+    {
+      result.push_back( std::make_pair( s, *v ));
+      v++;
+    }
+  }
+  return result;
+}
+
+void OpenGLWidget::simulationDeltaTime( float value )
+{
+  std::cout << "Delta time: " << value << std::endl;
+  _player->deltaTime( value );
+
+  _simDeltaTime = value;
+
+  _simTimePerSecond = 1.0f / ( _simDeltaTime * _timeStepsPerSecond );
+}
+
+float OpenGLWidget::simulationDeltaTime( void )
+{
+  return _player->deltaTime( );
+}
+
+void OpenGLWidget::simulationStepsPerSecond( float value )
+{
+  _timeStepsPerSecond = value;
+
+  _simPeriod = 1.0f / ( _timeStepsPerSecond );
+  _simTimePerSecond = ( _simDeltaTime * _timeStepsPerSecond );
+}
+
+float OpenGLWidget::simulationStepsPerSecond( void )
+{
+  return _timeStepsPerSecond;
+}
+
+void OpenGLWidget::changeSimulationDecayValue( float value )
+{
+  _maxLife = value;
+
+  if( _prototype)
+    _prototype->setLife( value, value );
+}
+
+float OpenGLWidget::getSimulationDecayValue( void )
+{
+  return _prototype->maxLife( );
+}
 
 void OpenGLWidget::reducePlaybackSpeed( )
 {

@@ -77,8 +77,15 @@ public slots:
   void UpdateSimulationSizeFunction( void );
   void PreviewSimulationSizeFunction( void );
 
+  void changeEditorSimDeltaTime( void );
+  void updateSimDeltaTime( void );
+
+  void changeEditorSimTimestepsPS( void );
+  void updateSimTimestepsPS( void );
+
+
   void changeEditorDecayValue( void );
-  void UpdateSimulationDecayValue( void );
+  void updateSimulationDecayValue( void );
 
   void AlphaBlendingToggled( void );
 
@@ -122,7 +129,7 @@ protected:
 private:
 
   void initPlaybackDock( void );
-  void initSimColorDock( void );
+  void initSimControlDock( void );
   void initSummaryWidget( void );
 
   OpenGLWidget* _openGLWidget;
@@ -140,6 +147,8 @@ private:
   TransferFunctionEditor* _tfEditor;
   TransferFunctionWidget* _tfWidget;
   QDoubleSpinBox* _decayBox;
+  QDoubleSpinBox* _deltaTimeBox;
+  QDoubleSpinBox* _timeStepsPSBox;
 
   QPushButton* _clearSelectionButton;
   QLabel* _selectionSizeLabel;

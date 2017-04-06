@@ -120,7 +120,7 @@ void MainWindow::init( const std::string& zeqUri )
 
 
   initPlaybackDock( );
-  initSimColorDock( );
+  initSimControlDock( );
 
   connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool )),
              _ui->actionTogglePlaybackDock, SLOT( setChecked( bool )));
@@ -329,6 +329,8 @@ void MainWindow::configurePlayer( void )
 #endif
 
   changeEditorColorMapping( );
+  changeEditorSimDeltaTime( );
+  changeEditorSimTimestepsPS( );
   changeEditorSizeFunction( );
   changeEditorDecayValue( );
   initSummaryWidget( );
@@ -452,7 +454,7 @@ void MainWindow::initPlaybackDock( void )
            this, SLOT( PlayAt( float )));
 }
 
-void MainWindow::initSimColorDock( void )
+void MainWindow::initSimControlDock( void )
 {
   _simConfigurationDock = new QDockWidget( );
   _simConfigurationDock->setMinimumHeight( 100 );
@@ -467,6 +469,16 @@ void MainWindow::initSimColorDock( void )
 
 //  _psWidget = new ParticleSizeWidget( );
 //  _psWidget->setMinimumHeight( 150 );
+
+  _deltaTimeBox = new QDoubleSpinBox( );
+  _deltaTimeBox->setMinimum( 0.00000001 );
+  _deltaTimeBox->setMaximum( 50 );
+  _deltaTimeBox->setSingleStep( 0.05 );
+
+  _timeStepsPSBox = new QDoubleSpinBox( );
+  _timeStepsPSBox->setMinimum( 0.00000001 );
+  _timeStepsPSBox->setMaximum( 50 );
+  _timeStepsPSBox->setSingleStep( 1.0 );
 
   _decayBox = new QDoubleSpinBox( );
   _decayBox->setMinimum( 0.01 );
@@ -489,6 +501,15 @@ void MainWindow::initSimColorDock( void )
   tfLayout->addWidget( _tfWidget );
   tFunctionGB->setLayout( tfLayout );
   tFunctionGB->setMaximumHeight( 250 );
+
+  QGroupBox* tSpeedGB = new QGroupBox( "Simulation playback speed" );
+  QGridLayout* sfLayout = new QGridLayout( );
+  sfLayout->addWidget( new QLabel( "Simulation Timestep size:" ), 0, 0, 1, 1 );
+  sfLayout->addWidget( _deltaTimeBox, 0, 1, 1, 1  );
+  sfLayout->addWidget( new QLabel( "Timesteps per second:" ), 1, 0, 1, 1 );
+  sfLayout->addWidget( _timeStepsPSBox, 1, 1, 1, 1  );
+  tSpeedGB->setLayout( sfLayout );
+  tSpeedGB->setMaximumHeight( 200 );
 
   QGroupBox* dFunctionGB = new QGroupBox( "Decay function" );
   QHBoxLayout* dfLayout = new QHBoxLayout( );
@@ -515,6 +536,7 @@ void MainWindow::initSimColorDock( void )
 
   verticalLayout->setAlignment( Qt::AlignTop );
   verticalLayout->addWidget( tFunctionGB );
+  verticalLayout->addWidget( tSpeedGB );
   verticalLayout->addWidget( dFunctionGB );
   verticalLayout->addWidget( rFunctionGB );
   verticalLayout->addWidget( selFunctionGB  );
@@ -537,8 +559,14 @@ void MainWindow::initSimColorDock( void )
   connect( _tfWidget, SIGNAL( previewColor( void )),
            this, SLOT( PreviewSimulationSizeFunction( void )));
 
+  connect( _deltaTimeBox, SIGNAL( valueChanged( double )),
+             this, SLOT( updateSimDeltaTime( void )));
+
+  connect( _timeStepsPSBox, SIGNAL( valueChanged( double )),
+             this, SLOT( updateSimTimestepsPS( void )));
+
   connect( _decayBox, SIGNAL( valueChanged( double )),
-           this, SLOT( UpdateSimulationDecayValue( void )));
+           this, SLOT( updateSimulationDecayValue( void )));
 
   connect( _alphaNormalButton, SIGNAL( toggled( bool )),
            this, SLOT( AlphaBlendingToggled( void ) ));
@@ -827,12 +855,32 @@ void MainWindow::PreviewSimulationSizeFunction( void )
   _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizePreview( ));
 }
 
+void MainWindow::changeEditorSimDeltaTime( void )
+{
+  _deltaTimeBox->setValue( _openGLWidget->simulationDeltaTime( ));
+}
+
+void MainWindow::updateSimDeltaTime( void )
+{
+  _openGLWidget->simulationDeltaTime( _deltaTimeBox->value( ));
+}
+
+void MainWindow::changeEditorSimTimestepsPS( void )
+{
+  _timeStepsPSBox->setValue( _openGLWidget->simulationStepsPerSecond( ));
+}
+
+void MainWindow::updateSimTimestepsPS( void )
+{
+  _openGLWidget->simulationStepsPerSecond( _timeStepsPSBox->value( ));
+}
+
 void MainWindow::changeEditorDecayValue( void )
 {
   _decayBox->setValue( _openGLWidget->getSimulationDecayValue( ));
 }
 
-void MainWindow::UpdateSimulationDecayValue( void )
+void MainWindow::updateSimulationDecayValue( void )
 {
   _openGLWidget->changeSimulationDecayValue( _decayBox->value( ));
 }

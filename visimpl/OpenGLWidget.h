@@ -111,6 +111,12 @@ public slots:
   void changeSimulationSizeFunction( const TSizeFunction& sizes );
   TSizeFunction getSimulationSizeFunction( void );
 
+  void simulationDeltaTime( float value );
+  float simulationDeltaTime( void );
+
+  void simulationStepsPerSecond( float value );
+  float simulationStepsPerSecond( void );
+
   void changeSimulationDecayValue( float value );
   float getSimulationDecayValue( void );
 
@@ -137,7 +143,7 @@ protected:
   virtual void keyPressEvent( QKeyEvent* event );
 
   void configureSimulation( void );
-  void updateSimulation( void );
+  void updateParticles( float renderDelta );
   void paintParticles( void );
 
   std::unordered_set< uint32_t > _selectedGIDs;
@@ -184,6 +190,11 @@ protected:
 
   float _maxLife;
   float _deltaTime;
+
+  float _simDeltaTime;
+  float _timeStepsPerSecond;
+  float _simTimePerSecond;
+
   bool _firstFrame;
 
   prefr::ColorOperationModel* _prototype;
@@ -195,7 +206,10 @@ protected:
   float _playbackSpeed;
   float _renderSpeed;
   float _maxFPS;
+
+  float _simPeriod;
   float _renderPeriod;
+
   float _elapsedTimeRenderAcc;
   float _elapsedTimeSliderAcc;
   float _elapsedTimeSimAcc;
