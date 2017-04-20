@@ -134,7 +134,7 @@ int main( int argc, char** argv )
 
 
   setFormat( );
-  MainWindow mainWindow;
+  visimpl::MainWindow mainWindow;
   mainWindow.setWindowTitle("SimPart");
 
   if ( initWindowSize )

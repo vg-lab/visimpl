@@ -39,187 +39,186 @@
   #include <mutex>
 #endif
 
-class OpenGLWidget
-  : public QOpenGLWidget
-  , public QOpenGLFunctions
+namespace visimpl
 {
 
-  Q_OBJECT;
-
-public:
-
-  typedef enum
+  class OpenGLWidget
+    : public QOpenGLWidget
+    , public QOpenGLFunctions
   {
-    tBlueConfig,
-    SWC,
-    NsolScene
-  } TDataFileType;
 
-  typedef enum
-  {
-    PROTOTYPE_OFF = 0,
-    PROTOTYPE_ON
-  } TPrototypeEnum;
+    Q_OBJECT;
 
-  OpenGLWidget( QWidget* parent = 0,
-                Qt::WindowFlags windowFlags = 0,
-                bool paintNeurons = true,
-                const std::string& zeqUri = "" );
-  ~OpenGLWidget( void );
+  public:
 
-  void createParticleSystem( float scale = 1.0f );
-  void loadData( const std::string& fileName,
-                 const simil::TDataType = simil::TDataType::TBlueConfig,
-                 simil::TSimulationType simulationType = simil::TSimSpikes,
-                 const std::string& report = std::string( "" ));
+    typedef enum
+    {
+      tBlueConfig,
+      SWC,
+      NsolScene
+    } TDataFileType;
 
-  void idleUpdate( bool idleUpdate_ = true )
-  {
-    _idleUpdate = idleUpdate_;
-  }
+    typedef enum
+    {
+      PROTOTYPE_OFF = 0,
+      PROTOTYPE_ON
+    } TPrototypeEnum;
 
-  simil::SimulationPlayer* player( );
-  void resetParticles( void );
+    OpenGLWidget( QWidget* parent = 0,
+                  Qt::WindowFlags windowFlags = 0,
+                  bool paintNeurons = true,
+                  const std::string& zeqUri = "" );
+    ~OpenGLWidget( void );
 
-  void SetAlphaBlendingAccumulative( bool accumulative = true );
+    void createParticleSystem( float scale = 1.0f );
+    void loadData( const std::string& fileName,
+                   const simil::TDataType = simil::TDataType::TBlueConfig,
+                   simil::TSimulationType simulationType = simil::TSimSpikes,
+                   const std::string& report = std::string( "" ));
+
+    void idleUpdate( bool idleUpdate_ = true )
+    {
+      _idleUpdate = idleUpdate_;
+    }
+
+    simil::SimulationPlayer* player( );
+    void resetParticles( void );
+
+    void SetAlphaBlendingAccumulative( bool accumulative = true );
 
 
-signals:
+  signals:
 
-  void updateSlider( float );
+    void updateSlider( float );
 
-public slots:
+  public slots:
 
-  void togglePaintNeurons( void );
-  void changeClearColor( void );
-  void toggleUpdateOnIdle( void );
-  void toggleShowFPS( void );
-  void toggleWireframe( void );
+    void togglePaintNeurons( void );
+    void changeClearColor( void );
+    void toggleUpdateOnIdle( void );
+    void toggleShowFPS( void );
+    void toggleWireframe( void );
 
-  void Play( void );
-  void Pause( void );
-  void PlayPause( void );
-  void Stop( void );
-  void Repeat( bool repeat );
-  void PlayAt( float percentage );
-  void Restart( void );
-  void GoToEnd( void );
+    void Play( void );
+    void Pause( void );
+    void PlayPause( void );
+    void Stop( void );
+    void Repeat( bool repeat );
+    void PlayAt( float percentage );
+    void Restart( void );
+    void GoToEnd( void );
 
-  void changeSimulationColorMapping( const TTransferFunction& colors );
-  TTransferFunction getSimulationColorMapping( void );
+    void changeSimulationColorMapping( const TTransferFunction& colors );
+    TTransferFunction getSimulationColorMapping( void );
 
-  void changeSimulationSizeFunction( const TSizeFunction& sizes );
-  TSizeFunction getSimulationSizeFunction( void );
+    void changeSimulationSizeFunction( const TSizeFunction& sizes );
+    TSizeFunction getSimulationSizeFunction( void );
 
-  void simulationDeltaTime( float value );
-  float simulationDeltaTime( void );
+    void simulationDeltaTime( float value );
+    float simulationDeltaTime( void );
 
-  void simulationStepsPerSecond( float value );
-  float simulationStepsPerSecond( void );
+    void simulationStepsPerSecond( float value );
+    float simulationStepsPerSecond( void );
 
-  void changeSimulationDecayValue( float value );
-  float getSimulationDecayValue( void );
+    void changeSimulationDecayValue( float value );
+    float getSimulationDecayValue( void );
 
-  void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
-  void showSelection( bool );
-  void updateSelection( void );
-  void clearSelection( void );
+    void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
+    void showSelection( bool );
+    void updateSelection( void );
+    void clearSelection( void );
 
-protected slots:
+  protected:
 
-  void reducePlaybackSpeed( );
-  void increasePlaybackSpeed( );
+    virtual void initializeGL( void );
+    virtual void paintGL( void );
+    virtual void resizeGL( int w, int h );
 
-protected:
+    virtual void mousePressEvent( QMouseEvent* event );
+    virtual void mouseReleaseEvent( QMouseEvent* event );
+    virtual void wheelEvent( QWheelEvent* event );
+    virtual void mouseMoveEvent( QMouseEvent* event );
+    virtual void keyPressEvent( QKeyEvent* event );
 
-  virtual void initializeGL( void );
-  virtual void paintGL( void );
-  virtual void resizeGL( int w, int h );
+    void configureSimulation( void );
+    void updateParticles( float renderDelta );
+    void paintParticles( void );
 
-  virtual void mousePressEvent( QMouseEvent* event );
-  virtual void mouseReleaseEvent( QMouseEvent* event );
-  virtual void wheelEvent( QWheelEvent* event );
-  virtual void mouseMoveEvent( QMouseEvent* event );
-  virtual void keyPressEvent( QKeyEvent* event );
+    std::unordered_set< uint32_t > _selectedGIDs;
 
-  void configureSimulation( void );
-  void updateParticles( float renderDelta );
-  void paintParticles( void );
+  #ifdef VISIMPL_USE_ZEROEQ
 
-  std::unordered_set< uint32_t > _selectedGIDs;
+    std::string _zeqUri;
 
-#ifdef VISIMPL_USE_ZEROEQ
+  #endif
 
-  std::string _zeqUri;
+    QLabel _fpsLabel;
+    bool _showFps;
 
-#endif
+    bool _wireframe;
 
-  QLabel _fpsLabel;
-  bool _showFps;
+    reto::Camera* _camera;
+    glm::vec3 _lastCameraPosition;
 
-  bool _wireframe;
+    glm::vec3 _boundingBoxMin;
+    glm::vec3 _boundingBoxMax;
 
-  reto::Camera* _camera;
-  glm::vec3 _lastCameraPosition;
+    bool _focusOnSelection;
+    bool _pendingSelection;
 
-  glm::vec3 _boundingBoxMin;
-  glm::vec3 _boundingBoxMax;
+    unsigned int _frameCount;
 
-  bool _focusOnSelection;
-  bool _pendingSelection;
+    int _mouseX, _mouseY;
+    bool _rotation;
+    bool _translation;
 
-  unsigned int _frameCount;
+    bool _idleUpdate;
+    bool _paint;
 
-  int _mouseX, _mouseY;
-  bool _rotation;
-  bool _translation;
+    QColor _currentClearColor;
 
-  bool _idleUpdate;
-  bool _paint;
+    std::chrono::time_point< std::chrono::system_clock > _then;
+    std::chrono::time_point< std::chrono::system_clock > _lastFrame;
 
-  QColor _currentClearColor;
+    reto::ShaderProgram* _particlesShader;
+    prefr::ParticleSystem* _particleSystem;
 
-  std::chrono::time_point< std::chrono::system_clock > _then;
-  std::chrono::time_point< std::chrono::system_clock > _lastFrame;
+    simil::TSimulationType _simulationType;
+    simil::SimulationPlayer* _player;
 
-  reto::ShaderProgram* _particlesShader;
-  prefr::ParticleSystem* _particleSystem;
+    float _maxLife;
+    float _deltaTime;
 
-  simil::TSimulationType _simulationType;
-  simil::SimulationPlayer* _player;
+    float _simDeltaTime;
+    float _timeStepsPerSecond;
+    float _simTimePerSecond;
 
-  float _maxLife;
-  float _deltaTime;
+    bool _firstFrame;
 
-  float _simDeltaTime;
-  float _timeStepsPerSecond;
-  float _simTimePerSecond;
+    prefr::ColorOperationModel* _prototype;
+    prefr::ColorOperationModel* _offPrototype;
 
-  bool _firstFrame;
+    std::unordered_map< uint32_t, prefr::Cluster* > gidNodesMap;
+    std::unordered_map< prefr::Cluster*, uint32_t > nodesGIDMap;
 
-  prefr::ColorOperationModel* _prototype;
-  prefr::ColorOperationModel* _offPrototype;
+    float _renderSpeed;
+    float _maxFPS;
 
-  std::unordered_map< uint32_t, prefr::Cluster* > gidNodesMap;
-  std::unordered_map< prefr::Cluster*, uint32_t > nodesGIDMap;
+    float _simPeriod;
+    float _renderPeriod;
 
-  float _playbackSpeed;
-  float _renderSpeed;
-  float _maxFPS;
+    float _elapsedTimeRenderAcc;
+    float _elapsedTimeSliderAcc;
+    float _elapsedTimeSimAcc;
 
-  float _simPeriod;
-  float _renderPeriod;
+    bool _alphaBlendingAccumulative;
+    bool _showSelection;
 
-  float _elapsedTimeRenderAcc;
-  float _elapsedTimeSliderAcc;
-  float _elapsedTimeSimAcc;
+    bool _resetParticles;
+    bool _updateSelection;
 
-  bool _alphaBlendingAccumulative;
-  bool _showSelection;
+  };
 
-  bool _resetParticles;
-  bool _updateSelection;
-
-};
+} // namespace visimpl
 
 #endif // __VISIMPL__OPENGLWIDGET__

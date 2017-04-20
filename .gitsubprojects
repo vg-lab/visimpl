@@ -4,4 +4,4 @@
 # git_subproject( gmrvlex git@gitlab.gmrv.es:nsviz/gmrvlex.git c20b194 )
 git_subproject( ReTo git@gitlab.gmrv.es:nsviz/ReTo.git 491e23c )
 git_subproject( prefr git@gitlab.gmrv.es:nsviz/prefr.git 1a3eeb9 )
-git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git af1b8c2 )
+git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git ffce70b )

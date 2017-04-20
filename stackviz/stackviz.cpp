@@ -139,7 +139,7 @@ int main( int argc, char** argv )
     }
   }
 
-  MainWindow mainWindow;
+  stackviz::MainWindow mainWindow;
   mainWindow.setWindowTitle("StackViz");
 
   if ( initWindowSize )
