@@ -244,8 +244,8 @@ namespace visimpl
     QLabel* _localMaxLabel;
 
 //    simil::SubsetEventManager* _subsetEventManager;
-    std::vector< TimeFrame > _timeFrames;
-    QGridLayout* _timeFramesLayout;
+    std::vector< TEvent > _events;
+    QGridLayout* _eventsLayout;
     QScrollArea* _eventScroll;
     std::vector< SubsetEventWidget* > _subsetEventWidgets;
     std::vector< EventRow > _subsetRows;

@@ -48,12 +48,17 @@
     <property name="title">
      <string>Options</string>
     </property>
+    <addaction name="actionTogglePlaybackDock"/>
+    <addaction name="actionToggleSimConfigDock"/>
+    <addaction name="actionShowSelection"/>
+    <addaction name="separator"/>
     <addaction name="actionUpdateOnIdle"/>
     <addaction name="actionPaintNeurons"/>
     <addaction name="actionShowFPSOnIdleUpdate"/>
+    <addaction name="separator"/>
     <addaction name="actionHome"/>
+    <addaction name="separator"/>
     <addaction name="actionBackgroundColor"/>
-    <addaction name="actionShowSelection"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
@@ -74,9 +79,12 @@
    <addaction name="actionCloseData"/>
    <addaction name="separator"/>
    <addaction name="actionOpenSWCFile"/>
+   <addaction name="actionTogglePlaybackDock"/>
+   <addaction name="separator"/>
    <addaction name="actionHome"/>
    <addaction name="actionBackgroundColor"/>
    <addaction name="actionShowSelection"/>
+   <addaction name="actionToggleSimConfigDock"/>
    <addaction name="actionOpenXMLScene"/>
   </widget>
   <action name="actionQuit">
@@ -135,7 +143,7 @@
   </action>
   <action name="actionOpenXMLScene">
    <property name="icon">
-    <iconset resource="resources.qrc">
+    <iconset>
      <normaloff>:/icons/open_xml.png</normaloff>:/icons/open_xml.png</iconset>
    </property>
    <property name="text">
@@ -177,7 +185,7 @@
   </action>
   <action name="actionOpenSWCFile">
    <property name="icon">
-    <iconset resource="resources.qrc">
+    <iconset>
      <normaloff>:/icons/open_swc.png</normaloff>:/icons/open_swc.png</iconset>
    </property>
    <property name="text">
@@ -221,7 +229,7 @@
     <bool>false</bool>
    </property>
   </action>
-  <action name="actionShowSelection">
+  <action name="actionToggleSimConfigDock">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -230,7 +238,13 @@
      <normaloff>:/icons/query.png</normaloff>:/icons/query.png</iconset>
    </property>
    <property name="text">
-    <string>Show selection</string>
+    <string>Toggle Simulation Config Dock</string>
+   </property>
+   <property name="toolTip">
+    <string>Show/Hide simulation configuration dock</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
    </property>
   </action>
   <action name="actionHome">
@@ -240,6 +254,44 @@
    </property>
    <property name="text">
     <string>Home</string>
+   </property>
+  </action>
+  <action name="actionTogglePlaybackDock">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normalon>:/icons/menu-play.png</normalon>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Toggle Playback Dock</string>
+   </property>
+   <property name="toolTip">
+    <string>Show/Hide playback dock</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionShowSelection">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/hide.png</normaloff>
+     <normalon>:/icons/show.png</normalon>:/icons/hide.png</iconset>
+   </property>
+   <property name="text">
+    <string>Show selection</string>
+   </property>
+   <property name="toolTip">
+    <string>Show/Hide selection</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
    </property>
   </action>
  </widget>

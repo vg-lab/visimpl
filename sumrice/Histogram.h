@@ -38,6 +38,10 @@ namespace visimpl
       QGradientStops _gradientStops;
       QPolygonF _curveStopsLocal;
       QPolygonF _curveStopsGlobal;
+
+      QPainterPath _cachedLocalRep;
+      QPainterPath _cachedGlobalRep;
+
       std::vector< float > _gridLines;
     };
 
@@ -50,14 +54,16 @@ namespace visimpl
     } THistogram;
 
     MultiLevelHistogram( void );
-    MultiLevelHistogram( const TSpikes& spikes, float startTime, float endTime );
-//    MultiLevelHistogram( const brion::SpikeReport& spikeReport );
+    MultiLevelHistogram( const simil::Spikes& spikes,
+                         float startTime,
+                         float endTime );
+
     MultiLevelHistogram( const simil::SpikeData& spikeReport );
 
     virtual void init( unsigned int binsNumber = 250, float zoomFactor = 1.5f );
 
-    void Spikes( const TSpikes& spikes, float startTime, float endTime );
-//    void Spikes( const brion::SpikeReport& spikeReport );
+    void Spikes( const simil::Spikes& spikes, float startTime, float endTime );
+
     void Spikes( const simil::SpikeData& spikeReport  );
 
     void BuildHistogram( THistogram histogram = T_HIST_MAIN );
@@ -143,6 +149,7 @@ signals:
 
   protected:
 
+    virtual void resizeEvent( QResizeEvent* event );
     virtual void paintEvent( QPaintEvent* event );
 
     Histogram _mainHistogram;
@@ -151,7 +158,7 @@ signals:
     unsigned int _bins;
     float _zoomFactor;
 
-    const TSpikes* _spikes;
+    const simil::Spikes* _spikes;
     float _startTime;
     float _endTime;
 
@@ -191,7 +198,8 @@ signals:
     unsigned int _pixelsPerCharacter;
     unsigned int _pixelMargin;
 
-    std::vector< TimeFrame >* _timeFrames;
+    std::vector< TEvent >* _events;
+    std::vector< QPainterPath >* _cachedEventGraphs;
   };
 }
 

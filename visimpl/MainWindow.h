@@ -25,123 +25,139 @@ namespace Ui
 class MainWindow;
 }
 
-class MainWindow
-  : public QMainWindow
+namespace visimpl
 {
-  Q_OBJECT
 
-public:
-  explicit MainWindow( QWidget* parent = 0,
-                       bool updateOnIdle = true );
-  ~MainWindow( void );
+  class MainWindow
+    : public QMainWindow
+  {
+    Q_OBJECT
 
-  void init( const std::string& zeqUri = "" );
-  void showStatusBarMessage ( const QString& message );
+  public:
+    explicit MainWindow( QWidget* parent = 0,
+                         bool updateOnIdle = true );
+    ~MainWindow( void );
 
-  void openBlueConfig( const std::string& fileName,
+    void init( const std::string& zeqUri = "" );
+    void showStatusBarMessage ( const QString& message );
+
+    void openBlueConfig( const std::string& fileName,
+                         simil::TSimulationType simulationType,
+                         const std::string& report);
+
+    void openHDF5File( const std::string& networkFile,
                        simil::TSimulationType simulationType,
-                       const std::string& report);
-
-  void openHDF5File( const std::string& networkFile,
-                     simil::TSimulationType simulationType,
-                     const std::string& activityFile = "" );
+                       const std::string& activityFile = "" );
 
 
-public slots:
+  public slots:
 
-  void openBlueConfigThroughDialog( void );
-  void openHDF5ThroughDialog( void );
+    void openBlueConfigThroughDialog( void );
+    void openHDF5ThroughDialog( void );
 
-  void aboutDialog( void );
+    void aboutDialog( void );
+    void togglePlaybackDock( void );
+    void toggleSimConfigDock( void );
 
-  void PlayPause( bool notify = true );
-  void Play( bool notify = true );
-  void Pause( bool notify = true );
-  void Stop( bool notify = true );
-  void Repeat( bool notify = true );
-  void PlayAt( bool notify = true );
-  void PlayAt( float, bool notify = true );
-  void PlayAt( int, bool notify = true );
-  void requestPlayAt( float );
-  void Restart( bool notify = true );
-  void GoToEnd( bool notify = true );
+    void PlayPause( bool notify = true );
+    void Play( bool notify = true );
+    void Pause( bool notify = true );
+    void Stop( bool notify = true );
+    void Repeat( bool notify = true );
+    void PlayAt( bool notify = true );
+    void PlayAt( float, bool notify = true );
+    void PlayAt( int, bool notify = true );
+    void requestPlayAt( float );
+    void Restart( bool notify = true );
+    void GoToEnd( bool notify = true );
 
-  void UpdateSimulationSlider( float percentage );
+    void UpdateSimulationSlider( float percentage );
 
-  void UpdateSimulationColorMapping( void );
-  void PreviewSimulationColorMapping( void );
-  void changeEditorColorMapping( void );
-  void changeEditorSizeFunction( void );
-  void UpdateSimulationSizeFunction( void );
-  void PreviewSimulationSizeFunction( void );
+    void UpdateSimulationColorMapping( void );
+    void PreviewSimulationColorMapping( void );
+    void changeEditorColorMapping( void );
+    void changeEditorSizeFunction( void );
+    void UpdateSimulationSizeFunction( void );
+    void PreviewSimulationSizeFunction( void );
 
-  void changeEditorDecayValue( void );
-  void UpdateSimulationDecayValue( void );
+    void changeEditorSimDeltaTime( void );
+    void updateSimDeltaTime( void );
 
-  void AlphaBlendingToggled( void );
+    void changeEditorSimTimestepsPS( void );
+    void updateSimTimestepsPS( void );
 
 
-#ifdef VISIMPL_USE_ZEROEQ
+    void changeEditorDecayValue( void );
+    void updateSimulationDecayValue( void );
 
-  protected slots:
+    void AlphaBlendingToggled( void );
 
-#ifdef VISIMPL_USE_GMRVLEX
 
-  void ApplyPlaybackOperation( unsigned int playbackOp );
-  void _zeqEventRepeat( bool repeat );
+  #ifdef VISIMPL_USE_ZEROEQ
 
-#endif
+    protected slots:
 
-  void ClearSelection( void );
-  void playAtButtonClicked( void );
+  #ifdef VISIMPL_USE_GMRVLEX
 
-protected:
+    void ApplyPlaybackOperation( unsigned int playbackOp );
+    void _zeqEventRepeat( bool repeat );
 
-  void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
-  void _setZeqUri( const std::string& );
-  bool _zeqConnection;
+  #endif
 
-  std::string _uri;
-  zeroeq::Subscriber* _subscriber;
+    void ClearSelection( void );
+    void playAtButtonClicked( void );
 
-  std::thread* _thread;
+  protected:
 
-#endif // VISIMPL_USE_ZEROEQ
+    void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
+    void _setZeqUri( const std::string& );
+    bool _zeqConnection;
 
-protected:
-  void configurePlayer( void );
+    std::string _uri;
+    zeroeq::Subscriber* _subscriber;
 
-  Ui::MainWindow* _ui;
+    std::thread* _thread;
 
-  QString _lastOpenedFileName;
-  QIcon _playIcon;
-  QIcon _pauseIcon;
+  #endif // VISIMPL_USE_ZEROEQ
 
-private:
+  protected:
+    void configurePlayer( void );
 
-  void initPlaybackDock( void );
-  void initSimColorDock( void );
-  void initSummaryWidget( void );
+    Ui::MainWindow* _ui;
 
-  OpenGLWidget* _openGLWidget;
-  visimpl::Summary* _summary;
+    QString _lastOpenedFileName;
+    QIcon _playIcon;
+    QIcon _pauseIcon;
 
-  QDockWidget* _simulationDock;
-  QSlider* _simSlider;
-  QPushButton* _playButton;
-  QLabel* _startTimeLabel;
-  QLabel* _endTimeLabel;
-  QPushButton* _repeatButton;
-  QPushButton* _goToButton;
+  private:
 
-  QDockWidget* _simConfigurationDock;
-  TransferFunctionEditor* _tfEditor;
-  TransferFunctionWidget* _tfWidget;
-  QDoubleSpinBox* _decayBox;
+    void initPlaybackDock( void );
+    void initSimControlDock( void );
+    void initSummaryWidget( void );
 
-  QPushButton* _clearSelectionButton;
-  QLabel* _selectionSizeLabel;
+    OpenGLWidget* _openGLWidget;
+    visimpl::Summary* _summary;
 
-  QRadioButton* _alphaNormalButton;
-  QRadioButton* _alphaAccumulativeButton;
-};
+    QDockWidget* _simulationDock;
+    QSlider* _simSlider;
+    QPushButton* _playButton;
+    QLabel* _startTimeLabel;
+    QLabel* _endTimeLabel;
+    QPushButton* _repeatButton;
+    QPushButton* _goToButton;
+
+    QDockWidget* _simConfigurationDock;
+    TransferFunctionEditor* _tfEditor;
+    TransferFunctionWidget* _tfWidget;
+    QDoubleSpinBox* _decayBox;
+    QDoubleSpinBox* _deltaTimeBox;
+    QDoubleSpinBox* _timeStepsPSBox;
+
+    QPushButton* _clearSelectionButton;
+    QLabel* _selectionSizeLabel;
+
+    QRadioButton* _alphaNormalButton;
+    QRadioButton* _alphaAccumulativeButton;
+  };
+
+} // namespace visimpl

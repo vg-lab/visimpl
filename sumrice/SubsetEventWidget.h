@@ -26,21 +26,17 @@ namespace visimpl
 
     SubsetEventWidget( void );
 
-//    virtual void mousePressEvent( QMouseEvent* event_ );
-//    virtual void mouseReleaseEvent( QMouseEvent* event_ );
-//    virtual void mouseMoveEvent( QMouseEvent* event_ );
-
-    void timeFrames( std::vector< TimeFrame >* timeFrames );
-    std::vector< TimeFrame >* timeFrames( void );
+    void timeFrames( std::vector< TEvent >* timeFrames );
+    std::vector< TEvent >* timeFrames( void );
 
     void index( unsigned int index_ );
 
   protected:
 
+    virtual void resizeEvent( QResizeEvent* event );
     virtual void paintEvent( QPaintEvent* event );
 
-//    simil::SubsetEventManager* _subsetEventMngr;
-    std::vector< TimeFrame >* _timeFrames;
+    std::vector< TEvent >* _events;
 
     unsigned int _index;
     unsigned int _heightPerRow;

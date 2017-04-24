@@ -62,7 +62,7 @@ namespace visimpl
   , _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
   , _colorLocal( 0, 0, 128, 50 )
   , _colorGlobal( 255, 0, 0, 100 )
-  , _timeFramesLayout( nullptr )
+  , _eventsLayout( nullptr )
   , _eventScroll( nullptr )
   , _syncScrollsVertically( true )
   , _heightPerRow( 50 )
@@ -103,14 +103,14 @@ namespace visimpl
       QVBoxLayout* upperLayout = new QVBoxLayout( );
       upperLayout->setAlignment( Qt::AlignTop );
 
-      _timeFramesLayout = new QGridLayout( );
-      _timeFramesLayout->setAlignment( Qt::AlignTop );
-      _timeFramesLayout->setVerticalSpacing( 0 );
+      _eventsLayout = new QGridLayout( );
+      _eventsLayout->setAlignment( Qt::AlignTop );
+      _eventsLayout->setVerticalSpacing( 0 );
 
       _eventScroll = new QScrollArea();
       QWidget* subsetWidget = new QWidget( );
 
-      subsetWidget->setLayout( _timeFramesLayout );
+      subsetWidget->setLayout( _eventsLayout );
       _eventScroll->setWidget( subsetWidget );
       _eventScroll->setWidgetResizable( true );
       _eventScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
@@ -360,7 +360,11 @@ namespace visimpl
     {
       _mainLayout->addWidget( _mainHistogram, 0, 1, 1, 1 );
       _mainHistogram->paintRegion( false );
+      _mainHistogram->simPlayer( _player );
       _histograms.push_back( _mainHistogram );
+
+      connect( _mainHistogram, SIGNAL( mousePressed( QPoint, float )),
+               this, SLOT( childHistogramPressed( QPoint, float )));
     }
     else if( _stackType == T_STACK_EXPANDABLE )
     {
@@ -368,7 +372,7 @@ namespace visimpl
       HistogramRow mainRow;
 
       mainRow.histogram = _mainHistogram;
-      mainRow.histogram->_timeFrames = &_timeFrames;
+      mainRow.histogram->_events = &_events;
       QString labelText( "All" );
       mainRow.label = new QLabel( labelText );
       mainRow.label->setMinimumWidth( _maxLabelWidth );
@@ -415,7 +419,7 @@ namespace visimpl
           unsigned int counter = 0;
           for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
           {
-            TimeFrame timeFrame;
+            TEvent timeFrame;
             timeFrame.name = it->first;
 
     //        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
@@ -443,7 +447,7 @@ namespace visimpl
             timeFrame.color = _subsetEventColorPalette[
               counter %  _subsetEventColorPalette.size( ) ];
 
-            _timeFrames.push_back( timeFrame );
+            _events.push_back( timeFrame );
 
             QLabel* label = new QLabel( timeFrame.name.c_str( ));
             label->setMinimumHeight( 20 );
@@ -454,7 +458,7 @@ namespace visimpl
             SubsetEventWidget* subsetWidget = new SubsetEventWidget( );
             subsetWidget->setSizePolicy( QSizePolicy::Expanding,
                                                QSizePolicy::Expanding );
-            subsetWidget->timeFrames( &_timeFrames );
+            subsetWidget->timeFrames( &_events );
             subsetWidget->setMinimumWidth( _currentCentralMinWidth );
             subsetWidget->index( counter );
 
@@ -468,9 +472,9 @@ namespace visimpl
             _subsetRows.push_back( eventrow );
             _subsetEventWidgets.push_back( subsetWidget );
 
-            _timeFramesLayout->addWidget( label, counter, 0, 1, 1 );
-            _timeFramesLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
-            _timeFramesLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
+            _eventsLayout->addWidget( label, counter, 0, 1, 1 );
+            _eventsLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
+            _eventsLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
 
           }
         }
@@ -625,7 +629,7 @@ namespace visimpl
 
     histogram->simPlayer( _player );
 
-    histogram->_timeFrames = &_timeFrames;
+    histogram->_events = &_events;
 
     currentRow.histogram = histogram;
     currentRow.label = new QLabel( name.c_str( ));
@@ -1115,15 +1119,15 @@ namespace visimpl
 
       if( timeFrameRow.checkBox->isChecked( ))
       {
-        _timeFramesLayout->removeWidget( timeFrameRow.label );
-        _timeFramesLayout->removeWidget( timeFrameRow.widget );
-        _timeFramesLayout->removeWidget( timeFrameRow.checkBox );
+        _eventsLayout->removeWidget( timeFrameRow.label );
+        _eventsLayout->removeWidget( timeFrameRow.widget );
+        _eventsLayout->removeWidget( timeFrameRow.checkBox );
 
         delete timeFrameRow.label;
         delete timeFrameRow.widget;
         delete timeFrameRow.checkBox;
 
-        _timeFrames.erase( _timeFrames.begin( ) + counter );
+        _events.erase( _events.begin( ) + counter );
         _subsetEventWidgets.erase( _subsetEventWidgets.begin( ) + counter );
 
         toDelete.push_back( counter );
