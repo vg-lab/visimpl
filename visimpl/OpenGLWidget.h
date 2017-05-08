@@ -30,6 +30,7 @@
 #include "prefr/ColorOperationModel.h"
 
 #include <sumrice/sumrice.h>
+#include <scoop/scoop.h>
 
 #ifdef VISIMPL_USE_ZEROEQ
   #include <zeroeq/zeroeq.h>
@@ -64,9 +65,18 @@ namespace visimpl
       PROTOTYPE_ON
     } TPrototypeEnum;
 
+    struct EventLabel
+    {
+    public:
+
+      QWidget* upperWidget;
+      QFrame* frame;
+      QLabel* label;
+
+    };
+
     OpenGLWidget( QWidget* parent = 0,
                   Qt::WindowFlags windowFlags = 0,
-                  bool paintNeurons = true,
                   const std::string& zeqUri = "" );
     ~OpenGLWidget( void );
 
@@ -76,16 +86,14 @@ namespace visimpl
                    simil::TSimulationType simulationType = simil::TSimSpikes,
                    const std::string& report = std::string( "" ));
 
-    void idleUpdate( bool idleUpdate_ = true )
-    {
-      _idleUpdate = idleUpdate_;
-    }
+    void idleUpdate( bool idleUpdate_ = true );
 
     simil::SimulationPlayer* player( );
     void resetParticles( void );
 
     void SetAlphaBlendingAccumulative( bool accumulative = true );
 
+    void subsetEventsManager( simil::SubsetEventManager* manager );
 
   signals:
 
@@ -128,6 +136,8 @@ namespace visimpl
     void updateSelection( void );
     void clearSelection( void );
 
+    void showEventsActivityLabels( bool show );
+
   protected:
 
     virtual void initializeGL( void );
@@ -144,6 +154,10 @@ namespace visimpl
     void updateParticles( float renderDelta );
     void paintParticles( void );
 
+    void updateEventLabelsVisibility( void );
+
+    std::vector< bool > activeEventsAt( float time );
+
     std::unordered_set< uint32_t > _selectedGIDs;
 
   #ifdef VISIMPL_USE_ZEROEQ
@@ -152,7 +166,7 @@ namespace visimpl
 
   #endif
 
-    QLabel _fpsLabel;
+    QLabel* _fpsLabel;
     bool _showFps;
 
     bool _wireframe;
@@ -217,6 +231,14 @@ namespace visimpl
     bool _resetParticles;
     bool _updateSelection;
 
+    bool _showActiveEvents;
+    simil::SubsetEventManager* _subsetEvents;
+    std::vector< EventLabel > _eventLabels;
+    QGridLayout* _eventLabelsLayout;
+    std::vector< std::vector< bool >> _eventsActivation;
+    float _deltaEvents;
+
+    scoop::ColorPalette _eventLabelColors;
   };
 
 } // namespace visimpl

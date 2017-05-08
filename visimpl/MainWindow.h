@@ -43,17 +43,22 @@ namespace visimpl
 
     void openBlueConfig( const std::string& fileName,
                          simil::TSimulationType simulationType,
-                         const std::string& report);
+                         const std::string& report,
+                         const std::string& subsetEventFile = "");
 
     void openHDF5File( const std::string& networkFile,
                        simil::TSimulationType simulationType,
-                       const std::string& activityFile = "" );
+                       const std::string& activityFile = "",
+                       const std::string& subsetEventFile = "" );
 
 
   public slots:
 
     void openBlueConfigThroughDialog( void );
     void openHDF5ThroughDialog( void );
+
+    void openSubsetEventFile( const std::string& fileName,
+                              bool append = false );
 
     void aboutDialog( void );
     void togglePlaybackDock( void );
@@ -91,7 +96,6 @@ namespace visimpl
     void updateSimulationDecayValue( void );
 
     void AlphaBlendingToggled( void );
-
 
   #ifdef VISIMPL_USE_ZEROEQ
 

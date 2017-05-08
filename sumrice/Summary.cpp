@@ -62,6 +62,7 @@ namespace visimpl
   , _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
   , _colorLocal( 0, 0, 128, 50 )
   , _colorGlobal( 255, 0, 0, 100 )
+  , _maxNumEvents( 8 )
   , _eventsLayout( nullptr )
   , _eventScroll( nullptr )
   , _syncScrollsVertically( true )
@@ -83,7 +84,6 @@ namespace visimpl
   , _fillPlots( true )
   , _autoAddEvents( true )
   , _autoAddEventSubset( true )
-  , _autoCalculateCorrelations( true )
   , _defaultCorrelationDeltaTime( 0.125f )
   {
 
@@ -275,19 +275,22 @@ namespace visimpl
 
     // Fill the palette with ColorbBewer qualitative palette with 10 classes
     // but rearranging to have consecutive colors with different hue.
-    _subsetEventColorPalette.reserve( 10 );
-//    _subsetEventColorPalette.push_back( QColor( "#a6cee3" ));
-    _subsetEventColorPalette.push_back( QColor( "#b2df8a" ));
-//    _subsetEventColorPalette.push_back( QColor( "#fb9a99" ));
-    _subsetEventColorPalette.push_back( QColor( "#fdbf6f" ));
-    _subsetEventColorPalette.push_back( QColor( "#cab2d6" ));
-    _subsetEventColorPalette.push_back( QColor( "#b15928" ));
-    _subsetEventColorPalette.push_back( QColor( "#ffff99" ));
-//    _subsetEventColorPalette.push_back( QColor( "#1f78b4" ));
-    _subsetEventColorPalette.push_back( QColor( "#33a02c" ));
-//    _subsetEventColorPalette.push_back( QColor( "#e31a1c" ));
-    _subsetEventColorPalette.push_back( QColor( "#ff7f00" ));
-    _subsetEventColorPalette.push_back( QColor( "#6a3d9a" ));
+    _eventsPalette = scoop::ColorPalette::colorBrewerQualitative(
+        scoop::ColorPalette::ColorBrewerQualitative::Pastel1, 9 );
+
+//    _subsetEventColorPalette.reserve( 10 );
+////    _subsetEventColorPalette.push_back( QColor( "#a6cee3" ));
+//    _subsetEventColorPalette.push_back( QColor( "#b2df8a" ));
+////    _subsetEventColorPalette.push_back( QColor( "#fb9a99" ));
+//    _subsetEventColorPalette.push_back( QColor( "#fdbf6f" ));
+//    _subsetEventColorPalette.push_back( QColor( "#cab2d6" ));
+//    _subsetEventColorPalette.push_back( QColor( "#b15928" ));
+//    _subsetEventColorPalette.push_back( QColor( "#ffff99" ));
+////    _subsetEventColorPalette.push_back( QColor( "#1f78b4" ));
+//    _subsetEventColorPalette.push_back( QColor( "#33a02c" ));
+////    _subsetEventColorPalette.push_back( QColor( "#e31a1c" ));
+//    _subsetEventColorPalette.push_back( QColor( "#ff7f00" ));
+//    _subsetEventColorPalette.push_back( QColor( "#6a3d9a" ));
 
   }
 
@@ -444,8 +447,8 @@ namespace visimpl
 
             }
 
-            timeFrame.color = _subsetEventColorPalette[
-              counter %  _subsetEventColorPalette.size( ) ];
+            timeFrame.color = _eventsPalette.colors( )[
+              counter /* %  _eventsPalette.size( ) */ ];
 
             _events.push_back( timeFrame );
 

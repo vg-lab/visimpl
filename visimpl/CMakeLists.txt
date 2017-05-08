@@ -66,6 +66,7 @@ set(VISIMPL_LINK_LIBRARIES
   SimIL
   prefr
   sumrice
+  scoop
 )
 
 

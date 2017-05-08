@@ -51,9 +51,9 @@
     <addaction name="actionTogglePlaybackDock"/>
     <addaction name="actionToggleSimConfigDock"/>
     <addaction name="actionShowSelection"/>
+    <addaction name="actionShowEventsActivity"/>
     <addaction name="separator"/>
     <addaction name="actionUpdateOnIdle"/>
-    <addaction name="actionPaintNeurons"/>
     <addaction name="actionShowFPSOnIdleUpdate"/>
     <addaction name="separator"/>
     <addaction name="actionHome"/>
@@ -215,20 +215,6 @@
     <string>Ctrl+S</string>
    </property>
   </action>
-  <action name="actionPaintNeurons">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Paint neurons</string>
-   </property>
-   <property name="toolTip">
-    <string>Paint neurons</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-  </action>
   <action name="actionToggleSimConfigDock">
    <property name="checkable">
     <bool>true</bool>
@@ -292,6 +278,17 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="actionShowEventsActivity">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show events activity</string>
+   </property>
+   <property name="toolTip">
+    <string>Show/Hide events activity</string>
    </property>
   </action>
  </widget>

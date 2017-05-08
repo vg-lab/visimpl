@@ -12,6 +12,7 @@
 
 #include <prefr/prefr.h>
 #include <simil/simil.h>
+#include <scoop/scoop.h>
 
 #include <QWidget>
 #include <QGridLayout>
@@ -244,6 +245,7 @@ namespace visimpl
     QLabel* _localMaxLabel;
 
 //    simil::SubsetEventManager* _subsetEventManager;
+    unsigned int _maxNumEvents;
     std::vector< TEvent > _events;
     QGridLayout* _eventsLayout;
     QScrollArea* _eventScroll;
@@ -281,10 +283,10 @@ namespace visimpl
     bool _fillPlots;
     bool _autoAddEvents;
     bool _autoAddEventSubset;
-    bool _autoCalculateCorrelations;
     float _defaultCorrelationDeltaTime;
 
-    std::vector< QColor > _subsetEventColorPalette;
+    scoop::ColorPalette _eventsPalette;
+//    std::vector< QColor > _subsetEventColorPalette;
 
   };
 

@@ -63,8 +63,9 @@ namespace visimpl
     _ui->setupUi( this );
 
     _ui->actionUpdateOnIdle->setChecked( updateOnIdle );
-    _ui->actionPaintNeurons->setChecked( true );
     _ui->actionShowFPSOnIdleUpdate->setChecked( false );
+
+    _ui->actionShowEventsActivity->setChecked( false );
 
   #ifdef VISIMPL_USE_BRION
     _ui->actionOpenBlueConfig->setEnabled( true );
@@ -77,9 +78,7 @@ namespace visimpl
   void MainWindow::init( const std::string& zeqUri )
   {
 
-    _openGLWidget = new OpenGLWidget( 0, 0,
-                                      _ui->actionPaintNeurons->isChecked( ),
-                                      zeqUri );
+    _openGLWidget = new OpenGLWidget( 0, 0, zeqUri );
     this->setCentralWidget( _openGLWidget );
     qDebug( ) << _openGLWidget->format( );
 
@@ -88,14 +87,14 @@ namespace visimpl
     connect( _ui->actionUpdateOnIdle, SIGNAL( triggered( )),
              _openGLWidget, SLOT( toggleUpdateOnIdle( )));
 
-    connect( _ui->actionPaintNeurons, SIGNAL( triggered( )),
-             _openGLWidget, SLOT( togglePaintNeurons( )));
-
     connect( _ui->actionBackgroundColor, SIGNAL( triggered( )),
              _openGLWidget, SLOT( changeClearColor( )));
 
     connect( _ui->actionShowFPSOnIdleUpdate, SIGNAL( triggered( )),
              _openGLWidget, SLOT( toggleShowFPS( )));
+
+    connect( _ui->actionShowEventsActivity, SIGNAL( triggered( bool )),
+             _openGLWidget, SLOT( showEventsActivityLabels( bool )));
 
     connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
              this, SLOT( openBlueConfigThroughDialog( )));
@@ -162,11 +161,14 @@ namespace visimpl
 
   void MainWindow::openBlueConfig( const std::string& fileName,
                                    simil::TSimulationType simulationType,
-                                   const std::string& reportLabel)
+                                   const std::string& reportLabel,
+                                   const std::string& subsetEventFile )
   {
     _openGLWidget->loadData( fileName,
                              simil::TDataType::TBlueConfig,
                              simulationType, reportLabel );
+
+    openSubsetEventFile( subsetEventFile, true );
 
     configurePlayer( );
 
@@ -229,12 +231,15 @@ namespace visimpl
 
   void MainWindow::openHDF5File( const std::string& networkFile,
                                  simil::TSimulationType simulationType,
-                                 const std::string& activityFile )
+                                 const std::string& activityFile,
+                                 const std::string& subsetEventFile )
   {
     _openGLWidget->loadData( networkFile,
                              simil::TDataType::THDF5,
                              simulationType,
                              activityFile );
+
+    openSubsetEventFile( subsetEventFile, true );
 
     configurePlayer( );
   }
@@ -269,6 +274,33 @@ namespace visimpl
 
     openHDF5File( networkFile, simil::TSimSpikes, activityFile );
   }
+
+  void MainWindow::openSubsetEventFile( const std::string& filePath,
+                                        bool append )
+  {
+    if( filePath.empty( ))
+      return;
+
+    if( !append )
+      _openGLWidget->player( )->data( )->subsetsEvents( )->clear( );
+
+
+    if( filePath.find( "json" ) != std::string::npos )
+    {
+      std::cout << "Loading JSON file: " << filePath << std::endl;
+      _openGLWidget->player( )->data( )->subsetsEvents( )->loadJSON( filePath );
+    }
+    else if( filePath.find( "h5" ) != std::string::npos )
+    {
+      std::cout << "Loading H5 file: " << filePath << std::endl;
+      _openGLWidget->player( )->data( )->subsetsEvents( )->loadH5( filePath );
+    }
+    else
+    {
+      std::cout << "Subset Events file not found: " << filePath << std::endl;
+    }
+  }
+
 
   void MainWindow::aboutDialog( void )
   {
@@ -604,6 +636,10 @@ namespace visimpl
       _summary->Init( spikesPlayer->data( ));
 
       _summary->simulationPlayer( _openGLWidget->player( ));
+
+      _openGLWidget->subsetEventsManager( spikesPlayer->data( )->subsetsEvents( ));
+
+      _openGLWidget->showEventsActivityLabels( _ui->actionShowEventsActivity->isChecked( ));
     }
 
   }

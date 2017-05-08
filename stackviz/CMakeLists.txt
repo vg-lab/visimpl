@@ -48,6 +48,7 @@ set(STACKVIZ_LINK_LIBRARIES
   Qt5::OpenGL
   prefr  
   sumrice
+  scoop
 )
 
 if ( NOT DEFAULT_CONTEXT_OPENGL_MAJOR )

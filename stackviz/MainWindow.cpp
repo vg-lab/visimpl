@@ -35,6 +35,7 @@ namespace stackviz
   , _summary( nullptr )
   , _player( nullptr )
   , _autoAddAvailableSubsets( true )
+  , _autoCalculateCorrelations( false )
   , _simulationDock( nullptr )
   , _playButton( nullptr )
   , _simSlider( nullptr )
@@ -156,14 +157,13 @@ namespace stackviz
   }
 
   void MainWindow::openSubsetEventFile( const std::string& filePath,
-                                        bool /*append*/ )
+                                        bool append )
   {
     if( filePath.empty( ))
       return;
 
-  //  if( !append )
-  //    _player->data( )->subsetsEvents( )->clear( );
-  //  _subsetEventManager = new simil::SubsetEventManager( );
+    if( !append )
+      _player->data( )->subsetsEvents( )->clear( );
 
     if( filePath.find( "json" ) != std::string::npos )
     {
@@ -174,6 +174,7 @@ namespace stackviz
     {
       std::cout << "Loading H5 file: " << filePath << std::endl;
       _player->data( )->subsetsEvents( )->loadH5( filePath );
+      _autoCalculateCorrelations = true;
     }
     else
     {
@@ -452,26 +453,29 @@ namespace stackviz
     connect( _summary, SIGNAL( histogramClicked( visimpl::MultiLevelHistogram* )),
                this, SLOT( HistogramClicked( visimpl::MultiLevelHistogram* )));
 
-    simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
 
-    for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
+    if( _autoCalculateCorrelations )
     {
-      cc.compute( "grclayer", event );
-    }
-
-    for( auto name : cc.correlationNames( ))
-    {
-      simil::Correlation* correlation = cc.correlation( name );
-
-      visimpl::Selection selection;
-      selection.name = name;
-      for( auto value : correlation->values )
+      simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
+      for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
       {
-        if( value.second.hit > 0.7f )
-          selection.gids.insert( value.first );
+        cc.compute( "grclayer", event );
       }
 
-      _summary->AddNewHistogram( selection );
+      for( auto name : cc.correlationNames( ))
+      {
+        simil::Correlation* correlation = cc.correlation( name );
+
+        visimpl::Selection selection;
+        selection.name = name;
+        for( auto value : correlation->values )
+        {
+          if( value.second.hit > 0.7f )
+            selection.gids.insert( value.first );
+        }
+
+        _summary->AddNewHistogram( selection );
+      }
     }
   }
 

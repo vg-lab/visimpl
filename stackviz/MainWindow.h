@@ -136,6 +136,7 @@ namespace stackviz
   //  simil::SubsetEventManager* _subsetEventManager;
 
     bool _autoAddAvailableSubsets;
+    bool _autoCalculateCorrelations;
 
     // Playback Control
     QDockWidget* _simulationDock;

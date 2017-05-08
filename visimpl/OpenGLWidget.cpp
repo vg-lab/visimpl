@@ -12,6 +12,7 @@
 #include <QMouseEvent>
 #include <QColorDialog>
 #include <QShortcut>
+#include <QGraphicsOpacityEffect>
 
 #include <sstream>
 #include <string>
@@ -35,7 +36,6 @@ namespace visimpl
 
   OpenGLWidget::OpenGLWidget( QWidget* parent_,
                               Qt::WindowFlags windowsFlags_,
-                              bool paintNeurons_,
                               const std::string&
   #ifdef VISIMPL_USE_ZEROEQ
                               zeqUri
@@ -45,12 +45,12 @@ namespace visimpl
   #ifdef VISIMPL_USE_ZEROEQ
   , _zeqUri( zeqUri )
   #endif
-  , _fpsLabel( this )
+  , _fpsLabel( nullptr )
   , _showFps( false )
   , _wireframe( false )
   , _camera( nullptr )
   , _lastCameraPosition( 0, 0, 0)
-  , _focusOnSelection( paintNeurons_ )
+  , _focusOnSelection( true )
   , _pendingSelection( false )
   , _frameCount( 0 )
   , _mouseX( 0 )
@@ -82,6 +82,9 @@ namespace visimpl
   , _showSelection( false )
   , _resetParticles( false )
   , _updateSelection( false )
+  , _showActiveEvents( true )
+  , _subsetEvents( nullptr )
+  , _deltaEvents( 0.125f )
   {
   #ifdef VISIMPL_USE_ZEROEQ
     if ( zeqUri != "" )
@@ -94,22 +97,35 @@ namespace visimpl
 
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
-    _fpsLabel.setStyleSheet(
-      "QLabel { background-color : #333;"
-      "color : white;"
-      "padding: 3px;"
-      "margin: 10px;"
-      " border-radius: 10px;}" );
-
-    // This is needed to get key evends
-    this->setFocusPolicy( Qt::WheelFocus );
-
     _maxFPS = 60.0f;
     _renderPeriod = 1.0f / _maxFPS;
 
     _renderSpeed = 1.f;
 
-    _fpsLabel.setVisible( _showFps );
+    _fpsLabel = new QLabel( );
+    _fpsLabel->setStyleSheet(
+      "QLabel { background-color : #333;"
+      "color : white;"
+      "padding: 3px;"
+      "margin: 10px;"
+      " border-radius: 10px;}" );
+    _fpsLabel->setVisible( _showFps );
+    _fpsLabel->setMaximumSize( 100, 50 );
+
+
+    _eventLabelsLayout = new QGridLayout( );
+    _eventLabelsLayout->setAlignment( Qt::AlignTop );
+    _eventLabelsLayout->setMargin( 0 );
+    setLayout( _eventLabelsLayout );
+    _eventLabelsLayout->addWidget( _fpsLabel, 0, 0, 1, 9 );
+
+
+
+    // This is needed to get key events
+    this->setFocusPolicy( Qt::WheelFocus );
+
+
+
 
   //  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Minus ),
   //                 this, SLOT( reducePlaybackSpeed( ) ));
@@ -614,6 +630,15 @@ namespace visimpl
     _updateSelection = true;
   }
 
+  void OpenGLWidget::showEventsActivityLabels( bool show )
+  {
+    for( auto container : _eventLabels )
+    {
+      container.upperWidget->setVisible( show );
+      container.upperWidget->update( );
+    }
+  }
+
 
   void OpenGLWidget::updateParticles( float renderDelta )
   {
@@ -717,22 +742,24 @@ namespace visimpl
 
       if ( _particleSystem )
       {
-
-        if( _elapsedTimeSimAcc >= _simPeriod )
+        if( _player->isPlaying( ))
         {
-          configureSimulation( );
+          if( _elapsedTimeSimAcc >= _simPeriod )
+          {
+            configureSimulation( );
+            updateEventLabelsVisibility( );
 
-          _elapsedTimeSimAcc = 0.0f;
+            _elapsedTimeSimAcc = 0.0f;
+          }
+
+          if( _elapsedTimeRenderAcc >= _renderPeriod )
+          {
+            float renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond;
+
+            updateParticles( renderDelta );
+            _elapsedTimeRenderAcc = 0.0f;
+          }
         }
-
-        if( _elapsedTimeRenderAcc >= _renderPeriod )
-        {
-          float renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond;
-
-          updateParticles( renderDelta );
-          _elapsedTimeRenderAcc = 0.0f;
-        }
-
         paintParticles( );
 
       }
@@ -753,10 +780,9 @@ namespace visimpl
     }
 
 
-    #define FRAMES_PAINTED_TO_MEASURE_FPS 30
+    #define FRAMES_PAINTED_TO_MEASURE_FPS 10
     if( _showFps && _frameCount >= FRAMES_PAINTED_TO_MEASURE_FPS )
     {
-
       auto duration =
         std::chrono::duration_cast<std::chrono::milliseconds>( now - _then );
       _then = now;
@@ -768,13 +794,13 @@ namespace visimpl
         unsigned int ellapsedMiliseconds = duration.count( );
 
         unsigned int fps = roundf( 1000.0f *
-                                   float( FRAMES_PAINTED_TO_MEASURE_FPS ) /
+                                   float( _frameCount ) /
                                    float( ellapsedMiliseconds ));
 
         if( _showFps )
         {
-          _fpsLabel.setText( QString::number( fps ) + QString( " FPS" ));
-          _fpsLabel.adjustSize( );
+          _fpsLabel->setText( QString::number( fps ) + QString( " FPS" ));
+          _fpsLabel->adjustSize( );
         }
 
       }
@@ -787,6 +813,64 @@ namespace visimpl
       update( );
     }
 
+  }
+
+  void OpenGLWidget::updateEventLabelsVisibility( void )
+  {
+    std::vector< bool > visibility = activeEventsAt( _player->currentTime( ));
+
+    unsigned int counter = 0;
+    for( auto showLabel : visibility )
+    {
+      EventLabel& labelObjects = _eventLabels[ counter ];
+//      QString style( "border: 1px solid " + showLabel ? "white;" : "black;" );
+      QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect( );
+      effect->setOpacity( showLabel ? 1.0 : 0.5 );
+      labelObjects.upperWidget->setGraphicsEffect( effect );
+      labelObjects.upperWidget->update( );
+      ++counter;
+    }
+
+
+
+  }
+
+
+  std::vector< bool > OpenGLWidget::activeEventsAt( float time )
+  {
+    std::vector< bool > result( _eventLabels.size( ), false);
+
+//    unsigned int counter = 0;
+//    auto eventRange = _subsetEvents->events( );
+//    for( auto event = eventRange.first; event != eventRange.second; ++event )
+//    {
+//      for( auto it : event->second )
+//      {
+//        if( time >= it.first && time <= it.second )
+//        {
+//          result[ counter ] = true;
+//          break;
+//        }
+//        else if ( time < it.first )
+//          break;
+//      }
+//
+//      ++counter;
+//    }
+
+    float totalTime = _player->endTime( ) - _player->startTime( );
+
+    double perc = time / totalTime;
+    unsigned int counter = 0;
+    for( auto event : _eventsActivation )
+    {
+      unsigned int position = perc * event.size( );
+      result[ counter ] = event[ position ];
+
+      ++counter;
+    }
+
+    return result;
   }
 
   void OpenGLWidget::resizeGL( int w , int h )
@@ -914,7 +998,7 @@ namespace visimpl
   {
     _showFps = !_showFps;
 
-    _fpsLabel.setVisible( _showFps );
+    _fpsLabel->setVisible( _showFps );
 
     if ( _idleUpdate )
       update( );
@@ -947,10 +1031,104 @@ namespace visimpl
     update( );
   }
 
+  void OpenGLWidget::idleUpdate( bool idleUpdate_ )
+  {
+    _idleUpdate = idleUpdate_;
+  }
 
   simil::SimulationPlayer* OpenGLWidget::player( )
   {
     return _player;
+  }
+
+  void OpenGLWidget::subsetEventsManager( simil::SubsetEventManager* manager )
+  {
+    _subsetEvents = manager;
+    const auto& eventNames = _subsetEvents->eventNames( );
+
+    if( eventNames.empty( ))
+      return;
+
+
+    for( auto& label : _eventLabels )
+    {
+      _eventLabelsLayout->removeWidget( label.upperWidget );
+
+      delete( label.frame );
+      delete( label.label );
+      delete( label.upperWidget );
+
+    }
+
+    _eventLabels.clear( );
+    _eventsActivation.clear( );
+
+
+    unsigned int row = 0;
+
+    float totalTime = _player->endTime( ) - _player->startTime( );
+
+    unsigned int activitySize =
+        std::ceil( totalTime / _deltaEvents );
+
+    _eventLabelColors =
+        scoop::ColorPalette::colorBrewerQualitative(
+            scoop::ColorPalette::ColorBrewerQualitative::Pastel1, 9 );
+
+    scoop::ColorPalette::Colors colors = _eventLabelColors.colors( );
+
+    for( auto name : eventNames )
+    {
+      const std::vector< simil::Event >& event =
+          _subsetEvents->getEvent( name );
+
+      EventLabel labelObjects;
+
+      QFrame* frame = new QFrame( );
+//      std::cout << "Creating color: " << .toStdString( ) << std::endl;
+      frame->setStyleSheet( "background-color: " + colors[ row ].name( ) );
+      frame->setMinimumSize( 20, 20 );
+      frame->setMaximumSize( 20, 20 );
+
+      QLabel* label = new QLabel( );
+//      label->setVisible( false );
+      label->setMaximumSize( 100, 50 );
+      label->setTextFormat( Qt::RichText );
+      label->setStyleSheet(
+        "QLabel { background-color : #333;"
+        "color : white;"
+        "padding: 3px;"
+        "margin: 10px;"
+        " border-radius: 10px;}" );
+
+      label->setText( "" + QString( name.c_str( )));
+
+      QWidget* container = new QWidget( );
+      QHBoxLayout* labelLayout = new QHBoxLayout( );
+
+      labelLayout->addWidget( frame );
+      labelLayout->addWidget( label );
+      container->setLayout( labelLayout );
+
+      labelObjects.frame = frame;
+      labelObjects.label = label;
+      labelObjects.upperWidget = container;
+
+      _eventLabels.push_back( labelObjects );
+
+//      _eventLabels.push_back( label );
+
+      _eventLabelsLayout->addWidget( container, row, 10, 2, 1 );
+
+      std::vector< bool > activity( activitySize );
+
+      _eventsActivation.push_back(
+          _subsetEvents->eventActivity( name, _deltaEvents, totalTime ));
+
+      ++row;
+    }
+
+    update( );
   }
 
   void OpenGLWidget::Play( void )

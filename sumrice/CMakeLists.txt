@@ -40,6 +40,7 @@ set(SUMRICE_LINK_LIBRARIES
   ReTo
   SimIL
   prefr
+  scoop
 )
 
 if (ZEROEQ_FOUND)

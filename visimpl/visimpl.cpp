@@ -39,6 +39,7 @@ int main( int argc, char** argv )
   std::string zeqUri;
   std::string target = std::string( "" );
   std::string report = std::string( "" );
+  std::string subsetEventFile( "" );
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
   int initWindowWidth, initWindowHeight;
@@ -91,6 +92,16 @@ int main( int argc, char** argv )
       }
       else
         usageMessage( argv[0] );
+    }
+
+    if( strcmp( argv[ i ], "-se" ) == 0 )
+    {
+      if( ++i < argc )
+      {
+        subsetEventFile = std::string( argv[ i ]);
+      }
+      else
+        usageMessage( argv[ 0 ]);
     }
 
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
@@ -153,10 +164,10 @@ int main( int argc, char** argv )
   switch( dataType )
   {
     case simil::TDataType::TBlueConfig:
-      mainWindow.openBlueConfig( networkFile, simType, report );
+      mainWindow.openBlueConfig( networkFile, simType, report, subsetEventFile );
       break;
     case simil::TDataType::THDF5:
-      mainWindow.openHDF5File( networkFile, simType, activityFile );
+      mainWindow.openHDF5File( networkFile, simType, activityFile, subsetEventFile );
       break;
     default:
       break;

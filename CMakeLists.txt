@@ -58,6 +58,7 @@ common_find_package( HDF5 REQUIRED COMPONENTS C CXX )
 common_find_package( ReTo REQUIRED )
 common_find_package( SimIL REQUIRED )
 common_find_package( prefr REQUIRED )
+common_find_package( scoop REQUIRED )
 common_find_package( OpenMP )
 
 
