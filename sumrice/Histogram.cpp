@@ -186,10 +186,8 @@ namespace visimpl
 
 #else
 
-    std::cout << "Parallel build " << histogram << std::endl;
-
     float invTotalTime = 1.0f / totalTime;
-    unsigned int numThreads = 2;
+    unsigned int numThreads = 4;
 
     omp_set_dynamic( 0 );
     omp_set_num_threads( numThreads );

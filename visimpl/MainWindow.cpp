@@ -865,39 +865,32 @@ namespace visimpl
 
   void MainWindow::UpdateSimulationColorMapping( void )
   {
-  //  TTransferFunction& colors = _tfEditor->getColorPoints( );
-
-  //  _openGLWidget->changeSimulationColorMapping( _tfEditor->getColorPoints( ));
-    _openGLWidget->changeSimulationColorMapping( _tfWidget->getColors( ));
-  //  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
+//    _openGLWidget->changeSimulationColorMapping( _tfWidget->getColors( ));
   }
 
   void MainWindow::PreviewSimulationColorMapping( void )
   {
-    _openGLWidget->changeSimulationColorMapping( _tfWidget->getPreviewColors( ));
+//    _openGLWidget->changeSimulationColorMapping( _tfWidget->getPreviewColors( ));
   }
 
   void MainWindow::changeEditorColorMapping( void )
   {
-  //  _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
-    _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
-  //  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
+//    _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
   }
 
   void MainWindow::changeEditorSizeFunction( void )
   {
-    _tfWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction( ));
-  //  _psWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction() );
+//    _tfWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction( ));
   }
 
   void MainWindow::UpdateSimulationSizeFunction( void )
   {
-    _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizeFunction( ));
+//    _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizeFunction( ));
   }
 
   void MainWindow::PreviewSimulationSizeFunction( void )
   {
-    _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizePreview( ));
+//    _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizePreview( ));
   }
 
   void MainWindow::changeEditorSimDeltaTime( void )

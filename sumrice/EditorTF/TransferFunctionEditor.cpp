@@ -14,7 +14,6 @@
 #include <limits>
 #include <fstream>
 
-#include <QtGui>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
@@ -189,9 +188,9 @@ TransferFunctionEditor::~TransferFunctionEditor()
 {
 }
 
-TTransferFunction TransferFunctionEditor::getColorPoints( void )
+visimpl::TTransferFunction TransferFunctionEditor::getColorPoints( void )
 {
-  TTransferFunction result;
+  visimpl::TTransferFunction result;
 
   QGradientStops stops = gradientFrame->getGradientStops( );
 
@@ -238,7 +237,7 @@ void TransferFunctionEditor::colorPointsChanged
     noTransparencyGradientFrame->setGradientStops( ntStops );
 }
 
-void TransferFunctionEditor::setColorPoints( const TTransferFunction& colors )
+void TransferFunctionEditor::setColorPoints( const visimpl::TTransferFunction& colors )
 {
 //  QGradientStops gradientColors;
 //  QGradientStops ntGradientColors;

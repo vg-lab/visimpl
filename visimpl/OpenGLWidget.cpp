@@ -163,34 +163,13 @@ namespace visimpl
 
     _simulationType = simulationType;
 
-    switch( _simulationType )
-    {
-      case simil::TSimSpikes:
-      {
-        _deltaTime = 0.5f;
-  //        _player = new SpikesPlayer( fileName, true );
-        simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer( );
-        spPlayer->LoadData( fileType, fileName, report );
-        _player = spPlayer;
-        _player->deltaTime( _deltaTime );
+    _deltaTime = 0.5f;
 
-        break;
-      }
-      case simil::TSimVoltages:
-      {
-  #ifdef SIMIL_USE_BRION
-        _player = new simil::VoltagesPlayer( fileName, report, true);
-        _deltaTime = _player->deltaTime( );
-  #else
-        std::cerr << "Error: simil without Brion support." << std::endl;
-        exit( -1 );
-  #endif
-        break;
-      }
-      default:
-        VISIMPL_THROW("Cannot load an undefined simulation type.");
+    simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer( );
+    spPlayer->LoadData( fileType, fileName, report );
+    _player = spPlayer;
+    _player->deltaTime( _deltaTime );
 
-    }
 
     float scale = 1.0f;
     if( fileType == simil::THDF5 )
@@ -217,6 +196,9 @@ namespace visimpl
     }
 
     createParticleSystem( scale );
+
+    _inputMux = new InputMultiplexer( _particleSystem, gidNodesMap );
+
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
   #endif
@@ -255,68 +237,7 @@ namespace visimpl
 
     _player->Frame( );
 
-    switch( _simulationType )
-    {
-      case simil::TSimSpikes:
-      {
-        simil::SpikesCRange spikes =
-            dynamic_cast< simil::SpikesPlayer* >( _player )->spikesNow( );
-
-        unsigned int count = 0;
-        unsigned int triggeredSpikes = 0;
-        for( simil::SpikesCIter spike = spikes.first;
-             spike != spikes.second; ++spike)
-        {
-          if( _selectedGIDs.find( ( *spike ).second ) != _selectedGIDs.end( )
-              || _selectedGIDs.size( ) == 0 || !_showSelection )
-          {
-            auto res = gidNodesMap.find( (*spike).second );
-            if( res != gidNodesMap.end( ))
-            {
-              dynamic_cast< prefr::Cluster* >(( *res ).second )->killParticles( );
-              ++triggeredSpikes;
-            }
-            count += 1;
-          }
-        }
-        break;
-      }
-      case simil::TSimVoltages:
-      {
-  #ifdef SIMIL_USE_BRION
-        simil::VoltagesPlayer* vplayer =
-            dynamic_cast< simil::VoltagesPlayer* >(_player);
-
-        float normFactor = vplayer->getNormVoltageFactor( );
-
-        unsigned int counter = 0;
-        for( auto gid : vplayer->gids( ))
-        {
-          auto res = gidNodesMap.find( gid );
-          if( res == gidNodesMap.end( ))
-          {
-            std::cerr << "Err: Node not found " << gid << std::endl;
-            continue;
-          }
-
-          float volt = vplayer->getVoltage( gid );
-          float relVal = volt + std::abs( vplayer->minVoltage( ));
-          relVal *= normFactor;
-
-          dynamic_cast< prefr::ValuedSource* >( res->second )->
-              particlesLife( relVal );
-
-          counter++;
-        }
-  #else
-        std::cerr << "Error: SimIL without BRion support." << std::endl;
-        exit( -1 );
-  #endif
-        break;
-      }
-      default:
-        break;
-    }
+    _inputMux->processFrameInput( _player->spikesNow( ));
 
   }
 
@@ -515,41 +436,6 @@ namespace visimpl
 
   }
 
-  void OpenGLWidget::resetParticles( void )
-  {
-    _particleSystem->run( false );
-
-#ifdef VISIMPL_USE_OPENMP
-    #pragma omp parallel for
-    for( int i = 0; i < ( int )_particleSystem->clusters( ).size( ); i++ )
-    {
-      prefr::Cluster* cluster = _particleSystem->clusters( )[ i ];
-#else
-    for( auto cluster : _particleSystem->clusters( ))
-    {
-#endif
-
-      switch( _simulationType )
-      {
-        case simil::TSimSpikes:
-          cluster->killParticles( false );
-        break;
-        case simil::TSimVoltages:
-          cluster->killParticles( false );
-        break;
-        default:
-        break;
-      }
-      cluster->source( )->restart( );
-    }
-
-    _particleSystem->run( true );
-
-    _particleSystem->update( 0.0f );
-  }
-
-
-
   void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
   {
     if( gids.size( ) > 0 )
@@ -732,7 +618,7 @@ namespace visimpl
       updateSelection( );
 
     if( _resetParticles )
-      resetParticles( );
+      _inputMux->resetParticles( );
 
     _resetParticles = false;
 
@@ -839,24 +725,6 @@ namespace visimpl
   std::vector< bool > OpenGLWidget::activeEventsAt( float time )
   {
     std::vector< bool > result( _eventLabels.size( ), false);
-
-//    unsigned int counter = 0;
-//    auto eventRange = _subsetEvents->events( );
-//    for( auto event = eventRange.first; event != eventRange.second; ++event )
-//    {
-//      for( auto it : event->second )
-//      {
-//        if( time >= it.first && time <= it.second )
-//        {
-//          result[ counter ] = true;
-//          break;
-//        }
-//        else if ( time < it.first )
-//          break;
-//      }
-//
-//      ++counter;
-//    }
 
     float totalTime = _player->endTime( ) - _player->startTime( );
 
@@ -1214,78 +1082,6 @@ namespace visimpl
     _alphaBlendingAccumulative = accumulative;
   }
 
-  void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
-  {
-
-    if( _particleSystem )
-    {
-
-      prefr::vectortvec4 gcolors;
-
-      for( auto c : colors )
-      {
-        glm::vec4 gColor( c.second.red( ) / 255.0f,
-                          c.second.green( ) / 255.0f,
-                          c.second.blue( ) / 255.0f,
-                          c.second.alpha( ) / 255.0f );
-        gcolors.Insert( c.first, gColor );
-      }
-
-      _prototype->color = gcolors;
-
-      _particleSystem->update( 0.0f );
-    }
-  }
-
-  TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
-  {
-    TTransferFunction result;
-
-    if( _particleSystem )
-    {
-      prefr::vectortvec4 colors = _prototype->color;
-
-      for( unsigned int i = 0; i < colors.size; i++ )
-      {
-        glm::vec4 c = colors.values[ i ];
-        QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
-        result.push_back( std::make_pair( colors.times[ i ], color ));
-      }
-    }
-
-    return result;
-  }
-
-  void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
-  {
-    if( _particleSystem )
-    {
-      utils::InterpolationSet< float > newSize;
-      for( auto s : sizes )
-      {
-        std::cout << s.first << " " << s.second << std::endl;
-        newSize.Insert( s.first, s.second );
-      }
-      _prototype->size = newSize;
-
-      _particleSystem->update( 0.0f );
-    }
-  }
-
-  TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
-  {
-    TSizeFunction result;
-    if( _particleSystem )
-    {
-      auto v = _prototype->size.values.begin( );
-      for( auto s : _prototype->size.times)
-      {
-        result.push_back( std::make_pair( s, *v ));
-        v++;
-      }
-    }
-    return result;
-  }
 
   void OpenGLWidget::simulationDeltaTime( float value )
   {

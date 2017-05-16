@@ -40,6 +40,8 @@ set(VISIMPL_SOURCES
   prefr/CompositeColorUpdater.cpp
   prefr/ValuedSource.cpp
   prefr/ValuedUpdater.cpp
+  VisualGroup.cpp
+  InputMultiplexer.cpp
   visimpl.ui
   resources.qrc
 )
@@ -54,6 +56,8 @@ set(VISIMPL_HEADERS
   prefr/CompositeColorUpdater.h
   prefr/ValuedSource.h
   prefr/ValuedUpdater.h
+  VisualGroup.h
+  InputMultiplexer.h
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

@@ -322,9 +322,9 @@ void TransferFunctionWidget::InitDialog( void )
           this, SLOT(colorPointsChanged(const QPolygonF &)));
 }
 
-TTransferFunction TransferFunctionWidget::getColors( bool includeAlpha )
+visimpl::TTransferFunction TransferFunctionWidget::getColors( bool includeAlpha )
 {
-  TTransferFunction result;
+  visimpl::TTransferFunction result;
 
   for( auto stop : ( includeAlpha ? _tResult : _result->getGradientStops( )) )
   {
@@ -334,9 +334,9 @@ TTransferFunction TransferFunctionWidget::getColors( bool includeAlpha )
   return result;
 }
 
-TTransferFunction TransferFunctionWidget::getPreviewColors( void )
+visimpl::TTransferFunction TransferFunctionWidget::getPreviewColors( void )
 {
-  TTransferFunction result;
+  visimpl::TTransferFunction result;
 
   QGradientStops stops = _gradientFrame->getGradientStops( );
 
@@ -383,7 +383,7 @@ void TransferFunctionWidget::colorPointsChanged( const QPolygonF &points )
     _sizeFrame->setGradientStops( ntStops );
 }
 
-void TransferFunctionWidget::setColorPoints( const TTransferFunction& colors,
+void TransferFunctionWidget::setColorPoints( const visimpl::TTransferFunction& colors,
                                              bool updateResult )
 {
 //  QGradientStops gradientColors;
@@ -417,29 +417,29 @@ void TransferFunctionWidget::setColorPoints( const TTransferFunction& colors,
 }
 
 
-TSizeFunction TransferFunctionWidget::getSizeFunction( void )
+visimpl::TSizeFunction TransferFunctionWidget::getSizeFunction( void )
 {
   return _sizeFunction;
 }
 
-TSizeFunction TransferFunctionWidget::getSizePreview( void )
+visimpl::TSizeFunction TransferFunctionWidget::getSizePreview( void )
 {
   return pointsToSizeFunc( _sizePoints->points( ),
                            _minSizeBox->value( ),
                            _maxSizeBox->value( ));
 }
 
-TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF& points )
+visimpl::TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF& points )
 {
   return pointsToSizeFunc( points, _minSize, _maxSize );
 }
 
-TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF &points,
+visimpl::TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF &points,
                                                     float minSize,
                                                     float maxSize )
 {
 
-  TSizeFunction result;
+  visimpl::TSizeFunction result;
   float time;
   float value;
 //  float invHeight = 1.0f / float( height( ));
@@ -455,7 +455,7 @@ TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF &points,
   return result;
 }
 
-void TransferFunctionWidget::setSizeFunction( const TSizeFunction& sizeFunc )
+void TransferFunctionWidget::setSizeFunction( const visimpl::TSizeFunction& sizeFunc )
 {
 
   _sizeFunction = sizeFunc;

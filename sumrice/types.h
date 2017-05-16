@@ -30,7 +30,11 @@ namespace visimpl
   typedef std::unordered_set< uint32_t > GIDUSet;
   typedef utils::InterpolationSet< glm::vec4 > TColorMapper;
 
+  typedef std::pair< float, QColor > TTFColor;
+  typedef std::vector< TTFColor > TTransferFunction;
 
+  typedef std::pair< float, float > TSize;
+  typedef std::vector< TSize > TSizeFunction;
 
   typedef enum
   {

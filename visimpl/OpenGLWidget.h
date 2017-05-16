@@ -29,6 +29,8 @@
 #include "prefr/ColorSource.h"
 #include "prefr/ColorOperationModel.h"
 
+#include "InputMultiplexer.h"
+
 #include <sumrice/sumrice.h>
 #include <scoop/scoop.h>
 
@@ -116,12 +118,6 @@ namespace visimpl
     void Restart( void );
     void GoToEnd( void );
 
-    void changeSimulationColorMapping( const TTransferFunction& colors );
-    TTransferFunction getSimulationColorMapping( void );
-
-    void changeSimulationSizeFunction( const TSizeFunction& sizes );
-    TSizeFunction getSimulationSizeFunction( void );
-
     void simulationDeltaTime( float value );
     float simulationDeltaTime( void );
 
@@ -198,7 +194,7 @@ namespace visimpl
     prefr::ParticleSystem* _particleSystem;
 
     simil::TSimulationType _simulationType;
-    simil::SimulationPlayer* _player;
+    simil::SpikesPlayer* _player;
 
     float _maxLife;
     float _deltaTime;
@@ -237,6 +233,8 @@ namespace visimpl
     QGridLayout* _eventLabelsLayout;
     std::vector< std::vector< bool >> _eventsActivation;
     float _deltaEvents;
+
+    InputMultiplexer* _inputMux;
 
     scoop::ColorPalette _eventLabelColors;
   };
