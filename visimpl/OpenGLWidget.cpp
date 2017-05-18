@@ -34,6 +34,8 @@
 namespace visimpl
 {
 
+  static float invRGBInt = 1.0f / 255;
+
   OpenGLWidget::OpenGLWidget( QWidget* parent_,
                               Qt::WindowFlags windowsFlags_,
                               const std::string&
@@ -85,6 +87,7 @@ namespace visimpl
   , _showActiveEvents( true )
   , _subsetEvents( nullptr )
   , _deltaEvents( 0.125f )
+  , _inputMux( nullptr )
   {
   #ifdef VISIMPL_USE_ZEROEQ
     if ( zeqUri != "" )
@@ -197,7 +200,8 @@ namespace visimpl
 
     createParticleSystem( scale );
 
-    _inputMux = new InputMultiplexer( _particleSystem, gidNodesMap );
+    _inputMux = new InputMultiplexer( _particleSystem, _player->gids( ) );
+    _inputMux->models( _prototype, _offPrototype );
 
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
@@ -277,7 +281,7 @@ namespace visimpl
 
     _offPrototype = new prefr::ColorOperationModel( _maxLife, _maxLife );
 
-    _offPrototype->color.Insert( 0.0f, ( glm::vec4(0.1f, 0.1f, 0.1f, 0.5f)));
+    _offPrototype->color.Insert( 0.0f, ( glm::vec4(0.1f, 0.1f, 0.1f, 0.2f)));
 
     _offPrototype->velocity.Insert( 0.0f, 0.0f );
 
@@ -403,9 +407,6 @@ namespace visimpl
       cluster->inactiveKillParticles( true );
       source->maxEmissionCycles( 1 );
 
-      gidNodesMap.insert( std::make_pair(( *gid ), cluster ));
-      nodesGIDMap.insert( std::make_pair( cluster, ( *gid )));
-
       i++;
       gid++;
 
@@ -442,12 +443,20 @@ namespace visimpl
     {
       _selectedGIDs = gids;
       _pendingSelection = true;
-      _updateSelection = true;
+
+      if( !_inputMux->showGroups( ))
+        setUpdateSelection( );
+      _inputMux->selection( gids );
+
     }
     std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
 
   }
 
+  void OpenGLWidget::setUpdateSelection( void )
+  {
+    _updateSelection = true;
+  }
 
   void OpenGLWidget::updateSelection( void )
   {
@@ -455,7 +464,7 @@ namespace visimpl
     {
       _particleSystem->run( false );
 
-      bool baseOn = !_showSelection || _selectedGIDs.size( ) == 0;
+//      bool baseOn = !_showSelection || _selectedGIDs.empty( );
 
       _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),
                                    std::numeric_limits< float >::max( ),
@@ -465,25 +474,20 @@ namespace visimpl
                                    std::numeric_limits< float >::min( ),
                                    std::numeric_limits< float >::min( ));
 
-      for( auto cluster : _particleSystem->clusters( ))
+      std::vector< prefr::Cluster* > active =
+          std::move( _inputMux->activeClusters( ));
+
+      for( auto cluster : ( !active.empty( ) ? active :_particleSystem->clusters( ) ))
       {
-        auto it = nodesGIDMap.find( cluster );
-        unsigned int id = it->second;
-
-  //      auto res = _selectedGIDs.find( id );
-
-        bool on =  baseOn || _selectedGIDs.find( id ) != _selectedGIDs.end( );
-
-        cluster->model( on ? _prototype : _offPrototype );
-
-        if( ( _focusOnSelection && on ) || !_focusOnSelection )
-        for( prefr::tparticle particle = cluster->particles( ).begin( );
-             particle != cluster->particles( ).end( ); ++particle)
+        auto particleRange = cluster->particles( );
+        for( prefr::tparticle particle = particleRange.begin( );
+            particle != particleRange.end( ); ++particle )
         {
           expandBoundingBox( _boundingBoxMin,
                              _boundingBoxMax,
                              particle.position( ));
         }
+
       }
 
       glm::vec3 center = ( _boundingBoxMax + _boundingBoxMin ) * 0.5f;
@@ -506,12 +510,16 @@ namespace visimpl
 
     _showSelection = showSelection_;
 
+    if( _inputMux )
+      _inputMux->showGroups( !_showSelection );
+
     updateSelection( );
 
   }
 
   void OpenGLWidget::clearSelection( void )
   {
+    _inputMux->clearSelection( );
     _selectedGIDs.clear( );
     _updateSelection = true;
   }
@@ -909,9 +917,27 @@ namespace visimpl
     return _player;
   }
 
+  InputMultiplexer* OpenGLWidget::inputMultiplexer( void )
+  {
+    return _inputMux;
+  }
+
   void OpenGLWidget::subsetEventsManager( simil::SubsetEventManager* manager )
   {
     _subsetEvents = manager;
+
+    createEventLabels( );
+
+    update( );
+  }
+
+  const scoop::ColorPalette& OpenGLWidget::colorPalette( void )
+  {
+    return _colorPalette;
+  }
+
+  void OpenGLWidget::createEventLabels( void )
+  {
     const auto& eventNames = _subsetEvents->eventNames( );
 
     if( eventNames.empty( ))
@@ -939,11 +965,11 @@ namespace visimpl
     unsigned int activitySize =
         std::ceil( totalTime / _deltaEvents );
 
-    _eventLabelColors =
+    _colorPalette =
         scoop::ColorPalette::colorBrewerQualitative(
-            scoop::ColorPalette::ColorBrewerQualitative::Pastel1, 9 );
+            scoop::ColorPalette::ColorBrewerQualitative::Set1, 9 );
 
-    scoop::ColorPalette::Colors colors = _eventLabelColors.colors( );
+    scoop::ColorPalette::Colors colors = _colorPalette.colors( );
 
     for( auto name : eventNames )
     {
@@ -995,8 +1021,6 @@ namespace visimpl
 
       ++row;
     }
-
-    update( );
   }
 
   void OpenGLWidget::Play( void )
@@ -1080,6 +1104,69 @@ namespace visimpl
   void OpenGLWidget::SetAlphaBlendingAccumulative( bool accumulative )
   {
     _alphaBlendingAccumulative = accumulative;
+  }
+
+  void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
+  {
+
+    prefr::vectortvec4 gcolors;
+
+    for( auto c : colors )
+    {
+      glm::vec4 gColor( c.second.red( ) * invRGBInt,
+                       c.second.green( ) * invRGBInt,
+                       c.second.blue( ) * invRGBInt,
+                       c.second.alpha( ) * invRGBInt );
+
+      gcolors.Insert( c.first, gColor );
+    }
+
+    _prototype->color = gcolors;
+
+  }
+
+  TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
+  {
+    TTransferFunction result;
+
+    prefr::vectortvec4 colors = _prototype->color;
+
+    auto timeValue = _prototype->color.times.begin( );
+    for( auto c : _prototype->color.values )
+    {
+      QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
+      result.push_back( std::make_pair( *timeValue, color ));
+
+      ++timeValue;
+    }
+
+
+    return result;
+  }
+
+  void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
+  {
+
+    utils::InterpolationSet< float > newSize;
+    for( auto s : sizes )
+    {
+      newSize.Insert( s.first, s.second );
+    }
+    _prototype->size = newSize;
+
+  }
+
+  TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
+  {
+    TSizeFunction result;
+    auto sizeValue = _prototype->size.values.begin( );
+    for( auto s : _prototype->size.times)
+    {
+      result.push_back( std::make_pair( s, *sizeValue ));
+      ++sizeValue;
+    }
+
+    return result;
   }
 
 

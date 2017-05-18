@@ -91,11 +91,15 @@ namespace visimpl
     void idleUpdate( bool idleUpdate_ = true );
 
     simil::SimulationPlayer* player( );
+    InputMultiplexer* inputMultiplexer( void );
+
     void resetParticles( void );
 
     void SetAlphaBlendingAccumulative( bool accumulative = true );
 
     void subsetEventsManager( simil::SubsetEventManager* manager );
+
+    const scoop::ColorPalette& colorPalette( void );
 
   signals:
 
@@ -118,6 +122,12 @@ namespace visimpl
     void Restart( void );
     void GoToEnd( void );
 
+    void changeSimulationColorMapping( const TTransferFunction& colors );
+    TTransferFunction getSimulationColorMapping( void );
+
+    void changeSimulationSizeFunction( const TSizeFunction& sizes );
+    TSizeFunction getSimulationSizeFunction( void );
+
     void simulationDeltaTime( float value );
     float simulationDeltaTime( void );
 
@@ -129,6 +139,7 @@ namespace visimpl
 
     void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
     void showSelection( bool );
+    void setUpdateSelection( void );
     void updateSelection( void );
     void clearSelection( void );
 
@@ -150,6 +161,7 @@ namespace visimpl
     void updateParticles( float renderDelta );
     void paintParticles( void );
 
+    void createEventLabels( void );
     void updateEventLabelsVisibility( void );
 
     std::vector< bool > activeEventsAt( float time );
@@ -236,7 +248,7 @@ namespace visimpl
 
     InputMultiplexer* _inputMux;
 
-    scoop::ColorPalette _eventLabelColors;
+    scoop::ColorPalette _colorPalette;
   };
 
 } // namespace visimpl

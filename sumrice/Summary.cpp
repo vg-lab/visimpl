@@ -276,7 +276,7 @@ namespace visimpl
     // Fill the palette with ColorbBewer qualitative palette with 10 classes
     // but rearranging to have consecutive colors with different hue.
     _eventsPalette = scoop::ColorPalette::colorBrewerQualitative(
-        scoop::ColorPalette::ColorBrewerQualitative::Pastel1, 9 );
+        scoop::ColorPalette::ColorBrewerQualitative::Set1, 9 );
 
 //    _subsetEventColorPalette.reserve( 10 );
 ////    _subsetEventColorPalette.push_back( QColor( "#a6cee3" ));

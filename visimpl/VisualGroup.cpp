@@ -12,14 +12,19 @@
 namespace visimpl
 {
 
-  float invRGBInt = 1.0f / 255;
+  static float invRGBInt = 1.0f / 255;
 
   VisualGroup::VisualGroup( )
-  : _model( nullptr )
+  : _name( "" )
+  , _model( nullptr )
   , _active( false )
-  {
+  { }
 
-  }
+  VisualGroup::VisualGroup( const std::string& name )
+  : _name( name )
+  , _model( nullptr )
+  , _active( false )
+  { }
 
   VisualGroup::~VisualGroup( )
   {

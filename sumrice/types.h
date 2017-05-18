@@ -89,7 +89,6 @@ namespace visimpl
 
   } TRepresentation_Mode;
 
-
 }
 
 

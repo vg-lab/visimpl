@@ -271,10 +271,10 @@
      <normalon>:/icons/show.png</normalon>:/icons/hide.png</iconset>
    </property>
    <property name="text">
-    <string>Show selection</string>
+    <string>Show selection / Show groups</string>
    </property>
    <property name="toolTip">
-    <string>Show/Hide selection</string>
+    <string>Show selection / Show groups</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>

@@ -21,6 +21,7 @@ namespace visimpl
   public:
 
     VisualGroup( );
+    VisualGroup( const std::string& name );
     ~VisualGroup( );
 
     void gids( const GIDUSet& gids_ );
@@ -38,6 +39,8 @@ namespace visimpl
     bool active( void );
 
   protected:
+
+    std::string _name;
 
     GIDUSet _gids;
 

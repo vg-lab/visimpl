@@ -11,16 +11,26 @@
 
 namespace visimpl
 {
+  static float invRGBInt = 1.0f / 255;
+
   InputMultiplexer::InputMultiplexer( prefr::ParticleSystem* particleSystem,
-                                      const std::unordered_map< uint32_t, prefr::Cluster* >& reference)
+                                      const TGIDSet& gids)
   : _particleSystem( particleSystem )
+  , _gids( gids )
   , _base( nullptr )
   , _off( nullptr )
   , _showGroups( false )
   {
-    _neuronClusters = reference;
-    for( auto ref : reference )
-      _clusterNeurons.insert( std::make_pair( ref.second, ref.first ));
+    auto cluster =
+        particleSystem->clusters( ).begin( );
+    for( auto gid : _gids )
+    {
+      _neuronClusters.insert( std::make_pair( gid, *cluster ));
+      _clusterNeurons.insert( std::make_pair( *cluster, gid ));
+
+      ++cluster;
+    }
+
   }
 
   InputMultiplexer::~InputMultiplexer( )
@@ -28,13 +38,16 @@ namespace visimpl
 
   }
 
-  void InputMultiplexer::addVisualGroup( const GIDUSet& gids, bool overrideGIDS )
+  VisualGroup* InputMultiplexer::addVisualGroup( const GIDUSet& gids,
+                                                 const std::string& name,
+                                                 bool overrideGIDS )
   {
-    VisualGroup* group = new VisualGroup( );
+    VisualGroup* group = new VisualGroup( name );
 
     prefr::ColorOperationModel* model =
         new prefr::ColorOperationModel( *_base );
 
+    group->_active = true;
     group->model( model );
     group->gids( gids );
 
@@ -56,37 +69,69 @@ namespace visimpl
     }
 
     scoop::ColorPalette palette =
-        scoop::ColorPalette::colorBrewerSequential(
-            ( scoop::ColorPalette::ColorBrewerSequential )( _groups.size( ) % 9 ), 4 );
+        scoop::ColorPalette::colorBrewerQualitative(
+            ( scoop::ColorPalette::ColorBrewerQualitative::Set1 ), 9 );
 
     auto colors = palette.colors( );
 
-    float invSize = 1.0f / colors.size( );
+//    float invSize = 1.0f / ( colors.size( ) - 1 );
 
 
+    std::cout << "Created color: ";
     TTransferFunction colorVariation;
-    unsigned int i = 0;
-    for( auto c : colors )
-    {
-      colorVariation.push_back( std::make_pair( i * invSize, c ));
-      ++i;
-    }
+
+    QColor color = colors[ _groups.size( ) ];
+
+    glm::vec4 baseColor( color.red( ) * invRGBInt,
+                         color.green( ) * invRGBInt,
+                         color.blue( ) * invRGBInt, 0.6f );
+
+    color = QColor( baseColor.r * 255,
+                    baseColor.g * 255,
+                    baseColor.b * 255,
+                    baseColor.a * 255 );
+
+    glm::vec4 darkColor =
+        ( baseColor * 0.4f ) + ( glm::vec4( 0.1f, 0.1f, 0.1f, 0.4f ) * 0.6f );
+
+    QColor darkqColor = QColor( darkColor.r * 255,
+                                darkColor.g * 255,
+                                darkColor.b * 255,
+                                darkColor.a * 255 );
+
+//    colorVariation.push_back( std::make_pair( 0.0f, darkqColor));
+    colorVariation.push_back( std::make_pair( 0.0f, color ));
+//    colorVariation.push_back( std::make_pair( 0.2f, color ));
+
+//    colorVariation.push_back( std::make_pair( 0.7f, color ));
+
+    colorVariation.push_back( std::make_pair( 1.0f, darkqColor));
 
     group->colorMapping( colorVariation );
 
     _groups.push_back( group );
 
-
+    return group;
   }
 
   void InputMultiplexer::showGroups( bool show )
   {
     _showGroups = show;
 
+    update( );
+  }
+
+  void InputMultiplexer::update( void )
+  {
     if( _showGroups )
       updateGroups( );
     else
       updateSelection( );
+  }
+
+  bool InputMultiplexer::showGroups( void )
+  {
+    return _showGroups;
   }
 
   void InputMultiplexer::setVisualGroupState( unsigned int i, bool state )
@@ -103,7 +148,7 @@ namespace visimpl
       {
         auto cluster = _neuronClusters.find( gid );
 
-        cluster->second->model( state ? group->model( ) : _base );
+        cluster->second->model( state ? group->model( ) : _off);
       }
     }
     else
@@ -138,8 +183,8 @@ namespace visimpl
       auto group = _neuronGroup.find( gid->second );
 
       cluster->model( group != _neuronGroup.end( ) ?
-          ( group->second->active( ) ? group->second->model( ) : _base ) :
-          _base );
+          ( group->second->active( ) ? group->second->model( ) : _off ) :
+          _off );
     }
   }
 
@@ -149,13 +194,13 @@ namespace visimpl
     {
 
 #ifdef VISIMPL_USE_OPENMP
-    #pragma omp parallel for
-    for( int i = 0; i < ( int )_particleSystem->clusters( ).size( ); i++ )
-    {
-      prefr::Cluster* cluster = _particleSystem->clusters( )[ i ];
+      #pragma omp parallel for
+      for( int i = 0; i < ( int )_particleSystem->clusters( ).size( ); i++ )
+      {
+        prefr::Cluster* cluster = _particleSystem->clusters( )[ i ];
 #else
-    for( auto cluster : _particleSystem->clusters( ))
-    {
+      for( auto cluster : _particleSystem->clusters( ))
+      {
 #endif
         auto gid = _clusterNeurons.find( cluster );
 
@@ -185,13 +230,13 @@ namespace visimpl
     {
       auto visualGroup = _neuronGroup.find( spike->second );
 
-      assert( visualGroup != _neuronGroup.end( ));
+//      assert( visualGroup != _neuronGroup.end( ));
 
       auto cluster = _neuronClusters.find( spike->second );
 
       assert( cluster != _neuronClusters.end( ));
 
-      if( visualGroup->second->active( ))
+      if( visualGroup != _neuronGroup.end( ) && visualGroup->second->active( ))
         cluster->second->killParticles( );
     }
   }
@@ -217,6 +262,54 @@ namespace visimpl
 
     if( !_showGroups )
       updateSelection( );
+  }
+
+  const GIDUSet& InputMultiplexer::selection( void )
+  {
+    return _selection;
+  }
+
+  void InputMultiplexer::models( prefr::ColorOperationModel* main,
+                                 prefr::ColorOperationModel* off )
+  {
+    _base = main;
+    _off = off;
+  }
+
+  std::vector< prefr::Cluster* > InputMultiplexer::activeClusters( void )
+  {
+    std::vector< prefr::Cluster* > result;
+
+    if( _showGroups )
+    {
+      for( auto group : _groups )
+      {
+        if( !group->active( ))
+          continue;
+
+        for( auto gid : group->gids( ))
+        {
+          auto it = _neuronGroup.find( gid );
+          if( it != _neuronGroup.end( ) && group == it->second )
+          {
+            auto cluster = _neuronClusters.find( gid );
+            result.push_back( cluster->second );
+          }
+
+        }
+      }
+    }
+    else
+    {
+      result.reserve( _selection.size( ));
+      for( auto gid : _selection )
+      {
+        auto cluster = _neuronClusters.find( gid );
+        result.push_back( cluster->second );
+      }
+    }
+
+    return result;
   }
 
   void InputMultiplexer::clearSelection( void )
@@ -250,6 +343,11 @@ namespace visimpl
     _particleSystem->run( true );
 
     _particleSystem->update( 0.0f );
+  }
+
+  const std::vector< VisualGroup* >& InputMultiplexer::groups( void ) const
+  {
+    return _groups;
   }
 
 }

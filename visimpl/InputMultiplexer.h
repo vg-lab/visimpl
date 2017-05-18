@@ -21,28 +21,41 @@
 namespace visimpl
 {
 
+  typedef std::pair< uint32_t, prefr::Cluster* > TGIDCluster;
+
   class InputMultiplexer
   {
   public:
 
     InputMultiplexer( prefr::ParticleSystem* particleSystem,
-                      const std::unordered_map< uint32_t, prefr::Cluster* >& reference );
+                      const TGIDSet& gids );
     ~InputMultiplexer( );
 
-    void addVisualGroup( const GIDUSet& group_, bool overrideGIDs = false );
+    VisualGroup* addVisualGroup( const GIDUSet& group_,
+                                 const std::string& name,
+                                 bool overrideGIDs = false );
 
     void setVisualGroupState( unsigned int i, bool state );
 
-
     void processFrameInput( const simil::SpikesCRange& spikes_ );
 
+    void update( void );
+
     void showGroups( bool show );
+    bool showGroups( void );
 
     void selection( const GIDUSet& newSelection );
     const GIDUSet& selection( void );
 
+    void models( prefr::ColorOperationModel* main,
+                 prefr::ColorOperationModel* off );
+
+    std::vector< prefr::Cluster* > activeClusters( void );
+
     void clearSelection( void );
     void resetParticles( void );
+
+    const std::vector< VisualGroup* >& groups( void ) const;
 
   protected:
 
@@ -53,6 +66,8 @@ namespace visimpl
     void processFrameInputSelection( const simil::SpikesCRange& spikes_ );
 
     prefr::ParticleSystem* _particleSystem;
+
+    TGIDSet _gids;
 
     std::vector< VisualGroup* > _groups;
 
