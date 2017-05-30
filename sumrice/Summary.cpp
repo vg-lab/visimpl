@@ -666,11 +666,6 @@ namespace visimpl
     _histograms.push_back( histogram );
 
     histogram->init( _bins, _zoomFactor );
-//    CreateSummarySpikes( );
-//    UpdateGradientColors( );
-
-    GIDUSet tmp;
-    histogram->filteredGIDs( tmp );
 
     update( );
   }
@@ -1185,6 +1180,8 @@ namespace visimpl
       histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_FOCUS );
       histogram->update( );
     }
+
+    _focusWidget->update( );
   }
 
   visimpl::TColorScale Summary::colorScaleLocal( void )
@@ -1203,6 +1200,8 @@ namespace visimpl
       histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_FOCUS );
       histogram->update( );
     }
+
+    _focusWidget->update( );
   }
 
   visimpl::TColorScale Summary::colorScaleGlobal( void )

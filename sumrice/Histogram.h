@@ -33,6 +33,12 @@ namespace visimpl
     {
     public:
 
+      Histogram( )
+      : std::vector< unsigned int >( )
+      , _maxValueHistogramLocal( 0 )
+      , _maxValueHistogramGlobal( 0 )
+      { }
+
       unsigned int _maxValueHistogramLocal;
       unsigned int _maxValueHistogramGlobal;
       QGradientStops _gradientStops;
@@ -148,6 +154,8 @@ signals:
     void mouseModifierPressed( float position,  Qt::KeyboardModifiers modifiers );
 
   protected:
+
+    void updateCachedRep( void );
 
     virtual void resizeEvent( QResizeEvent* event );
     virtual void paintEvent( QPaintEvent* event );

@@ -169,6 +169,7 @@ namespace visimpl
     float deltaTime = ( totalTime ) / histogram->size( );
     float currentTime = _startTime + deltaTime;
 
+    auto globalBin = globalHistogram.begin( );
     auto spike = _spikes->begin( );
     for( unsigned int& bin: *histogram )
     {
@@ -179,9 +180,11 @@ namespace visimpl
           bin++;
         }
         spike++;
+        (*globalBin)++;
       }
 
       currentTime += deltaTime;
+      ++globalBin;
     }
 
 #else
@@ -203,16 +206,16 @@ namespace visimpl
       int bin;
       while( spikeIt->first < endTime && spikeIt != _spikes->end( ))
       {
+        float perc =
+            std::max( 0.0f,
+                      std::min( 1.0f, ( spikeIt->first - _startTime )* invTotalTime ));
+        bin = perc * histogram->size( );
 
         if( !filter || _filteredGIDs.find( spikeIt->second ) != _filteredGIDs.end( ))
         {
-          float perc =
-              std::max( 0.0f,
-                        std::min( 1.0f, ( spikeIt->first - _startTime )* invTotalTime ));
-          bin = perc * histogram->size( );
-
           ( *histogram )[ bin ]++;
         }
+        ( globalHistogram )[ bin ]++;
         ++spikeIt;
       }
 
@@ -382,6 +385,8 @@ namespace visimpl
 
       histogram->_curveStopsLocal = auxLocal;
     }
+
+    updateCachedRep( );
   }
 
   void MultiLevelHistogram::bins( unsigned int binsNumber )
@@ -434,7 +439,7 @@ namespace visimpl
 
   void MultiLevelHistogram::filteredGIDs( const GIDUSet& gids )
   {
-    if( gids.size( ) > 0 )
+//    if( gids.size( ) > 0 )
       _filteredGIDs = gids;
   }
 
@@ -755,7 +760,7 @@ namespace visimpl
     _paintTimeline = first;
   }
 
-  void MultiLevelHistogram::resizeEvent( QResizeEvent* /*event*/ )
+  void MultiLevelHistogram::updateCachedRep( void )
   {
     _mainHistogram._cachedLocalRep = QPainterPath( );
     _mainHistogram._cachedGlobalRep = QPainterPath( );
@@ -776,6 +781,11 @@ namespace visimpl
     }
     _mainHistogram._cachedGlobalRep.lineTo( width( ), height( ) );
 
+  }
+
+  void MultiLevelHistogram::resizeEvent( QResizeEvent* /*event*/ )
+  {
+    updateCachedRep( );
   }
 
   void MultiLevelHistogram::paintEvent( QPaintEvent* /*e*/)
