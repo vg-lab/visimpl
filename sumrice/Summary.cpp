@@ -18,7 +18,6 @@
 #include <QSpinBox>
 #include <QScrollBar>
 #include <QApplication>
-#include <QSplitter>
 
 unsigned int visimpl::Selection::_counter = 0;
 
@@ -55,20 +54,28 @@ namespace visimpl
   , _mainHistogram( nullptr )
   , _detailHistogram( nullptr )
   , _focusedHistogram( nullptr )
-  , _histogramScroll( nullptr )
   , _mousePressed( false )
   , _stackType( stackType )
   , _colorScaleLocal( visimpl::T_COLOR_LINEAR )
   , _colorScaleGlobal( visimpl::T_COLOR_LOGARITHMIC )
   , _colorLocal( 0, 0, 128, 50 )
   , _colorGlobal( 255, 0, 0, 100 )
-  , _maxNumEvents( 8 )
+  , _focusWidget( nullptr )
+  , _histoLabelsLayout( nullptr )
+  , _histoLabelsScroll( nullptr )
+  , _eventLabelsLayout( nullptr )
+  , _eventLabelsScroll( nullptr )
+  , _histogramsLayout( nullptr )
+  , _histogramScroll( nullptr )
   , _eventsLayout( nullptr )
   , _eventScroll( nullptr )
+  , _eventsSplitter( nullptr )
+  , _histoSplitter( nullptr )
+  , _maxNumEvents( 8 )
   , _syncScrollsVertically( true )
   , _heightPerRow( 50 )
   , _maxLabelWidth( 100 )
-  , _currentCentralMinWidth( 200 )
+  , _currentCentralMinWidth( 500 )
   , _showMarker( false )
   , _regionPercentage( 0.0f )
   , _regionWidthPixels( -1 )
@@ -91,8 +98,8 @@ namespace visimpl
 
     if( _stackType == T_STACK_FIXED )
     {
-      _mainLayout = new QGridLayout( );
-      this->setLayout( _mainLayout );
+      _histogramsLayout = new QGridLayout( );
+      this->setLayout( _histogramsLayout );
     }
     else if( _stackType == T_STACK_EXPANDABLE )
     {
@@ -103,37 +110,113 @@ namespace visimpl
       QVBoxLayout* upperLayout = new QVBoxLayout( );
       upperLayout->setAlignment( Qt::AlignTop );
 
+      _eventLabelsLayout = new QGridLayout( );
+      _eventLabelsLayout->setAlignment( Qt::AlignTop );
+      _eventLabelsLayout->setVerticalSpacing( 0 );
+
+      QWidget* eventLabelsContainer = new QWidget( );
+      eventLabelsContainer->setLayout( _eventLabelsLayout );
+      eventLabelsContainer->setMaximumWidth( 150 );
+
+      _eventLabelsScroll = new QScrollArea( );
+      _eventLabelsScroll->setWidgetResizable( true );
+      _eventLabelsScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _eventLabelsScroll->setVisible( false );
+      _eventLabelsScroll->setWidget( eventLabelsContainer );
+
       _eventsLayout = new QGridLayout( );
       _eventsLayout->setAlignment( Qt::AlignTop );
       _eventsLayout->setVerticalSpacing( 0 );
 
-      _eventScroll = new QScrollArea();
-      QWidget* subsetWidget = new QWidget( );
+      QWidget* eventsContainer = new QWidget( );
+      eventsContainer->setLayout( _eventsLayout );
 
-      subsetWidget->setLayout( _eventsLayout );
-      _eventScroll->setWidget( subsetWidget );
+      _eventScroll = new QScrollArea();
       _eventScroll->setWidgetResizable( true );
       _eventScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
       _eventScroll->setVisible( false );
-      _eventScroll->setMaximumHeight( 200 );
+      _eventScroll->setWidget( eventsContainer );
 
       connect( _eventScroll->horizontalScrollBar( ),
                SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
 
-      QWidget* header = new QWidget( );
+      _histoLabelsLayout = new QGridLayout( );
+      _histoLabelsLayout->setAlignment( Qt::AlignTop );
+      _histoLabelsLayout->setVerticalSpacing( 0 );
+
+      QWidget* histoLabelsContainer = new QWidget( );
+      histoLabelsContainer->setLayout( _histoLabelsLayout );
+      histoLabelsContainer->setMaximumWidth( 150 );
+
+      _histoLabelsScroll = new QScrollArea( );
+      _histoLabelsScroll->setWidgetResizable( true );
+      _histoLabelsScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _histoLabelsScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+      _histoLabelsScroll->setWidget( histoLabelsContainer );
+
+
+      _histogramsLayout = new QGridLayout( );
+      _histogramsLayout->setAlignment( Qt::AlignTop );
+      _histogramsLayout->setVerticalSpacing( 0 );
+
+      QWidget* histogramsContainer = new QWidget( );
+      histogramsContainer->setLayout( _histogramsLayout );
+//      histogramsContainer->setMinimumWidth( 300);
+
+      _histogramScroll = new QScrollArea( );
+      _histogramScroll->setWidgetResizable( true );
+      _histogramScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _histogramScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _histogramScroll->setWidget( histogramsContainer );
+
+      connect( _histogramScroll->horizontalScrollBar( ),
+               SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
+
+//      auto widgetSize = size( );
+//      QList< int > initialSizes;
+//      initialSizes.push_back( widgetSize.width( ) * 0.2f );
+//      initialSizes.push_back( widgetSize.width( ) - initialSizes[ 0 ]);
+
+      _eventsSplitter = new QSplitter( Qt::Horizontal );
+      _histoSplitter = new QSplitter( Qt::Horizontal );
+
+      _eventsSplitter->addWidget( _eventLabelsScroll );
+      _eventsSplitter->addWidget( _eventScroll );
+
+      _histoSplitter->addWidget( _histoLabelsScroll );
+      _histoSplitter->addWidget( _histogramScroll );
+
+//      _eventsSplitter->setSizes( initialSizes );
+//      _histoSplitter->setSizes( initialSizes );
+
+      connect( _eventsSplitter, SIGNAL( splitterMoved( int, int )),
+               this, SLOT( syncSplitters( ) ));
+
+      connect( _histoSplitter, SIGNAL( splitterMoved( int, int )),
+               this, SLOT( syncSplitters( ) ));
+
+//      QWidget* outerEventsContainer = new QWidget( );
+//      QGridLayout* outerEventsLayout = new QGridLayout( );
+
+
+//      outerEventsLayout->addWidget( _eventLabelsScroll, 0, 0, 1, 1 );
+//      outerEventsLayout->addWidget( _eventScroll, 0, 1, 1, 20 );
+//      outerEventsContainer->setLayout( outerEventsLayout );
+
+//      QWidget* outerHistoContainer = new QWidget( );
+//      QGridLayout* outerHistoLayout = new QGridLayout( );
+//
+//      outerHistoLayout->addWidget( _histoLabelsScroll, 0, 0, 1, 1 );
+//      outerHistoLayout->addWidget( _histogramScroll, 0, 1, 1, 20 );
+//      outerHistoContainer->setLayout( outerHistoLayout );
+
+      QWidget* headerContainer = new QWidget( );
       QGridLayout* headerLayout = new QGridLayout( );
       headerLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 1);
       headerLayout->addWidget( new QLabel( "Activity" ), 0, 1, 1, _summaryColumns);
       headerLayout->addWidget( new QLabel( "Select" ), 0, _maxColumns - 1, 1, 1);
 
-      header->setLayout( headerLayout );
-
-      _mainLayout = new QGridLayout( );
-      _mainLayout->setAlignment( Qt::AlignTop );
-      _mainLayout->setVerticalSpacing( 0 );
-
-      _body = new QWidget( );
-      _body->setLayout( _mainLayout );
+      headerContainer->setLayout( headerLayout );
 
       QWidget* foot = new QWidget( );
       QGridLayout* footLayout = new QGridLayout( );
@@ -241,23 +324,11 @@ namespace visimpl
 
       foot->setLayout( footLayout );
 
-    ////  std::cout << width( ) << std::endl;
-    //  _body->setMinimumWidth( width( ));
-    ////  body->setMaximumWidth( width( ));
-      _histogramScroll = new QScrollArea( );
-      _histogramScroll->setWidget( _body );
-      _histogramScroll->setWidgetResizable( true );
-      _histogramScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-
-      connect( _histogramScroll->horizontalScrollBar( ),
-               SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
-
       auto splitter = new QSplitter( Qt::Vertical, this );
-      splitter->addWidget( _eventScroll );
-      splitter->addWidget( _histogramScroll );
+      splitter->addWidget( _eventsSplitter );
+      splitter->addWidget( _histoSplitter );
       upperLayout->addWidget( splitter );
       upperLayout->addWidget( foot );
-    //  upperLayout->addWidget( _body );
 
       this->setLayout( upperLayout );
 
@@ -361,7 +432,7 @@ namespace visimpl
 
     if( _stackType == T_STACK_FIXED)
     {
-      _mainLayout->addWidget( _mainHistogram, 0, 1, 1, 1 );
+      _histogramsLayout->addWidget( _mainHistogram, 0, 1, 1, 1 );
       _mainHistogram->paintRegion( false );
       _mainHistogram->simPlayer( _player );
       _histograms.push_back( _mainHistogram );
@@ -385,9 +456,9 @@ namespace visimpl
   //    mainRow.checkBox->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
 
       unsigned int row = _histograms.size( );
-      _mainLayout->addWidget( mainRow.label, row , 0, 1, 1 );
-      _mainLayout->addWidget( _mainHistogram, row, 1, 1, _summaryColumns );
-      _mainLayout->addWidget( mainRow.checkBox, row, _maxColumns - 1, 1, 1 );
+      _histoLabelsLayout->addWidget( mainRow.label, row , 0, 1, 1 );
+      _histogramsLayout->addWidget( _mainHistogram, row, 1, 1, _summaryColumns );
+//      _histogramsLayout->addWidget( mainRow.checkBox, row, _maxColumns - 1, 1, 1 );
     //  mainRow.checkBox->setVisible( false );
 
       _rows.push_back( mainRow );
@@ -410,6 +481,7 @@ namespace visimpl
 
         if( _autoAddEvents && _simData->subsetsEvents( )->numEvents( ) > 0 )
         {
+          _eventLabelsScroll->setVisible( true );
           _eventScroll->setVisible( true );
 
           simil::EventRange timeFrames = _simData->subsetsEvents( )->events( );
@@ -475,9 +547,9 @@ namespace visimpl
             _subsetRows.push_back( eventrow );
             _subsetEventWidgets.push_back( subsetWidget );
 
-            _eventsLayout->addWidget( label, counter, 0, 1, 1 );
+            _eventLabelsLayout->addWidget( label, counter, 0, 1, 1 );
             _eventsLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
-            _eventsLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
+//            _eventsLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
 
           }
         }
@@ -496,6 +568,9 @@ namespace visimpl
       }
       else
       {
+        if( _eventLabelsScroll )
+          _eventLabelsScroll->setVisible( false );
+
         if( _eventScroll )
           _eventScroll->setVisible( false );
       }
@@ -536,25 +611,6 @@ namespace visimpl
   #endif
 
       {
-//      visimpl::MultiLevelHistogram* histogram = new visimpl::MultiLevelHistogram( *_spikeReport );
-//  //    histogram->filteredGIDs( gids );
-//      histogram->colorMapper( _mainHistogram->colorMapper( ));
-//  //    histogram->colorScale( visimpl::Histogram::T_COLOR_EXPONENTIAL );
-//  //    histogram->normalizeRule( visimpl::Histogram::T_NORM_MAX );
-//  //    histogram->mousePosition( &_lastMousePosition );
-//      histogram->setMinimumHeight( _heightPerRow );
-//      histogram->setMaximumHeight( _heightPerRow );
-//  //    histogram->setMinimumWidth( 500 );
-//      std::cout << "Thread " << this->thread( ) << std::endl;
-//      _mainLayout->addWidget( histogram, _histograms.size( ), 0, _maxColumns - 2, 1 );
-//  //    _mainLayout->addWidget( histogram );
-//      _histograms.push_back( histogram );
-//
-//      histogram->init( _bins, _zoomFactor );
-//  //    CreateSummarySpikes( );
-//  //    UpdateGradientColors( );
-//
-//      update( );
         insertSubset( selection );
       }
 
@@ -642,9 +698,9 @@ namespace visimpl
     currentRow.checkBox = new QCheckBox( );
 
     unsigned int row = _histograms.size( );
-    _mainLayout->addWidget( currentRow.label, row , 0, 1, 1 );
-    _mainLayout->addWidget( histogram, row, 1, 1, _summaryColumns );
-    _mainLayout->addWidget( currentRow.checkBox, row, _maxColumns - 1, 1, 1 );
+    _histoLabelsLayout->addWidget( currentRow.label, row , 0, 1, 1 );
+    _histogramsLayout->addWidget( histogram, row, 1, 1, _summaryColumns );
+//    _histogramsLayout->addWidget( currentRow.checkBox, row, _maxColumns - 1, 1, 1 );
 
     _rows.push_back( currentRow );
 
@@ -1080,9 +1136,9 @@ namespace visimpl
 
       if( summaryRow.checkBox->isChecked( ))
       {
-        _mainLayout->removeWidget( summaryRow.label );
-        _mainLayout->removeWidget( summaryRow.histogram );
-        _mainLayout->removeWidget( summaryRow.checkBox );
+        _histoLabelsLayout->removeWidget( summaryRow.label );
+        _histogramsLayout->removeWidget( summaryRow.histogram );
+//        _histogramsLayout->removeWidget( summaryRow.checkBox );
 
         delete summaryRow.label;
         delete summaryRow.histogram;
@@ -1117,9 +1173,9 @@ namespace visimpl
 
       if( timeFrameRow.checkBox->isChecked( ))
       {
-        _eventsLayout->removeWidget( timeFrameRow.label );
+        _eventLabelsLayout->removeWidget( timeFrameRow.label );
         _eventsLayout->removeWidget( timeFrameRow.widget );
-        _eventsLayout->removeWidget( timeFrameRow.checkBox );
+//        _eventsLayout->removeWidget( timeFrameRow.checkBox );
 
         delete timeFrameRow.label;
         delete timeFrameRow.widget;
@@ -1148,7 +1204,10 @@ namespace visimpl
     }
 
     if( _subsetRows.size( ) == 0 )
+    {
+      _eventLabelsScroll->setVisible( false );
       _eventScroll->setVisible( false );
+    }
 
     update( );
   }
@@ -1301,6 +1360,15 @@ namespace visimpl
         _eventScroll->horizontalScrollBar( )->setValue( newPos );
         _histogramScroll->horizontalScrollBar( )->setValue( newPos );
     }
+  }
+
+  void Summary::syncSplitters( )
+  {
+    if( sender( ) == _eventsSplitter )
+      _histoSplitter->setSizes( _eventsSplitter->sizes( ));
+    else
+      _eventsSplitter->setSizes( _histoSplitter->sizes( ));
+
   }
 
 }

@@ -21,6 +21,7 @@
 #include <QCheckBox>
 #include <QTimer>
 #include <QScrollArea>
+#include <QSplitter>
 
 #include "FocusFrame.h"
 #include "Histogram.h"
@@ -130,6 +131,7 @@ namespace visimpl
 
     void updateMouseMarker( QPoint point );
     void moveScrollSync( int newPos );
+    void syncSplitters( );
 
   protected:
 
@@ -219,7 +221,7 @@ namespace visimpl
     visimpl::MultiLevelHistogram* _mainHistogram;
     visimpl::MultiLevelHistogram* _detailHistogram;
     visimpl::MultiLevelHistogram* _focusedHistogram;
-    QScrollArea* _histogramScroll;
+
 
     bool _mousePressed;
 
@@ -236,8 +238,22 @@ namespace visimpl
 
     FocusFrame* _focusWidget;
 
-    QGridLayout* _mainLayout;
-    QWidget* _body;
+
+    QGridLayout* _histoLabelsLayout;
+    QScrollArea* _histoLabelsScroll;
+
+    QGridLayout* _eventLabelsLayout;
+    QScrollArea* _eventLabelsScroll;
+
+    QGridLayout* _histogramsLayout;
+    QScrollArea* _histogramScroll;
+
+    QGridLayout* _eventsLayout;
+    QScrollArea* _eventScroll;
+
+    QSplitter* _eventsSplitter;
+    QSplitter* _histoSplitter;
+
     QWidget* _localColorWidget;
     QWidget* _globalColorWidget;
     QLabel* _currentValueLabel;
@@ -247,8 +263,7 @@ namespace visimpl
 //    simil::SubsetEventManager* _subsetEventManager;
     unsigned int _maxNumEvents;
     std::vector< TEvent > _events;
-    QGridLayout* _eventsLayout;
-    QScrollArea* _eventScroll;
+
     std::vector< SubsetEventWidget* > _subsetEventWidgets;
     std::vector< EventRow > _subsetRows;
 
