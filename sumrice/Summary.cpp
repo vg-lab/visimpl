@@ -72,6 +72,7 @@ namespace visimpl
   , _eventsSplitter( nullptr )
   , _histoSplitter( nullptr )
   , _maxNumEvents( 8 )
+  , _syncScrollsHorizontally( true )
   , _syncScrollsVertically( true )
   , _heightPerRow( 50 )
   , _maxLabelWidth( 100 )
@@ -137,8 +138,14 @@ namespace visimpl
       _eventScroll->setVisible( false );
       _eventScroll->setWidget( eventsContainer );
 
-      connect( _eventScroll->horizontalScrollBar( ),
-               SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
+      connect( _eventScroll->horizontalScrollBar( ), SIGNAL( actionTriggered( int )),
+               this, SLOT( moveHoriScrollSync( int )));
+
+      connect( _eventScroll->verticalScrollBar( ), SIGNAL( actionTriggered( int )),
+               this, SLOT( moveVertScrollSync( int )));
+
+      connect( _eventLabelsScroll->verticalScrollBar( ), SIGNAL( actionTriggered( int )),
+               this, SLOT( moveVertScrollSync( int )));
 
       _histoLabelsLayout = new QGridLayout( );
       _histoLabelsLayout->setAlignment( Qt::AlignTop );
@@ -169,8 +176,14 @@ namespace visimpl
       _histogramScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
       _histogramScroll->setWidget( histogramsContainer );
 
-      connect( _histogramScroll->horizontalScrollBar( ),
-               SIGNAL( sliderMoved( int )), this, SLOT( moveScrollSync( int )));
+      connect( _histogramScroll->horizontalScrollBar( ), SIGNAL( actionTriggered( int )),
+               this, SLOT( moveHoriScrollSync( int )));
+
+      connect( _histogramScroll->verticalScrollBar( ), SIGNAL( actionTriggered( int )),
+               this, SLOT( moveVertScrollSync( int )));
+
+      connect( _histoLabelsScroll->verticalScrollBar( ), SIGNAL( actionTriggered( int )),
+               this, SLOT( moveVertScrollSync( int )));
 
 //      auto widgetSize = size( );
 //      QList< int > initialSizes;
@@ -451,6 +464,8 @@ namespace visimpl
       mainRow.label = new QLabel( labelText );
       mainRow.label->setMinimumWidth( _maxLabelWidth );
       mainRow.label->setMaximumWidth( _maxLabelWidth );
+      mainRow.label->setMinimumHeight( _heightPerRow );
+      mainRow.label->setMaximumHeight( _heightPerRow );
   //    mainRow.label->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
       mainRow.checkBox = new QCheckBox( );
   //    mainRow.checkBox->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
@@ -528,6 +543,8 @@ namespace visimpl
             label->setMinimumHeight( 20 );
             label->setMinimumWidth( _maxLabelWidth );
             label->setMaximumWidth( _maxLabelWidth );
+            label->setMinimumHeight( _heightPerRow );
+            label->setMaximumHeight( _heightPerRow );
             label->setToolTip( timeFrame.name.c_str( ));
 
             SubsetEventWidget* subsetWidget = new SubsetEventWidget( );
@@ -535,6 +552,8 @@ namespace visimpl
                                                QSizePolicy::Expanding );
             subsetWidget->timeFrames( &_events );
             subsetWidget->setMinimumWidth( _currentCentralMinWidth );
+            subsetWidget->setMinimumHeight( _heightPerRow );
+            subsetWidget->setMaximumHeight( _heightPerRow );
             subsetWidget->index( counter );
 
             QCheckBox* checkbox = new QCheckBox();
@@ -694,6 +713,8 @@ namespace visimpl
     currentRow.label = new QLabel( name.c_str( ));
     currentRow.label->setMinimumWidth( _maxLabelWidth );
     currentRow.label->setMaximumWidth( _maxLabelWidth );
+    currentRow.label->setMinimumHeight( _heightPerRow );
+    currentRow.label->setMaximumHeight( _heightPerRow );
     currentRow.label->setToolTip( name.c_str( ));
     currentRow.checkBox = new QCheckBox( );
 
@@ -1342,7 +1363,7 @@ namespace visimpl
       else
         pos = _eventScroll->horizontalScrollBar( )->value( );
 
-      moveScrollSync( pos );
+      moveVertScrollSync( pos );
 
       updateRegionBounds( );
 
@@ -1353,12 +1374,43 @@ namespace visimpl
     event_->ignore( );
   }
 
-  void Summary::moveScrollSync( int newPos )
+  void Summary::moveHoriScrollSync( int /*action*/ )
+  {
+    if( _syncScrollsHorizontally &&
+        ( sender( ) == _eventScroll->horizontalScrollBar( ) ||
+          sender( ) == _histogramScroll->horizontalScrollBar( )))
+    {
+      auto author = dynamic_cast< QAbstractSlider* >( sender( ));
+      int newPos = author->sliderPosition( );
+      _eventScroll->horizontalScrollBar( )->setValue( newPos );
+      _histogramScroll->horizontalScrollBar( )->setValue( newPos );
+    }
+  }
+
+  void Summary::moveVertScrollSync( int /*action*/ )
   {
     if( _syncScrollsVertically )
     {
-        _eventScroll->horizontalScrollBar( )->setValue( newPos );
-        _histogramScroll->horizontalScrollBar( )->setValue( newPos );
+
+      if( sender( ) == _eventLabelsScroll->verticalScrollBar( ) ||
+          sender( ) == _eventScroll->verticalScrollBar( ))
+      {
+        auto author = dynamic_cast< QAbstractSlider* >( sender( ));
+        int newPos = author->sliderPosition( );
+
+        _eventLabelsScroll->verticalScrollBar( )->setValue( newPos );
+        _eventScroll->verticalScrollBar( )->setValue( newPos );
+      }
+      else if( sender( ) == _histoLabelsScroll->verticalScrollBar( ) ||
+          sender( ) == _histogramScroll->verticalScrollBar( ) )
+      {
+        auto author = dynamic_cast< QAbstractSlider* >( sender( ));
+        int newPos = author->sliderPosition( );
+
+
+        _histoLabelsScroll->verticalScrollBar( )->setValue( newPos );
+        _histogramScroll->verticalScrollBar( )->setValue( newPos );
+      }
     }
   }
 

@@ -130,7 +130,8 @@ namespace visimpl
     void gridLinesNumber( int linesNumber );
 
     void updateMouseMarker( QPoint point );
-    void moveScrollSync( int newPos );
+    void moveVertScrollSync( int newPos );
+    void moveHoriScrollSync( int newPos );
     void syncSplitters( );
 
   protected:
@@ -267,6 +268,7 @@ namespace visimpl
     std::vector< SubsetEventWidget* > _subsetEventWidgets;
     std::vector< EventRow > _subsetRows;
 
+    bool _syncScrollsHorizontally;
     bool _syncScrollsVertically;
 
     unsigned int _maxColumns;
