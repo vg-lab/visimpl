@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="/">
+    <file>icons/list.png</file>
     <file>icons/menu-play.png</file>
     <file>icons/visimpl-icon-square.png</file>
     <file>icons/logoGMRV.png</file>
@@ -15,5 +16,8 @@
     <file>icons/repeat.png</file>
     <file>icons/previous.png</file>
     <file>icons/next.png</file>
+    <file>icons/hide.png</file>
+    <file>icons/show.png</file>
+    <file>icons/trash.png</file>
   </qresource>
 </RCC>

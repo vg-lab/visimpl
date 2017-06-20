@@ -158,7 +158,6 @@ namespace visimpl
       _histoLabelsScroll = new QScrollArea( );
       _histoLabelsScroll->setWidgetResizable( true );
       _histoLabelsScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-      _histoLabelsScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _histoLabelsScroll->setWidget( histoLabelsContainer );
 
 
@@ -412,7 +411,7 @@ namespace visimpl
     if( !_spikeReport )
       return;
 
-    _mainHistogram = new visimpl::MultiLevelHistogram( *_spikeReport );
+    _mainHistogram = new visimpl::HistogramWidget( *_spikeReport );
     _mainHistogram->setMinimumHeight( _heightPerRow );
     _mainHistogram->setMaximumHeight( _heightPerRow );
     _mainHistogram->colorScaleLocal( _colorScaleLocal );
@@ -460,6 +459,7 @@ namespace visimpl
 
       mainRow.histogram = _mainHistogram;
       mainRow.histogram->_events = &_events;
+      mainRow.histogram->name( "All" );
       QString labelText( "All" );
       mainRow.label = new QLabel( labelText );
       mainRow.label->setMinimumWidth( _maxLabelWidth );
@@ -547,27 +547,28 @@ namespace visimpl
             label->setMaximumHeight( _heightPerRow );
             label->setToolTip( timeFrame.name.c_str( ));
 
-            SubsetEventWidget* subsetWidget = new SubsetEventWidget( );
-            subsetWidget->setSizePolicy( QSizePolicy::Expanding,
-                                               QSizePolicy::Expanding );
-            subsetWidget->timeFrames( &_events );
-            subsetWidget->setMinimumWidth( _currentCentralMinWidth );
-            subsetWidget->setMinimumHeight( _heightPerRow );
-            subsetWidget->setMaximumHeight( _heightPerRow );
-            subsetWidget->index( counter );
+            EventWidget* eventWidget = new EventWidget( );
+            eventWidget->name( timeFrame.name );
+            eventWidget->setSizePolicy( QSizePolicy::Expanding,
+                                        QSizePolicy::Expanding );
+            eventWidget->timeFrames( &_events );
+            eventWidget->setMinimumWidth( _currentCentralMinWidth );
+            eventWidget->setMinimumHeight( _heightPerRow );
+            eventWidget->setMaximumHeight( _heightPerRow );
+            eventWidget->index( counter );
 
             QCheckBox* checkbox = new QCheckBox();
 
             EventRow eventrow;
-            eventrow.widget = subsetWidget;
+            eventrow.widget = eventWidget;
             eventrow.label = label;
             eventrow.checkBox = checkbox;
 
             _subsetRows.push_back( eventrow );
-            _subsetEventWidgets.push_back( subsetWidget );
+            _eventWidgets.push_back( eventWidget );
 
             _eventLabelsLayout->addWidget( label, counter, 0, 1, 1 );
-            _eventsLayout->addWidget( subsetWidget, counter, 1, 1, _summaryColumns );
+            _eventsLayout->addWidget( eventWidget, counter, 1, 1, _summaryColumns );
 //            _eventsLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
 
           }
@@ -686,9 +687,10 @@ namespace visimpl
   {
     HistogramRow currentRow;
 
-    visimpl::MultiLevelHistogram* histogram =
-        new visimpl::MultiLevelHistogram( *_spikeReport );
+    visimpl::HistogramWidget* histogram =
+        new visimpl::HistogramWidget( *_spikeReport );
 
+    histogram->name( name );
     histogram->filteredGIDs( subset );
     histogram->colorMapper( _mainHistogram->colorMapper( ));
     histogram->colorScaleLocal( _colorScaleLocal );
@@ -768,7 +770,7 @@ namespace visimpl
 //        _regionWidth = 10.0f / nativeParentWidget( )->width( );
 
       _focusedHistogram =
-              dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
+              dynamic_cast< visimpl::HistogramWidget* >( sender( ));
 
       _focusedHistogram->regionWidth( _regionWidth );
     }
@@ -834,7 +836,7 @@ namespace visimpl
     {
       if( modifiers == Qt::ControlModifier )
         emit histogramClicked(
-            dynamic_cast< visimpl::MultiLevelHistogram* >( sender( )));
+            dynamic_cast< visimpl::HistogramWidget* >( sender( )));
       else if( modifiers == Qt::ShiftModifier )
         emit histogramClicked( percentage );
     }
@@ -918,8 +920,8 @@ namespace visimpl
 
   void Summary::updateMouseMarker( QPoint point )
   {
-    visimpl::MultiLevelHistogram* focusedHistogram =
-            dynamic_cast< visimpl::MultiLevelHistogram* >( sender( ));
+    visimpl::HistogramWidget* focusedHistogram =
+            dynamic_cast< visimpl::HistogramWidget* >( sender( ));
 
     _lastMousePosition = point;
 
@@ -1146,6 +1148,16 @@ namespace visimpl
     _showMarker = show_;
   }
 
+  const std::vector< EventWidget* >* Summary::eventWidgets( void ) const
+  {
+    return &_eventWidgets;
+  }
+
+  const std::vector< HistogramWidget* >* Summary::histogramWidgets( void ) const
+  {
+    return &_histograms;
+  }
+
   void Summary::removeSelections( void )
   {
     std::vector< unsigned int > toDelete;
@@ -1203,7 +1215,7 @@ namespace visimpl
         delete timeFrameRow.checkBox;
 
         _events.erase( _events.begin( ) + counter );
-        _subsetEventWidgets.erase( _subsetEventWidgets.begin( ) + counter );
+        _eventWidgets.erase( _eventWidgets.begin( ) + counter );
 
         toDelete.push_back( counter );
       }
@@ -1216,7 +1228,7 @@ namespace visimpl
           _subsetRows.begin( ) + toDelete[ i ]);
 
     counter = 0;
-    for( auto timeFrame : _subsetEventWidgets )
+    for( auto timeFrame : _eventWidgets )
     {
       timeFrame->index( counter );
       ++counter;
@@ -1256,8 +1268,8 @@ namespace visimpl
     for( auto histogram : _histograms )
     {
       histogram->colorScaleLocal( colorScale );
-      histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_MAIN );
-      histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_FOCUS );
+      histogram->CalculateColors( visimpl::HistogramWidget::T_HIST_MAIN );
+      histogram->CalculateColors( visimpl::HistogramWidget::T_HIST_FOCUS );
       histogram->update( );
     }
 
@@ -1276,8 +1288,8 @@ namespace visimpl
     for( auto histogram : _histograms )
     {
       histogram->colorScaleGlobal( colorScale );
-      histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_MAIN );
-      histogram->CalculateColors( visimpl::MultiLevelHistogram::T_HIST_FOCUS );
+      histogram->CalculateColors( visimpl::HistogramWidget::T_HIST_MAIN );
+      histogram->CalculateColors( visimpl::HistogramWidget::T_HIST_FOCUS );
       histogram->update( );
     }
 
@@ -1351,7 +1363,7 @@ namespace visimpl
 //        histogram->update( );
       }
 
-      for( auto subsetEventWidget : _subsetEventWidgets )
+      for( auto subsetEventWidget : _eventWidgets )
       {
         subsetEventWidget->setMinimumWidth( _currentCentralMinWidth );
 //        subsetEventWidget->update( );
@@ -1421,6 +1433,18 @@ namespace visimpl
     else
       _eventsSplitter->setSizes( _histoSplitter->sizes( ));
 
+  }
+
+  void Summary::adjustSplittersSize( )
+  {
+    int lhs = width( ) * 0.2;
+    int rhs = width( ) - lhs;
+
+    QList< int > sizes;
+    sizes << lhs << rhs;
+
+    _eventsSplitter->setSizes( sizes );
+    _histoSplitter->setSizes( sizes );
   }
 
 }

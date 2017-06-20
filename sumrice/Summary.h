@@ -23,13 +23,13 @@
 #include <QScrollArea>
 #include <QSplitter>
 
+#include "EventWidget.h"
 #include "FocusFrame.h"
 #include "Histogram.h"
-#include "SubsetEventWidget.h"
 
 namespace visimpl
 {
-  class MultiLevelHistogram;
+  class HistogramWidget;
 
 
   struct Selection
@@ -83,6 +83,9 @@ namespace visimpl
     void heightPerRow( unsigned int height_ );
     unsigned int heightPerRow( void );
 
+    const std::vector< EventWidget* >* eventWidgets( void ) const;
+    const std::vector< HistogramWidget* >* histogramWidgets( void ) const;
+
     void showMarker( bool show_ );
 
     void colorScaleLocal( visimpl::TColorScale colorScale );
@@ -105,7 +108,7 @@ namespace visimpl
   signals:
 
     void histogramClicked( float );
-    void histogramClicked( visimpl::MultiLevelHistogram* );
+    void histogramClicked( visimpl::HistogramWidget* );
 
   public slots:
 
@@ -114,6 +117,8 @@ namespace visimpl
     void fillPlots( bool fillPlots_ );
 
     void toggleAutoNameSelections( void );
+
+    void adjustSplittersSize( void );
 
   protected slots:
 
@@ -149,7 +154,7 @@ namespace visimpl
       ~HistogramRow( )
       { }
 
-      visimpl::MultiLevelHistogram* histogram;
+      visimpl::HistogramWidget* histogram;
       QLabel* label;
       QCheckBox* checkBox;
 
@@ -168,7 +173,7 @@ namespace visimpl
       ~EventRow( )
       { }
 
-      visimpl::SubsetEventWidget* widget;
+      visimpl::EventWidget* widget;
       QLabel* label;
       QCheckBox* checkBox;
 
@@ -219,9 +224,9 @@ namespace visimpl
 
     GIDUSet _gids;
 
-    visimpl::MultiLevelHistogram* _mainHistogram;
-    visimpl::MultiLevelHistogram* _detailHistogram;
-    visimpl::MultiLevelHistogram* _focusedHistogram;
+    visimpl::HistogramWidget* _mainHistogram;
+    visimpl::HistogramWidget* _detailHistogram;
+    visimpl::HistogramWidget* _focusedHistogram;
 
 
     bool _mousePressed;
@@ -234,7 +239,7 @@ namespace visimpl
     QColor _colorLocal;
     QColor _colorGlobal;
 
-    std::vector< visimpl::MultiLevelHistogram* > _histograms;
+    std::vector< visimpl::HistogramWidget* > _histograms;
     std::vector< HistogramRow > _rows;
 
     FocusFrame* _focusWidget;
@@ -265,7 +270,7 @@ namespace visimpl
     unsigned int _maxNumEvents;
     std::vector< TEvent > _events;
 
-    std::vector< SubsetEventWidget* > _subsetEventWidgets;
+    std::vector< EventWidget* > _eventWidgets;
     std::vector< EventRow > _subsetRows;
 
     bool _syncScrollsHorizontally;

@@ -27,7 +27,7 @@ FocusFrame::FocusFrame( QWidget* parent_ )
 { }
 
 
-void FocusFrame::viewRegion( const visimpl::MultiLevelHistogram& histogram,
+void FocusFrame::viewRegion( const visimpl::HistogramWidget& histogram,
                              float marker,// float offset,
                              float regionWidth )
 {

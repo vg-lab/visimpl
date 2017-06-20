@@ -22,7 +22,7 @@
 
 namespace visimpl
 {
-  MultiLevelHistogram::MultiLevelHistogram( )
+  HistogramWidget::HistogramWidget( )
   : QFrame( nullptr )
   , _bins( 50 )
   , _zoomFactor( 1.5f )
@@ -55,7 +55,7 @@ namespace visimpl
   }
 
 
-  MultiLevelHistogram::MultiLevelHistogram( const simil::Spikes& spikes,
+  HistogramWidget::HistogramWidget( const simil::Spikes& spikes,
                                  float startTime,
                                  float endTime )
   : QFrame( nullptr )
@@ -89,7 +89,7 @@ namespace visimpl
 //    init( );
   }
 
-  MultiLevelHistogram::MultiLevelHistogram( const simil::SpikeData& spikeReport )
+  HistogramWidget::HistogramWidget( const simil::SpikeData& spikeReport )
   : QFrame( nullptr )
   , _bins( 50 )
   , _zoomFactor( 1.5f )
@@ -122,7 +122,7 @@ namespace visimpl
   }
 
 
-  void MultiLevelHistogram::Spikes( const simil::Spikes& spikes,
+  void HistogramWidget::Spikes( const simil::Spikes& spikes,
                                     float startTime,
                                     float endTime )
   {
@@ -131,14 +131,14 @@ namespace visimpl
     _endTime = endTime;
   }
 
-  void MultiLevelHistogram::Spikes( const simil::SpikeData& spikeReport )
+  void HistogramWidget::Spikes( const simil::SpikeData& spikeReport )
   {
     _spikes = &spikeReport.spikes( );
     _startTime = spikeReport.startTime( );
     _endTime = spikeReport.endTime( );
   }
 
-  void MultiLevelHistogram::init( unsigned int binsNumber, float zoomFactor_ )
+  void HistogramWidget::init( unsigned int binsNumber, float zoomFactor_ )
   {
     _zoomFactor = zoomFactor_;
     bins( binsNumber );
@@ -150,7 +150,7 @@ namespace visimpl
     setMouseTracking( true );
   }
 
-  void MultiLevelHistogram::BuildHistogram( THistogram histogramNumber )
+  void HistogramWidget::BuildHistogram( THistogram histogramNumber )
   {
     Histogram* histogram = &_mainHistogram;
 //    Histogram* aux = new Histogram( *histogram );
@@ -298,7 +298,7 @@ namespace visimpl
     return result;
   }
 
-  void MultiLevelHistogram::CalculateColors( THistogram histogramNumber )
+  void HistogramWidget::CalculateColors( THistogram histogramNumber )
   {
     Histogram* histogram = &_mainHistogram;
 
@@ -389,7 +389,23 @@ namespace visimpl
     updateCachedRep( );
   }
 
-  void MultiLevelHistogram::bins( unsigned int binsNumber )
+  unsigned int HistogramWidget::gidsSize( void )
+  {
+    return _player->data( )->gids( ).size( ) - _filteredGIDs.size( );
+  }
+
+  void HistogramWidget::name( const std::string& name_ )
+  {
+    _name = name_;
+  }
+
+  const std::string& HistogramWidget::name( void ) const
+  {
+    return _name;
+  }
+
+
+  void HistogramWidget::bins( unsigned int binsNumber )
   {
     if( _bins == binsNumber )
       return;
@@ -413,12 +429,12 @@ namespace visimpl
     BuildHistogram( T_HIST_FOCUS );
   }
 
-  unsigned int MultiLevelHistogram::bins( void )
+  unsigned int HistogramWidget::bins( void ) const
   {
     return _bins;
   }
 
-  void MultiLevelHistogram::zoomFactor( float factor )
+  void HistogramWidget::zoomFactor( float factor )
   {
     _zoomFactor = factor;
 
@@ -432,23 +448,23 @@ namespace visimpl
     BuildHistogram( T_HIST_FOCUS );
   }
 
-  float MultiLevelHistogram::zoomFactor( void )
+  float HistogramWidget::zoomFactor( void ) const
   {
     return _zoomFactor;
   }
 
-  void MultiLevelHistogram::filteredGIDs( const GIDUSet& gids )
+  void HistogramWidget::filteredGIDs( const GIDUSet& gids )
   {
 //    if( gids.size( ) > 0 )
       _filteredGIDs = gids;
   }
 
-  const GIDUSet& MultiLevelHistogram::filteredGIDs( void )
+  const GIDUSet& HistogramWidget::filteredGIDs( void ) const
   {
     return _filteredGIDs;
   }
 
-  void MultiLevelHistogram::colorScaleLocal( TColorScale scale )
+  void HistogramWidget::colorScaleLocal( TColorScale scale )
   {
 
     _prevColorScaleLocal = _colorScaleLocal;
@@ -476,7 +492,7 @@ namespace visimpl
     }
   }
 
-  void MultiLevelHistogram::colorScaleGlobal( TColorScale scale )
+  void HistogramWidget::colorScaleGlobal( TColorScale scale )
   {
 
     _prevColorScaleGlobal = _colorScaleGlobal;
@@ -504,24 +520,24 @@ namespace visimpl
     }
   }
 
-  TColorScale MultiLevelHistogram::colorScaleLocal( void )
+  TColorScale HistogramWidget::colorScaleLocal( void ) const
   {
     return _colorScaleLocal;
   }
 
-  void MultiLevelHistogram::normalizeRule(
+  void HistogramWidget::normalizeRule(
       TNormalize_Rule normRule )
   {
     _normRule = normRule;
   }
 
-  TNormalize_Rule MultiLevelHistogram::normalizeRule( void )
+  TNormalize_Rule HistogramWidget::normalizeRule( void ) const
   {
     return _normRule;
   }
 
 
-  void MultiLevelHistogram::gridLinesNumber( unsigned int linesNumber )
+  void HistogramWidget::gridLinesNumber( unsigned int linesNumber )
   {
     _gridLinesNumber = linesNumber;
 
@@ -549,93 +565,93 @@ namespace visimpl
 
   }
 
-  unsigned int MultiLevelHistogram::gridLinesNumber( void )
+  unsigned int HistogramWidget::gridLinesNumber( void ) const
   {
     return _gridLinesNumber;
   }
 
-  void MultiLevelHistogram::representationMode(
+  void HistogramWidget::representationMode(
       TRepresentation_Mode repMode )
   {
     _repMode = repMode;
   }
 
   TRepresentation_Mode
-  MultiLevelHistogram::representationMode( void )
+  HistogramWidget::representationMode( void ) const
   {
     return _repMode;
   }
 
-  unsigned int MultiLevelHistogram::histogramSize( void ) const
+  unsigned int HistogramWidget::histogramSize( void ) const
   {
     return _mainHistogram.size( );
   }
 
-  unsigned int MultiLevelHistogram::focusHistogramSize( void ) const
+  unsigned int HistogramWidget::focusHistogramSize( void ) const
   {
     return _focusHistogram.size( );
   }
 
 
-  unsigned int MultiLevelHistogram::maxLocal( void )
+  unsigned int HistogramWidget::maxLocal( void ) const
   {
     return _mainHistogram._maxValueHistogramLocal;
   }
 
-  unsigned int MultiLevelHistogram::maxGlobal( void )
+  unsigned int HistogramWidget::maxGlobal( void ) const
   {
     return _mainHistogram._maxValueHistogramGlobal;
   }
 
-  unsigned int MultiLevelHistogram::focusMaxLocal( void )
+  unsigned int HistogramWidget::focusMaxLocal( void ) const
   {
     return _focusHistogram._maxValueHistogramLocal;
   }
 
-  unsigned int MultiLevelHistogram::focusMaxGlobal( void )
+  unsigned int HistogramWidget::focusMaxGlobal( void ) const
   {
     return _focusHistogram._maxValueHistogramGlobal;
   }
 
 
   const utils::InterpolationSet< glm::vec4 >&
-  MultiLevelHistogram::colorMapper( void )
+  HistogramWidget::colorMapper( void )
   {
     return _colorMapper;
   }
 
-  void MultiLevelHistogram::colorMapper(
+  void HistogramWidget::colorMapper(
       const utils::InterpolationSet< glm::vec4 >& colors )
   {
     _colorMapper = colors;
   }
 
-  QColor MultiLevelHistogram::colorLocal( void )
+  QColor HistogramWidget::colorLocal( void ) const
   {
     return _colorLocal;
   }
 
-  void MultiLevelHistogram::colorLocal( const QColor& color )
+  void HistogramWidget::colorLocal( const QColor& color )
   {
     _colorLocal = color;
   }
 
-  QColor MultiLevelHistogram::colorGlobal( void )
+  QColor HistogramWidget::colorGlobal( void ) const
   {
     return _colorGlobal;
   }
 
-  void MultiLevelHistogram::colorGlobal( const QColor& color )
+  void HistogramWidget::colorGlobal( const QColor& color )
   {
     _colorGlobal = color;
   }
 
-  const QGradientStops& MultiLevelHistogram::gradientStops( void )
+  const QGradientStops& HistogramWidget::gradientStops( void )
   {
     return _mainHistogram._gradientStops;
   }
 
-  unsigned int MultiLevelHistogram::valueAt( float percentage )
+  unsigned int HistogramWidget::valueAt( float percentage )
   {
     unsigned int position =
         std::max( 0.0f, std::min( 1.0f, percentage)) * _mainHistogram.size( );
@@ -646,7 +662,7 @@ namespace visimpl
     return _mainHistogram[ position ];
   }
 
-  unsigned int MultiLevelHistogram::focusValueAt( float percentage )
+  unsigned int HistogramWidget::focusValueAt( float percentage )
   {
     unsigned int position = percentage * _focusHistogram.size( );
 
@@ -656,38 +672,38 @@ namespace visimpl
     return _focusHistogram[ position ];
   }
 
-  bool MultiLevelHistogram::isInitialized( void )
+  bool HistogramWidget::isInitialized( void )
   {
     return _mainHistogram._gradientStops.size( ) > 0 ||
            _mainHistogram._curveStopsGlobal.size( ) > 0;
   }
 
-  QPolygonF MultiLevelHistogram::localFunction( void ) const
+  QPolygonF HistogramWidget::localFunction( void ) const
   {
     return _mainHistogram._curveStopsLocal;
   }
 
-  QPolygonF MultiLevelHistogram::globalFunction( void ) const
+  QPolygonF HistogramWidget::globalFunction( void ) const
   {
     return _mainHistogram._curveStopsGlobal;
   }
 
-  QPolygonF MultiLevelHistogram::focusLocalFunction( void ) const
+  QPolygonF HistogramWidget::focusLocalFunction( void ) const
   {
     return _focusHistogram._curveStopsLocal;
   }
 
-  QPolygonF MultiLevelHistogram::focusGlobalFunction( void ) const
+  QPolygonF HistogramWidget::focusGlobalFunction( void ) const
   {
     return _focusHistogram._curveStopsGlobal;
   }
 
-  void MultiLevelHistogram::fillPlots( bool fillPlots_ )
+  void HistogramWidget::fillPlots( bool fillPlots_ )
   {
     _fillPlots = fillPlots_;
   }
 
-  void MultiLevelHistogram::mousePressEvent( QMouseEvent* event_ )
+  void HistogramWidget::mousePressEvent( QMouseEvent* event_ )
   {
     QFrame::mousePressEvent( event_ );
 
@@ -706,7 +722,7 @@ namespace visimpl
     }
   }
 
-  void MultiLevelHistogram::mouseReleaseEvent( QMouseEvent* event_ )
+  void HistogramWidget::mouseReleaseEvent( QMouseEvent* event_ )
   {
     QPoint position = event_->pos( );
 
@@ -714,7 +730,7 @@ namespace visimpl
     emit mouseReleased( mapToGlobal( position ), percentage );
   }
 
-  void MultiLevelHistogram::mouseMoveEvent( QMouseEvent* event_ )
+  void HistogramWidget::mouseMoveEvent( QMouseEvent* event_ )
   {
     QFrame::mouseMoveEvent( event_ );
 
@@ -725,42 +741,42 @@ namespace visimpl
     emit mousePositionChanged( position );
   }
 
-  void MultiLevelHistogram::mousePosition( QPoint* mousePosition_ )
+  void HistogramWidget::mousePosition( QPoint* mousePosition_ )
   {
     _lastMousePosition = mousePosition_;
   }
 
-  void MultiLevelHistogram::regionPosition( float* regionPercentage )
+  void HistogramWidget::regionPosition( float* regionPercentage )
   {
     _regionPercentage = regionPercentage;
   }
 
-  void MultiLevelHistogram::simPlayer( simil::SimulationPlayer* player )
+  void HistogramWidget::simPlayer( simil::SimulationPlayer* player )
   {
     _player = player;
   }
 
-  void MultiLevelHistogram::regionWidth( float region_ )
+  void HistogramWidget::regionWidth( float region_ )
   {
     _regionWidth = region_;
   }
 
-  float MultiLevelHistogram::regionWidth( void )
+  float HistogramWidget::regionWidth( void )
   {
     return _regionWidth;
   }
 
-  void MultiLevelHistogram::paintRegion( bool region )
+  void HistogramWidget::paintRegion( bool region )
   {
     _paintRegion = region;
   }
 
-  void MultiLevelHistogram::firstHistogram( bool first )
+  void HistogramWidget::firstHistogram( bool first )
   {
     _paintTimeline = first;
   }
 
-  void MultiLevelHistogram::updateCachedRep( void )
+  void HistogramWidget::updateCachedRep( void )
   {
     _mainHistogram._cachedLocalRep = QPainterPath( );
     _mainHistogram._cachedGlobalRep = QPainterPath( );
@@ -783,12 +799,12 @@ namespace visimpl
 
   }
 
-  void MultiLevelHistogram::resizeEvent( QResizeEvent* /*event*/ )
+  void HistogramWidget::resizeEvent( QResizeEvent* /*event*/ )
   {
     updateCachedRep( );
   }
 
-  void MultiLevelHistogram::paintEvent( QPaintEvent* /*e*/)
+  void HistogramWidget::paintEvent( QPaintEvent* /*e*/)
   {
     QPainter painter( this );
     unsigned int currentHeight = height( );
