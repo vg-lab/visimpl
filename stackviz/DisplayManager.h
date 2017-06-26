@@ -21,30 +21,37 @@ namespace stackviz
 
   typedef enum
   {
-//    TDM_CONTAINER = 0,
-//    TDM_CHECK,
-    TDM_H_NAME = 0,
+    TDM_E_CONTAINER = 0,
+    TDM_E_NAME,
+    TDM_E_SHOW,
+    TDM_E_DELETE,
+//    TDM_E_LINE,
+    TDM_E_MAXCOLUMN
+  } TDispMngrEventName;
+
+  typedef std::tuple< QWidget*,
+                      QLabel*,
+                      QPushButton*,
+                      QPushButton*
+//                      QFrame*
+                      > TDisplayEventTuple;
+
+  typedef enum
+  {
+    TDM_H_CONTAINER = 0,
+    TDM_H_NAME,
     TDM_H_NUMBER,
     TDM_H_SHOW,
     TDM_H_DELETE,
     TDM_H_MAXCOLUMN
   } TDispMngrHistoName;
 
-  typedef enum
-  {
-    TDM_E_NAME = 0,
-    TDM_E_SHOW,
-    TDM_E_DELETE,
-    TDM_E_MAXCOLUMN
-  } TDispMngrEventName;
-
-//  typedef std::tuple< QWidget*,
-//                      /*QCheckBox*,*/
-//                      QLabel*,
-//                      QLabel*,
-//                      QPushButton*,
-//                      QPushButton*
-//                      > TDisplayMngrTuple;
+  typedef std::tuple< QWidget*,
+                      QLabel*,
+                      QLabel*,
+                      QPushButton*,
+                      QPushButton*
+                      > TDisplayHistogramTuple;
 
 
   class DisplayManagerWidget : public QWidget
@@ -63,6 +70,8 @@ namespace stackviz
     void dirtyEvents( void );
     void dirtyHistograms( void );
 
+    void clearWidgets( void );
+
   signals:
 
     void hiddenRemovedEvent( unsigned int, bool );
@@ -73,25 +82,39 @@ namespace stackviz
     void eventCellClicked( int, int );
     void histoCellClicked( int, int );
 
-    void hideEvent( int i );
-    void removeEvent( int i );
+    void hideRow( int i );
+    void removeRow( int i );
+
+    void hideEventClicked( );
+    void deleteEventClicked( );
+
+    void close( void );
+
+//    void hideHistoClicked( );
+//    void deleteHistoClicked( );
 
   protected:
+
+    void clearEventWidgets( void );
+    void clearHistogramWidgets( void );
 
     void refreshEvents( void );
     void refreshHistograms( void );
 
-    QTableWidget* _eventTable;
-    QTableWidget* _histoTable;
+//    QTableWidget* _eventTable;
+//    QTableWidget* _histoTable;
 
     const std::vector< visimpl::EventWidget* >* _eventData;
     const std::vector< visimpl::HistogramWidget* >* _histData;
 
-//    std::vector< TDisplayMngrTuple > _events;
-//    std::vector< TDisplayMngrTuple > _histograms;
+    std::vector< visimpl::EventWidget* > _availableEvents;
+    std::vector< visimpl::HistogramWidget* > _availableHistograms;
 
-//    QGridLayout* _eventsLayout;
-//    QGridLayout* _histogramsLayout;
+    std::vector< TDisplayEventTuple > _events;
+    std::vector< TDisplayHistogramTuple > _histograms;
+
+    QGridLayout* _eventsLayout;
+    QGridLayout* _histogramsLayout;
 
     bool _dirtyFlagEvents;
     bool _dirtyFlagHistograms;
