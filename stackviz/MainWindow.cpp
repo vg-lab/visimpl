@@ -279,6 +279,19 @@ namespace stackviz
       _displayManager = new DisplayManagerWidget( );
       _displayManager->init( _summary->eventWidgets(),
                              _summary->histogramWidgets( ));
+
+      connect( _displayManager, SIGNAL( eventVisibilityChanged( unsigned int, bool )),
+               _summary, SLOT( eventVisibility( unsigned int, bool )));
+
+      connect( _displayManager, SIGNAL( subsetVisibilityChanged( unsigned int, bool )),
+               _summary, SLOT( subsetVisibility( unsigned int, bool )));
+
+      connect( _displayManager, SIGNAL( removeEvent( unsigned int )),
+               _summary, SLOT( removeEvent( unsigned int )));
+
+      connect( _displayManager, SIGNAL( removeHistogram( unsigned int )),
+               _summary, SLOT( removeSubset( unsigned int )));
+
     }
 
     _displayManager->refresh( );

@@ -7,8 +7,8 @@
  *					Do not distribute without further notice.
  */
 
-#ifndef DISPLAYMANAGER_H_
-#define DISPLAYMANAGER_H_
+#ifndef DISPLAYMANAGERWIDGET_H_
+#define DISPLAYMANAGERWIDGET_H_
 
 #include <sumrice/sumrice.h>
 
@@ -74,24 +74,21 @@ namespace stackviz
 
   signals:
 
-    void hiddenRemovedEvent( unsigned int, bool );
-    void hiddenRemovedHistogram( unsigned int, bool );
+    void eventVisibilityChanged( unsigned int, bool );
+    void removeEvent( unsigned int );
+
+    void subsetVisibilityChanged( unsigned int, bool );
+    void removeHistogram( unsigned int );
 
   protected slots:
-
-    void eventCellClicked( int, int );
-    void histoCellClicked( int, int );
-
-    void hideRow( int i );
-    void removeRow( int i );
 
     void hideEventClicked( );
     void deleteEventClicked( );
 
     void close( void );
 
-//    void hideHistoClicked( );
-//    void deleteHistoClicked( );
+    void hideHistoClicked( );
+    void deleteHistoClicked( );
 
   protected:
 
@@ -107,8 +104,8 @@ namespace stackviz
     const std::vector< visimpl::EventWidget* >* _eventData;
     const std::vector< visimpl::HistogramWidget* >* _histData;
 
-    std::vector< visimpl::EventWidget* > _availableEvents;
-    std::vector< visimpl::HistogramWidget* > _availableHistograms;
+//    std::vector< visimpl::EventWidget* > _availableEvents;
+//    std::vector< visimpl::HistogramWidget* > _availableHistograms;
 
     std::vector< TDisplayEventTuple > _events;
     std::vector< TDisplayHistogramTuple > _histograms;
@@ -123,4 +120,4 @@ namespace stackviz
 
 }
 
-#endif /* DISPLAYMANAGER_H_ */
+#endif /* DISPLAYMANAGERWIDGET_H_ */

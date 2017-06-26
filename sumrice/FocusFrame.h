@@ -25,6 +25,8 @@ public:
                    float marker,// float offset,
                    float regionWidth = 0.1f);
 
+  void clear( void );
+
   virtual void paintEvent(QPaintEvent* event);
 
   QColor colorLocal( void );

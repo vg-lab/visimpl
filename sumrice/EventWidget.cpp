@@ -108,6 +108,9 @@ namespace visimpl
       if( counter > _index )
         break;
 
+      if( !e.visible )
+        continue;
+
       QColor color = e.color;
 
       if( counter == _index )

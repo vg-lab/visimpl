@@ -961,6 +961,9 @@ namespace visimpl
     {
       for( const auto& timeFrame : *_events )
       {
+        if( !timeFrame.visible )
+          continue;
+
         QColor color = timeFrame.color;
 
         color.setAlpha( 50 );

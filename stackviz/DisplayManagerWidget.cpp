@@ -7,9 +7,8 @@
  *					Do not distribute without further notice.
  */
 
-#include "DisplayManager.h"
-
 #include <QGroupBox>
+#include "DisplayManagerWidget.h"
 
 namespace stackviz
 {
@@ -57,6 +56,7 @@ namespace stackviz
 
     // Events
     _eventsLayout = new QGridLayout( );
+    _eventsLayout->setAlignment( Qt::AlignTop );
 
     QWidget* eventScrollContainer = new QWidget( );
     eventScrollContainer->setLayout( _eventsLayout );
@@ -85,6 +85,7 @@ namespace stackviz
 
     // Histograms
     _histogramsLayout = new QGridLayout( );
+    _histogramsLayout->setAlignment( Qt::AlignTop );
 
     QWidget* histoScrollContainer = new QWidget( );
     histoScrollContainer->setLayout( _histogramsLayout );
@@ -149,7 +150,7 @@ namespace stackviz
     clearEventWidgets( );
 
     clearHistogramWidgets( );
-  }
+  } // clearWidgets
 
   void DisplayManagerWidget::clearEventWidgets( void )
   {
@@ -159,16 +160,6 @@ namespace stackviz
       _eventsLayout->removeWidget( container );
 
       delete container;
-
-//      auto layout = container->layout( );
-
-//      layout->removeWidget( std::get< TDM_E_NAME >( e ));
-//      layout->removeWidget( std::get< TDM_E_SHOW >( e ));
-//      layout->removeWidget( std::get< TDM_E_DELETE >( e ));
-//
-//      delete std::get< TDM_E_NAME >( e );
-//      delete std::get< TDM_E_SHOW >( e );
-//      delete std::get< TDM_E_DELETE >( e );
 
     }
 
@@ -180,7 +171,8 @@ namespace stackviz
     }
 
     _events.clear( );
-  }
+
+  } // clearEventWidgets
 
   void DisplayManagerWidget::clearHistogramWidgets( void )
   {
@@ -191,7 +183,17 @@ namespace stackviz
 
       delete container;
     }
-  }
+
+    QLayoutItem* item;
+    while(( item = _histogramsLayout->takeAt( 0 )) != nullptr )
+    {
+      delete item->widget( );
+      delete item;
+    }
+
+    _histograms.clear( );
+
+  } // clearHistogramWidgets
 
   void DisplayManagerWidget::refresh( )
   {
@@ -201,24 +203,21 @@ namespace stackviz
     if( _dirtyFlagHistograms )
       refreshHistograms( );
 
-  }
+  } // refresh
 
   void DisplayManagerWidget::refreshEvents( void )
   {
 
     clearEventWidgets( );
 
-//    unsigned int eventNumber = _eventData->size( );
-
-//    _eventTable->resize( eventNumber, TDM_E_MAXCOLUMN );
-
     unsigned int row = 0;
-    for( const auto& event : _availableEvents )
+    for( const auto& event : *_eventData )
     {
 
       TDisplayEventTuple pointers;
 
       QWidget* container = new QWidget( );
+      container->setMaximumHeight( 50 );
       // Fill name
       QGridLayout* contLayout = new QGridLayout( );
       container->setLayout( contLayout );
@@ -239,7 +238,7 @@ namespace stackviz
 
       _eventsLayout->addWidget( container );
 
-      if( row < _availableEvents.size( ) - 1 )
+      if( row < _eventData->size( ) - 1 )
       {
         QFrame* line = new QFrame( container );
         line->setFrameShape(QFrame::HLine);
@@ -257,38 +256,26 @@ namespace stackviz
 
       _events.push_back( std::make_tuple( container, nameLabel, hideButton,
                                           deleteButton ));
-
-//      connect( deleteButton)
-
-//      QTableWidgetItem* item = new QTableWidgetItem( tr( event->name( ).c_str( )));
-//      _eventTable->setItem( row, TDM_E_NAME, item );
-
-//      item = new QTableWidgetItem( );
-//      item->setIcon( QIcon( QPixmap( ":icons/hide.png" )));
-//      _eventTable->setItem( row, TDM_E_SHOW, item );
-
-
-//      item = new QTableWidgetItem( );
-//      item->setIcon( QIcon( QPixmap( ":icons/trash.png" )));
-//      _eventTable->setItem( row, TDM_E_DELETE, item );
-
       ++row;
     }
 
     _dirtyFlagEvents = false;
-  }
+
+  } // refreshEvents
 
   void DisplayManagerWidget::refreshHistograms( void )
   {
     clearHistogramWidgets( );
 
     unsigned int row = 0;
-    for( const auto& hist : _availableHistograms )
+    for( const auto& hist : *_histData )
     {
 
       TDisplayEventTuple pointers;
 
       QWidget* container = new QWidget( );
+      container->setMaximumHeight( 50 );
+
       // Fill name
       QGridLayout* contLayout = new QGridLayout( );
       container->setLayout( contLayout );
@@ -314,7 +301,7 @@ namespace stackviz
 
       _histogramsLayout->addWidget( container );
 
-      if( row < _eventData->size( ) - 1 )
+      if( row < _histData->size( ) - 1 )
       {
         QFrame* line = new QFrame( container );
         line->setFrameShape(QFrame::HLine);
@@ -324,63 +311,20 @@ namespace stackviz
       }
 
       connect( hideButton, SIGNAL( clicked( )),
-               this, SLOT( hideEventClicked( )));
+               this, SLOT( hideHistoClicked( )));
+
+      connect( deleteButton, SIGNAL( clicked( )),
+               this, SLOT( deleteHistoClicked( )));
 
       _histograms.push_back( std::make_tuple( container, nameLabel, numberLabel,
                                               hideButton, deleteButton ));
       ++row;
    }
-//    _histoTable->clearWidgets( );
-//
-//    unsigned int histNumber = _histData->size( );
-//
-//    _histoTable->resize( histNumber, TDM_E_MAXCOLUMN );
-//
-//    unsigned int row = 0;
-//    for( const auto& hist : *_histData )
-//    {
-//
-//      // Fill name
-//      QTableWidgetItem* item = new QTableWidgetItem( tr( hist->name( ).c_str( )));
-//      _histoTable->setItem( row, TDM_H_NAME, item );
-//
-//      item = new QTableWidgetItem( QString::number( hist->gidsSize( )));
-//      _histoTable->setItem( row, TDM_H_NUMBER, item );
-//
-//      item = new QTableWidgetItem( );
-//      item->setIcon( QIcon( QPixmap( ":icons/hide.png" )));
-//      _histoTable->setItem( row, TDM_H_SHOW, item );
-//
-//      item = new QTableWidgetItem( );
-//      item->setIcon( QIcon( QPixmap( ":icons/trash.png" )));
-//      _histoTable->setItem( row, TDM_H_DELETE, item );
-//
-//      ++row;
-//    }
-//
+
     _dirtyFlagHistograms = false;
 
   } // refreshHistograms
 
-  void DisplayManagerWidget::eventCellClicked( int, int )
-  {
-
-  }
-
-  void DisplayManagerWidget::histoCellClicked( int, int )
-  {
-
-  }
-
-  void DisplayManagerWidget::hideRow( int )
-  {
-
-  }
-
-  void DisplayManagerWidget::removeRow( int )
-  {
-
-  }
 
   void DisplayManagerWidget::hideEventClicked( )
   {
@@ -399,7 +343,7 @@ namespace stackviz
 
         button->setIcon( QIcon( hidden ? ":icons/show.png" : ":icons/hide.png" ));
 
-        emit( hiddenRemovedEvent( counter, true ));
+        emit( eventVisibilityChanged( counter, hidden ));
 
         break;
       }
@@ -407,7 +351,7 @@ namespace stackviz
       ++counter;
     }
 
-  }
+  } // hideEventClicked
 
   void DisplayManagerWidget::deleteEventClicked( )
   {
@@ -421,17 +365,10 @@ namespace stackviz
       if( author->parent( ) == container )
       {
 
-//        _eventsLayout->removeWidget( container );
-//        _eventsLayout->removeWidget( std::get< TDM_E_LINE >( t ));
-
-//        delete container;
-
-        _availableEvents.erase( _availableEvents.begin( ) + counter );
-
+        emit( removeEvent( counter ));
         _dirtyFlagEvents = true;
-        refreshEvents( );
 
-        emit( hiddenRemovedEvent( counter, false ));
+        refreshEvents( );
 
         break;
       }
@@ -439,17 +376,58 @@ namespace stackviz
      ++counter;
     }
 
-  }
+  } // deleteEventClicked
 
-  void hideHistoClicked( )
+  void DisplayManagerWidget::hideHistoClicked( )
   {
+    auto author = dynamic_cast< QWidget* >( sender( ));
 
-  }
+    unsigned int counter = 0;
+    for( auto t : _histograms )
+    {
+      auto container = std::get< TDM_H_CONTAINER >( t );
 
-  void deleteHistoClicked( )
+      if( author->parent( ) == container )
+      {
+        auto button = std::get< TDM_H_SHOW >( t );
+
+        bool hidden = button->isChecked( );
+
+        button->setIcon( QIcon( hidden ? ":icons/show.png" : ":icons/hide.png" ));
+
+        emit( subsetVisibilityChanged( counter, hidden ));
+
+        break;
+      }
+
+      ++counter;
+    }
+  } // hideHistoClicked
+
+  void DisplayManagerWidget::deleteHistoClicked( )
   {
+    auto author = dynamic_cast< QWidget* >( sender( ));
 
-  }
+    unsigned int counter = 0;
+    for( auto t : _histograms )
+    {
+      auto container = std::get< TDM_H_CONTAINER >( t );
+
+      if( author->parent( ) == container )
+      {
+
+        emit( removeHistogram( counter ));
+        _dirtyFlagHistograms = true;
+
+        refreshHistograms( );
+
+        break;
+      }
+
+     ++counter;
+    }
+
+  } // deleteHistoClicked
 
 }
 

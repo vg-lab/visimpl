@@ -38,7 +38,7 @@
 
 #include "ui_stackviz.h"
 
-#include "DisplayManager.h"
+#include "DisplayManagerWidget.h"
 
 namespace Ui
 {

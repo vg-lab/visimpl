@@ -31,13 +31,13 @@ set(STACKVIZ_SOURCES
   resources.qrc
   stackviz.cpp
   MainWindow.cpp
-  DisplayManager.cpp
+  DisplayManagerWidget.cpp
 )
 
 set(STACKVIZ_HEADERS
   ${PROJECT_BINARY_DIR}/include/stackviz/version.h
   MainWindow.h
-  DisplayManager.h
+  DisplayManagerWidget.h
   log.h  
 )
 

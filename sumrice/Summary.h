@@ -120,14 +120,17 @@ namespace visimpl
 
     void adjustSplittersSize( void );
 
+    void eventVisibility( unsigned int i, bool show );
+    void subsetVisibility( unsigned int i, bool show );
+    void removeEvent( unsigned int i );
+    void removeSubset( unsigned int i );
+
   protected slots:
 
     void childHistogramPressed( const QPoint&, float );
     void childHistogramReleased( const QPoint&, float );
     void childHistogramClicked( float percentage,
                                 Qt::KeyboardModifiers modifiers );
-
-    void removeSelections( void );
 
     void colorScaleLocal( int value );
     void colorScaleGlobal( int value );
@@ -138,6 +141,12 @@ namespace visimpl
     void moveVertScrollSync( int newPos );
     void moveHoriScrollSync( int newPos );
     void syncSplitters( );
+
+    void hideRemoveEvent( unsigned int i, bool hideDelete );
+    void hideRemoveSubset( unsigned int i, bool hideDelete );
+
+    void updateEventWidgets( void );
+    void updateHistogramWidgets( void );
 
   protected:
 
@@ -239,8 +248,8 @@ namespace visimpl
     QColor _colorLocal;
     QColor _colorGlobal;
 
-    std::vector< visimpl::HistogramWidget* > _histograms;
-    std::vector< HistogramRow > _rows;
+    std::vector< visimpl::HistogramWidget* > _histogramWidgets;
+    std::vector< HistogramRow > _histogramRows;
 
     FocusFrame* _focusWidget;
 
@@ -271,7 +280,7 @@ namespace visimpl
     std::vector< TEvent > _events;
 
     std::vector< EventWidget* > _eventWidgets;
-    std::vector< EventRow > _subsetRows;
+    std::vector< EventRow > _eventRows;
 
     bool _syncScrollsHorizontally;
     bool _syncScrollsVertically;

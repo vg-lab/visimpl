@@ -244,8 +244,6 @@ namespace visimpl
       QComboBox* globalComboBox = new QComboBox( );
       globalComboBox->addItems( csItems );
 
-      QPushButton* removeButton = new QPushButton( "Delete" );
-
       _focusWidget = new FocusFrame( );
       _focusWidget->colorLocal( _colorLocal );
       _focusWidget->colorGlobal( _colorGlobal );
@@ -305,7 +303,6 @@ namespace visimpl
       footLayout->addWidget( binSpinBox, 0, 10, 1, 1 );
       footLayout->addWidget( new QLabel( "ZoomFactor:" ), 1, 9, 1, 1 );
       footLayout->addWidget( zoomFactorSpinBox, 1, 10, 1, 1 );
-      footLayout->addWidget( removeButton, 0, 11, 1, 1 );
       footLayout->addWidget( new QLabel( "Current value: "), 2, 9, 1, 2 );
       footLayout->addWidget( _currentValueLabel, 2, 11, 1, 1 );
       footLayout->addWidget( new QLabel( "Local max: "), 3, 9, 1, 2 );
@@ -321,9 +318,6 @@ namespace visimpl
 
       connect( globalComboBox, SIGNAL( currentIndexChanged( int ) ),
                  this, SLOT( colorScaleGlobal( int )));
-
-      connect( removeButton, SIGNAL( clicked( void )),
-               this, SLOT( removeSelections( void )));
 
       connect( binSpinBox, SIGNAL( valueChanged( int )),
                this,  SLOT( bins( int )));
@@ -447,7 +441,7 @@ namespace visimpl
       _histogramsLayout->addWidget( _mainHistogram, 0, 1, 1, 1 );
       _mainHistogram->paintRegion( false );
       _mainHistogram->simPlayer( _player );
-      _histograms.push_back( _mainHistogram );
+      _histogramWidgets.push_back( _mainHistogram );
 
       connect( _mainHistogram, SIGNAL( mousePressed( QPoint, float )),
                this, SLOT( childHistogramPressed( QPoint, float )));
@@ -466,18 +460,18 @@ namespace visimpl
       mainRow.label->setMaximumWidth( _maxLabelWidth );
       mainRow.label->setMinimumHeight( _heightPerRow );
       mainRow.label->setMaximumHeight( _heightPerRow );
-  //    mainRow.label->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
-      mainRow.checkBox = new QCheckBox( );
-  //    mainRow.checkBox->setSizePolicy( QSizePolicy::Fixed, QSizePolicy::Fixed );
 
-      unsigned int row = _histograms.size( );
+//      mainRow.checkBox = new QCheckBox( );
+
+
+      unsigned int row = _histogramWidgets.size( );
       _histoLabelsLayout->addWidget( mainRow.label, row , 0, 1, 1 );
       _histogramsLayout->addWidget( _mainHistogram, row, 1, 1, _summaryColumns );
 //      _histogramsLayout->addWidget( mainRow.checkBox, row, _maxColumns - 1, 1, 1 );
     //  mainRow.checkBox->setVisible( false );
 
-      _rows.push_back( mainRow );
-      _histograms.push_back( _mainHistogram );
+      _histogramRows.push_back( mainRow );
+      _histogramWidgets.push_back( _mainHistogram );
 
 
       //  AddGIDSelection( gids );
@@ -511,6 +505,7 @@ namespace visimpl
           {
             TEvent timeFrame;
             timeFrame.name = it->first;
+            timeFrame.visible = true;
 
     //        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
 
@@ -557,14 +552,14 @@ namespace visimpl
             eventWidget->setMaximumHeight( _heightPerRow );
             eventWidget->index( counter );
 
-            QCheckBox* checkbox = new QCheckBox();
+//            QCheckBox* checkbox = new QCheckBox();
 
             EventRow eventrow;
             eventrow.widget = eventWidget;
             eventrow.label = label;
-            eventrow.checkBox = checkbox;
+//            eventrow.checkBox = checkbox;
 
-            _subsetRows.push_back( eventrow );
+            _eventRows.push_back( eventrow );
             _eventWidgets.push_back( eventWidget );
 
             _eventLabelsLayout->addWidget( label, counter, 0, 1, 1 );
@@ -718,14 +713,14 @@ namespace visimpl
     currentRow.label->setMinimumHeight( _heightPerRow );
     currentRow.label->setMaximumHeight( _heightPerRow );
     currentRow.label->setToolTip( name.c_str( ));
-    currentRow.checkBox = new QCheckBox( );
+//    currentRow.checkBox = new QCheckBox( );
 
-    unsigned int row = _histograms.size( );
+    unsigned int row = _histogramWidgets.size( );
     _histoLabelsLayout->addWidget( currentRow.label, row , 0, 1, 1 );
     _histogramsLayout->addWidget( histogram, row, 1, 1, _summaryColumns );
 //    _histogramsLayout->addWidget( currentRow.checkBox, row, _maxColumns - 1, 1, 1 );
 
-    _rows.push_back( currentRow );
+    _histogramRows.push_back( currentRow );
 
     histogram->mousePosition( &_lastMousePosition );
     histogram->regionPosition( &_regionPercentage );
@@ -742,7 +737,7 @@ namespace visimpl
     connect( histogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
              this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
 
-    _histograms.push_back( histogram );
+    _histogramWidgets.push_back( histogram );
 
     histogram->init( _bins, _zoomFactor );
 
@@ -809,7 +804,7 @@ namespace visimpl
 
     _mousePressed = true;
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       histogram->paintRegion( histogram == _focusedHistogram );
       histogram->update( );
@@ -1026,7 +1021,7 @@ namespace visimpl
       _overRegionEdgeLower = _overRegionEdgeUpper = false;
     }
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       if( _stackType == T_STACK_EXPANDABLE && _mousePressed )
         histogram->paintRegion( histogram == focusedHistogram );
@@ -1037,41 +1032,26 @@ namespace visimpl
   void Summary::CreateSummarySpikes( )
   {
     std::cout << "Creating histograms... Number of bins: " << _bins << std::endl;
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       if( !histogram->isInitialized( ) )
         histogram->init( _bins, _zoomFactor );
     }
-
-  //  _mainHistogram->CreateHistogram( _bins );
-  //
-  //  _selectionHistogram->CreateHistogram( _bins );
-
-
   }
 
-  //void Summary::CreateSummaryVoltages( void )
-  //{
-  //
-  //}
 
   void Summary::UpdateGradientColors( bool replace )
   {
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       if( !histogram->isInitialized( ) || replace)
         histogram->CalculateColors( );
     }
-
-  //  _mainHistogram->CalculateColors( );
-  //
-  //  _detailHistogram->CalculateColors( );
-
   }
 
   unsigned int Summary::histogramsNumber( void )
   {
-    return _histograms.size( );
+    return _histogramWidgets.size( );
   }
 
 
@@ -1079,7 +1059,7 @@ namespace visimpl
   {
     _bins = bins_;
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       histogram->bins( _bins );
       update( );
@@ -1090,7 +1070,7 @@ namespace visimpl
   {
     _zoomFactor = zoom;
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       histogram->zoomFactor( _zoomFactor );
       update( );
@@ -1101,7 +1081,7 @@ namespace visimpl
   {
     _fillPlots = fillPlots_;
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       histogram->fillPlots( _fillPlots );
       histogram->update( );
@@ -1130,7 +1110,7 @@ namespace visimpl
   {
     _heightPerRow = height_;
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       histogram->setMinimumHeight( _heightPerRow );
       histogram->setMaximumHeight( _heightPerRow );
@@ -1155,94 +1135,140 @@ namespace visimpl
 
   const std::vector< HistogramWidget* >* Summary::histogramWidgets( void ) const
   {
-    return &_histograms;
+    return &_histogramWidgets;
   }
 
-  void Summary::removeSelections( void )
+  void Summary::hideRemoveEvent( unsigned int i, bool hideDelete )
   {
-    std::vector< unsigned int > toDelete;
-
-    unsigned int counter = _rows.size( ) - 1;
-    for( unsigned int i = 0; i < _rows.size( ); ++i )
+    if( hideDelete )
     {
-      auto& summaryRow = _rows[ counter ];
+      eventVisibility( i, !_eventWidgets[ i ]->isVisible( ));
+    }
+    else
+    {
+      removeEvent( i );
+    }
+  }
 
-      if( summaryRow.checkBox->isChecked( ))
+  void Summary::hideRemoveSubset( unsigned int i, bool hideDelete )
+  {
+    if( hideDelete )
+    {
+      subsetVisibility( i, !_histogramWidgets[ i ]->isVisible( ));
+    }
+    else
+    {
+      removeSubset( i );
+    }
+  }
+
+  void Summary::updateEventWidgets( void )
+  {
+    unsigned int counter = 0;
+    for( auto e : _eventWidgets )
+    {
+      if( e->isVisible( ))
       {
-        _histoLabelsLayout->removeWidget( summaryRow.label );
-        _histogramsLayout->removeWidget( summaryRow.histogram );
-//        _histogramsLayout->removeWidget( summaryRow.checkBox );
-
-        delete summaryRow.label;
-        delete summaryRow.histogram;
-        delete summaryRow.checkBox;
-
-        _histograms.erase( _histograms.begin( ) + counter );
-
-        toDelete.push_back( counter );
+        e->index( counter );
+        ++counter;
       }
 
-      --counter;
+      e->update( );
     }
 
-    for( unsigned int i = 0; i < toDelete.size( ); ++i )
-      _rows.erase( _rows.begin( ) + toDelete[ i ]);
+  }
 
-    counter = 0;
-    for( auto histogram : _histograms )
+  void Summary::updateHistogramWidgets( void )
+  {
+    unsigned int counter = 0;
+    for( auto histogram : _histogramWidgets )
     {
+      if( !histogram->isVisible( ))
+        continue;
+
       histogram->firstHistogram( counter == 0 );
       ++counter;
 
       histogram->update( );
     }
+  }
 
-    toDelete.clear( );
+  void Summary::eventVisibility( unsigned int i, bool show )
+  {
+    EventRow& row = _eventRows[ i ];
 
-    counter = _subsetRows.size( ) - 1;
-    for( unsigned int i = 0; i < _subsetRows.size( ); ++i )
-    {
-      auto& timeFrameRow = _subsetRows[ counter ];
+    row.widget->setVisible( show );
+    row.label->setVisible( show );
 
-      if( timeFrameRow.checkBox->isChecked( ))
-      {
-        _eventLabelsLayout->removeWidget( timeFrameRow.label );
-        _eventsLayout->removeWidget( timeFrameRow.widget );
-//        _eventsLayout->removeWidget( timeFrameRow.checkBox );
+    _events[ i ].visible = show;
 
-        delete timeFrameRow.label;
-        delete timeFrameRow.widget;
-        delete timeFrameRow.checkBox;
+    updateEventWidgets( );
 
-        _events.erase( _events.begin( ) + counter );
-        _eventWidgets.erase( _eventWidgets.begin( ) + counter );
+    for( auto h : _histogramWidgets )
+      h->update( );
+  }
 
-        toDelete.push_back( counter );
-      }
+  void Summary::subsetVisibility( unsigned int i, bool show )
+  {
+    HistogramRow& row = _histogramRows[ i ];
 
-      --counter;
-    }
+    row.histogram->setVisible( show );
+    row.label->setVisible( show );
 
-    for( unsigned int i = 0; i < toDelete.size( ); ++i )
-      _subsetRows.erase(
-          _subsetRows.begin( ) + toDelete[ i ]);
+    updateHistogramWidgets( );
+  }
 
-    counter = 0;
-    for( auto timeFrame : _eventWidgets )
-    {
-      timeFrame->index( counter );
-      ++counter;
+  void Summary::removeEvent( unsigned int i )
+  {
+    auto& timeFrameRow = _eventRows[ i ];
 
-      timeFrame->update( );
-    }
+    _eventLabelsLayout->removeWidget( timeFrameRow.label );
+    _eventsLayout->removeWidget( timeFrameRow.widget );
 
-    if( _subsetRows.size( ) == 0 )
+    delete timeFrameRow.label;
+    delete timeFrameRow.widget;
+    delete timeFrameRow.checkBox;
+
+    _events.erase( _events.begin( ) + i );
+    _eventWidgets.erase( _eventWidgets.begin( ) + i );
+
+    _eventRows.erase( _eventRows.begin( ) + i);
+
+    updateEventWidgets( );
+
+    if( _eventRows.size( ) == 0 )
     {
       _eventLabelsScroll->setVisible( false );
       _eventScroll->setVisible( false );
     }
 
-    update( );
+  }
+
+  void Summary::removeSubset( unsigned int i )
+  {
+
+    auto& summaryRow = _histogramRows[ i ];
+
+    if( _focusedHistogram == summaryRow.histogram )
+    {
+      _focusedHistogram = nullptr;
+      _focusWidget->clear( );
+      _focusWidget->update( );
+    }
+
+    _histoLabelsLayout->removeWidget( summaryRow.label );
+    _histogramsLayout->removeWidget( summaryRow.histogram );
+
+    delete summaryRow.label;
+    delete summaryRow.histogram;
+    delete summaryRow.checkBox;
+
+    _histogramWidgets.erase( _histogramWidgets.begin( ) + i );
+
+    _histogramRows.erase( _histogramRows.begin( ) + i );
+
+    updateHistogramWidgets( );
+
   }
 
   void Summary::colorScaleLocal( int value )
@@ -1265,7 +1291,7 @@ namespace visimpl
   {
     _colorScaleLocal = colorScale;
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       histogram->colorScaleLocal( colorScale );
       histogram->CalculateColors( visimpl::HistogramWidget::T_HIST_MAIN );
@@ -1285,7 +1311,7 @@ namespace visimpl
   {
     _colorScaleGlobal = colorScale;
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       histogram->colorScaleGlobal( colorScale );
       histogram->CalculateColors( visimpl::HistogramWidget::T_HIST_MAIN );
@@ -1320,7 +1346,7 @@ namespace visimpl
   {
     _gridLinesNumber = linesNumber;
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
     {
       histogram->gridLinesNumber( linesNumber );
       histogram->update( );
@@ -1336,13 +1362,13 @@ namespace visimpl
   {
     _player = player;
 
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
       histogram->simPlayer( _player );
   }
 
   void Summary::repaintHistograms( void )
   {
-    for( auto histogram : _histograms )
+    for( auto histogram : _histogramWidgets )
       histogram->update( );
   }
 
@@ -1357,7 +1383,7 @@ namespace visimpl
       if( _currentCentralMinWidth < 200 )
         _currentCentralMinWidth = 200;
 
-      for( auto histogram : _histograms )
+      for( auto histogram : _histogramWidgets )
       {
         histogram->setMinimumWidth( _currentCentralMinWidth );
 //        histogram->update( );
