@@ -21,9 +21,11 @@ public:
 
   FocusFrame( QWidget* parent = 0 );
 
-  void viewRegion( const visimpl::MultiLevelHistogram& histogram,
+  void viewRegion( const visimpl::HistogramWidget& histogram,
                    float marker,// float offset,
                    float regionWidth = 0.1f);
+
+  void clear( void );
 
   virtual void paintEvent(QPaintEvent* event);
 

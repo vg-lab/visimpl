@@ -7,7 +7,7 @@
  *					Do not distribute without further notice.
  */
 
-#include "SubsetEventWidget.h"
+#include "EventWidget.h"
 
 #include <QPainter>
 #include <QBrush>
@@ -15,7 +15,7 @@
 namespace visimpl
 {
 
-  SubsetEventWidget::SubsetEventWidget( void )
+  EventWidget::EventWidget( void )
   : QFrame( nullptr )
   , _events( nullptr )
   , _index( 0 )
@@ -27,7 +27,7 @@ namespace visimpl
 
   }
 
-  void SubsetEventWidget::resizeEvent( QResizeEvent* /*event*/ )
+  void EventWidget::resizeEvent( QResizeEvent* /*event*/ )
   {
     unsigned int w = width( );
     unsigned int h = height( );
@@ -94,7 +94,7 @@ namespace visimpl
   }
 
 
-  void SubsetEventWidget::paintEvent( QPaintEvent* /*event_*/ )
+  void EventWidget::paintEvent( QPaintEvent* /*event_*/ )
   {
     QPainter painter( this );
 
@@ -107,6 +107,9 @@ namespace visimpl
     {
       if( counter > _index )
         break;
+
+      if( !e.visible )
+        continue;
 
       QColor color = e.color;
 
@@ -138,20 +141,32 @@ namespace visimpl
     }
   }
 
-  void SubsetEventWidget::timeFrames( std::vector< TEvent >* timeFrameVector )
+  void EventWidget::timeFrames( std::vector< TEvent >* timeFrameVector )
   {
     _events = timeFrameVector;
   }
 
-  std::vector< TEvent >* SubsetEventWidget::timeFrames( void )
+  std::vector< TEvent >* EventWidget::timeFrames( void )
   {
     return _events;
   }
 
-  void SubsetEventWidget::index( unsigned int index_ )
+  void EventWidget::index( unsigned int index_ )
   {
     _index = index_;
   }
 
+  void EventWidget::name( const std::string& name_ )
+  {
+    _name = name_;
+  }
+
+  const std::string& EventWidget::name( void ) const
+  {
+    return _name;
+  }
+
+  
+  
 }
 

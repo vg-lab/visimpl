@@ -21,7 +21,7 @@
 namespace visimpl
 {
 
-  class MultiLevelHistogram : public QFrame
+  class HistogramWidget : public QFrame
   {
     friend class Summary;
 
@@ -59,12 +59,12 @@ namespace visimpl
       T_HIST_FOCUS
     } THistogram;
 
-    MultiLevelHistogram( void );
-    MultiLevelHistogram( const simil::Spikes& spikes,
+    HistogramWidget( void );
+    HistogramWidget( const simil::Spikes& spikes,
                          float startTime,
                          float endTime );
 
-    MultiLevelHistogram( const simil::SpikeData& spikeReport );
+    HistogramWidget( const simil::SpikeData& spikeReport );
 
     virtual void init( unsigned int binsNumber = 250, float zoomFactor = 1.5f );
 
@@ -76,43 +76,48 @@ namespace visimpl
 
     void CalculateColors( THistogram histogramNumber = T_HIST_MAIN );
 
+    unsigned int gidsSize( void );
+
+    void name( const std::string& name_ );
+    const std::string& name( void ) const;
+
     void bins( unsigned int binsNumber );
-    unsigned int bins( void );
+    unsigned int bins( void ) const;
 
     void zoomFactor( float factor );
-    float zoomFactor( void );
+    float zoomFactor( void ) const;
 
     void filteredGIDs( const GIDUSet& gids );
-    const GIDUSet& filteredGIDs( void );
+    const GIDUSet& filteredGIDs( void ) const;
 
     void colorScaleLocal( TColorScale scale );
-    TColorScale colorScaleLocal( void );
+    TColorScale colorScaleLocal( void ) const;
 
     void colorScaleGlobal( TColorScale scale );
-    TColorScale colorScaleGlobal( void );
+    TColorScale colorScaleGlobal( void ) const;
 
-    QColor colorLocal( void );
+    QColor colorLocal( void ) const;
     void colorLocal( const QColor& );
 
-    QColor colorGlobal( void );
+    QColor colorGlobal( void ) const;
     void colorGlobal( const QColor& );
 
     void normalizeRule( TNormalize_Rule normRule );
-    TNormalize_Rule normalizeRule( void );
+    TNormalize_Rule normalizeRule( void ) const;
 
     void representationMode( TRepresentation_Mode repType );
-    TRepresentation_Mode representationMode( void );
+    TRepresentation_Mode representationMode( void ) const;
 
     void gridLinesNumber( unsigned int linesNumber );
-    unsigned int gridLinesNumber( void );
+    unsigned int gridLinesNumber( void ) const;
 
     unsigned int histogramSize( void ) const;
-    unsigned int maxLocal( void );
-    unsigned int maxGlobal( void );
+    unsigned int maxLocal( void ) const;
+    unsigned int maxGlobal( void ) const;
 
     unsigned int focusHistogramSize( void ) const;
-    unsigned int focusMaxLocal( void );
-    unsigned int focusMaxGlobal( void );
+    unsigned int focusMaxLocal( void ) const;
+    unsigned int focusMaxGlobal( void ) const;
 
     const utils::InterpolationSet< glm::vec4 >& colorMapper( void );
     void colorMapper(const utils::InterpolationSet< glm::vec4 >& colors );
@@ -163,6 +168,7 @@ signals:
     Histogram _mainHistogram;
     Histogram _focusHistogram;
 
+    std::string _name;
     unsigned int _bins;
     float _zoomFactor;
 

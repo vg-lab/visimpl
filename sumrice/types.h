@@ -47,6 +47,7 @@ namespace visimpl
   {
     std::string name;
     QColor color;
+    bool visible;
 
     std::vector< std::pair< float, float >> percentages;
 

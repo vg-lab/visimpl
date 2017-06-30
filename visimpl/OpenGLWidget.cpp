@@ -973,8 +973,6 @@ namespace visimpl
 
     for( auto name : eventNames )
     {
-      const std::vector< simil::Event >& event =
-          _subsetEvents->getEvent( name );
 
       EventLabel labelObjects;
 

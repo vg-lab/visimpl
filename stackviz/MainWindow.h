@@ -38,6 +38,8 @@
 
 #include "ui_stackviz.h"
 
+#include "DisplayManagerWidget.h"
+
 namespace Ui
 {
 class MainWindow;
@@ -77,6 +79,7 @@ namespace stackviz
 
     void aboutDialog( void );
     void togglePlaybackDock( void );
+    void showDisplayManagerWidget( void );
 
     void PlayPause( bool notify = true );
     void Play( bool notify = true );
@@ -98,7 +101,7 @@ namespace stackviz
     void ApplyPlaybackOperation( unsigned int playbackOp );
     void _zeqEventRepeat( bool repeat );
 
-    void HistogramClicked( visimpl::MultiLevelHistogram* );
+    void HistogramClicked( visimpl::HistogramWidget* );
 
     void playAtButtonClicked( void );
 
@@ -151,6 +154,8 @@ namespace stackviz
 
     QLabel* _startTimeLabel;
     QLabel* _endTimeLabel;
+
+    DisplayManagerWidget* _displayManager;
 
   #ifdef VISIMPL_USE_ZEROEQ
 

@@ -18,18 +18,21 @@
 
 namespace visimpl
 {
-  class SubsetEventWidget : public QFrame
+  class EventWidget : public QFrame
   {
     Q_OBJECT;
 
   public:
 
-    SubsetEventWidget( void );
+    EventWidget( void );
 
     void timeFrames( std::vector< TEvent >* timeFrames );
     std::vector< TEvent >* timeFrames( void );
 
     void index( unsigned int index_ );
+
+    void name( const std::string& name_ );
+    const std::string& name( void ) const;
 
   protected:
 
@@ -43,6 +46,8 @@ namespace visimpl
     unsigned int _columns;
     unsigned int _centralColumns;
     unsigned int _margin;
+
+    std::string _name;
   };
 
 

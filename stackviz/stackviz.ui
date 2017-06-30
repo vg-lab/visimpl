@@ -70,6 +70,7 @@
    <addaction name="separator"/>
    <addaction name="actionTogglePlaybackDock"/>
    <addaction name="actionCloseData"/>
+   <addaction name="actionShowDataManager"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -162,6 +163,15 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionShowDataManager">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/list.png</normaloff>:/icons/list.png</iconset>
+   </property>
+   <property name="text">
+    <string>Show Data Manager</string>
    </property>
   </action>
  </widget>

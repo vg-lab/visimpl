@@ -44,6 +44,7 @@ namespace stackviz
   , _playing( false )
   , _startTimeLabel( nullptr )
   , _endTimeLabel( nullptr )
+  , _displayManager( nullptr )
   #ifdef VISIMPL_USE_ZEROEQ
   , _zeqConnection( false )
   , _subscriber( nullptr )
@@ -93,6 +94,8 @@ namespace stackviz
     connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( )),
              this, SLOT( togglePlaybackDock( )));
 
+    connect( _ui->actionShowDataManager, SIGNAL( triggered( )),
+             this, SLOT( showDisplayManagerWidget( )));
 
 
     #ifdef VISIMPL_USE_ZEROEQ
@@ -267,6 +270,33 @@ namespace stackviz
 
 
     update( );
+  }
+
+  void MainWindow::showDisplayManagerWidget( void )
+  {
+    if( !_displayManager )
+    {
+      _displayManager = new DisplayManagerWidget( );
+      _displayManager->init( _summary->eventWidgets(),
+                             _summary->histogramWidgets( ));
+
+      connect( _displayManager, SIGNAL( eventVisibilityChanged( unsigned int, bool )),
+               _summary, SLOT( eventVisibility( unsigned int, bool )));
+
+      connect( _displayManager, SIGNAL( subsetVisibilityChanged( unsigned int, bool )),
+               _summary, SLOT( subsetVisibility( unsigned int, bool )));
+
+      connect( _displayManager, SIGNAL( removeEvent( unsigned int )),
+               _summary, SLOT( removeEvent( unsigned int )));
+
+      connect( _displayManager, SIGNAL( removeHistogram( unsigned int )),
+               _summary, SLOT( removeSubset( unsigned int )));
+
+    }
+
+    _displayManager->refresh( );
+
+    _displayManager->show( );
   }
 
   void MainWindow::openHDF5File( const std::string& networkFile,
@@ -450,8 +480,8 @@ namespace stackviz
     connect( _summary, SIGNAL( histogramClicked( float )),
              this, SLOT( PlayAt( float )));
 
-    connect( _summary, SIGNAL( histogramClicked( visimpl::MultiLevelHistogram* )),
-               this, SLOT( HistogramClicked( visimpl::MultiLevelHistogram* )));
+    connect( _summary, SIGNAL( histogramClicked( visimpl::HistogramWidget* )),
+               this, SLOT( HistogramClicked( visimpl::HistogramWidget* )));
 
 
     if( _autoCalculateCorrelations )
@@ -497,6 +527,8 @@ namespace stackviz
       }
 
     }
+
+    QTimer::singleShot( 0, _summary, SLOT( adjustSplittersSize( )));
   }
 
   void MainWindow::PlayPause( bool notify )
@@ -741,7 +773,7 @@ namespace stackviz
       _repeatButton->setChecked( repeat );
     }
 
-    void MainWindow::HistogramClicked( visimpl::MultiLevelHistogram* histogram )
+    void MainWindow::HistogramClicked( visimpl::HistogramWidget* histogram )
     {
       const visimpl::GIDUSet* selection;
 
