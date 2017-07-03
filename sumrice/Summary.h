@@ -125,6 +125,9 @@ namespace visimpl
     void removeEvent( unsigned int i );
     void removeSubset( unsigned int i );
 
+    void focusPlayback( void );
+    void setFocusAt( float perc );
+
   protected slots:
 
     void childHistogramPressed( const QPoint&, float );

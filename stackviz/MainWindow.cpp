@@ -97,7 +97,6 @@ namespace stackviz
     connect( _ui->actionShowDataManager, SIGNAL( triggered( )),
              this, SLOT( showDisplayManagerWidget( )));
 
-
     #ifdef VISIMPL_USE_ZEROEQ
 
     _setZeqUri( zeqUri );
@@ -483,6 +482,11 @@ namespace stackviz
     connect( _summary, SIGNAL( histogramClicked( visimpl::HistogramWidget* )),
                this, SLOT( HistogramClicked( visimpl::HistogramWidget* )));
 
+    _ui->actionFocusOnPlayhead->setVisible( true );
+    connect( _ui->actionFocusOnPlayhead, SIGNAL( triggered( )),
+             _summary, SLOT( focusPlayback( )));
+
+
 
     if( _autoCalculateCorrelations )
     {
@@ -720,6 +724,9 @@ namespace stackviz
 
     if( _summary )
       _summary->repaintHistograms( );
+
+    if( _ui->actionFollowPlayhead->isChecked( ))
+      _summary->focusPlayback( );
   }
 
 

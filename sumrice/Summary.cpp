@@ -286,6 +286,9 @@ namespace visimpl
       gridSpinBox->setSingleStep( 1 );
       gridSpinBox->setValue( 3 );
 
+      QPushButton* focusButton = new QPushButton( "Focus" );
+
+
     //  unsigned int totalRows = 10;
       footLayout->addWidget( new QLabel( "Local normalization:" ), 0, 0, 1, 1);
       footLayout->addWidget( _localColorWidget, 0, 1, 1, 1 );
@@ -301,6 +304,7 @@ namespace visimpl
 
       footLayout->addWidget( new QLabel( "Bins:" ), 0, 9, 1, 1 );
       footLayout->addWidget( binSpinBox, 0, 10, 1, 1 );
+      footLayout->addWidget( focusButton, 0, 11, 1, 1);
       footLayout->addWidget( new QLabel( "ZoomFactor:" ), 1, 9, 1, 1 );
       footLayout->addWidget( zoomFactorSpinBox, 1, 10, 1, 1 );
       footLayout->addWidget( new QLabel( "Current value: "), 2, 9, 1, 2 );
@@ -327,6 +331,9 @@ namespace visimpl
 
       connect( gridSpinBox, SIGNAL( valueChanged( int )),
                this, SLOT( gridLinesNumber( int )));
+
+      connect( focusButton, SIGNAL( clicked( )),
+               this, SLOT( focusPlayback( )));
 
       foot->setLayout( footLayout );
 
@@ -1471,6 +1478,25 @@ namespace visimpl
 
     _eventsSplitter->setSizes( sizes );
     _histoSplitter->setSizes( sizes );
+  }
+
+
+  void Summary::focusPlayback( void )
+  {
+    float perc = _player->GetRelativeTime( );
+
+    setFocusAt( perc );
+  }
+
+  void Summary::setFocusAt( float perc )
+  {
+    int max = _histogramScroll->horizontalScrollBar( )->maximum( );
+    int min = _histogramScroll->horizontalScrollBar( )->minimum( );
+
+    int value = ( max - min ) * perc;
+
+    _histogramScroll->horizontalScrollBar( )->setValue( value );
+    _eventScroll->horizontalScrollBar( )->setValue( value );
   }
 
 }
