@@ -1,6 +1,8 @@
 <RCC>
   <qresource prefix="/">
     <file>icons/list.png</file>
+    <file>icons/autofocus.png</file>
+    <file>icons/focus.png</file>
     <file>icons/menu-play.png</file>
     <file>icons/visimpl-icon-square.png</file>
     <file>icons/logoGMRV.png</file>

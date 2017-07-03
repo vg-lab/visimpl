@@ -51,7 +51,15 @@
     <addaction name="actionAutoNamingSelections"/>
     <addaction name="actionFill_Plots"/>
    </widget>
+   <widget class="QMenu" name="menuPlayback">
+    <property name="title">
+     <string>Playback</string>
+    </property>
+    <addaction name="actionFocusOnPlayhead"/>
+    <addaction name="actionFollowPlayhead"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuPlayback"/>
    <addaction name="menuOptions"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -71,6 +79,9 @@
    <addaction name="actionTogglePlaybackDock"/>
    <addaction name="actionCloseData"/>
    <addaction name="actionShowDataManager"/>
+   <addaction name="separator"/>
+   <addaction name="actionFocusOnPlayhead"/>
+   <addaction name="actionFollowPlayhead"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -172,6 +183,33 @@
    </property>
    <property name="text">
     <string>Show Data Manager</string>
+   </property>
+  </action>
+  <action name="actionFocusOnPlayhead">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/focus.png</normaloff>:/icons/focus.png</iconset>
+   </property>
+   <property name="text">
+    <string>Focus on playhead</string>
+   </property>
+   <property name="toolTip">
+    <string>Focus on playhead</string>
+   </property>
+  </action>
+  <action name="actionFollowPlayhead">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/autofocus.png</normaloff>:/icons/autofocus.png</iconset>
+   </property>
+   <property name="text">
+    <string>Follow playhead</string>
+   </property>
+   <property name="toolTip">
+    <string>Follow playhead</string>
    </property>
   </action>
  </widget>
