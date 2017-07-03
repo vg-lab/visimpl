@@ -31,11 +31,13 @@ set(STACKVIZ_SOURCES
   resources.qrc
   stackviz.cpp
   MainWindow.cpp
+  DisplayManagerWidget.cpp
 )
 
 set(STACKVIZ_HEADERS
   ${PROJECT_BINARY_DIR}/include/stackviz/version.h
   MainWindow.h
+  DisplayManagerWidget.h
   log.h  
 )
 
@@ -48,6 +50,7 @@ set(STACKVIZ_LINK_LIBRARIES
   Qt5::OpenGL
   prefr  
   sumrice
+  scoop
 )
 
 if ( NOT DEFAULT_CONTEXT_OPENGL_MAJOR )

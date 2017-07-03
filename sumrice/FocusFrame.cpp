@@ -27,7 +27,7 @@ FocusFrame::FocusFrame( QWidget* parent_ )
 { }
 
 
-void FocusFrame::viewRegion( const visimpl::MultiLevelHistogram& histogram,
+void FocusFrame::viewRegion( const visimpl::HistogramWidget& histogram,
                              float marker,// float offset,
                              float regionWidth )
 {
@@ -62,12 +62,13 @@ void FocusFrame::viewRegion( const visimpl::MultiLevelHistogram& histogram,
 
 }
 
+void FocusFrame::clear( void )
+{
+  _firstPointGlobal = _lastPointGlobal = 0;
+}
 
 void FocusFrame::paintEvent( QPaintEvent* /*event_*/ )
 {
-
-  if( _lastPointGlobal == _firstPointGlobal )
-    return;
 
   QPainter painter( this );
 
@@ -75,6 +76,10 @@ void FocusFrame::paintEvent( QPaintEvent* /*event_*/ )
 
   painter.fillRect( rect( ), QBrush( QColor( 255, 255, 255, 255 ),
                                      Qt::SolidPattern ));
+
+  if( _lastPointGlobal == _firstPointGlobal )
+    return;
+
   QPainterPath pathLocal;
   QPainterPath pathGlobal;
 

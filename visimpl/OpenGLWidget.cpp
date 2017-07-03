@@ -12,6 +12,7 @@
 #include <QMouseEvent>
 #include <QColorDialog>
 #include <QShortcut>
+#include <QGraphicsOpacityEffect>
 
 #include <sstream>
 #include <string>
@@ -33,9 +34,10 @@
 namespace visimpl
 {
 
+  static float invRGBInt = 1.0f / 255;
+
   OpenGLWidget::OpenGLWidget( QWidget* parent_,
                               Qt::WindowFlags windowsFlags_,
-                              bool paintNeurons_,
                               const std::string&
   #ifdef VISIMPL_USE_ZEROEQ
                               zeqUri
@@ -45,12 +47,12 @@ namespace visimpl
   #ifdef VISIMPL_USE_ZEROEQ
   , _zeqUri( zeqUri )
   #endif
-  , _fpsLabel( this )
+  , _fpsLabel( nullptr )
   , _showFps( false )
   , _wireframe( false )
   , _camera( nullptr )
   , _lastCameraPosition( 0, 0, 0)
-  , _focusOnSelection( paintNeurons_ )
+  , _focusOnSelection( true )
   , _pendingSelection( false )
   , _frameCount( 0 )
   , _mouseX( 0 )
@@ -82,6 +84,10 @@ namespace visimpl
   , _showSelection( false )
   , _resetParticles( false )
   , _updateSelection( false )
+  , _showActiveEvents( true )
+  , _subsetEvents( nullptr )
+  , _deltaEvents( 0.125f )
+  , _inputMux( nullptr )
   {
   #ifdef VISIMPL_USE_ZEROEQ
     if ( zeqUri != "" )
@@ -94,22 +100,35 @@ namespace visimpl
 
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
-    _fpsLabel.setStyleSheet(
-      "QLabel { background-color : #333;"
-      "color : white;"
-      "padding: 3px;"
-      "margin: 10px;"
-      " border-radius: 10px;}" );
-
-    // This is needed to get key evends
-    this->setFocusPolicy( Qt::WheelFocus );
-
     _maxFPS = 60.0f;
     _renderPeriod = 1.0f / _maxFPS;
 
     _renderSpeed = 1.f;
 
-    _fpsLabel.setVisible( _showFps );
+    _fpsLabel = new QLabel( );
+    _fpsLabel->setStyleSheet(
+      "QLabel { background-color : #333;"
+      "color : white;"
+      "padding: 3px;"
+      "margin: 10px;"
+      " border-radius: 10px;}" );
+    _fpsLabel->setVisible( _showFps );
+    _fpsLabel->setMaximumSize( 100, 50 );
+
+
+    _eventLabelsLayout = new QGridLayout( );
+    _eventLabelsLayout->setAlignment( Qt::AlignTop );
+    _eventLabelsLayout->setMargin( 0 );
+    setLayout( _eventLabelsLayout );
+    _eventLabelsLayout->addWidget( _fpsLabel, 0, 0, 1, 9 );
+
+
+
+    // This is needed to get key events
+    this->setFocusPolicy( Qt::WheelFocus );
+
+
+
 
   //  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Minus ),
   //                 this, SLOT( reducePlaybackSpeed( ) ));
@@ -147,34 +166,13 @@ namespace visimpl
 
     _simulationType = simulationType;
 
-    switch( _simulationType )
-    {
-      case simil::TSimSpikes:
-      {
-        _deltaTime = 0.5f;
-  //        _player = new SpikesPlayer( fileName, true );
-        simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer( );
-        spPlayer->LoadData( fileType, fileName, report );
-        _player = spPlayer;
-        _player->deltaTime( _deltaTime );
+    _deltaTime = 0.5f;
 
-        break;
-      }
-      case simil::TSimVoltages:
-      {
-  #ifdef SIMIL_USE_BRION
-        _player = new simil::VoltagesPlayer( fileName, report, true);
-        _deltaTime = _player->deltaTime( );
-  #else
-        std::cerr << "Error: simil without Brion support." << std::endl;
-        exit( -1 );
-  #endif
-        break;
-      }
-      default:
-        VISIMPL_THROW("Cannot load an undefined simulation type.");
+    simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer( );
+    spPlayer->LoadData( fileType, fileName, report );
+    _player = spPlayer;
+    _player->deltaTime( _deltaTime );
 
-    }
 
     float scale = 1.0f;
     if( fileType == simil::THDF5 )
@@ -201,6 +199,10 @@ namespace visimpl
     }
 
     createParticleSystem( scale );
+
+    _inputMux = new InputMultiplexer( _particleSystem, _player->gids( ) );
+    _inputMux->models( _prototype, _offPrototype );
+
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
   #endif
@@ -239,68 +241,7 @@ namespace visimpl
 
     _player->Frame( );
 
-    switch( _simulationType )
-    {
-      case simil::TSimSpikes:
-      {
-        simil::SpikesCRange spikes =
-            dynamic_cast< simil::SpikesPlayer* >( _player )->spikesNow( );
-
-        unsigned int count = 0;
-        unsigned int triggeredSpikes = 0;
-        for( simil::SpikesCIter spike = spikes.first;
-             spike != spikes.second; ++spike)
-        {
-          if( _selectedGIDs.find( ( *spike ).second ) != _selectedGIDs.end( )
-              || _selectedGIDs.size( ) == 0 || !_showSelection )
-          {
-            auto res = gidNodesMap.find( (*spike).second );
-            if( res != gidNodesMap.end( ))
-            {
-              dynamic_cast< prefr::Cluster* >(( *res ).second )->killParticles( );
-              ++triggeredSpikes;
-            }
-            count += 1;
-          }
-        }
-        break;
-      }
-      case simil::TSimVoltages:
-      {
-  #ifdef SIMIL_USE_BRION
-        simil::VoltagesPlayer* vplayer =
-            dynamic_cast< simil::VoltagesPlayer* >(_player);
-
-        float normFactor = vplayer->getNormVoltageFactor( );
-
-        unsigned int counter = 0;
-        for( auto gid : vplayer->gids( ))
-        {
-          auto res = gidNodesMap.find( gid );
-          if( res == gidNodesMap.end( ))
-          {
-            std::cerr << "Err: Node not found " << gid << std::endl;
-            continue;
-          }
-
-          float volt = vplayer->getVoltage( gid );
-          float relVal = volt + std::abs( vplayer->minVoltage( ));
-          relVal *= normFactor;
-
-          dynamic_cast< prefr::ValuedSource* >( res->second )->
-              particlesLife( relVal );
-
-          counter++;
-        }
-  #else
-        std::cerr << "Error: SimIL without BRion support." << std::endl;
-        exit( -1 );
-  #endif
-        break;
-      }
-      default:
-        break;
-    }
+    _inputMux->processFrameInput( _player->spikesNow( ));
 
   }
 
@@ -340,7 +281,7 @@ namespace visimpl
 
     _offPrototype = new prefr::ColorOperationModel( _maxLife, _maxLife );
 
-    _offPrototype->color.Insert( 0.0f, ( glm::vec4(0.1f, 0.1f, 0.1f, 0.5f)));
+    _offPrototype->color.Insert( 0.0f, ( glm::vec4(0.1f, 0.1f, 0.1f, 0.2f)));
 
     _offPrototype->velocity.Insert( 0.0f, 0.0f );
 
@@ -466,9 +407,6 @@ namespace visimpl
       cluster->inactiveKillParticles( true );
       source->maxEmissionCycles( 1 );
 
-      gidNodesMap.insert( std::make_pair(( *gid ), cluster ));
-      nodesGIDMap.insert( std::make_pair( cluster, ( *gid )));
-
       i++;
       gid++;
 
@@ -499,53 +437,26 @@ namespace visimpl
 
   }
 
-  void OpenGLWidget::resetParticles( void )
-  {
-    _particleSystem->run( false );
-
-#ifdef VISIMPL_USE_OPENMP
-    #pragma omp parallel for
-    for( int i = 0; i < ( int )_particleSystem->clusters( ).size( ); i++ )
-    {
-      prefr::Cluster* cluster = _particleSystem->clusters( )[ i ];
-#else
-    for( auto cluster : _particleSystem->clusters( ))
-    {
-#endif
-
-      switch( _simulationType )
-      {
-        case simil::TSimSpikes:
-          cluster->killParticles( false );
-        break;
-        case simil::TSimVoltages:
-          cluster->killParticles( false );
-        break;
-        default:
-        break;
-      }
-      cluster->source( )->restart( );
-    }
-
-    _particleSystem->run( true );
-
-    _particleSystem->update( 0.0f );
-  }
-
-
-
   void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
   {
     if( gids.size( ) > 0 )
     {
       _selectedGIDs = gids;
       _pendingSelection = true;
-      _updateSelection = true;
+
+      if( !_inputMux->showGroups( ))
+        setUpdateSelection( );
+      _inputMux->selection( gids );
+
     }
     std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
 
   }
 
+  void OpenGLWidget::setUpdateSelection( void )
+  {
+    _updateSelection = true;
+  }
 
   void OpenGLWidget::updateSelection( void )
   {
@@ -553,7 +464,7 @@ namespace visimpl
     {
       _particleSystem->run( false );
 
-      bool baseOn = !_showSelection || _selectedGIDs.size( ) == 0;
+//      bool baseOn = !_showSelection || _selectedGIDs.empty( );
 
       _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),
                                    std::numeric_limits< float >::max( ),
@@ -563,25 +474,20 @@ namespace visimpl
                                    std::numeric_limits< float >::min( ),
                                    std::numeric_limits< float >::min( ));
 
-      for( auto cluster : _particleSystem->clusters( ))
+      std::vector< prefr::Cluster* > active =
+          std::move( _inputMux->activeClusters( ));
+
+      for( auto cluster : ( !active.empty( ) ? active :_particleSystem->clusters( ) ))
       {
-        auto it = nodesGIDMap.find( cluster );
-        unsigned int id = it->second;
-
-  //      auto res = _selectedGIDs.find( id );
-
-        bool on =  baseOn || _selectedGIDs.find( id ) != _selectedGIDs.end( );
-
-        cluster->model( on ? _prototype : _offPrototype );
-
-        if( ( _focusOnSelection && on ) || !_focusOnSelection )
-        for( prefr::tparticle particle = cluster->particles( ).begin( );
-             particle != cluster->particles( ).end( ); ++particle)
+        auto particleRange = cluster->particles( );
+        for( prefr::tparticle particle = particleRange.begin( );
+            particle != particleRange.end( ); ++particle )
         {
           expandBoundingBox( _boundingBoxMin,
                              _boundingBoxMax,
                              particle.position( ));
         }
+
       }
 
       glm::vec3 center = ( _boundingBoxMax + _boundingBoxMin ) * 0.5f;
@@ -604,14 +510,27 @@ namespace visimpl
 
     _showSelection = showSelection_;
 
+    if( _inputMux )
+      _inputMux->showGroups( !_showSelection );
+
     updateSelection( );
 
   }
 
   void OpenGLWidget::clearSelection( void )
   {
+    _inputMux->clearSelection( );
     _selectedGIDs.clear( );
     _updateSelection = true;
+  }
+
+  void OpenGLWidget::showEventsActivityLabels( bool show )
+  {
+    for( auto container : _eventLabels )
+    {
+      container.upperWidget->setVisible( show );
+      container.upperWidget->update( );
+    }
   }
 
 
@@ -707,7 +626,7 @@ namespace visimpl
       updateSelection( );
 
     if( _resetParticles )
-      resetParticles( );
+      _inputMux->resetParticles( );
 
     _resetParticles = false;
 
@@ -717,22 +636,24 @@ namespace visimpl
 
       if ( _particleSystem )
       {
-
-        if( _elapsedTimeSimAcc >= _simPeriod )
+        if( _player->isPlaying( ))
         {
-          configureSimulation( );
+          if( _elapsedTimeSimAcc >= _simPeriod )
+          {
+            configureSimulation( );
+            updateEventLabelsVisibility( );
 
-          _elapsedTimeSimAcc = 0.0f;
+            _elapsedTimeSimAcc = 0.0f;
+          }
+
+          if( _elapsedTimeRenderAcc >= _renderPeriod )
+          {
+            float renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond;
+
+            updateParticles( renderDelta );
+            _elapsedTimeRenderAcc = 0.0f;
+          }
         }
-
-        if( _elapsedTimeRenderAcc >= _renderPeriod )
-        {
-          float renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond;
-
-          updateParticles( renderDelta );
-          _elapsedTimeRenderAcc = 0.0f;
-        }
-
         paintParticles( );
 
       }
@@ -753,10 +674,9 @@ namespace visimpl
     }
 
 
-    #define FRAMES_PAINTED_TO_MEASURE_FPS 30
+    #define FRAMES_PAINTED_TO_MEASURE_FPS 10
     if( _showFps && _frameCount >= FRAMES_PAINTED_TO_MEASURE_FPS )
     {
-
       auto duration =
         std::chrono::duration_cast<std::chrono::milliseconds>( now - _then );
       _then = now;
@@ -768,13 +688,13 @@ namespace visimpl
         unsigned int ellapsedMiliseconds = duration.count( );
 
         unsigned int fps = roundf( 1000.0f *
-                                   float( FRAMES_PAINTED_TO_MEASURE_FPS ) /
+                                   float( _frameCount ) /
                                    float( ellapsedMiliseconds ));
 
         if( _showFps )
         {
-          _fpsLabel.setText( QString::number( fps ) + QString( " FPS" ));
-          _fpsLabel.adjustSize( );
+          _fpsLabel->setText( QString::number( fps ) + QString( " FPS" ));
+          _fpsLabel->adjustSize( );
         }
 
       }
@@ -787,6 +707,46 @@ namespace visimpl
       update( );
     }
 
+  }
+
+  void OpenGLWidget::updateEventLabelsVisibility( void )
+  {
+    std::vector< bool > visibility = activeEventsAt( _player->currentTime( ));
+
+    unsigned int counter = 0;
+    for( auto showLabel : visibility )
+    {
+      EventLabel& labelObjects = _eventLabels[ counter ];
+//      QString style( "border: 1px solid " + showLabel ? "white;" : "black;" );
+      QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect( );
+      effect->setOpacity( showLabel ? 1.0 : 0.5 );
+      labelObjects.upperWidget->setGraphicsEffect( effect );
+      labelObjects.upperWidget->update( );
+      ++counter;
+    }
+
+
+
+  }
+
+
+  std::vector< bool > OpenGLWidget::activeEventsAt( float time )
+  {
+    std::vector< bool > result( _eventLabels.size( ), false);
+
+    float totalTime = _player->endTime( ) - _player->startTime( );
+
+    double perc = time / totalTime;
+    unsigned int counter = 0;
+    for( auto event : _eventsActivation )
+    {
+      unsigned int position = perc * event.size( );
+      result[ counter ] = event[ position ];
+
+      ++counter;
+    }
+
+    return result;
   }
 
   void OpenGLWidget::resizeGL( int w , int h )
@@ -914,7 +874,7 @@ namespace visimpl
   {
     _showFps = !_showFps;
 
-    _fpsLabel.setVisible( _showFps );
+    _fpsLabel->setVisible( _showFps );
 
     if ( _idleUpdate )
       update( );
@@ -947,10 +907,118 @@ namespace visimpl
     update( );
   }
 
+  void OpenGLWidget::idleUpdate( bool idleUpdate_ )
+  {
+    _idleUpdate = idleUpdate_;
+  }
 
   simil::SimulationPlayer* OpenGLWidget::player( )
   {
     return _player;
+  }
+
+  InputMultiplexer* OpenGLWidget::inputMultiplexer( void )
+  {
+    return _inputMux;
+  }
+
+  void OpenGLWidget::subsetEventsManager( simil::SubsetEventManager* manager )
+  {
+    _subsetEvents = manager;
+
+    createEventLabels( );
+
+    update( );
+  }
+
+  const scoop::ColorPalette& OpenGLWidget::colorPalette( void )
+  {
+    return _colorPalette;
+  }
+
+  void OpenGLWidget::createEventLabels( void )
+  {
+    const auto& eventNames = _subsetEvents->eventNames( );
+
+    if( eventNames.empty( ))
+      return;
+
+
+    for( auto& label : _eventLabels )
+    {
+      _eventLabelsLayout->removeWidget( label.upperWidget );
+
+      delete( label.frame );
+      delete( label.label );
+      delete( label.upperWidget );
+
+    }
+
+    _eventLabels.clear( );
+    _eventsActivation.clear( );
+
+
+    unsigned int row = 0;
+
+    float totalTime = _player->endTime( ) - _player->startTime( );
+
+    unsigned int activitySize =
+        std::ceil( totalTime / _deltaEvents );
+
+    _colorPalette =
+        scoop::ColorPalette::colorBrewerQualitative(
+            scoop::ColorPalette::ColorBrewerQualitative::Set1, 9 );
+
+    scoop::ColorPalette::Colors colors = _colorPalette.colors( );
+
+    for( auto name : eventNames )
+    {
+
+      EventLabel labelObjects;
+
+      QFrame* frame = new QFrame( );
+//      std::cout << "Creating color: " << .toStdString( ) << std::endl;
+      frame->setStyleSheet( "background-color: " + colors[ row ].name( ) );
+      frame->setMinimumSize( 20, 20 );
+      frame->setMaximumSize( 20, 20 );
+
+      QLabel* label = new QLabel( );
+//      label->setVisible( false );
+      label->setMaximumSize( 100, 50 );
+      label->setTextFormat( Qt::RichText );
+      label->setStyleSheet(
+        "QLabel { background-color : #333;"
+        "color : white;"
+        "padding: 3px;"
+        "margin: 10px;"
+        " border-radius: 10px;}" );
+
+      label->setText( "" + QString( name.c_str( )));
+
+      QWidget* container = new QWidget( );
+      QHBoxLayout* labelLayout = new QHBoxLayout( );
+
+      labelLayout->addWidget( frame );
+      labelLayout->addWidget( label );
+      container->setLayout( labelLayout );
+
+      labelObjects.frame = frame;
+      labelObjects.label = label;
+      labelObjects.upperWidget = container;
+
+      _eventLabels.push_back( labelObjects );
+
+//      _eventLabels.push_back( label );
+
+      _eventLabelsLayout->addWidget( container, row, 10, 2, 1 );
+
+      std::vector< bool > activity( activitySize );
+
+      _eventsActivation.push_back(
+          _subsetEvents->eventActivity( name, _deltaEvents, totalTime ));
+
+      ++row;
+    }
   }
 
   void OpenGLWidget::Play( void )
@@ -1039,75 +1107,66 @@ namespace visimpl
   void OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
   {
 
-    if( _particleSystem )
+    prefr::vectortvec4 gcolors;
+
+    for( auto c : colors )
     {
+      glm::vec4 gColor( c.second.red( ) * invRGBInt,
+                       c.second.green( ) * invRGBInt,
+                       c.second.blue( ) * invRGBInt,
+                       c.second.alpha( ) * invRGBInt );
 
-      prefr::vectortvec4 gcolors;
-
-      for( auto c : colors )
-      {
-        glm::vec4 gColor( c.second.red( ) / 255.0f,
-                          c.second.green( ) / 255.0f,
-                          c.second.blue( ) / 255.0f,
-                          c.second.alpha( ) / 255.0f );
-        gcolors.Insert( c.first, gColor );
-      }
-
-      _prototype->color = gcolors;
-
-      _particleSystem->update( 0.0f );
+      gcolors.Insert( c.first, gColor );
     }
+
+    _prototype->color = gcolors;
+
   }
 
   TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
   {
     TTransferFunction result;
 
-    if( _particleSystem )
-    {
-      prefr::vectortvec4 colors = _prototype->color;
+    prefr::vectortvec4 colors = _prototype->color;
 
-      for( unsigned int i = 0; i < colors.size; i++ )
-      {
-        glm::vec4 c = colors.values[ i ];
-        QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
-        result.push_back( std::make_pair( colors.times[ i ], color ));
-      }
+    auto timeValue = _prototype->color.times.begin( );
+    for( auto c : _prototype->color.values )
+    {
+      QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
+      result.push_back( std::make_pair( *timeValue, color ));
+
+      ++timeValue;
     }
+
 
     return result;
   }
 
   void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
   {
-    if( _particleSystem )
-    {
-      utils::InterpolationSet< float > newSize;
-      for( auto s : sizes )
-      {
-        std::cout << s.first << " " << s.second << std::endl;
-        newSize.Insert( s.first, s.second );
-      }
-      _prototype->size = newSize;
 
-      _particleSystem->update( 0.0f );
+    utils::InterpolationSet< float > newSize;
+    for( auto s : sizes )
+    {
+      newSize.Insert( s.first, s.second );
     }
+    _prototype->size = newSize;
+
   }
 
   TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
   {
     TSizeFunction result;
-    if( _particleSystem )
+    auto sizeValue = _prototype->size.values.begin( );
+    for( auto s : _prototype->size.times)
     {
-      auto v = _prototype->size.values.begin( );
-      for( auto s : _prototype->size.times)
-      {
-        result.push_back( std::make_pair( s, *v ));
-        v++;
-      }
+      result.push_back( std::make_pair( s, *sizeValue ));
+      ++sizeValue;
     }
+
     return result;
   }
+
 
   void OpenGLWidget::simulationDeltaTime( float value )
   {

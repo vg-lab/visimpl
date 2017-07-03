@@ -15,11 +15,10 @@
 #include <QWidget>
 #include <QAbstractButton>
 
+#include "../types.h"
+
 #include "ColorPoints.h"
 #include "Gradient.h"
-
-typedef std::pair< float, QColor > TTFColor;
-typedef std::vector< TTFColor > TTransferFunction;
 
 class TransferFunctionEditor : public QWidget
 {
@@ -30,8 +29,8 @@ public:
 
    ~TransferFunctionEditor( void );
 
-   TTransferFunction getColorPoints( );
-   void setColorPoints( const TTransferFunction& colors );
+   visimpl::TTransferFunction getColorPoints( );
+   void setColorPoints( const visimpl::TTransferFunction& colors );
 
 protected:
     void applyColorMap();

@@ -35,6 +35,7 @@ namespace stackviz
   , _summary( nullptr )
   , _player( nullptr )
   , _autoAddAvailableSubsets( true )
+  , _autoCalculateCorrelations( false )
   , _simulationDock( nullptr )
   , _playButton( nullptr )
   , _simSlider( nullptr )
@@ -43,6 +44,7 @@ namespace stackviz
   , _playing( false )
   , _startTimeLabel( nullptr )
   , _endTimeLabel( nullptr )
+  , _displayManager( nullptr )
   #ifdef VISIMPL_USE_ZEROEQ
   , _zeqConnection( false )
   , _subscriber( nullptr )
@@ -92,6 +94,8 @@ namespace stackviz
     connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( )),
              this, SLOT( togglePlaybackDock( )));
 
+    connect( _ui->actionShowDataManager, SIGNAL( triggered( )),
+             this, SLOT( showDisplayManagerWidget( )));
 
 
     #ifdef VISIMPL_USE_ZEROEQ
@@ -156,14 +160,13 @@ namespace stackviz
   }
 
   void MainWindow::openSubsetEventFile( const std::string& filePath,
-                                        bool /*append*/ )
+                                        bool append )
   {
     if( filePath.empty( ))
       return;
 
-  //  if( !append )
-  //    _player->data( )->subsetsEvents( )->clear( );
-  //  _subsetEventManager = new simil::SubsetEventManager( );
+    if( !append )
+      _player->data( )->subsetsEvents( )->clear( );
 
     if( filePath.find( "json" ) != std::string::npos )
     {
@@ -174,6 +177,7 @@ namespace stackviz
     {
       std::cout << "Loading H5 file: " << filePath << std::endl;
       _player->data( )->subsetsEvents( )->loadH5( filePath );
+      _autoCalculateCorrelations = true;
     }
     else
     {
@@ -268,6 +272,33 @@ namespace stackviz
     update( );
   }
 
+  void MainWindow::showDisplayManagerWidget( void )
+  {
+    if( !_displayManager )
+    {
+      _displayManager = new DisplayManagerWidget( );
+      _displayManager->init( _summary->eventWidgets(),
+                             _summary->histogramWidgets( ));
+
+      connect( _displayManager, SIGNAL( eventVisibilityChanged( unsigned int, bool )),
+               _summary, SLOT( eventVisibility( unsigned int, bool )));
+
+      connect( _displayManager, SIGNAL( subsetVisibilityChanged( unsigned int, bool )),
+               _summary, SLOT( subsetVisibility( unsigned int, bool )));
+
+      connect( _displayManager, SIGNAL( removeEvent( unsigned int )),
+               _summary, SLOT( removeEvent( unsigned int )));
+
+      connect( _displayManager, SIGNAL( removeHistogram( unsigned int )),
+               _summary, SLOT( removeSubset( unsigned int )));
+
+    }
+
+    _displayManager->refresh( );
+
+    _displayManager->show( );
+  }
+
   void MainWindow::openHDF5File( const std::string& networkFile,
                                  simil::TSimulationType simulationType,
                                  const std::string& activityFile,
@@ -281,7 +312,7 @@ namespace stackviz
 
     if( !subsetEventFile.empty( ))
     {
-      openSubsetEventFile( subsetEventFile, false );
+      openSubsetEventFile( subsetEventFile, true );
     }
 
     configurePlayer( );
@@ -449,30 +480,55 @@ namespace stackviz
     connect( _summary, SIGNAL( histogramClicked( float )),
              this, SLOT( PlayAt( float )));
 
-    connect( _summary, SIGNAL( histogramClicked( visimpl::MultiLevelHistogram* )),
-               this, SLOT( HistogramClicked( visimpl::MultiLevelHistogram* )));
+    connect( _summary, SIGNAL( histogramClicked( visimpl::HistogramWidget* )),
+               this, SLOT( HistogramClicked( visimpl::HistogramWidget* )));
 
-    simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
 
-    for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
+    if( _autoCalculateCorrelations )
     {
-      cc.compute( "grclayer", event );
-    }
+      simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
+//      for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
+//      {
+//        cc.compute( "grclayer", event );
+//      }
+//
+//      for( auto name : cc.correlationNames( ))
+//      {
+//        simil::Correlation* correlation = cc.correlation( name );
+//
+//        visimpl::Selection selection;
+//        selection.name = name;
+//        for( auto value : correlation->values )
+//        {
+//          if( value.second.hit > 0.7f )
+//            selection.gids.insert( value.first );
+//        }
+//
+//        _summary->AddNewHistogram( selection );
+//      }
 
-    for( auto name : cc.correlationNames( ))
-    {
-      simil::Correlation* correlation = cc.correlation( name );
+      auto eventNames = _player->data( )->subsetsEvents( )->eventNames( );
 
-      visimpl::Selection selection;
-      selection.name = name;
-      for( auto value : correlation->values )
+      auto result = cc.correlate( "grclayer", eventNames, 0.125f );
+
+      for( auto correlation : result )
       {
-        if( value.second.hit > 0.7f )
-          selection.gids.insert( value.first );
+        visimpl::Selection selection;
+        selection.name = correlation.subsetName + correlation.eventName;
+
+        for( auto neuron : correlation.values )
+        {
+          if( neuron.second.result > 0.5f )
+            selection.gids.insert( neuron.first );
+        }
+
+
+        _summary->AddNewHistogram( selection );
       }
 
-      _summary->AddNewHistogram( selection );
     }
+
+    QTimer::singleShot( 0, _summary, SLOT( adjustSplittersSize( )));
   }
 
   void MainWindow::PlayPause( bool notify )
@@ -717,7 +773,7 @@ namespace stackviz
       _repeatButton->setChecked( repeat );
     }
 
-    void MainWindow::HistogramClicked( visimpl::MultiLevelHistogram* histogram )
+    void MainWindow::HistogramClicked( visimpl::HistogramWidget* histogram )
     {
       const visimpl::GIDUSet* selection;
 

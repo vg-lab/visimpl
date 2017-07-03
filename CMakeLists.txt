@@ -9,8 +9,8 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 0.1.0 )
-set( visimpl_VERSION_ABI 1 )
+project( visimpl VERSION 0.1.1 )
+set( visimpl_VERSION_ABI 2 )
 
 # Disable in source building
 if( "${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}" )
@@ -58,6 +58,7 @@ common_find_package( HDF5 REQUIRED COMPONENTS C CXX )
 common_find_package( ReTo REQUIRED )
 common_find_package( SimIL REQUIRED )
 common_find_package( prefr REQUIRED )
+common_find_package( scoop REQUIRED )
 common_find_package( OpenMP )
 
 

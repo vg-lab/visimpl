@@ -29,7 +29,10 @@
 #include "prefr/ColorSource.h"
 #include "prefr/ColorOperationModel.h"
 
+#include "InputMultiplexer.h"
+
 #include <sumrice/sumrice.h>
+#include <scoop/scoop.h>
 
 #ifdef VISIMPL_USE_ZEROEQ
   #include <zeroeq/zeroeq.h>
@@ -64,9 +67,18 @@ namespace visimpl
       PROTOTYPE_ON
     } TPrototypeEnum;
 
+    struct EventLabel
+    {
+    public:
+
+      QWidget* upperWidget;
+      QFrame* frame;
+      QLabel* label;
+
+    };
+
     OpenGLWidget( QWidget* parent = 0,
                   Qt::WindowFlags windowFlags = 0,
-                  bool paintNeurons = true,
                   const std::string& zeqUri = "" );
     ~OpenGLWidget( void );
 
@@ -76,16 +88,18 @@ namespace visimpl
                    simil::TSimulationType simulationType = simil::TSimSpikes,
                    const std::string& report = std::string( "" ));
 
-    void idleUpdate( bool idleUpdate_ = true )
-    {
-      _idleUpdate = idleUpdate_;
-    }
+    void idleUpdate( bool idleUpdate_ = true );
 
     simil::SimulationPlayer* player( );
+    InputMultiplexer* inputMultiplexer( void );
+
     void resetParticles( void );
 
     void SetAlphaBlendingAccumulative( bool accumulative = true );
 
+    void subsetEventsManager( simil::SubsetEventManager* manager );
+
+    const scoop::ColorPalette& colorPalette( void );
 
   signals:
 
@@ -125,8 +139,11 @@ namespace visimpl
 
     void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
     void showSelection( bool );
+    void setUpdateSelection( void );
     void updateSelection( void );
     void clearSelection( void );
+
+    void showEventsActivityLabels( bool show );
 
   protected:
 
@@ -144,6 +161,11 @@ namespace visimpl
     void updateParticles( float renderDelta );
     void paintParticles( void );
 
+    void createEventLabels( void );
+    void updateEventLabelsVisibility( void );
+
+    std::vector< bool > activeEventsAt( float time );
+
     std::unordered_set< uint32_t > _selectedGIDs;
 
   #ifdef VISIMPL_USE_ZEROEQ
@@ -152,7 +174,7 @@ namespace visimpl
 
   #endif
 
-    QLabel _fpsLabel;
+    QLabel* _fpsLabel;
     bool _showFps;
 
     bool _wireframe;
@@ -184,7 +206,7 @@ namespace visimpl
     prefr::ParticleSystem* _particleSystem;
 
     simil::TSimulationType _simulationType;
-    simil::SimulationPlayer* _player;
+    simil::SpikesPlayer* _player;
 
     float _maxLife;
     float _deltaTime;
@@ -217,6 +239,16 @@ namespace visimpl
     bool _resetParticles;
     bool _updateSelection;
 
+    bool _showActiveEvents;
+    simil::SubsetEventManager* _subsetEvents;
+    std::vector< EventLabel > _eventLabels;
+    QGridLayout* _eventLabelsLayout;
+    std::vector< std::vector< bool >> _eventsActivation;
+    float _deltaEvents;
+
+    InputMultiplexer* _inputMux;
+
+    scoop::ColorPalette _colorPalette;
   };
 
 } // namespace visimpl

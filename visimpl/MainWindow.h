@@ -13,6 +13,8 @@
 #include <QSlider>
 #include <QTimer>
 #include <QRadioButton>
+#include <QGroupBox>
+#include <QPushButton>
 
 #include "OpenGLWidget.h"
 
@@ -43,17 +45,22 @@ namespace visimpl
 
     void openBlueConfig( const std::string& fileName,
                          simil::TSimulationType simulationType,
-                         const std::string& report);
+                         const std::string& report,
+                         const std::string& subsetEventFile = "");
 
     void openHDF5File( const std::string& networkFile,
                        simil::TSimulationType simulationType,
-                       const std::string& activityFile = "" );
+                       const std::string& activityFile = "",
+                       const std::string& subsetEventFile = "" );
 
 
   public slots:
 
     void openBlueConfigThroughDialog( void );
     void openHDF5ThroughDialog( void );
+
+    void openSubsetEventFile( const std::string& fileName,
+                              bool append = false );
 
     void aboutDialog( void );
     void togglePlaybackDock( void );
@@ -86,17 +93,19 @@ namespace visimpl
     void changeEditorSimTimestepsPS( void );
     void updateSimTimestepsPS( void );
 
+    void showSelection( bool show );
 
     void changeEditorDecayValue( void );
     void updateSimulationDecayValue( void );
 
     void AlphaBlendingToggled( void );
 
+  protected slots:
+
+    void addGroupFromSelection( void );
+    void checkGroupsVisibility( void );
 
   #ifdef VISIMPL_USE_ZEROEQ
-
-    protected slots:
-
   #ifdef VISIMPL_USE_GMRVLEX
 
     void ApplyPlaybackOperation( unsigned int playbackOp );
@@ -138,6 +147,8 @@ namespace visimpl
     OpenGLWidget* _openGLWidget;
     visimpl::Summary* _summary;
 
+    scoop::ColorPalette _colorPalette;
+
     QDockWidget* _simulationDock;
     QSlider* _simSlider;
     QPushButton* _playButton;
@@ -147,12 +158,21 @@ namespace visimpl
     QPushButton* _goToButton;
 
     QDockWidget* _simConfigurationDock;
+
+    QGroupBox* _tfGroupBox;
     TransferFunctionEditor* _tfEditor;
     TransferFunctionWidget* _tfWidget;
+
+    bool _autoNameGroups;
+    QGroupBox* _groupsGroupBox;
+    QGridLayout* _groupLayout;
+    std::vector< QCheckBox* > _groupsVisButtons;
+
     QDoubleSpinBox* _decayBox;
     QDoubleSpinBox* _deltaTimeBox;
     QDoubleSpinBox* _timeStepsPSBox;
 
+    QPushButton* _addGroupButton;
     QPushButton* _clearSelectionButton;
     QLabel* _selectionSizeLabel;
 

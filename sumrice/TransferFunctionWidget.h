@@ -46,16 +46,16 @@ public:
   TransferFunctionWidget( QWidget* parent = 0 );
   virtual ~TransferFunctionWidget( );
 
-  TTransferFunction getColors( bool includeAlpha = true );
-  void setColorPoints( const TTransferFunction& colors,
+  visimpl::TTransferFunction getColors( bool includeAlpha = true );
+  void setColorPoints( const visimpl::TTransferFunction& colors,
                        bool updateResult = true );
 
-  TSizeFunction getSizeFunction( void );
-  void setSizeFunction( const TSizeFunction& sizeFunc );
+  visimpl::TSizeFunction getSizeFunction( void );
+  void setSizeFunction( const visimpl::TSizeFunction& sizeFunc );
 
 
-  TTransferFunction getPreviewColors( void );
-  TSizeFunction getSizePreview( void );
+  visimpl::TTransferFunction getPreviewColors( void );
+  visimpl::TSizeFunction getSizePreview( void );
 
 
 
@@ -83,11 +83,11 @@ signals:
 
 protected:
 
-  TSizeFunction pointsToSizeFunc( const QPolygonF& points );
-  TSizeFunction pointsToSizeFunc( const QPolygonF& points,
+  visimpl::TSizeFunction pointsToSizeFunc( const QPolygonF& points );
+  visimpl::TSizeFunction pointsToSizeFunc( const QPolygonF& points,
                                   float minValue,
                                   float maxValue );
-  QPolygonF sizeFuncToPoints( const TSizeFunction& sizeFunc );
+  QPolygonF sizeFuncToPoints( const visimpl::TSizeFunction& sizeFunc );
 
   virtual void mousePressEvent( QMouseEvent * event );
 
@@ -106,7 +106,7 @@ protected:
   QDoubleSpinBox* _minSizeBox;
   QDoubleSpinBox* _maxSizeBox;
 
-  TSizeFunction _sizeFunction;
+  visimpl::TSizeFunction _sizeFunction;
   float _minSize;
   float _maxSize;
   QLabel* _minValueLabel;

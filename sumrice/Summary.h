@@ -12,6 +12,7 @@
 
 #include <prefr/prefr.h>
 #include <simil/simil.h>
+#include <scoop/scoop.h>
 
 #include <QWidget>
 #include <QGridLayout>
@@ -20,14 +21,15 @@
 #include <QCheckBox>
 #include <QTimer>
 #include <QScrollArea>
+#include <QSplitter>
 
+#include "EventWidget.h"
 #include "FocusFrame.h"
 #include "Histogram.h"
-#include "SubsetEventWidget.h"
 
 namespace visimpl
 {
-  class MultiLevelHistogram;
+  class HistogramWidget;
 
 
   struct Selection
@@ -81,6 +83,9 @@ namespace visimpl
     void heightPerRow( unsigned int height_ );
     unsigned int heightPerRow( void );
 
+    const std::vector< EventWidget* >* eventWidgets( void ) const;
+    const std::vector< HistogramWidget* >* histogramWidgets( void ) const;
+
     void showMarker( bool show_ );
 
     void colorScaleLocal( visimpl::TColorScale colorScale );
@@ -103,7 +108,7 @@ namespace visimpl
   signals:
 
     void histogramClicked( float );
-    void histogramClicked( visimpl::MultiLevelHistogram* );
+    void histogramClicked( visimpl::HistogramWidget* );
 
   public slots:
 
@@ -113,6 +118,13 @@ namespace visimpl
 
     void toggleAutoNameSelections( void );
 
+    void adjustSplittersSize( void );
+
+    void eventVisibility( unsigned int i, bool show );
+    void subsetVisibility( unsigned int i, bool show );
+    void removeEvent( unsigned int i );
+    void removeSubset( unsigned int i );
+
   protected slots:
 
     void childHistogramPressed( const QPoint&, float );
@@ -120,15 +132,21 @@ namespace visimpl
     void childHistogramClicked( float percentage,
                                 Qt::KeyboardModifiers modifiers );
 
-    void removeSelections( void );
-
     void colorScaleLocal( int value );
     void colorScaleGlobal( int value );
 
     void gridLinesNumber( int linesNumber );
 
     void updateMouseMarker( QPoint point );
-    void moveScrollSync( int newPos );
+    void moveVertScrollSync( int newPos );
+    void moveHoriScrollSync( int newPos );
+    void syncSplitters( );
+
+    void hideRemoveEvent( unsigned int i, bool hideDelete );
+    void hideRemoveSubset( unsigned int i, bool hideDelete );
+
+    void updateEventWidgets( void );
+    void updateHistogramWidgets( void );
 
   protected:
 
@@ -145,7 +163,7 @@ namespace visimpl
       ~HistogramRow( )
       { }
 
-      visimpl::MultiLevelHistogram* histogram;
+      visimpl::HistogramWidget* histogram;
       QLabel* label;
       QCheckBox* checkBox;
 
@@ -164,7 +182,7 @@ namespace visimpl
       ~EventRow( )
       { }
 
-      visimpl::SubsetEventWidget* widget;
+      visimpl::EventWidget* widget;
       QLabel* label;
       QCheckBox* checkBox;
 
@@ -215,10 +233,10 @@ namespace visimpl
 
     GIDUSet _gids;
 
-    visimpl::MultiLevelHistogram* _mainHistogram;
-    visimpl::MultiLevelHistogram* _detailHistogram;
-    visimpl::MultiLevelHistogram* _focusedHistogram;
-    QScrollArea* _histogramScroll;
+    visimpl::HistogramWidget* _mainHistogram;
+    visimpl::HistogramWidget* _detailHistogram;
+    visimpl::HistogramWidget* _focusedHistogram;
+
 
     bool _mousePressed;
 
@@ -230,13 +248,27 @@ namespace visimpl
     QColor _colorLocal;
     QColor _colorGlobal;
 
-    std::vector< visimpl::MultiLevelHistogram* > _histograms;
-    std::vector< HistogramRow > _rows;
+    std::vector< visimpl::HistogramWidget* > _histogramWidgets;
+    std::vector< HistogramRow > _histogramRows;
 
     FocusFrame* _focusWidget;
 
-    QGridLayout* _mainLayout;
-    QWidget* _body;
+
+    QGridLayout* _histoLabelsLayout;
+    QScrollArea* _histoLabelsScroll;
+
+    QGridLayout* _eventLabelsLayout;
+    QScrollArea* _eventLabelsScroll;
+
+    QGridLayout* _histogramsLayout;
+    QScrollArea* _histogramScroll;
+
+    QGridLayout* _eventsLayout;
+    QScrollArea* _eventScroll;
+
+    QSplitter* _eventsSplitter;
+    QSplitter* _histoSplitter;
+
     QWidget* _localColorWidget;
     QWidget* _globalColorWidget;
     QLabel* _currentValueLabel;
@@ -244,12 +276,13 @@ namespace visimpl
     QLabel* _localMaxLabel;
 
 //    simil::SubsetEventManager* _subsetEventManager;
+    unsigned int _maxNumEvents;
     std::vector< TEvent > _events;
-    QGridLayout* _eventsLayout;
-    QScrollArea* _eventScroll;
-    std::vector< SubsetEventWidget* > _subsetEventWidgets;
-    std::vector< EventRow > _subsetRows;
 
+    std::vector< EventWidget* > _eventWidgets;
+    std::vector< EventRow > _eventRows;
+
+    bool _syncScrollsHorizontally;
     bool _syncScrollsVertically;
 
     unsigned int _maxColumns;
@@ -281,10 +314,10 @@ namespace visimpl
     bool _fillPlots;
     bool _autoAddEvents;
     bool _autoAddEventSubset;
-    bool _autoCalculateCorrelations;
     float _defaultCorrelationDeltaTime;
 
-    std::vector< QColor > _subsetEventColorPalette;
+    scoop::ColorPalette _eventsPalette;
+//    std::vector< QColor > _subsetEventColorPalette;
 
   };
 

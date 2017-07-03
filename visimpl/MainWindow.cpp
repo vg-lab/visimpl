@@ -14,7 +14,6 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
-#include <QGroupBox>
 #include <QShortcut>
 #include <QMessageBox>
 // #include "qt/CustomSlider.h"
@@ -50,8 +49,12 @@ namespace visimpl
   , _repeatButton( nullptr )
   , _goToButton( nullptr )
   , _simConfigurationDock( nullptr )
+  , _tfGroupBox( nullptr )
   , _tfEditor( nullptr )
   , _tfWidget( nullptr )
+  , _autoNameGroups( false )
+  , _groupsGroupBox( nullptr )
+  , _groupLayout( nullptr )
   , _decayBox( nullptr )
   , _deltaTimeBox( nullptr )
   , _timeStepsPSBox( nullptr )
@@ -63,8 +66,9 @@ namespace visimpl
     _ui->setupUi( this );
 
     _ui->actionUpdateOnIdle->setChecked( updateOnIdle );
-    _ui->actionPaintNeurons->setChecked( true );
     _ui->actionShowFPSOnIdleUpdate->setChecked( false );
+
+    _ui->actionShowEventsActivity->setChecked( false );
 
   #ifdef VISIMPL_USE_BRION
     _ui->actionOpenBlueConfig->setEnabled( true );
@@ -77,9 +81,7 @@ namespace visimpl
   void MainWindow::init( const std::string& zeqUri )
   {
 
-    _openGLWidget = new OpenGLWidget( 0, 0,
-                                      _ui->actionPaintNeurons->isChecked( ),
-                                      zeqUri );
+    _openGLWidget = new OpenGLWidget( 0, 0, zeqUri );
     this->setCentralWidget( _openGLWidget );
     qDebug( ) << _openGLWidget->format( );
 
@@ -88,14 +90,14 @@ namespace visimpl
     connect( _ui->actionUpdateOnIdle, SIGNAL( triggered( )),
              _openGLWidget, SLOT( toggleUpdateOnIdle( )));
 
-    connect( _ui->actionPaintNeurons, SIGNAL( triggered( )),
-             _openGLWidget, SLOT( togglePaintNeurons( )));
-
     connect( _ui->actionBackgroundColor, SIGNAL( triggered( )),
              _openGLWidget, SLOT( changeClearColor( )));
 
     connect( _ui->actionShowFPSOnIdleUpdate, SIGNAL( triggered( )),
              _openGLWidget, SLOT( toggleShowFPS( )));
+
+    connect( _ui->actionShowEventsActivity, SIGNAL( triggered( bool )),
+             _openGLWidget, SLOT( showEventsActivityLabels( bool )));
 
     connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
              this, SLOT( openBlueConfigThroughDialog( )));
@@ -118,7 +120,7 @@ namespace visimpl
     _openGLWidget->showSelection( true );
 
     connect( _ui->actionShowSelection, SIGNAL( toggled( bool )),
-             _openGLWidget, SLOT( showSelection( bool )));
+             this, SLOT( showSelection( bool )));
 
   #else
     _ui->actionShowSelection->setEnabled( false );
@@ -162,11 +164,14 @@ namespace visimpl
 
   void MainWindow::openBlueConfig( const std::string& fileName,
                                    simil::TSimulationType simulationType,
-                                   const std::string& reportLabel)
+                                   const std::string& reportLabel,
+                                   const std::string& subsetEventFile )
   {
     _openGLWidget->loadData( fileName,
                              simil::TDataType::TBlueConfig,
                              simulationType, reportLabel );
+
+    openSubsetEventFile( subsetEventFile, true );
 
     configurePlayer( );
 
@@ -229,12 +234,15 @@ namespace visimpl
 
   void MainWindow::openHDF5File( const std::string& networkFile,
                                  simil::TSimulationType simulationType,
-                                 const std::string& activityFile )
+                                 const std::string& activityFile,
+                                 const std::string& subsetEventFile )
   {
     _openGLWidget->loadData( networkFile,
                              simil::TDataType::THDF5,
                              simulationType,
                              activityFile );
+
+    openSubsetEventFile( subsetEventFile, true );
 
     configurePlayer( );
   }
@@ -269,6 +277,33 @@ namespace visimpl
 
     openHDF5File( networkFile, simil::TSimSpikes, activityFile );
   }
+
+  void MainWindow::openSubsetEventFile( const std::string& filePath,
+                                        bool append )
+  {
+    if( filePath.empty( ))
+      return;
+
+    if( !append )
+      _openGLWidget->player( )->data( )->subsetsEvents( )->clear( );
+
+
+    if( filePath.find( "json" ) != std::string::npos )
+    {
+      std::cout << "Loading JSON file: " << filePath << std::endl;
+      _openGLWidget->player( )->data( )->subsetsEvents( )->loadJSON( filePath );
+    }
+    else if( filePath.find( "h5" ) != std::string::npos )
+    {
+      std::cout << "Loading H5 file: " << filePath << std::endl;
+      _openGLWidget->player( )->data( )->subsetsEvents( )->loadH5( filePath );
+    }
+    else
+    {
+      std::cout << "Subset Events file not found: " << filePath << std::endl;
+    }
+  }
+
 
   void MainWindow::aboutDialog( void )
   {
@@ -481,17 +516,20 @@ namespace visimpl
     _deltaTimeBox->setMaximum( 50 );
     _deltaTimeBox->setSingleStep( 0.05 );
     _deltaTimeBox->setDecimals( 5 );
+    _deltaTimeBox->setMaximumWidth( 100 );
 
     _timeStepsPSBox = new QDoubleSpinBox( );
     _timeStepsPSBox->setMinimum( 0.00000001 );
     _timeStepsPSBox->setMaximum( 50 );
     _timeStepsPSBox->setSingleStep( 1.0 );
-    _deltaTimeBox->setDecimals( 5 );
+    _timeStepsPSBox->setDecimals( 5 );
+    _timeStepsPSBox->setMaximumWidth( 100 );
 
     _decayBox = new QDoubleSpinBox( );
     _decayBox->setMinimum( 0.01 );
     _decayBox->setMaximum( 600.0 );
-    _deltaTimeBox->setDecimals( 5 );
+    _decayBox->setDecimals( 5 );
+    _decayBox->setMaximumWidth( 100 );
 
     _alphaNormalButton = new QRadioButton( "Normal" );
     _alphaAccumulativeButton = new QRadioButton( "Accumulative" );
@@ -501,19 +539,23 @@ namespace visimpl
     _clearSelectionButton->setEnabled( false );
     _selectionSizeLabel = new QLabel( "0" );
 
+    _addGroupButton = new QPushButton( "Add group" );
+    _addGroupButton->setEnabled( false );
+    _addGroupButton->setToolTip( "Click to create a group from current selection.");
+
     QWidget* container = new QWidget( );
     QVBoxLayout* verticalLayout = new QVBoxLayout( );
   //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
 
-    QGroupBox* tFunctionGB = new QGroupBox( "Color and Size transfer function" );
+    _tfGroupBox = new QGroupBox( "Color and Size transfer function" );
     QVBoxLayout* tfLayout = new QVBoxLayout( );
     tfLayout->addWidget( _tfWidget );
-    tFunctionGB->setLayout( tfLayout );
-    tFunctionGB->setMaximumHeight( 250 );
+    _tfGroupBox->setLayout( tfLayout );
+    _tfGroupBox->setMaximumHeight( 250 );
 
     QGroupBox* tSpeedGB = new QGroupBox( "Simulation playback speed" );
     QGridLayout* sfLayout = new QGridLayout( );
-    sfLayout->addWidget( new QLabel( "Simulation Timestep size:" ), 0, 0, 1, 1 );
+    sfLayout->addWidget( new QLabel( "Simulation timestep:" ), 0, 0, 1, 1 );
     sfLayout->addWidget( _deltaTimeBox, 0, 1, 1, 1  );
     sfLayout->addWidget( new QLabel( "Timesteps per second:" ), 1, 0, 1, 1 );
     sfLayout->addWidget( _timeStepsPSBox, 1, 1, 1, 1  );
@@ -539,12 +581,39 @@ namespace visimpl
     QHBoxLayout* selLayout = new QHBoxLayout( );
     selLayout->addWidget( new QLabel( "Selection size: " ));
     selLayout->addWidget( _selectionSizeLabel );
+    selLayout->addWidget( _addGroupButton );
     selLayout->addWidget( _clearSelectionButton );
     selFunctionGB->setLayout( selLayout );
     selFunctionGB->setMaximumHeight( 200 );
 
+
+    _groupsGroupBox = new QGroupBox( "Current visualization groups" );
+    _groupsGroupBox->setMaximumHeight( 200 );
+    _groupLayout = new QGridLayout( );
+    _groupLayout->setAlignment( Qt::AlignTop );
+
+
+    QWidget* groupContainer = new QWidget( );
+    groupContainer->setLayout( _groupLayout );
+
+    QScrollArea* groupScroll = new QScrollArea( );
+    groupScroll->setWidget( groupContainer );
+    groupScroll->setWidgetResizable( true );
+    groupScroll->setFrameShape( QFrame::Shape::NoFrame );
+    groupScroll->setFrameShadow( QFrame::Shadow::Plain );
+    groupScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+    groupScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+
+    QGridLayout* groupOuterLayout = new QGridLayout( );
+    groupOuterLayout->setMargin( 0 );
+    groupOuterLayout->addWidget( groupScroll );
+
+    _groupsGroupBox->setLayout( groupOuterLayout );
+    _groupsGroupBox->setVisible( false );
+
     verticalLayout->setAlignment( Qt::AlignTop );
-    verticalLayout->addWidget( tFunctionGB );
+    verticalLayout->addWidget( _tfGroupBox );
+    verticalLayout->addWidget( _groupsGroupBox );
     verticalLayout->addWidget( tSpeedGB );
     verticalLayout->addWidget( dFunctionGB );
     verticalLayout->addWidget( rFunctionGB );
@@ -580,8 +649,11 @@ namespace visimpl
     connect( _alphaNormalButton, SIGNAL( toggled( bool )),
              this, SLOT( AlphaBlendingToggled( void ) ));
 
-    connect( _clearSelectionButton, SIGNAL( clicked( void ))
-             , this, SLOT( ClearSelection( void )));
+    connect( _clearSelectionButton, SIGNAL( clicked( void )),
+             this, SLOT( ClearSelection( void )));
+
+    connect( _addGroupButton, SIGNAL( clicked( void )),
+             this, SLOT( addGroupFromSelection( )));
 
   //  connect( _alphaAccumulativeButton, SIGNAL( toggled( bool )),
   //           this, SLOT( AlphaBlendingToggled( void ) ));
@@ -604,6 +676,10 @@ namespace visimpl
       _summary->Init( spikesPlayer->data( ));
 
       _summary->simulationPlayer( _openGLWidget->player( ));
+
+      _openGLWidget->subsetEventsManager( spikesPlayer->data( )->subsetsEvents( ));
+
+      _openGLWidget->showEventsActivityLabels( _ui->actionShowEventsActivity->isChecked( ));
     }
 
   }
@@ -829,11 +905,7 @@ namespace visimpl
 
   void MainWindow::UpdateSimulationColorMapping( void )
   {
-  //  TTransferFunction& colors = _tfEditor->getColorPoints( );
-
-  //  _openGLWidget->changeSimulationColorMapping( _tfEditor->getColorPoints( ));
     _openGLWidget->changeSimulationColorMapping( _tfWidget->getColors( ));
-  //  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
   }
 
   void MainWindow::PreviewSimulationColorMapping( void )
@@ -843,15 +915,12 @@ namespace visimpl
 
   void MainWindow::changeEditorColorMapping( void )
   {
-  //  _tfEditor->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
     _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
-  //  _psWidget->SetFrameBackground( _tfWidget->getColors( false ));
   }
 
   void MainWindow::changeEditorSizeFunction( void )
   {
     _tfWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction( ));
-  //  _psWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction() );
   }
 
   void MainWindow::UpdateSimulationSizeFunction( void )
@@ -907,6 +976,16 @@ namespace visimpl
       std::cout << "Accumulative" << std::endl;
       _openGLWidget->SetAlphaBlendingAccumulative( true );
     }
+  }
+
+  void MainWindow::showSelection( bool show )
+  {
+    _tfGroupBox->setVisible( show );
+    _groupsGroupBox->setVisible( !show );
+//    _tfWidget->setEnabled( show );
+
+
+    _openGLWidget->showSelection( show );
   }
 
 
@@ -994,6 +1073,7 @@ namespace visimpl
     {
       _openGLWidget->clearSelection( );
 
+      _addGroupButton->setEnabled( false );
       _clearSelectionButton->setEnabled( false );
       _selectionSizeLabel->setText( "0" );
     }
@@ -1042,6 +1122,7 @@ namespace visimpl
 
       _openGLWidget->setSelectedGIDs( selectedSet );
 
+      _addGroupButton->setEnabled( true );
       _clearSelectionButton->setEnabled( true );
       _selectionSizeLabel->setText( QString::number( selectedSet.size( )));
     }
@@ -1049,5 +1130,81 @@ namespace visimpl
   }
 
 #endif
+
+  void MainWindow::addGroupFromSelection( void )
+  {
+    InputMultiplexer* inputMux = _openGLWidget->inputMultiplexer( );
+
+    unsigned int currentIndex = inputMux->groups( ).size( );
+
+    QString groupName( "Group " + QString::number( currentIndex ));
+
+    if( !_autoNameGroups )
+    {
+      bool ok;
+      groupName =
+          QInputDialog::getText( this, tr( "Group Name" ),
+                                 tr( "Please, introduce group name: "),
+                                 QLineEdit::Normal,
+                                 groupName,
+                                 &ok );
+
+      if( !ok )
+        return;
+    }
+
+    inputMux->addVisualGroup( inputMux->selection( ),
+                              groupName.toStdString( ),
+                              false );
+
+    if( inputMux->showGroups( ))
+      inputMux->showGroups( true );
+
+    QFrame* frame = new QFrame( );
+    auto colors = _openGLWidget->colorPalette( ).colors( );
+
+    frame->setStyleSheet( "background-color: " + colors[ currentIndex ].name( ) );
+    frame->setMinimumSize( 20, 20 );
+    frame->setMaximumSize( 20, 20 );
+
+//    QIcon* eye = new QIcon( ":/icons/show.png" );
+    QCheckBox* buttonVisibility = new QCheckBox( "active" );
+    buttonVisibility->setChecked( true );
+//    buttonVisibility->setMinimumSize( 60, 50 );
+//    buttonVisibility->setMaximumSize( 60, 50 );
+
+    _groupsVisButtons.push_back( buttonVisibility );
+
+    connect( buttonVisibility, SIGNAL( clicked( )),
+             this, SLOT( checkGroupsVisibility( )));
+
+    _groupLayout->addWidget( frame, currentIndex, 0, 1, 1 );
+    _groupLayout->addWidget( new QLabel( groupName ), currentIndex, 1, 1, 1 );
+    _groupLayout->addWidget( buttonVisibility, currentIndex, 2, 1, 1 );
+
+    _openGLWidget->setUpdateSelection( );
+    _openGLWidget->update( );
+  }
+
+  void MainWindow::checkGroupsVisibility( void )
+  {
+    unsigned int counter = 0;
+    auto group = _openGLWidget->inputMultiplexer( )->groups( ).begin( );
+    for( auto button : _groupsVisButtons )
+    {
+      if( button->isChecked( ) != ( *group)->active( ) )
+      {
+        _openGLWidget->inputMultiplexer( )->setVisualGroupState( counter, button->isChecked( ));
+
+      }
+      ++group;
+      ++counter;
+    }
+
+    _openGLWidget->setUpdateSelection( );
+    _openGLWidget->update( );
+  }
+
+
 
 } // namespace visimpl
