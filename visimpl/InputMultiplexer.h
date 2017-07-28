@@ -37,7 +37,8 @@ namespace visimpl
 
     void setVisualGroupState( unsigned int i, bool state );
 
-    void processFrameInput( const simil::SpikesCRange& spikes_ );
+    void processInput( const simil::SpikesCRange& spikes_,
+                       float begin, float end, bool clear );
 
     void update( void );
 
@@ -50,6 +51,8 @@ namespace visimpl
     void models( prefr::ColorOperationModel* main,
                  prefr::ColorOperationModel* off );
 
+    void decay( float decayValue );
+
     std::vector< prefr::Cluster* > activeClusters( void );
 
     void clearSelection( void );
@@ -59,11 +62,18 @@ namespace visimpl
 
   protected:
 
+    typedef std::vector< std::tuple< uint32_t, float >> TModifiedNeurons;
+
+    TModifiedNeurons parseInput( const simil::SpikesCRange& spikes_,
+                                 float begin, float end );
+
     void updateGroups( void );
     void updateSelection( void );
 
-    void processFrameInputGroups( const simil::SpikesCRange& spikes_ );
-    void processFrameInputSelection( const simil::SpikesCRange& spikes_ );
+    void processFrameInputGroups( const simil::SpikesCRange& spikes_,
+                                  float begin, float end );
+    void processFrameInputSelection( const simil::SpikesCRange& spikes_,
+                                     float begin, float end );
 
     prefr::ParticleSystem* _particleSystem;
 
@@ -82,6 +92,9 @@ namespace visimpl
     bool _showGroups;
 
     GIDUSet _selection;
+
+    float _decayValue;
+
 
   };
 

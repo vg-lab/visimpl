@@ -12,7 +12,7 @@
 namespace prefr
 {
 
-  static float invRandMax = 1.0f / RAND_MAX;
+//  static float invRandMax = 1.0f / RAND_MAX;
 
   ValuedUpdater::ValuedUpdater( )
   : Updater( )
@@ -21,7 +21,8 @@ namespace prefr
   ValuedUpdater::~ValuedUpdater( )
   { }
 
-  void ValuedUpdater::Emit( const Cluster& cluster, const tparticle_ptr current )
+  void ValuedUpdater::emitParticle( const Cluster& cluster,
+                                    const tparticle_ptr current )
   {
     ColorOperationModel* model =
             dynamic_cast< ColorOperationModel* >( cluster.model( ));
@@ -30,8 +31,8 @@ namespace prefr
 
     if( model && ( !current->alive( )))
     {
-     current->life( glm::clamp(rand( ) * invRandMax, 0.0f, 1.0f) *
-         model->lifeInterval( ) + model->minLife( ) );
+     current->life( 0.0f );
+     current->alive( true );
 
      SampledValues values;
      source->sample( &values );
@@ -43,27 +44,28 @@ namespace prefr
   }
 
 
-  void ValuedUpdater::Update( const Cluster& cluster,
-                              const tparticle_ptr current,
-                              float deltaTime )
+  void ValuedUpdater::updateParticle( const Cluster& cluster,
+                                      const tparticle_ptr current,
+                                      float deltaTime )
   {
-    ColorOperationModel* cProto =
+    ColorOperationModel* model =
         dynamic_cast< ColorOperationModel* >( cluster.model( ));
 
     ValuedSource* node = dynamic_cast< ValuedSource* >( cluster.source( ));
 
-    float refLife = node->particlesLife( );
-
     current->life( std::max( 0.0f, current->life( ) - deltaTime ));
 
-    current->alive( cluster.active( ));
+//    float refLife = (current->life( ) - model->minLife( )) * model->inverseMaxLife() ;
+    float refLife = 1.0f - glm::clamp( current->life( ) * model->inverseMaxLife( ),
+                                 0.0f, 1.0f );
+//    current->alive( cluster.active( ));
 
     if( current->alive( ))
     {
       if( !node->still( ))
       {
 
-        current->velocityModule( cProto->velocity.GetValue( refLife ));
+        current->velocityModule( model->velocity.GetValue( refLife ));
 
         current->position( current->position( ) +
                            current->velocity( ) *
@@ -71,10 +73,10 @@ namespace prefr
       }
 
       current->color( glm::clamp(
-          cProto->colorop( node->color( ),
-                           cProto->color.GetValue( refLife )), 0.0f, 1.0f ));
+          model->colorop( node->color( ),
+                           model->color.GetValue( refLife )), 0.0f, 1.0f ));
 
-      current->size( cProto->size.GetValue( refLife ) + node->size());
+      current->size( model->size.GetValue( refLife ) + node->size());
     }
 
   }
