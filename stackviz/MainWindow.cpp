@@ -138,7 +138,7 @@ namespace stackviz
      }
      case simil::TSimVoltages:
   #ifdef SIMIL_USE_BRION
-       _player = new simil::VoltagesPlayer( fileName, reportLabel, true);
+//       _player = new simil::VoltagesPlayer( fileName, reportLabel, true);
   #else
        std::cerr << "SimIL without Brion support." << std::endl;
        exit( -1 );

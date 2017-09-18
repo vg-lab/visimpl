@@ -122,7 +122,9 @@ namespace visimpl
     setLayout( _eventLabelsLayout );
     _eventLabelsLayout->addWidget( _fpsLabel, 0, 0, 1, 9 );
 
-
+    _colorPalette =
+        scoop::ColorPalette::colorBrewerQualitative(
+            scoop::ColorPalette::ColorBrewerQualitative::Set1, 9 );
 
     // This is needed to get key events
     this->setFocusPolicy( Qt::WheelFocus );
@@ -175,10 +177,6 @@ namespace visimpl
 
 
     float scale = 1.0f;
-    if( fileType == simil::THDF5 )
-    {
-      scale = 500.f;
-    }
 
     switch( fileType )
     {
@@ -192,8 +190,8 @@ namespace visimpl
         simulationDeltaTime( 0.005f );
         simulationStepsPerSecond( 20.0f );
         changeSimulationDecayValue( 0.1f );
+        scale = 500.f;
         break;
-
       default:
         break;
     }
@@ -510,10 +508,12 @@ namespace visimpl
 
       _deltaTime = elapsedMilliseconds * 0.001f;
 
-      _elapsedTimeSimAcc += _deltaTime;
-      _elapsedTimeRenderAcc += _deltaTime;
-      _elapsedTimeSliderAcc += _deltaTime;
-
+      if( _player->isPlaying( ))
+      {
+        _elapsedTimeSimAcc += _deltaTime;
+        _elapsedTimeRenderAcc += _deltaTime;
+        _elapsedTimeSliderAcc += _deltaTime;
+      }
       _frameCount++;
       glDepthMask(GL_TRUE);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -973,10 +973,6 @@ namespace visimpl
 
     unsigned int activitySize =
         std::ceil( totalTime / _deltaEvents );
-
-    _colorPalette =
-        scoop::ColorPalette::colorBrewerQualitative(
-            scoop::ColorPalette::ColorBrewerQualitative::Set1, 9 );
 
     scoop::ColorPalette::Colors colors = _colorPalette.colors( );
 
