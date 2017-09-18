@@ -247,6 +247,21 @@ namespace visimpl
     configurePlayer( );
   }
 
+  void MainWindow::openCSVFile( const std::string& networkFile,
+                    simil::TSimulationType simulationType,
+                    const std::string& activityFile,
+                    const std::string& subsetEventFile )
+  {
+    _openGLWidget->loadData( networkFile,
+                             simil::TDataType::TCSV,
+                             simulationType,
+                             activityFile );
+
+    openSubsetEventFile( subsetEventFile, true );
+
+    configurePlayer( );
+  }
+
 
   void MainWindow::openHDF5ThroughDialog( void )
   {

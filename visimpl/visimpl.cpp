@@ -93,6 +93,17 @@ int main( int argc, char** argv )
       else
         usageMessage( argv[0] );
     }
+    else if( std::strcmp( argv[ i ], "-csv") == 0 )
+    {
+      if( i + 2 < argc )
+      {
+        ++i;
+        networkFile = std::string( argv[ i ]);
+        ++i;
+        activityFile = std::string( argv[ i ]);
+        dataType = simil::TCSV;
+      }
+    }
 
     if( strcmp( argv[ i ], "-se" ) == 0 )
     {
@@ -168,6 +179,9 @@ int main( int argc, char** argv )
       break;
     case simil::TDataType::THDF5:
       mainWindow.openHDF5File( networkFile, simType, activityFile, subsetEventFile );
+      break;
+    case simil::TDataType::TCSV:
+      mainWindow.openCSVFile( networkFile, simType, activityFile, subsetEventFile );
       break;
     default:
       break;

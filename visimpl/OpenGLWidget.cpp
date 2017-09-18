@@ -192,6 +192,12 @@ namespace visimpl
         changeSimulationDecayValue( 0.1f );
         scale = 500.f;
         break;
+      case simil::TCSV:
+        simulationDeltaTime( 0.2f );
+        simulationStepsPerSecond( 2.0f );
+        changeSimulationDecayValue( 1.5f );
+        scale = 5.f;
+        break;
       default:
         break;
     }
