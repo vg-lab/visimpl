@@ -34,15 +34,21 @@ namespace prefr
     virtual void size( float size );
     virtual float size();
 
+    virtual void particlesRelLife( float relLife );
+
     virtual void particlesLife( float life );
-    virtual float particlesLife( void );
+
+    bool emits( void ) const;
 
   protected:
+
+    void _prepareParticles( void );
 
     glm::vec4 _color;
     float _size;
     bool _still;
 
+    float _particlesRelLife;
     float _particlesLife;
 
   };

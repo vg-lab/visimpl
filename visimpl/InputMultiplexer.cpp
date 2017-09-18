@@ -9,6 +9,8 @@
 
 #include "InputMultiplexer.h"
 
+#include "prefr/ValuedSource.h"
+
 namespace visimpl
 {
   static float invRGBInt = 1.0f / 255;
@@ -216,44 +218,117 @@ namespace visimpl
     }
   }
 
-  void InputMultiplexer::processFrameInput( const simil::SpikesCRange& spikes_ )
+  void InputMultiplexer::processInput( const simil::SpikesCRange& spikes_,
+                                            float begin, float end, bool /*clear*/)
   {
+//    if( clear )
+//      resetParticles( );
+
     if( _showGroups )
-      processFrameInputGroups( spikes_ );
+      processFrameInputGroups( spikes_, begin, end );
     else
-      processFrameInputSelection( spikes_ );
+      processFrameInputSelection( spikes_, begin, end );
   }
 
-  void InputMultiplexer::processFrameInputGroups( const simil::SpikesCRange& spikes_ )
+  InputMultiplexer::TModifiedNeurons
+  InputMultiplexer::parseInput( const simil::SpikesCRange& spikes_,
+                                float /*begin*/, float end )
   {
+    TModifiedNeurons result;
+    std::unordered_map< uint32_t, unsigned int > inserted;
+
+    auto current = result.begin( );
     for( simil::SpikesCIter spike = spikes_.first; spike != spikes_.second; ++spike )
     {
-      auto visualGroup = _neuronGroup.find( spike->second );
+      float lifeValue = _decayValue - ( end - spike->first);
 
-//      assert( visualGroup != _neuronGroup.end( ));
+      auto it = inserted.find( spike->second );
+      if( it == inserted.end( ))
+      {
+        inserted.insert( std::make_pair( spike->second, result.size( )));
+//        *current = std::make_tuple( spike->second, lifeValue );
+        result.emplace_back( spike->second, lifeValue );
 
-      auto cluster = _neuronClusters.find( spike->second );
+        ++current;
+      }
+    }
+
+    return result;
+  }
+
+  void InputMultiplexer::processFrameInputGroups( const simil::SpikesCRange& spikes_,
+                                                  float begin, float end )
+  {
+
+    auto state = std::move( parseInput( spikes_, begin, end ));
+
+    for( const auto& neuron : state )
+    {
+      auto gid = std::get< 0 >( neuron );
+
+      auto visualGroup = _neuronGroup.find( gid );
+
+      auto cluster = _neuronClusters.find( gid );
 
       assert( cluster != _neuronClusters.end( ));
 
+      auto particleRange = cluster->second->particles( );
+
       if( visualGroup != _neuronGroup.end( ) && visualGroup->second->active( ))
-        cluster->second->killParticles( );
+      {
+        dynamic_cast< prefr::ValuedSource* >( cluster->second->source( ))->particlesLife( std::get< 1 >( neuron ));
+      }
+
+
     }
+
+//    for( simil::SpikesCIter spike = spikes_.first; spike != spikes_.second; ++spike )
+//    {
+//      auto visualGroup = _neuronGroup.find( spike->second );
+//
+//      auto cluster = _neuronClusters.find( spike->second );
+//
+//      assert( cluster != _neuronClusters.end( ));
+//
+//      if( visualGroup != _neuronGroup.end( ) && visualGroup->second->active( ))
+//        cluster->second->killParticles( );
+//    }
   }
 
-  void InputMultiplexer::processFrameInputSelection( const simil::SpikesCRange& spikes_ )
+  void InputMultiplexer::processFrameInputSelection( const simil::SpikesCRange& spikes_,
+                                                     float begin, float end )
   {
-    for( simil::SpikesCIter spike = spikes_.first; spike != spikes_.second; ++spike )
+    auto state = std::move( parseInput( spikes_, begin, end ));
+
+    for( const auto& neuron : state )
     {
-      if( _selection.empty( ) || _selection.find( spike->second ) != _selection.end( ))
+      auto gid = std::get< 0 >( neuron );
+
+      auto cluster = _neuronClusters.find( gid );
+
+      assert( cluster != _neuronClusters.end( ));
+
+      auto particleRange = cluster->second->particles( );
+
+      if( _selection.empty( ) || _selection.find( gid ) != _selection.end( ))
       {
-        auto cluster = _neuronClusters.find( spike->second );
-
-        assert( cluster != _neuronClusters.end( ));
-
-        cluster->second->killParticles( );
+        dynamic_cast< prefr::ValuedSource* >( cluster->second->source( ))->particlesLife( std::get< 1 >( neuron ));
       }
+
+
     }
+
+//    for( simil::SpikesCIter spike = spikes_.first; spike != spikes_.second; ++spike )
+//    {
+//      if( _selection.empty( ) || _selection.find( spike->second ) != _selection.end( ))
+//      {
+//        auto cluster = _neuronClusters.find( spike->second );
+//
+//        assert( cluster != _neuronClusters.end( ));
+//
+//        cluster->second->killParticles( );
+//      }
+//    }
   }
 
   void InputMultiplexer::selection( const GIDUSet& newSelection )
@@ -312,6 +387,12 @@ namespace visimpl
     return result;
   }
 
+
+  void InputMultiplexer::decay( float decayValue )
+  {
+    _decayValue = decayValue;
+  }
+
   void InputMultiplexer::clearSelection( void )
   {
     _selection.clear( );
@@ -334,10 +415,9 @@ namespace visimpl
     {
 #endif
 
-
       cluster->killParticles( false );
 
-      cluster->source( )->restart( );
+//      cluster->source( )->restart( );
     }
 
     _particleSystem->run( true );

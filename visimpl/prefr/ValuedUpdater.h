@@ -24,10 +24,12 @@ namespace prefr
 
     ~ValuedUpdater( );
 
-    virtual void Emit( const Cluster& cluster, const tparticle_ptr current );
+    virtual void emitParticle( const Cluster& cluster,
+                               const tparticle_ptr current );
 
-    virtual void Update( const Cluster& cluster, const tparticle_ptr current,
-                         float deltaTime );
+    virtual void updateParticle( const Cluster& cluster,
+                                 const tparticle_ptr current,
+                                 float deltaTime );
   };
 
 }

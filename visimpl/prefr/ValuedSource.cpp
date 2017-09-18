@@ -17,7 +17,7 @@ namespace prefr
   , _color( color_ )
   , _size ( 0.0f )
   , _still( still_ )
-  , _particlesLife( 0.0f )
+  , _particlesRelLife( 0.0f )
   {}
 
   ValuedSource::~ValuedSource()
@@ -54,14 +54,59 @@ namespace prefr
     return _size;
   }
 
-  void ValuedSource::particlesLife( float life )
+  void ValuedSource::_prepareParticles( void )
   {
-    _particlesLife = life;
+    auto particlesRange = _cluster->particles( );
+
+    _particlesToEmit.clear( );
+
+    for( auto particle = particlesRange.begin( );
+         particle != particlesRange.end( ); ++particle )
+    {
+      if( !particle.alive( ))
+      {
+        _particlesToEmit.push_back( particle.id( ));
+        ++_lastFrameAliveParticles;
+      }
+    }
+
+    _deadParticles.clear( );
+
+    _emittedParticles += _lastFrameAliveParticles;
   }
 
-  float ValuedSource::particlesLife( void )
+  void ValuedSource::particlesRelLife( float relativeLife )
   {
-    return _particlesLife;
+    auto particlesRange = cluster( )->particles( );
+
+    float lifeRange = cluster( )->model( )->lifeInterval( );
+
+    float lifeValue = relativeLife * lifeRange + cluster( )->model( )->minLife( );
+
+    for( auto particle = particlesRange.begin( );
+         particle != particlesRange.end( ); ++particle )
+    {
+      particle.life( lifeValue );
+    }
+
+  }
+
+  void ValuedSource::particlesLife( float life )
+  {
+
+    auto particlesRange = cluster( )->particles( );
+
+    for( auto particle = particlesRange.begin( );
+         particle != particlesRange.end( ); ++particle )
+    {
+      particle.life( life );
+    }
+
+  }
+
+  bool ValuedSource::emits( void ) const
+  {
+    return true;
   }
 
 }

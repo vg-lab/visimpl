@@ -122,7 +122,9 @@ namespace visimpl
     setLayout( _eventLabelsLayout );
     _eventLabelsLayout->addWidget( _fpsLabel, 0, 0, 1, 9 );
 
-
+    _colorPalette =
+        scoop::ColorPalette::colorBrewerQualitative(
+            scoop::ColorPalette::ColorBrewerQualitative::Set1, 9 );
 
     // This is needed to get key events
     this->setFocusPolicy( Qt::WheelFocus );
@@ -175,10 +177,6 @@ namespace visimpl
 
 
     float scale = 1.0f;
-    if( fileType == simil::THDF5 )
-    {
-      scale = 500.f;
-    }
 
     switch( fileType )
     {
@@ -192,8 +190,8 @@ namespace visimpl
         simulationDeltaTime( 0.005f );
         simulationStepsPerSecond( 20.0f );
         changeSimulationDecayValue( 0.1f );
+        scale = 500.f;
         break;
-
       default:
         break;
     }
@@ -239,9 +237,14 @@ namespace visimpl
     if( !_player || !_player->isPlaying( ) || !_particleSystem->run( ))
       return;
 
+    float prevTime = _player->currentTime( );
+
     _player->Frame( );
 
-    _inputMux->processFrameInput( _player->spikesNow( ));
+    float currentTime = _player->currentTime( );
+
+    _inputMux->processInput( _player->spikesNow( ), prevTime,
+                                  currentTime, false );
 
   }
 
@@ -301,7 +304,7 @@ namespace visimpl
     {
      case simil::TSimSpikes:
 
-       updater = new prefr::CompositeColorUpdater( );
+       updater = new prefr::ValuedUpdater( );
        std::cout << "Created Spikes Updater" << std::endl;
 
        _prototype->color.Insert( 0.0f, ( glm::vec4(0.f, 1.f, 0.f, 0.05)));
@@ -383,7 +386,7 @@ namespace visimpl
       switch( _simulationType )
       {
       case simil::TSimSpikes:
-        source = new prefr::ColorSource( -1.f, position,
+        source = new prefr::ValuedSource( -1.0f, position,
                                          glm::vec4( 0, 0, 0, 0 ),
                                          true );
         break;
@@ -404,8 +407,8 @@ namespace visimpl
       _particleSystem->addSource( source );
       _particleSystem->addCluster( cluster, start, partPerEmitter );
 
-      cluster->inactiveKillParticles( true );
-      source->maxEmissionCycles( 1 );
+      cluster->inactiveKillParticles( false );
+//      source->maxEmissionCycles( 1 );
 
       i++;
       gid++;
@@ -436,6 +439,175 @@ namespace visimpl
     _resetParticles = true;
 
   }
+
+
+  void OpenGLWidget::paintParticles( void )
+    {
+      if( !_particleSystem )
+        return;
+
+      glDepthMask(GL_FALSE);
+      glEnable(GL_BLEND);
+
+      glEnable(GL_DEPTH_TEST);
+      glDisable(GL_CULL_FACE);
+
+      if( _alphaBlendingAccumulative )
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+      else
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+      glFrontFace(GL_CCW);
+
+      _particlesShader->use( );
+          // unsigned int shader;
+          // shader = _particlesShader->getID();
+      unsigned int shader;
+      shader = _particlesShader->program( );
+
+      unsigned int uModelViewProjM, cameraUp, cameraRight;
+
+      uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
+      glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
+                         _camera->viewProjectionMatrix( ));
+
+      cameraUp = glGetUniformLocation( shader, "cameraUp" );
+      cameraRight = glGetUniformLocation( shader, "cameraRight" );
+
+      float* viewM = _camera->viewMatrix( );
+
+      glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
+      glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
+
+      glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
+                                 _camera->position( )[ 1 ],
+                                 _camera->position( )[ 2 ] );
+
+      _particleSystem->updateCameraDistances( cameraPosition );
+
+      _lastCameraPosition = cameraPosition;
+
+      _particleSystem->updateRender( );
+      _particleSystem->render( );
+
+      _particlesShader->unuse( );
+
+    }
+
+    void OpenGLWidget::paintGL( void )
+    {
+      std::chrono::time_point< std::chrono::system_clock > now =
+          std::chrono::system_clock::now( );
+
+      unsigned int elapsedMilliseconds =
+          std::chrono::duration_cast< std::chrono::milliseconds >
+            ( now - _lastFrame ).count( );
+
+      _lastFrame = now;
+
+      _deltaTime = elapsedMilliseconds * 0.001f;
+
+      if( _player->isPlaying( ))
+      {
+        _elapsedTimeSimAcc += _deltaTime;
+        _elapsedTimeRenderAcc += _deltaTime;
+        _elapsedTimeSliderAcc += _deltaTime;
+      }
+      _frameCount++;
+      glDepthMask(GL_TRUE);
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      glDisable(GL_BLEND);
+      glEnable(GL_DEPTH_TEST);
+      glEnable(GL_CULL_FACE);
+
+      if( _updateSelection )
+        updateSelection( );
+
+      if( _resetParticles )
+        _inputMux->resetParticles( );
+
+      _resetParticles = false;
+
+      if ( _paint )
+      {
+        _camera->anim( );
+
+        if ( _particleSystem )
+        {
+          if( _player->isPlaying( ))
+          {
+            if( _elapsedTimeSimAcc >= _simPeriod )
+            {
+              configureSimulation( );
+              updateEventLabelsVisibility( );
+
+              _elapsedTimeSimAcc = 0.0f;
+            }
+
+            if( _elapsedTimeRenderAcc >= _renderPeriod )
+            {
+              float renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond;
+
+              updateParticles( renderDelta );
+              _elapsedTimeRenderAcc = 0.0f;
+            }
+          }
+          paintParticles( );
+
+        }
+        glUseProgram( 0 );
+        glFlush( );
+
+      }
+
+      if( _player && _elapsedTimeSliderAcc > SIM_SLIDER_UPDATE_PERIOD )
+      {
+        _elapsedTimeSliderAcc = 0.0f;
+
+    #ifdef VISIMPL_USE_ZEROEQ
+        _player->sendCurrentTimestamp( );
+    #endif
+
+        emit updateSlider( _player->GetRelativeTime( ));
+      }
+
+
+      #define FRAMES_PAINTED_TO_MEASURE_FPS 10
+      if( _showFps && _frameCount >= FRAMES_PAINTED_TO_MEASURE_FPS )
+      {
+        auto duration =
+          std::chrono::duration_cast<std::chrono::milliseconds>( now - _then );
+        _then = now;
+
+        MainWindow* mainWindow = dynamic_cast< MainWindow* >( parent( ));
+        if( mainWindow )
+        {
+
+          unsigned int ellapsedMiliseconds = duration.count( );
+
+          unsigned int fps = roundf( 1000.0f *
+                                     float( _frameCount ) /
+                                     float( ellapsedMiliseconds ));
+
+          if( _showFps )
+          {
+            _fpsLabel->setText( QString::number( fps ) + QString( " FPS" ));
+            _fpsLabel->adjustSize( );
+          }
+
+        }
+
+        _frameCount = 0;
+      }
+
+      if( _idleUpdate )
+      {
+        update( );
+      }
+
+    }
+
 
   void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
   {
@@ -544,170 +716,7 @@ namespace visimpl
     }
   }
 
-  void OpenGLWidget::paintParticles( void )
-  {
-    if( !_particleSystem )
-      return;
 
-    glDepthMask(GL_FALSE);
-    glEnable(GL_BLEND);
-
-    glEnable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-
-    if( _alphaBlendingAccumulative )
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-    else
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-    glFrontFace(GL_CCW);
-
-    _particlesShader->use( );
-        // unsigned int shader;
-        // shader = _particlesShader->getID();
-    unsigned int shader;
-    shader = _particlesShader->program( );
-
-    unsigned int uModelViewProjM, cameraUp, cameraRight;
-
-    uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
-    glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
-                       _camera->viewProjectionMatrix( ));
-
-    cameraUp = glGetUniformLocation( shader, "cameraUp" );
-    cameraRight = glGetUniformLocation( shader, "cameraRight" );
-
-    float* viewM = _camera->viewMatrix( );
-
-    glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
-    glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
-
-    glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
-                               _camera->position( )[ 1 ],
-                               _camera->position( )[ 2 ] );
-
-    _particleSystem->updateCameraDistances( cameraPosition );
-
-    _lastCameraPosition = cameraPosition;
-
-    _particleSystem->updateRender( );
-    _particleSystem->render( );
-
-    _particlesShader->unuse( );
-
-  }
-
-  void OpenGLWidget::paintGL( void )
-  {
-    std::chrono::time_point< std::chrono::system_clock > now =
-        std::chrono::system_clock::now( );
-
-    unsigned int elapsedMilliseconds =
-        std::chrono::duration_cast< std::chrono::milliseconds >
-          ( now - _lastFrame ).count( );
-
-    _lastFrame = now;
-
-    _deltaTime = elapsedMilliseconds * 0.001f;
-
-    _elapsedTimeSimAcc += _deltaTime;
-    _elapsedTimeRenderAcc += _deltaTime;
-    _elapsedTimeSliderAcc += _deltaTime;
-
-    _frameCount++;
-    glDepthMask(GL_TRUE);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glDisable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-
-    if( _updateSelection )
-      updateSelection( );
-
-    if( _resetParticles )
-      _inputMux->resetParticles( );
-
-    _resetParticles = false;
-
-    if ( _paint )
-    {
-      _camera->anim( );
-
-      if ( _particleSystem )
-      {
-        if( _player->isPlaying( ))
-        {
-          if( _elapsedTimeSimAcc >= _simPeriod )
-          {
-            configureSimulation( );
-            updateEventLabelsVisibility( );
-
-            _elapsedTimeSimAcc = 0.0f;
-          }
-
-          if( _elapsedTimeRenderAcc >= _renderPeriod )
-          {
-            float renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond;
-
-            updateParticles( renderDelta );
-            _elapsedTimeRenderAcc = 0.0f;
-          }
-        }
-        paintParticles( );
-
-      }
-      glUseProgram( 0 );
-      glFlush( );
-
-    }
-
-    if( _player && _elapsedTimeSliderAcc > SIM_SLIDER_UPDATE_PERIOD )
-    {
-      _elapsedTimeSliderAcc = 0.0f;
-
-  #ifdef VISIMPL_USE_ZEROEQ
-      _player->sendCurrentTimestamp( );
-  #endif
-
-      emit updateSlider( _player->GetRelativeTime( ));
-    }
-
-
-    #define FRAMES_PAINTED_TO_MEASURE_FPS 10
-    if( _showFps && _frameCount >= FRAMES_PAINTED_TO_MEASURE_FPS )
-    {
-      auto duration =
-        std::chrono::duration_cast<std::chrono::milliseconds>( now - _then );
-      _then = now;
-
-      MainWindow* mainWindow = dynamic_cast< MainWindow* >( parent( ));
-      if( mainWindow )
-      {
-
-        unsigned int ellapsedMiliseconds = duration.count( );
-
-        unsigned int fps = roundf( 1000.0f *
-                                   float( _frameCount ) /
-                                   float( ellapsedMiliseconds ));
-
-        if( _showFps )
-        {
-          _fpsLabel->setText( QString::number( fps ) + QString( " FPS" ));
-          _fpsLabel->adjustSize( );
-        }
-
-      }
-
-      _frameCount = 0;
-    }
-
-    if( _idleUpdate )
-    {
-      update( );
-    }
-
-  }
 
   void OpenGLWidget::updateEventLabelsVisibility( void )
   {
@@ -965,10 +974,6 @@ namespace visimpl
     unsigned int activitySize =
         std::ceil( totalTime / _deltaEvents );
 
-    _colorPalette =
-        scoop::ColorPalette::colorBrewerQualitative(
-            scoop::ColorPalette::ColorBrewerQualitative::Set1, 9 );
-
     scoop::ColorPalette::Colors colors = _colorPalette.colors( );
 
     for( auto name : eventNames )
@@ -1199,6 +1204,9 @@ namespace visimpl
   void OpenGLWidget::changeSimulationDecayValue( float value )
   {
     _maxLife = value;
+
+    if( _inputMux )
+      _inputMux->decay( value );
 
     if( _prototype)
       _prototype->setLife( value, value );
