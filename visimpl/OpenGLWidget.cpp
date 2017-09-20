@@ -239,13 +239,31 @@ namespace visimpl
 
     float prevTime = _player->currentTime( );
 
+    if( _backtrace )
+    {
+
+      backtraceSimulation( );
+
+      _backtrace = false;
+    }
+
     _player->Frame( );
 
     float currentTime = _player->currentTime( );
 
     _inputMux->processInput( _player->spikesNow( ), prevTime,
-                                  currentTime, false );
+                             currentTime, false );
 
+  }
+
+  void OpenGLWidget::backtraceSimulation( void )
+  {
+    float endTime = _player->currentTime( );
+    float startTime = std::max( 0.0f, endTime - _maxLife );
+    simil::SpikesCRange context =
+        _player->spikesBetween( startTime, endTime );
+
+    _inputMux->processInput( context, startTime, endTime, true );
   }
 
 
@@ -508,7 +526,7 @@ namespace visimpl
 
       _deltaTime = elapsedMilliseconds * 0.001f;
 
-      if( _player->isPlaying( ))
+      if( _player && _player->isPlaying( ))
       {
         _elapsedTimeSimAcc += _deltaTime;
         _elapsedTimeRenderAcc += _deltaTime;
@@ -535,7 +553,7 @@ namespace visimpl
 
         if ( _particleSystem )
         {
-          if( _player->isPlaying( ))
+          if( _player && _player->isPlaying( ))
           {
             if( _elapsedTimeSimAcc >= _simPeriod )
             {
@@ -1078,6 +1096,8 @@ namespace visimpl
     {
       _particleSystem->run( false );
       _resetParticles = true;
+
+      _backtrace = true;
 
       std::cout << "Play at " << percentage << std::endl;
       _player->PlayAt( percentage );

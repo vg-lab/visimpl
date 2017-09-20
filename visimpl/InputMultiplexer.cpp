@@ -219,10 +219,10 @@ namespace visimpl
   }
 
   void InputMultiplexer::processInput( const simil::SpikesCRange& spikes_,
-                                            float begin, float end, bool /*clear*/)
+                                       float begin, float end, bool clear )
   {
-//    if( clear )
-//      resetParticles( );
+    if( clear )
+      resetParticles( );
 
     if( _showGroups )
       processFrameInputGroups( spikes_, begin, end );

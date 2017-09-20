@@ -157,6 +157,8 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
+    void backtraceSimulation( void );
+
     void configureSimulation( void );
     void updateParticles( float renderDelta );
     void paintParticles( void );
@@ -187,6 +189,7 @@ namespace visimpl
 
     bool _focusOnSelection;
     bool _pendingSelection;
+    bool _backtrace;
 
     unsigned int _frameCount;
 
