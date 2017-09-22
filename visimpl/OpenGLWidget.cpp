@@ -263,7 +263,8 @@ namespace visimpl
     simil::SpikesCRange context =
         _player->spikesBetween( startTime, endTime );
 
-    _inputMux->processInput( context, startTime, endTime, true );
+    if( context.first != context.second )
+      _inputMux->processInput( context, startTime, endTime, true );
   }
 
 
