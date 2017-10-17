@@ -1111,7 +1111,7 @@ namespace visimpl
   //    std::vector< unsigned int > selected =
   //        zeq::hbp::deserializeSelectedIDs( selected );
 
-      std::vector< uint32_t > ids = std::move( selected->getIdsVector( ));
+      std::vector< uint32_t > ids = selected->getIdsVector( );
 
 
 
