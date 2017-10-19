@@ -860,7 +860,7 @@ namespace stackviz
 
   //  std::vector< unsigned int > selected =
   //      zeroeq::hbp::deserializeSelectedIDs( event_ );
-    std::vector< uint32_t > ids = std::move( selected->getIdsVector( ));
+    std::vector< uint32_t > ids = selected->getIdsVector( );
     std::cout << "Received selection with " << ids.size( ) << " elements" << std::endl;
 
     visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));

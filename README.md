@@ -45,8 +45,8 @@ Yosemite and Windows 7/8 (Visual Studio 2013 Win64). The following steps
 should be enough to build it:
 
 ```bash
-git clone https://gitlab.gmrv.es/nsviz/visimpl.git ViSimpl
+git clone --recursive https://gitlab.gmrv.es/nsviz/visimpl.git ViSimpl
 mkdir ViSimpl/build && cd ViSimpl/build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCLONE_SUBPROJECTS=ON
 make
 ```
