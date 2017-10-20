@@ -11,6 +11,7 @@
 #include "MainWindow.h"
 #include <QDebug>
 #include <QOpenGLWidget>
+#include <QDir>
 
 #include <visimpl/version.h>
 
@@ -27,7 +28,15 @@ int main( int argc, char** argv )
   setenv("LANG", "C", 1);
 #endif
 
+#if defined(Q_OS_MAC)
+  QDir dir( QFileInfo( argv[0] ).dir( )); // e.g. appdir/Contents/MacOS/appname
+  dir.cdUp( );
+  QCoreApplication::addLibraryPath(
+    dir.absolutePath( ) + QString( "/Plugins" ));
+#endif
+
   QApplication application( argc, argv );
+
 
   simil::TSimulationType simType = simil::TSimSpikes;
   simil::TDataType dataType = simil::TBlueConfig;
