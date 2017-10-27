@@ -70,7 +70,7 @@ namespace visimpl
 
     _ui->actionShowEventsActivity->setChecked( false );
 
-  #ifdef VISIMPL_USE_BRION
+  #ifdef SIMIL_USE_BRION
     _ui->actionOpenBlueConfig->setEnabled( true );
   #else
     _ui->actionOpenBlueConfig->setEnabled( false );
@@ -179,46 +179,57 @@ namespace visimpl
 
   void MainWindow::openBlueConfigThroughDialog( void )
   {
-  #ifdef VISIMPL_USE_BRION
+  #ifdef SIMIL_USE_BRION
 
     QString path = QFileDialog::getOpenFileName(
       this, tr( "Open BlueConfig" ), _lastOpenedFileName,
       tr( "BlueConfig ( BlueConfig CircuitConfig);; All files (*)" ),
       nullptr, QFileDialog::DontUseNativeDialog );
 
-    if (path != QString( "" ))
+    if( path != QString( "" ))
     {
-      bool ok1, ok2;
-      QInputDialog simTypeDialog;
-      simil::TSimulationType simType;
-      QStringList items = {"Spikes", "Voltages"};
 
-      QString text = QInputDialog::getItem(
-        this, tr( "Please select simulation type" ),
-        tr( "Type:" ), items, 0, false, &ok1 );
+//      bool ok;
+//
+      simil::TSimulationType simType = simil::TSimSpikes;
+//      QString text = QInputDialog::getText(
+//            this, tr( "Please type a target" ),
+//            tr( "Target name:" ), QLineEdit::Normal,
+//            "Mosaic", &ok );
 
-      if( !ok1 )
-        return;
+//      bool ok1, ok2;
+//      QInputDialog simTypeDialog;
+//      simil::TSimulationType simType = simil::TSimSpikes;
+//      QStringList items = {"Spikes", "Voltages"};
 
-      if( text == items[0] )
-      {
-        simType = simil::TSimSpikes;
-        ok2 = true;
-      }
-      else
-      {
-        simType = simil::TSimVoltages;
 
-        text = QInputDialog::getText(
-            this, tr( "Please select report" ),
-            tr( "Report:" ), QLineEdit::Normal,
-            "soma", &ok2 );
-      }
 
-      if ( ok1 && ok2 && !text.isEmpty( ))
+//      QString text = QInputDialog::getItem(
+//        this, tr( "Please select simulation type" ),
+//        tr( "Type:" ), items, 0, false, &ok1 );
+//
+//      if( !ok1 )
+//        return;
+//
+//      if( text == items[0] )
+//      {
+//        simType = simil::TSimSpikes;
+//        ok2 = true;
+//      }
+//      else
+//      {
+//        simType = simil::TSimVoltages;
+//
+//        text = QInputDialog::getText(
+//            this, tr( "Please select report" ),
+//            tr( "Report:" ), QLineEdit::Normal,
+//            "soma", &ok2 );
+//      }
+
+//      if ( ok && !text.isEmpty( ))
       {
   //      std::string targetLabel = text.toStdString( );
-        std::string reportLabel = text.toStdString( );
+        std::string reportLabel;// = text.toStdString( );
         _lastOpenedFileName = QFileInfo(path).path( );
         std::string fileName = path.toStdString( );
         openBlueConfig( fileName, simType, reportLabel );
@@ -686,6 +697,9 @@ namespace visimpl
 
   void MainWindow::PlayPause( bool notify )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     if( !_openGLWidget->player( )->isPlaying( ))
       Play( notify );
     else
@@ -695,6 +709,8 @@ namespace visimpl
   void MainWindow::Play( bool notify )
   {
   //  playIcon.swap( pauseIcon );
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
 
     if( _openGLWidget )
     {
@@ -713,6 +729,9 @@ namespace visimpl
 
   void MainWindow::Pause( bool notify )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     if( _openGLWidget )
     {
       _openGLWidget->Pause( );
@@ -729,6 +748,9 @@ namespace visimpl
 
   void MainWindow::Stop( bool notify )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     if( _openGLWidget )
     {
       _openGLWidget->Stop( );
@@ -748,6 +770,9 @@ namespace visimpl
 
   void MainWindow::Repeat( bool notify )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     if( _openGLWidget )
     {
       bool repeat = _repeatButton->isChecked( );
@@ -768,11 +793,17 @@ namespace visimpl
 
   void MainWindow::requestPlayAt( float percentage )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     PlayAt( percentage, false );
   }
 
   void MainWindow::PlayAt( bool notify )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     if( _openGLWidget )
     {
       PlayAt( _simSlider->sliderPosition( ), notify );
@@ -781,6 +812,9 @@ namespace visimpl
 
   void MainWindow::PlayAt( float percentage, bool notify )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     if( _openGLWidget )
     {
       int sliderPosition = percentage *
@@ -812,6 +846,9 @@ namespace visimpl
 
   void MainWindow::PlayAt( int sliderPosition, bool notify )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     if( _openGLWidget )
     {
 
@@ -846,6 +883,9 @@ namespace visimpl
 
   void MainWindow::Restart( bool notify )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     if( _openGLWidget )
     {
       _openGLWidget->Restart( );
@@ -867,6 +907,9 @@ namespace visimpl
 
   void MainWindow::GoToEnd( bool notify )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     if( _openGLWidget )
     {
       _openGLWidget->GoToEnd( );
@@ -882,7 +925,9 @@ namespace visimpl
 
   void MainWindow::UpdateSimulationSlider( float percentage )
   {
-  //  if( _openGLWidget->player( )->isPlaying( ))
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     {
 
       _startTimeLabel->setText(
@@ -1081,6 +1126,9 @@ namespace visimpl
 
   void MainWindow::playAtButtonClicked( void )
   {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
     bool ok;
     double result =
         QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
