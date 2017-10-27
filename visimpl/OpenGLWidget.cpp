@@ -508,7 +508,7 @@ namespace visimpl
 
       _deltaTime = elapsedMilliseconds * 0.001f;
 
-      if( _player->isPlaying( ))
+      if( _player && _player->isPlaying( ))
       {
         _elapsedTimeSimAcc += _deltaTime;
         _elapsedTimeRenderAcc += _deltaTime;
@@ -535,7 +535,7 @@ namespace visimpl
 
         if ( _particleSystem )
         {
-          if( _player->isPlaying( ))
+          if( _player && _player->isPlaying( ))
           {
             if( _elapsedTimeSimAcc >= _simPeriod )
             {
