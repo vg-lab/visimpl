@@ -666,7 +666,7 @@ namespace visimpl
                                    std::numeric_limits< float >::min( ));
 
       std::vector< prefr::Cluster* > active =
-          std::move( _inputMux->activeClusters( ));
+        _inputMux->activeClusters( );
 
       for( auto cluster : ( !active.empty( ) ? active :_particleSystem->clusters( ) ))
       {

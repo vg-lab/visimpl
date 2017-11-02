@@ -260,7 +260,7 @@ namespace visimpl
                                                   float begin, float end )
   {
 
-    auto state = std::move( parseInput( spikes_, begin, end ));
+    auto state = parseInput( spikes_, begin, end );
 
     for( const auto& neuron : state )
     {
@@ -298,7 +298,7 @@ namespace visimpl
   void InputMultiplexer::processFrameInputSelection( const simil::SpikesCRange& spikes_,
                                                      float begin, float end )
   {
-    auto state = std::move( parseInput( spikes_, begin, end ));
+    auto state = parseInput( spikes_, begin, end );
 
     for( const auto& neuron : state )
     {

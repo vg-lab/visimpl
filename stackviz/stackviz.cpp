@@ -11,6 +11,7 @@
 #include "MainWindow.h"
 #include <QDebug>
 #include <QOpenGLWidget>
+#include <QDir>
 
 #include <stackviz/version.h>
 #include <sumrice/sumrice.h>
@@ -25,6 +26,13 @@ int main( int argc, char** argv )
   // Linux osg obj importer has a bug with non english lang.
 #ifndef Win32
   setenv("LANG", "C", 1);
+#endif
+
+#if defined(Q_OS_MAC)
+  QDir dir( QFileInfo( argv[0] ).dir( )); // e.g. appdir/Contents/MacOS/appname
+  dir.cdUp( );
+  QCoreApplication::addLibraryPath(
+    dir.absolutePath( ) + QString( "/Plugins" ));
 #endif
 
   QApplication application(argc,argv);

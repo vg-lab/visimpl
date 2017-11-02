@@ -4,7 +4,6 @@ doc/html
 doc/latex
 *Makefile*
 *.orig
-CMake/common
 .ciscript
 ci.*
 jambs*
