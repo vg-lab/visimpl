@@ -11,6 +11,7 @@
 #include "MainWindow.h"
 #include <QDebug>
 #include <QOpenGLWidget>
+#include <QDir>
 
 #include <visimpl/version.h>
 
@@ -27,7 +28,15 @@ int main( int argc, char** argv )
   setenv("LANG", "C", 1);
 #endif
 
+#if defined(Q_OS_MAC)
+  QDir dir( QFileInfo( argv[0] ).dir( )); // e.g. appdir/Contents/MacOS/appname
+  dir.cdUp( );
+  QCoreApplication::addLibraryPath(
+    dir.absolutePath( ) + QString( "/Plugins" ));
+#endif
+
   QApplication application( argc, argv );
+
 
   simil::TSimulationType simType = simil::TSimSpikes;
   simil::TDataType dataType = simil::TBlueConfig;
@@ -115,6 +124,16 @@ int main( int argc, char** argv )
         usageMessage( argv[ 0 ]);
     }
 
+    if( std::strcmp( argv[ i ], "-target" ) == 0 )
+    {
+      if(++i < argc )
+      {
+        target = argv[ i ];
+      }
+      else
+        usageMessage( argv[0] );
+    }
+
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
       simType = simil::TSimSpikes;
@@ -175,7 +194,7 @@ int main( int argc, char** argv )
   switch( dataType )
   {
     case simil::TDataType::TBlueConfig:
-      mainWindow.openBlueConfig( networkFile, simType, report, subsetEventFile );
+      mainWindow.openBlueConfig( networkFile, simType, target, subsetEventFile );
       break;
     case simil::TDataType::THDF5:
       mainWindow.openHDF5File( networkFile, simType, activityFile, subsetEventFile );

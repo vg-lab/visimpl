@@ -76,7 +76,10 @@ namespace visimpl
   , _offPrototype( nullptr )
   , _renderSpeed( 0.0f )
   , _simPeriod( 0.0f )
+  , _simPeriodMicroseconds( 0.0f )
   , _renderPeriod( 0.0f )
+  , _renderPeriodMicroseconds( 0.0f )
+  , _sliderUpdatePeriod( 0.25f )
   , _elapsedTimeRenderAcc( 0.0f )
   , _elapsedTimeSliderAcc( 0.0f )
   , _elapsedTimeSimAcc( 0.0f )
@@ -102,6 +105,9 @@ namespace visimpl
 
     _maxFPS = 60.0f;
     _renderPeriod = 1.0f / _maxFPS;
+    _renderPeriodMicroseconds = _renderPeriod * 1000000;
+
+    _sliderUpdatePeriodMicroseconds = _sliderUpdatePeriod * 1000000;
 
     _renderSpeed = 1.f;
 
@@ -170,8 +176,11 @@ namespace visimpl
 
     _deltaTime = 0.5f;
 
+    simil::SpikeData* spikeData = new simil::SpikeData( fileName, fileType, report );
+    spikeData->reduceDataToGIDS( );
+
     simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer( );
-    spPlayer->LoadData( fileType, fileName, report );
+    spPlayer->LoadData( spikeData );
     _player = spPlayer;
     _player->deltaTime( _deltaTime );
 
@@ -245,13 +254,32 @@ namespace visimpl
 
     float prevTime = _player->currentTime( );
 
+    if( _backtrace )
+    {
+
+      backtraceSimulation( );
+
+      _backtrace = false;
+    }
+
     _player->Frame( );
 
     float currentTime = _player->currentTime( );
 
     _inputMux->processInput( _player->spikesNow( ), prevTime,
-                                  currentTime, false );
+                             currentTime, false );
 
+  }
+
+  void OpenGLWidget::backtraceSimulation( void )
+  {
+    float endTime = _player->currentTime( );
+    float startTime = std::max( 0.0f, endTime - _maxLife );
+    simil::SpikesCRange context =
+        _player->spikesBetween( startTime, endTime );
+
+    if( context.first != context.second )
+      _inputMux->processInput( context, startTime, endTime, true );
   }
 
 
@@ -506,19 +534,19 @@ namespace visimpl
       std::chrono::time_point< std::chrono::system_clock > now =
           std::chrono::system_clock::now( );
 
-      unsigned int elapsedMilliseconds =
-          std::chrono::duration_cast< std::chrono::milliseconds >
+      unsigned int elapsedMicroseconds =
+          std::chrono::duration_cast< std::chrono::microseconds >
             ( now - _lastFrame ).count( );
 
       _lastFrame = now;
 
-      _deltaTime = elapsedMilliseconds * 0.001f;
+      _deltaTime = elapsedMicroseconds * 0.000001;
 
-      if( _player->isPlaying( ))
+      if( _player && _player->isPlaying( ))
       {
-        _elapsedTimeSimAcc += _deltaTime;
-        _elapsedTimeRenderAcc += _deltaTime;
-        _elapsedTimeSliderAcc += _deltaTime;
+        _elapsedTimeSimAcc += elapsedMicroseconds;
+        _elapsedTimeRenderAcc += elapsedMicroseconds;
+        _elapsedTimeSliderAcc += elapsedMicroseconds;
       }
       _frameCount++;
       glDepthMask(GL_TRUE);
@@ -541,9 +569,9 @@ namespace visimpl
 
         if ( _particleSystem )
         {
-          if( _player->isPlaying( ))
+          if( _player && _player->isPlaying( ))
           {
-            if( _elapsedTimeSimAcc >= _simPeriod )
+            if( _elapsedTimeSimAcc >= _simPeriodMicroseconds )
             {
               configureSimulation( );
               updateEventLabelsVisibility( );
@@ -551,9 +579,9 @@ namespace visimpl
               _elapsedTimeSimAcc = 0.0f;
             }
 
-            if( _elapsedTimeRenderAcc >= _renderPeriod )
+            if( _elapsedTimeRenderAcc >= _renderPeriodMicroseconds )
             {
-              float renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond;
+              double renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;
 
               updateParticles( renderDelta );
               _elapsedTimeRenderAcc = 0.0f;
@@ -567,8 +595,9 @@ namespace visimpl
 
       }
 
-      if( _player && _elapsedTimeSliderAcc > SIM_SLIDER_UPDATE_PERIOD )
+      if( _player && _elapsedTimeSliderAcc > _sliderUpdatePeriodMicroseconds )
       {
+
         _elapsedTimeSliderAcc = 0.0f;
 
     #ifdef VISIMPL_USE_ZEROEQ
@@ -653,7 +682,7 @@ namespace visimpl
                                    std::numeric_limits< float >::min( ));
 
       std::vector< prefr::Cluster* > active =
-          std::move( _inputMux->activeClusters( ));
+        _inputMux->activeClusters( );
 
       for( auto cluster : ( !active.empty( ) ? active :_particleSystem->clusters( ) ))
       {
@@ -1085,6 +1114,8 @@ namespace visimpl
       _particleSystem->run( false );
       _resetParticles = true;
 
+      _backtrace = true;
+
       std::cout << "Play at " << percentage << std::endl;
       _player->PlayAt( percentage );
       _particleSystem->run( true );
@@ -1199,6 +1230,7 @@ namespace visimpl
     _timeStepsPerSecond = value;
 
     _simPeriod = 1.0f / ( _timeStepsPerSecond );
+    _simPeriodMicroseconds = _simPeriod * 1000000;
     _simTimePerSecond = ( _simDeltaTime * _timeStepsPerSecond );
   }
 

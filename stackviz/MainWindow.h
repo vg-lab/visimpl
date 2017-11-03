@@ -135,7 +135,7 @@ namespace stackviz
     QTimer _selectionsTimer;
 
     simil::SimulationPlayer* _player;
-
+    simil::SimulationData* _data;
   //  simil::SubsetEventManager* _subsetEventManager;
 
     bool _autoAddAvailableSubsets;

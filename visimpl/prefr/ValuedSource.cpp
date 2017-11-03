@@ -93,6 +93,7 @@ namespace prefr
 
   void ValuedSource::particlesLife( float life )
   {
+    life = std::max( 0.0f, life );
 
     auto particlesRange = cluster( )->particles( );
 

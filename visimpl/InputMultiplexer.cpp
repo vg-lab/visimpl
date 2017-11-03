@@ -219,10 +219,10 @@ namespace visimpl
   }
 
   void InputMultiplexer::processInput( const simil::SpikesCRange& spikes_,
-                                            float begin, float end, bool /*clear*/)
+                                       float begin, float end, bool clear )
   {
-//    if( clear )
-//      resetParticles( );
+    if( clear )
+      resetParticles( );
 
     if( _showGroups )
       processFrameInputGroups( spikes_, begin, end );
@@ -260,7 +260,7 @@ namespace visimpl
                                                   float begin, float end )
   {
 
-    auto state = std::move( parseInput( spikes_, begin, end ));
+    auto state = parseInput( spikes_, begin, end );
 
     for( const auto& neuron : state )
     {
@@ -298,7 +298,7 @@ namespace visimpl
   void InputMultiplexer::processFrameInputSelection( const simil::SpikesCRange& spikes_,
                                                      float begin, float end )
   {
-    auto state = std::move( parseInput( spikes_, begin, end ));
+    auto state = parseInput( spikes_, begin, end );
 
     for( const auto& neuron : state )
     {
@@ -306,7 +306,8 @@ namespace visimpl
 
       auto cluster = _neuronClusters.find( gid );
 
-      assert( cluster != _neuronClusters.end( ));
+      if( cluster == _neuronClusters.end( ))
+        continue;
 
       auto particleRange = cluster->second->particles( );
 

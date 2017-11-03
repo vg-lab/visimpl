@@ -58,7 +58,7 @@ namespace stackviz
   {
     _ui->setupUi( this );
 
-  #ifdef VISIMPL_USE_BRION
+  #ifdef VISIMPL_USE_SIMIL
     _ui->actionOpenBlueConfig->setEnabled( true );
   #else
     _ui->actionOpenBlueConfig->setEnabled( false );
@@ -118,10 +118,10 @@ namespace stackviz
 
   void MainWindow::openBlueConfig( const std::string& fileName,
                                    simil::TSimulationType simulationType,
-                                   const std::string& reportLabel,
+                                   const std::string& target,
                                    const std::string& subsetEventFile )
   {
-    ( void ) reportLabel;
+    ( void ) target;
 
     _simulationType = simulationType;
 
@@ -129,8 +129,15 @@ namespace stackviz
    {
      case simil::TSimSpikes:
      {
+        simil::SpikeData* spikeData =
+            new simil::SpikeData( fileName, simil::TBlueConfig, target );
+
+        spikeData->reduceDataToGIDS( );
+
+        _data = spikeData;
+
        simil::SpikesPlayer* player = new simil::SpikesPlayer( );
-       player->LoadData( simil::TDataType::TBlueConfig,  fileName );
+       player->LoadData( _data );
        _player = player;
 
   //     _player->deltaTime( _deltaTime );
@@ -187,7 +194,7 @@ namespace stackviz
 
   void MainWindow::openBlueConfigThroughDialog( void )
   {
-  #ifdef VISIMPL_USE_BRION
+  #ifdef VISIMPL_USE_SIMIL
 
      QString path = QFileDialog::getOpenFileName(
        this, tr( "Open BlueConfig" ), _lastOpenedFileName,
@@ -860,7 +867,7 @@ namespace stackviz
 
   //  std::vector< unsigned int > selected =
   //      zeroeq::hbp::deserializeSelectedIDs( event_ );
-    std::vector< uint32_t > ids = std::move( selected->getIdsVector( ));
+    std::vector< uint32_t > ids = selected->getIdsVector( );
     std::cout << "Received selection with " << ids.size( ) << " elements" << std::endl;
 
     visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
