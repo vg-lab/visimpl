@@ -100,19 +100,19 @@ int main( int argc, char** argv )
         usageMessage( argv[0] );
     }
 
-    if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
-    {
-       simType = simil::TSimSpikes;
-    }
-    else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
+    if( std::strcmp( argv[ i ], "-target" ) == 0 )
     {
       if(++i < argc )
       {
-         simType = simil::TSimVoltages;
-        report = std::string( argv[ i ]);
+        target = argv[ i ];
       }
       else
         usageMessage( argv[0] );
+    }
+
+    if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
+    {
+       simType = simil::TSimSpikes;
     }
 
     if( strcmp( argv[ i ], "-se" ) == 0 )
@@ -166,7 +166,7 @@ int main( int argc, char** argv )
   switch( dataType )
   {
     case simil::TDataType::TBlueConfig:
-      mainWindow.openBlueConfig( networkFile, simType, report,
+      mainWindow.openBlueConfig( networkFile, simType, target,
                                  subsetEventFile );
       break;
     case simil::TDataType::THDF5:
@@ -185,11 +185,9 @@ void usageMessage( char* progName )
   std::cerr << std::endl
             << "Usage: "
             << progName << std::endl
-            << "\t[ -bc blue_config_path"
+            << "\t[ -bc blue_config_path [-target target_name]"
             << std::endl
             << "\t[ -spikes ] "
-            << std::endl
-            << "\t[ -voltage report_label ] "
             << std::endl
             << "\t[ -zeq schema* ]"
             << std::endl

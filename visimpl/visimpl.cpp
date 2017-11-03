@@ -113,6 +113,16 @@ int main( int argc, char** argv )
         usageMessage( argv[ 0 ]);
     }
 
+    if( std::strcmp( argv[ i ], "-target" ) == 0 )
+    {
+      if(++i < argc )
+      {
+        target = argv[ i ];
+      }
+      else
+        usageMessage( argv[0] );
+    }
+
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
       simType = simil::TSimSpikes;
@@ -173,7 +183,7 @@ int main( int argc, char** argv )
   switch( dataType )
   {
     case simil::TDataType::TBlueConfig:
-      mainWindow.openBlueConfig( networkFile, simType, report, subsetEventFile );
+      mainWindow.openBlueConfig( networkFile, simType, target, subsetEventFile );
       break;
     case simil::TDataType::THDF5:
       mainWindow.openHDF5File( networkFile, simType, activityFile, subsetEventFile );

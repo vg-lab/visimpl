@@ -157,6 +157,8 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
+    void backtraceSimulation( void );
+
     void configureSimulation( void );
     void updateParticles( float renderDelta );
     void paintParticles( void );
@@ -187,6 +189,7 @@ namespace visimpl
 
     bool _focusOnSelection;
     bool _pendingSelection;
+    bool _backtrace;
 
     unsigned int _frameCount;
 
@@ -209,11 +212,11 @@ namespace visimpl
     simil::SpikesPlayer* _player;
 
     float _maxLife;
-    float _deltaTime;
+    double _deltaTime;
 
-    float _simDeltaTime;
-    float _timeStepsPerSecond;
-    float _simTimePerSecond;
+    double _simDeltaTime;
+    double _timeStepsPerSecond;
+    double _simTimePerSecond;
 
     bool _firstFrame;
 
@@ -227,7 +230,12 @@ namespace visimpl
     float _maxFPS;
 
     float _simPeriod;
+    float _simPeriodMicroseconds;
     float _renderPeriod;
+    float _renderPeriodMicroseconds;
+
+    float _sliderUpdatePeriod;
+    float _sliderUpdatePeriodMicroseconds;
 
     float _elapsedTimeRenderAcc;
     float _elapsedTimeSliderAcc;
