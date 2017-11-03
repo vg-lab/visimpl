@@ -212,11 +212,11 @@ namespace visimpl
     simil::SpikesPlayer* _player;
 
     float _maxLife;
-    float _deltaTime;
+    double _deltaTime;
 
-    float _simDeltaTime;
-    float _timeStepsPerSecond;
-    float _simTimePerSecond;
+    double _simDeltaTime;
+    double _timeStepsPerSecond;
+    double _simTimePerSecond;
 
     bool _firstFrame;
 
@@ -230,7 +230,12 @@ namespace visimpl
     float _maxFPS;
 
     float _simPeriod;
+    float _simPeriodMicroseconds;
     float _renderPeriod;
+    float _renderPeriodMicroseconds;
+
+    float _sliderUpdatePeriod;
+    float _sliderUpdatePeriodMicroseconds;
 
     float _elapsedTimeRenderAcc;
     float _elapsedTimeSliderAcc;

@@ -306,7 +306,8 @@ namespace visimpl
 
       auto cluster = _neuronClusters.find( gid );
 
-      assert( cluster != _neuronClusters.end( ));
+      if( cluster == _neuronClusters.end( ))
+        continue;
 
       auto particleRange = cluster->second->particles( );
 
