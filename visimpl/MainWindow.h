@@ -75,8 +75,8 @@ namespace visimpl
     void PlayAt( float, bool notify = true );
     void PlayAt( int, bool notify = true );
     void requestPlayAt( float );
-    void Restart( bool notify = true );
-    void GoToEnd( bool notify = true );
+    void PreviousStep( bool notify = true );
+    void NextStep( bool notify = true );
 
     void UpdateSimulationSlider( float percentage );
 

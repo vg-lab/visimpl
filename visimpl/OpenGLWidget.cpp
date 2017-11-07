@@ -54,6 +54,8 @@ namespace visimpl
   , _lastCameraPosition( 0, 0, 0)
   , _focusOnSelection( true )
   , _pendingSelection( false )
+  , _backtrace( false )
+  , _playbackMode( TPlaybackMode::CONTINUOUS )
   , _frameCount( 0 )
   , _mouseX( 0 )
   , _mouseY( 0 )
@@ -68,6 +70,15 @@ namespace visimpl
   , _player( nullptr )
   , _maxLife( 0.0f )
   , _deltaTime( 0.0f )
+  , _sbsTimePerStep( 2.0f )
+  , _sbsTimePerStepMilli( 2000.f )
+  , _sbsBeginTime( 0 )
+  , _sbsEndTime( 0 )
+  , _sbsCurrentTime( 0 )
+  , _sbsCurrentRenderDelta( 0 )
+  , _sbsPlaying( false )
+  , _sbsFirstStep( true )
+  , _sbsNextStep( false )
   , _simDeltaTime( 0.125f )
   , _timeStepsPerSecond( 2.0f )
   , _simTimePerSecond( 0.5f )
@@ -241,7 +252,7 @@ namespace visimpl
 
   }
 
-  void OpenGLWidget::configureSimulation( void )
+  void OpenGLWidget::configureSimulationFrame( void )
   {
     if( !_player || !_player->isPlaying( ) || !_particleSystem->run( ))
       return;
@@ -262,6 +273,60 @@ namespace visimpl
 
     _inputMux->processInput( _player->spikesNow( ), prevTime,
                              currentTime, false );
+
+  }
+
+  void OpenGLWidget::configureStepByStep( void )
+  {
+
+    if( !_player || ! _player->isPlaying( ) || !_particleSystem->run( ))
+      return;
+
+    _sbsBeginTime = _sbsFirstStep ? _player->currentTime( ) : _sbsEndTime;
+    _sbsFirstStep = false;
+    _sbsPlaying = true;
+
+    _sbsEndTime = _sbsBeginTime + _player->deltaTime( );
+    _sbsStepSpikes = _player->spikesBetween( _sbsBeginTime, _sbsEndTime );
+
+    _sbsCurrentTime = _sbsBeginTime;
+    _sbsCurrentSpike = _sbsStepSpikes.first;
+  }
+
+  void OpenGLWidget::configureStepByStepFrame( double elapsedRenderTimeMilliseconds )
+  {
+
+    _sbsCurrentRenderDelta = 0;
+
+    if( _sbsPlaying && _sbsCurrentTime >= _sbsEndTime )
+    {
+      _sbsPlaying = false;
+      emit stepCompleted( );
+    }
+
+    if( _sbsPlaying )
+    {
+      double diff = _sbsEndTime - _sbsCurrentTime;
+      double renderDelta  = elapsedRenderTimeMilliseconds * 0.000001;
+      _sbsCurrentRenderDelta = std::min( diff, renderDelta );
+
+      double nextTime = _sbsCurrentTime + _sbsCurrentRenderDelta;
+
+      auto spikeIt = _sbsCurrentSpike;
+      while( spikeIt->first < nextTime  &&
+             spikeIt - _sbsStepSpikes.first < _sbsStepSpikes.second - _sbsStepSpikes.first )
+      {
+        ++spikeIt;
+      }
+
+      if( spikeIt != _sbsCurrentSpike )
+      {
+        simil::SpikesCRange frameSpikes = std::make_pair( _sbsCurrentSpike, spikeIt );
+        _inputMux->processInput( frameSpikes, _sbsCurrentTime, nextTime, false );
+      }
+
+      _sbsCurrentTime = nextTime;
+    }
 
   }
 
@@ -299,7 +364,6 @@ namespace visimpl
     _particleSystem = new prefr::ParticleSystem( maxParticles );
     _particleSystem->renderDeadParticles( true );
 
-    //TODO
     _particleSystem->parallel( true );
 
     const TPosVect& positions = _player->positions( );
@@ -565,22 +629,60 @@ namespace visimpl
         {
           if( _player && _player->isPlaying( ))
           {
-            if( _elapsedTimeSimAcc >= _simPeriodMicroseconds )
+            switch( _playbackMode )
             {
-              configureSimulation( );
-              updateEventLabelsVisibility( );
+              // Continuous mode (Default)
+              case TPlaybackMode::CONTINUOUS:
+              {
+                if( _elapsedTimeSimAcc >= _simPeriodMicroseconds )
+                {
+                  configureSimulationFrame( );
+                  updateEventLabelsVisibility( );
 
-              _elapsedTimeSimAcc = 0.0f;
+                  _elapsedTimeSimAcc = 0.0f;
+                }
+
+
+                break;
+              }
+              // Step by step mode
+              case TPlaybackMode::STEP_BY_STEP:
+              {
+                if( _sbsNextStep )
+                {
+                  configureStepByStep( );
+                  _sbsNextStep = false;
+                }
+                break;
+              }
+              default:
+                break;
             }
+
 
             if( _elapsedTimeRenderAcc >= _renderPeriodMicroseconds )
             {
-              double renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;
+              double renderDelta = 0;
+
+              switch( _playbackMode )
+              {
+              case TPlaybackMode::CONTINUOUS:
+                renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;;
+                break;
+              case  TPlaybackMode::STEP_BY_STEP:
+                configureStepByStepFrame( _elapsedTimeRenderAcc );
+                renderDelta = _sbsTimePerStep * _sbsCurrentRenderDelta;
+                break;
+              default:
+                renderDelta = 0;
+              }
 
               updateParticles( renderDelta );
               _elapsedTimeRenderAcc = 0.0f;
             }
+
           }
+
           paintParticles( );
 
         }
@@ -950,9 +1052,25 @@ namespace visimpl
     _idleUpdate = idleUpdate_;
   }
 
+  TPlaybackMode OpenGLWidget::playbackMode( void )
+  {
+    return _playbackMode;
+  }
+
   simil::SimulationPlayer* OpenGLWidget::player( )
   {
     return _player;
+  }
+
+  float OpenGLWidget::currentTime( void )
+  {
+    switch( _playbackMode )
+    {
+    case TPlaybackMode::STEP_BY_STEP:
+      return _sbsCurrentTime;
+    default:
+      return _player->currentTime( );
+    }
   }
 
   InputMultiplexer* OpenGLWidget::inputMultiplexer( void )
@@ -1130,9 +1248,26 @@ namespace visimpl
     }
   }
 
-  void OpenGLWidget::GoToEnd( void )
+  void OpenGLWidget::PreviousStep( void )
   {
+    if( _playbackMode != TPlaybackMode::STEP_BY_STEP )
+    {
+      _playbackMode = TPlaybackMode::STEP_BY_STEP;
+      _sbsFirstStep = true;
+    }
 
+    _sbsNextStep = true;
+  }
+
+  void OpenGLWidget::NextStep( void )
+  {
+    if( _playbackMode != TPlaybackMode::STEP_BY_STEP )
+    {
+      _playbackMode = TPlaybackMode::STEP_BY_STEP;
+      _sbsFirstStep = true;
+    }
+
+    _sbsNextStep = true;
   }
 
   void OpenGLWidget::SetAlphaBlendingAccumulative( bool accumulative )

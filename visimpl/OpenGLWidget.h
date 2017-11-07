@@ -67,6 +67,13 @@ namespace visimpl
       PROTOTYPE_ON
     } TPrototypeEnum;
 
+    typedef enum
+    {
+      CONTINUOUS = 0,
+      STEP_BY_STEP,
+      AB_REPEAT
+    } TPlaybackMode;
+
     struct EventLabel
     {
     public:
@@ -90,7 +97,11 @@ namespace visimpl
 
     void idleUpdate( bool idleUpdate_ = true );
 
+    TPlaybackMode playbackMode( void );
+
     simil::SimulationPlayer* player( );
+    float currentTime( void );
+
     InputMultiplexer* inputMultiplexer( void );
 
     void resetParticles( void );
@@ -104,6 +115,8 @@ namespace visimpl
   signals:
 
     void updateSlider( float );
+
+    void stepCompleted( void );
 
   public slots:
 
@@ -120,7 +133,8 @@ namespace visimpl
     void Repeat( bool repeat );
     void PlayAt( float percentage );
     void Restart( void );
-    void GoToEnd( void );
+    void PreviousStep( void );
+    void NextStep( void );
 
     void changeSimulationColorMapping( const TTransferFunction& colors );
     TTransferFunction getSimulationColorMapping( void );
@@ -157,9 +171,13 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
+    void configureStepByStep( void );
+
     void backtraceSimulation( void );
 
-    void configureSimulation( void );
+    void configureSimulationFrame( void );
+    void configureStepByStepFrame( double elapsedRenderTimeMilliseconds );
+
     void updateParticles( float renderDelta );
     void paintParticles( void );
 
@@ -191,6 +209,8 @@ namespace visimpl
     bool _pendingSelection;
     bool _backtrace;
 
+    TPlaybackMode _playbackMode;
+
     unsigned int _frameCount;
 
     int _mouseX, _mouseY;
@@ -213,6 +233,19 @@ namespace visimpl
 
     float _maxLife;
     double _deltaTime;
+
+    double _sbsTimePerStep;
+    double _sbsTimePerStepMilli;
+    double _sbsBeginTime;
+    double _sbsEndTime;
+    double _sbsCurrentTime;
+    double _sbsCurrentRenderDelta;
+    simil::SpikesCRange _sbsStepSpikes;
+    simil::SpikesCIter _sbsCurrentSpike;
+
+    bool _sbsPlaying;
+    bool _sbsFirstStep;
+    bool _sbsNextStep;
 
     double _simDeltaTime;
     double _timeStepsPerSecond;

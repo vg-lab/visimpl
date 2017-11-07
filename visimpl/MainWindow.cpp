@@ -475,10 +475,10 @@ namespace visimpl
                this, SLOT( Stop( )));
 
     connect( nextButton, SIGNAL( clicked( )),
-               this, SLOT( GoToEnd( )));
+               this, SLOT( NextStep( )));
 
     connect( prevButton, SIGNAL( clicked( )),
-               this, SLOT( Restart( )));
+               this, SLOT( PreviousStep( )));
 
     connect( _repeatButton, SIGNAL( clicked( )),
                this, SLOT( Repeat( )));
@@ -881,45 +881,30 @@ namespace visimpl
     }
   }
 
-  void MainWindow::Restart( bool notify )
+  void MainWindow::PreviousStep( bool notify )
   {
     if( !_openGLWidget || !_openGLWidget->player( ))
       return;
 
     if( _openGLWidget )
     {
-      _openGLWidget->Restart( );
-
-      if( _openGLWidget->player( )->isPlaying( ))
-        _playButton->setIcon( _pauseIcon );
-      else
-        _playButton->setIcon( _playIcon );
-
-      if( notify )
-      {
-  #ifdef SIMIL_USE_ZEROEQ
-      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::BEGIN );
-  #endif
-      }
-
+      _playButton->setIcon( _pauseIcon );
+      _openGLWidget->player( )->Play( );
+      _openGLWidget->NextStep( );
     }
   }
 
-  void MainWindow::GoToEnd( bool notify )
+  void MainWindow::NextStep( bool notify )
   {
     if( !_openGLWidget || !_openGLWidget->player( ))
       return;
 
     if( _openGLWidget )
     {
-      _openGLWidget->GoToEnd( );
+      _playButton->setIcon( _pauseIcon );
+      _openGLWidget->player( )->Play( );
+      _openGLWidget->NextStep( );
 
-      if( notify )
-      {
-  #ifdef SIMIL_USE_ZEROEQ
-      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::END );
-  #endif
-      }
     }
   }
 
@@ -928,24 +913,17 @@ namespace visimpl
     if( !_openGLWidget || !_openGLWidget->player( ))
       return;
 
-    {
+    _startTimeLabel->setText(
+          QString::number( (double)_openGLWidget->currentTime( )));
 
-      _startTimeLabel->setText(
-            QString::number( (double)_openGLWidget->player( )->currentTime( )));
+    int total = _simSlider->maximum( ) - _simSlider->minimum( );
 
-  //    float percentage = _openGLWidget->player( )->GetRelativeTime( );
+    int position = percentage * total;
 
-      int total = _simSlider->maximum( ) - _simSlider->minimum( );
+    _simSlider->setSliderPosition( position );
 
-      int position = percentage * total;
-  //    std::cout << "Timer: " << percentage << " * "
-  //              << total << " = " << position << std::endl;
-
-      _simSlider->setSliderPosition( position );
-
-      if( _summary )
-        _summary->repaintHistograms( );
-    }
+    if( _summary )
+      _summary->repaintHistograms( );
   }
 
   void MainWindow::UpdateSimulationColorMapping( void )
@@ -1059,11 +1037,11 @@ namespace visimpl
           break;
         case zeroeq::gmrv::BEGIN:
   //        std::cout << "Received begin" << std::endl;
-          Restart( false );
+          PreviousStep( false );
           break;
         case zeroeq::gmrv::END:
   //        std::cout << "Received end" << std::endl;
-          GoToEnd( false );
+          NextStep( false );
           break;
         case zeroeq::gmrv::ENABLE_LOOP:
   //        std::cout << "Received enable loop" << std::endl;
@@ -1133,7 +1111,7 @@ namespace visimpl
     double result =
         QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
                                  tr( "Simulation time" ),
-                                 ( double )_openGLWidget->player( )->currentTime( ),
+                                 ( double )_openGLWidget->currentTime( ),
                                  ( double )_openGLWidget->player( )->data( )->startTime( ),
                                  ( double )_openGLWidget->player( )->data( )->endTime( ),
                                  3, &ok, Qt::Popup );
