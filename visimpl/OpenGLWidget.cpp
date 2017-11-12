@@ -70,8 +70,8 @@ namespace visimpl
   , _player( nullptr )
   , _maxLife( 0.0f )
   , _deltaTime( 0.0f )
-  , _sbsTimePerStep( 2.0f )
-  , _sbsTimePerStepMilli( 2000.f )
+  , _sbsTimePerStep( 10.0f )
+  , _sbsTimePerStepMilli( 10000.f )
   , _sbsBeginTime( 0 )
   , _sbsEndTime( 0 )
   , _sbsCurrentTime( 0 )
@@ -117,6 +117,8 @@ namespace visimpl
     _maxFPS = 60.0f;
     _renderPeriod = 1.0f / _maxFPS;
     _renderPeriodMicroseconds = _renderPeriod * 1000000;
+
+    _sbsInvTimePerStep = 1.0 / _sbsTimePerStep;
 
     _sliderUpdatePeriodMicroseconds = _sliderUpdatePeriod * 1000000;
 
@@ -291,9 +293,10 @@ namespace visimpl
 
     _sbsCurrentTime = _sbsBeginTime;
     _sbsCurrentSpike = _sbsStepSpikes.first;
+
   }
 
-  void OpenGLWidget::configureStepByStepFrame( double elapsedRenderTimeMilliseconds )
+  void OpenGLWidget::configureStepByStepFrame( double elapsedRenderTime )
   {
 
     _sbsCurrentRenderDelta = 0;
@@ -307,7 +310,7 @@ namespace visimpl
     if( _sbsPlaying )
     {
       double diff = _sbsEndTime - _sbsCurrentTime;
-      double renderDelta  = elapsedRenderTimeMilliseconds * 0.000001;
+      double renderDelta  = elapsedRenderTime * _sbsInvTimePerStep * _player->deltaTime( );
       _sbsCurrentRenderDelta = std::min( diff, renderDelta );
 
       double nextTime = _sbsCurrentTime + _sbsCurrentRenderDelta;
@@ -326,6 +329,7 @@ namespace visimpl
       }
 
       _sbsCurrentTime = nextTime;
+      _sbsCurrentSpike = spikeIt;
     }
 
   }
@@ -667,11 +671,11 @@ namespace visimpl
               switch( _playbackMode )
               {
               case TPlaybackMode::CONTINUOUS:
-                renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;;
+                renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;
                 break;
               case  TPlaybackMode::STEP_BY_STEP:
-                configureStepByStepFrame( _elapsedTimeRenderAcc );
-                renderDelta = _sbsTimePerStep * _sbsCurrentRenderDelta;
+                configureStepByStepFrame( _elapsedTimeRenderAcc * 0.000001 );
+                renderDelta = _sbsCurrentRenderDelta;
                 break;
               default:
                 renderDelta = 0;

@@ -881,7 +881,7 @@ namespace visimpl
     }
   }
 
-  void MainWindow::PreviousStep( bool notify )
+  void MainWindow::PreviousStep( bool /*notify*/ )
   {
     if( !_openGLWidget || !_openGLWidget->player( ))
       return;
@@ -894,7 +894,7 @@ namespace visimpl
     }
   }
 
-  void MainWindow::NextStep( bool notify )
+  void MainWindow::NextStep( bool /*notify*/ )
   {
     if( !_openGLWidget || !_openGLWidget->player( ))
       return;

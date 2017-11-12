@@ -44,6 +44,12 @@
 
 namespace visimpl
 {
+  typedef enum
+  {
+    CONTINUOUS = 0,
+    STEP_BY_STEP,
+    AB_REPEAT
+  } TPlaybackMode;
 
   class OpenGLWidget
     : public QOpenGLWidget
@@ -66,13 +72,6 @@ namespace visimpl
       PROTOTYPE_OFF = 0,
       PROTOTYPE_ON
     } TPrototypeEnum;
-
-    typedef enum
-    {
-      CONTINUOUS = 0,
-      STEP_BY_STEP,
-      AB_REPEAT
-    } TPlaybackMode;
 
     struct EventLabel
     {
@@ -236,10 +235,12 @@ namespace visimpl
 
     double _sbsTimePerStep;
     double _sbsTimePerStepMilli;
+    double _sbsInvTimePerStep;
     double _sbsBeginTime;
     double _sbsEndTime;
     double _sbsCurrentTime;
     double _sbsCurrentRenderDelta;
+
     simil::SpikesCRange _sbsStepSpikes;
     simil::SpikesCIter _sbsCurrentSpike;
 
