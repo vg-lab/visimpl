@@ -70,8 +70,7 @@ namespace visimpl
   , _player( nullptr )
   , _maxLife( 0.0f )
   , _deltaTime( 0.0f )
-  , _sbsTimePerStep( 10.0f )
-  , _sbsTimePerStepMilli( 10000.f )
+  , _sbsTimePerStep( 5.0f )
   , _sbsBeginTime( 0 )
   , _sbsEndTime( 0 )
   , _sbsCurrentTime( 0 )
@@ -79,6 +78,7 @@ namespace visimpl
   , _sbsPlaying( false )
   , _sbsFirstStep( true )
   , _sbsNextStep( false )
+  , _sbsPrevStep( false )
   , _simDeltaTime( 0.125f )
   , _timeStepsPerSecond( 2.0f )
   , _simTimePerSecond( 0.5f )
@@ -278,6 +278,33 @@ namespace visimpl
 
   }
 
+  void OpenGLWidget::configurePreviousStep( void )
+  {
+    if( !_player || !_particleSystem->run( ))
+      return;
+//TODO
+    _sbsBeginTime = _sbsFirstStep ?
+                    _player->currentTime( ):
+                    _sbsPlaying ? _sbsBeginTime : _sbsEndTime;
+
+    _sbsBeginTime = std::max( ( double ) _player->startTime( ),
+                              _sbsBeginTime - _player->deltaTime( ));
+
+    _sbsEndTime = _sbsBeginTime + _player->deltaTime( );
+
+    _player->GoTo( _sbsBeginTime );
+
+    backtraceSimulation( );
+
+    _sbsStepSpikes = _player->spikesBetween( _sbsBeginTime, _sbsEndTime );
+
+    _sbsCurrentTime = _sbsBeginTime;
+    _sbsCurrentSpike = _sbsStepSpikes.first;
+
+    _sbsFirstStep = false;
+    _sbsPlaying = true;
+  }
+
   void OpenGLWidget::configureStepByStep( void )
   {
 
@@ -285,14 +312,23 @@ namespace visimpl
       return;
 
     _sbsBeginTime = _sbsFirstStep ? _player->currentTime( ) : _sbsEndTime;
-    _sbsFirstStep = false;
-    _sbsPlaying = true;
 
     _sbsEndTime = _sbsBeginTime + _player->deltaTime( );
+
+    if( _sbsPlaying )
+    {
+      _player->GoTo( _sbsBeginTime );
+
+      backtraceSimulation( );
+    }
+
     _sbsStepSpikes = _player->spikesBetween( _sbsBeginTime, _sbsEndTime );
 
     _sbsCurrentTime = _sbsBeginTime;
     _sbsCurrentSpike = _sbsStepSpikes.first;
+
+    _sbsFirstStep = false;
+    _sbsPlaying = true;
 
   }
 
@@ -304,6 +340,8 @@ namespace visimpl
     if( _sbsPlaying && _sbsCurrentTime >= _sbsEndTime )
     {
       _sbsPlaying = false;
+      _player->GoTo( _sbsEndTime );
+      _player->Pause( );
       emit stepCompleted( );
     }
 
@@ -652,7 +690,12 @@ namespace visimpl
               // Step by step mode
               case TPlaybackMode::STEP_BY_STEP:
               {
-                if( _sbsNextStep )
+                if( _sbsPrevStep )
+                {
+                  configurePreviousStep( );
+                  _sbsPrevStep = false;
+                }
+                else if( _sbsNextStep )
                 {
                   configureStepByStep( );
                   _sbsNextStep = false;
@@ -1061,6 +1104,17 @@ namespace visimpl
     return _playbackMode;
   }
 
+  void OpenGLWidget::playbackMode( TPlaybackMode mode )
+  {
+    if( mode != TPlaybackMode::AB_REPEAT )
+      _playbackMode = mode;
+  }
+
+  bool OpenGLWidget::completedStep( void )
+  {
+    return !_sbsPlaying;
+  }
+
   simil::SimulationPlayer* OpenGLWidget::player( )
   {
     return _player;
@@ -1260,7 +1314,8 @@ namespace visimpl
       _sbsFirstStep = true;
     }
 
-    _sbsNextStep = true;
+    _sbsPrevStep = true;
+    _sbsNextStep = false;
   }
 
   void OpenGLWidget::NextStep( void )
@@ -1271,6 +1326,7 @@ namespace visimpl
       _sbsFirstStep = true;
     }
 
+    _sbsPrevStep = false;
     _sbsNextStep = true;
   }
 
@@ -1370,6 +1426,17 @@ namespace visimpl
   float OpenGLWidget::simulationStepsPerSecond( void )
   {
     return _timeStepsPerSecond;
+  }
+
+  void OpenGLWidget::simulationStepByStepDuration( float value )
+  {
+    _sbsTimePerStep = value;
+    _sbsInvTimePerStep = 1.0 / _sbsTimePerStep;
+  }
+
+  float OpenGLWidget::simulationStepByStepDuration( void )
+  {
+    return _sbsTimePerStep;
   }
 
   void OpenGLWidget::changeSimulationDecayValue( float value )

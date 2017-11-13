@@ -113,6 +113,9 @@ namespace visimpl
     connect( _ui->actionHome, SIGNAL( triggered( )),
              _openGLWidget, SLOT( updateSelection( )));
 
+    connect( _openGLWidget, SIGNAL( stepCompleted( void )),
+             this, SLOT( completedStep( void )));
+
   #ifdef VISIMPL_USE_ZEROEQ
     _ui->actionShowSelection->setEnabled( true );
     _ui->actionShowSelection->setChecked( true );
@@ -385,6 +388,7 @@ namespace visimpl
     changeEditorSimTimestepsPS( );
     changeEditorSizeFunction( );
     changeEditorDecayValue( );
+    changeEditorStepByStepDuration( );
     initSummaryWidget( );
   }
 
@@ -536,6 +540,13 @@ namespace visimpl
     _timeStepsPSBox->setDecimals( 5 );
     _timeStepsPSBox->setMaximumWidth( 100 );
 
+    _stepByStepDurationBox = new QDoubleSpinBox( );
+    _stepByStepDurationBox->setMinimum( 0.5 );
+    _stepByStepDurationBox->setMaximum( 50 );
+    _stepByStepDurationBox->setSingleStep( 1.0 );
+    _stepByStepDurationBox->setDecimals( 3 );
+    _stepByStepDurationBox->setMaximumWidth( 100 );
+
     _decayBox = new QDoubleSpinBox( );
     _decayBox->setMinimum( 0.01 );
     _decayBox->setMaximum( 600.0 );
@@ -570,6 +581,8 @@ namespace visimpl
     sfLayout->addWidget( _deltaTimeBox, 0, 1, 1, 1  );
     sfLayout->addWidget( new QLabel( "Timesteps per second:" ), 1, 0, 1, 1 );
     sfLayout->addWidget( _timeStepsPSBox, 1, 1, 1, 1  );
+    sfLayout->addWidget( new QLabel( "Step playback duration (s):"), 2, 0, 1, 1);
+    sfLayout->addWidget( _stepByStepDurationBox, 2, 1, 1, 1 );
     tSpeedGB->setLayout( sfLayout );
     tSpeedGB->setMaximumHeight( 200 );
 
@@ -657,6 +670,9 @@ namespace visimpl
     connect( _decayBox, SIGNAL( valueChanged( double )),
              this, SLOT( updateSimulationDecayValue( void )));
 
+    connect( _stepByStepDurationBox, SIGNAL( valueChanged( double )),
+             this, SLOT( updateSimStepByStepDuration( void )));
+
     connect( _alphaNormalButton, SIGNAL( toggled( bool )),
              this, SLOT( AlphaBlendingToggled( void ) ));
 
@@ -718,6 +734,10 @@ namespace visimpl
 
       _playButton->setIcon( _pauseIcon );
 
+      if( _openGLWidget->playbackMode( ) == TPlaybackMode::STEP_BY_STEP &&
+          _openGLWidget->completedStep( ))
+        _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
+
       if( notify )
       {
   #ifdef SIMIL_USE_ZEROEQ
@@ -757,6 +777,8 @@ namespace visimpl
       _playButton->setIcon( _playIcon );
       _startTimeLabel->setText(
             QString::number( (double)_openGLWidget->player( )->startTime( )));
+
+      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
 
       if( notify )
       {
@@ -829,6 +851,8 @@ namespace visimpl
 
       _openGLWidget->PlayAt( percentage );
 
+      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
+
       if( notify )
       {
   #ifdef SIMIL_USE_ZEROEQ
@@ -867,6 +891,8 @@ namespace visimpl
 
       _openGLWidget->PlayAt( percentage );
 
+      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
+
       if( notify )
       {
   #ifdef SIMIL_USE_ZEROEQ
@@ -890,7 +916,7 @@ namespace visimpl
     {
       _playButton->setIcon( _pauseIcon );
       _openGLWidget->player( )->Play( );
-      _openGLWidget->NextStep( );
+      _openGLWidget->PreviousStep( );
     }
   }
 
@@ -905,6 +931,14 @@ namespace visimpl
       _openGLWidget->player( )->Play( );
       _openGLWidget->NextStep( );
 
+    }
+  }
+
+  void MainWindow::completedStep( void )
+  {
+    if( _openGLWidget )
+    {
+      _playButton->setIcon( _playIcon );
     }
   }
 
@@ -985,6 +1019,18 @@ namespace visimpl
   {
     _openGLWidget->changeSimulationDecayValue( _decayBox->value( ));
   }
+
+
+  void MainWindow::changeEditorStepByStepDuration( void )
+  {
+    _stepByStepDurationBox->setValue( _openGLWidget->simulationStepByStepDuration( ));
+  }
+
+  void MainWindow::updateSimStepByStepDuration( void )
+  {
+    _openGLWidget->simulationStepByStepDuration( _stepByStepDurationBox->value( ));
+  }
+
 
   void MainWindow::AlphaBlendingToggled( void )
   {

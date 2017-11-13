@@ -97,6 +97,9 @@ namespace visimpl
     void idleUpdate( bool idleUpdate_ = true );
 
     TPlaybackMode playbackMode( void );
+    void playbackMode( TPlaybackMode mode );
+
+    bool completedStep( void );
 
     simil::SimulationPlayer* player( );
     float currentTime( void );
@@ -147,6 +150,9 @@ namespace visimpl
     void simulationStepsPerSecond( float value );
     float simulationStepsPerSecond( void );
 
+    void simulationStepByStepDuration( float value );
+    float simulationStepByStepDuration( void );
+
     void changeSimulationDecayValue( float value );
     float getSimulationDecayValue( void );
 
@@ -170,6 +176,7 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
+    void configurePreviousStep( void );
     void configureStepByStep( void );
 
     void backtraceSimulation( void );
@@ -234,7 +241,6 @@ namespace visimpl
     double _deltaTime;
 
     double _sbsTimePerStep;
-    double _sbsTimePerStepMilli;
     double _sbsInvTimePerStep;
     double _sbsBeginTime;
     double _sbsEndTime;
@@ -247,6 +253,7 @@ namespace visimpl
     bool _sbsPlaying;
     bool _sbsFirstStep;
     bool _sbsNextStep;
+    bool _sbsPrevStep;
 
     double _simDeltaTime;
     double _timeStepsPerSecond;

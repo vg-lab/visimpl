@@ -98,12 +98,17 @@ namespace visimpl
     void changeEditorDecayValue( void );
     void updateSimulationDecayValue( void );
 
+    void changeEditorStepByStepDuration( void );
+    void updateSimStepByStepDuration( void );
+
     void AlphaBlendingToggled( void );
 
   protected slots:
 
     void addGroupFromSelection( void );
     void checkGroupsVisibility( void );
+
+    void completedStep( void );
 
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
@@ -171,6 +176,7 @@ namespace visimpl
     QDoubleSpinBox* _decayBox;
     QDoubleSpinBox* _deltaTimeBox;
     QDoubleSpinBox* _timeStepsPSBox;
+    QDoubleSpinBox* _stepByStepDurationBox;
 
     QPushButton* _addGroupButton;
     QPushButton* _clearSelectionButton;
