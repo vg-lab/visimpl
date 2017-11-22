@@ -1,6 +1,7 @@
 # ViSimpl
 
 ## git master
+* [!32] Added "Step by step" feature. Fixed performance issues. Improved playback precission.
 * [!24] Added focus and autofocus features to show and follow the current playhead on StackViz.
 * [!23] Added visibility manager for handling events' and histograms' visibility.
 * Improved navigation features such as zoom, camera, focus+context or play at.
