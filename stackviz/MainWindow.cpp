@@ -7,6 +7,30 @@
  *          Do not distribute without further notice.
  */
 
+#ifdef VISIMPL_USE_GMRVLEX
+#include <gmrvlex/version.h>
+#endif
+#ifdef VISIMPL_USE_DEFLECT
+#include <deflect/version.h>
+#endif
+#ifdef VISIMPL_USE_NSOL
+#include <nsol/version.h>
+#endif
+#ifdef VISIMPL_USE_ZEROEQ
+#include <zeroeq/version.h>
+#endif
+#ifdef VISIMPL_USE_RETO
+#include <reto/version.h>
+#endif
+#ifdef VISIMPL_USE_SCOOP
+#include <scoop/version.h>
+#endif
+#ifdef VISIMPL_USE_SIMIL
+#include <simil/version.h>
+#endif
+#ifdef VISIMPL_USE_PREFR
+#include <prefr/version.h>
+#endif
 #include <stackviz/version.h>
 
 #include "MainWindow.h"
@@ -248,23 +272,83 @@ namespace stackviz
   void MainWindow::aboutDialog( void )
   {
 
-    QMessageBox::about(
-      this, tr("About ViSimpl"),
-      tr("<p><BIG><b>ViSimpl - StackViz</b></BIG><br><br>") +
-      tr( "version " ) +
-      tr( stackviz::Version::getString( ).c_str( )) +
-      tr( " (" ) +
-      tr( std::to_string( stackviz::Version::getRevision( )).c_str( )) +
-      tr( ")" ) +
-      tr ("<br><br>GMRV - Universidad Rey Juan Carlos<br><br>"
-          "<a href=www.gmrv.es>www.gmrv.es</a><br>"
-          "<a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
-          "<br>(c) 2015. Universidad Rey Juan Carlos<br><br>"
-          "<img src=':/icons/logoGMRV.png' > &nbsp; &nbsp;"
-          "<img src=':/icons/logoURJC.png' >"
-          "</p>"
-          ""));
+    QString msj = 
+      QString( "<h2>ViSimpl - StackViz</h2>" ) +
+      tr( "A multi-view visual analyzer of brain simulation data. " ) + 
+      "<br>" + 
+      tr( "Version " ) + stackviz::Version::getString( ).c_str( ) +
+      tr( " rev (%1)<br>").arg(stackviz::Version::getRevision( )) +
+      "<a href='https://gmrv.es/visimpl/'>https://gmrv.es/visimpl</a>" + 
+      "<h4>" + tr( "Build info:" ) + "</h4>" +
+      "<ul>"
+    
+#ifdef VISIMPL_USE_DEFLECT
+    "</li><li>Deflect " + DEFLECT_REV_STRING +
+#else
+    "</li><li>Deflect " + tr ("support not built.") +
+#endif
 
+#ifdef VISIMPL_USE_FIRES
+    "</li><li>FiReS " + FIRES_REV_STRING +
+#else
+    "</li><li>FiReS " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_GMRVLEX
+    "</li><li>GmrvLex " + GMRVLEX_REV_STRING +
+#else
+    "</li><li>GmrvLex " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_NSOL
+    "</li><li>Nsol " + NSOL_REV_STRING +
+#else
+    "</li><li>Nsol " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_PREFR
+    "</li><li>prefr " + PREFR_REV_STRING +     
+#else
+    "</li><li>prefr " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_RETO
+    "</li><li>ReTo " + RETO_REV_STRING +     
+#else
+    "</li><li>ReTo " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_SCOOP
+    "</li><li>Scoop " + SCOOP_REV_STRING +     
+#else
+    "</li><li>Scoop " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_SIMIL
+    "</li><li>SimIL " + SIMIL_REV_STRING +     
+#else
+    "</li><li>SimIL " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_ZEROEQ
+    "</li><li>ZeroEQ " + ZEROEQ_REV_STRING +
+#else
+    "</li><li>ZeroEQ " + tr ("support not built.") +
+#endif
+
+    "</li></ul>" +
+    "<h4>" + tr( "Developed by:" ) + "</h4>" +
+    "GMRV / URJC / UPM"
+    "<br><a href='https://gmrv.es/gmrvvis'>https://gmrv.es/gmrvvis</a>"
+    //"<br><a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
+    "<br>(C) 2015-2017<br><br>"
+    "<a href='https://gmrv.es/gmrvvis'><img src=':/icons/logoGMRV.png'/></a>"
+    "&nbsp;&nbsp;&nbsp;&nbsp;"
+    "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
+    "&nbsp;&nbsp;&nbsp;&nbsp;"
+    "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
+    
+    QMessageBox::about(this, tr( "About ViSimpl" ), msj );
   }
 
   void MainWindow::togglePlaybackDock( void )

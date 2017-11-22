@@ -211,7 +211,7 @@ namespace stackviz
     clearEventWidgets( );
 
     unsigned int row = 0;
-    for( const auto& event : *_eventData )
+    for( const auto& ev : *_eventData )
     {
 
       TDisplayEventTuple pointers;
@@ -222,7 +222,7 @@ namespace stackviz
       QGridLayout* contLayout = new QGridLayout( );
       container->setLayout( contLayout );
 
-      QLabel* nameLabel = new QLabel( tr( event->name( ).c_str( )), container);
+      QLabel* nameLabel = new QLabel( tr( ev->name( ).c_str( )), container);
       QPushButton* hideButton = new QPushButton( container );
       hideButton->setIcon( QIcon( QPixmap( ":icons/show.png" )));
       hideButton->setCheckable( true );
