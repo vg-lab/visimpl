@@ -348,7 +348,7 @@ namespace stackviz
     "&nbsp;&nbsp;&nbsp;&nbsp;"
     "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
     
-    QMessageBox::about(this, tr( "About ViSimpl" ), msj );
+    QMessageBox::about(this, tr( "About StackViz" ), msj );
   }
 
   void MainWindow::togglePlaybackDock( void )
