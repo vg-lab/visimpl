@@ -44,6 +44,12 @@
 
 namespace visimpl
 {
+  typedef enum
+  {
+    CONTINUOUS = 0,
+    STEP_BY_STEP,
+    AB_REPEAT
+  } TPlaybackMode;
 
   class OpenGLWidget
     : public QOpenGLWidget
@@ -90,7 +96,14 @@ namespace visimpl
 
     void idleUpdate( bool idleUpdate_ = true );
 
+    TPlaybackMode playbackMode( void );
+    void playbackMode( TPlaybackMode mode );
+
+    bool completedStep( void );
+
     simil::SimulationPlayer* player( );
+    float currentTime( void );
+
     InputMultiplexer* inputMultiplexer( void );
 
     void resetParticles( void );
@@ -104,6 +117,8 @@ namespace visimpl
   signals:
 
     void updateSlider( float );
+
+    void stepCompleted( void );
 
   public slots:
 
@@ -120,7 +135,8 @@ namespace visimpl
     void Repeat( bool repeat );
     void PlayAt( float percentage );
     void Restart( void );
-    void GoToEnd( void );
+    void PreviousStep( void );
+    void NextStep( void );
 
     void changeSimulationColorMapping( const TTransferFunction& colors );
     TTransferFunction getSimulationColorMapping( void );
@@ -133,6 +149,9 @@ namespace visimpl
 
     void simulationStepsPerSecond( float value );
     float simulationStepsPerSecond( void );
+
+    void simulationStepByStepDuration( float value );
+    float simulationStepByStepDuration( void );
 
     void changeSimulationDecayValue( float value );
     float getSimulationDecayValue( void );
@@ -157,9 +176,14 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
+    void configurePreviousStep( void );
+    void configureStepByStep( void );
+
     void backtraceSimulation( void );
 
-    void configureSimulation( void );
+    void configureSimulationFrame( void );
+    void configureStepByStepFrame( double elapsedRenderTimeMilliseconds );
+
     void updateParticles( float renderDelta );
     void paintParticles( void );
 
@@ -191,6 +215,8 @@ namespace visimpl
     bool _pendingSelection;
     bool _backtrace;
 
+    TPlaybackMode _playbackMode;
+
     unsigned int _frameCount;
 
     int _mouseX, _mouseY;
@@ -213,6 +239,21 @@ namespace visimpl
 
     float _maxLife;
     double _deltaTime;
+
+    double _sbsTimePerStep;
+    double _sbsInvTimePerStep;
+    double _sbsBeginTime;
+    double _sbsEndTime;
+    double _sbsCurrentTime;
+    double _sbsCurrentRenderDelta;
+
+    simil::SpikesCRange _sbsStepSpikes;
+    simil::SpikesCIter _sbsCurrentSpike;
+
+    bool _sbsPlaying;
+    bool _sbsFirstStep;
+    bool _sbsNextStep;
+    bool _sbsPrevStep;
 
     double _simDeltaTime;
     double _timeStepsPerSecond;

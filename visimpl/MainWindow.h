@@ -75,8 +75,8 @@ namespace visimpl
     void PlayAt( float, bool notify = true );
     void PlayAt( int, bool notify = true );
     void requestPlayAt( float );
-    void Restart( bool notify = true );
-    void GoToEnd( bool notify = true );
+    void PreviousStep( bool notify = true );
+    void NextStep( bool notify = true );
 
     void UpdateSimulationSlider( float percentage );
 
@@ -98,12 +98,17 @@ namespace visimpl
     void changeEditorDecayValue( void );
     void updateSimulationDecayValue( void );
 
+    void changeEditorStepByStepDuration( void );
+    void updateSimStepByStepDuration( void );
+
     void AlphaBlendingToggled( void );
 
   protected slots:
 
     void addGroupFromSelection( void );
     void checkGroupsVisibility( void );
+
+    void completedStep( void );
 
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
@@ -171,6 +176,7 @@ namespace visimpl
     QDoubleSpinBox* _decayBox;
     QDoubleSpinBox* _deltaTimeBox;
     QDoubleSpinBox* _timeStepsPSBox;
+    QDoubleSpinBox* _stepByStepDurationBox;
 
     QPushButton* _addGroupButton;
     QPushButton* _clearSelectionButton;

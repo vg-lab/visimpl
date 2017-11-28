@@ -9,8 +9,8 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 0.1.2 )
-set( visimpl_VERSION_ABI 3 )
+project( visimpl VERSION 0.1.3 )
+set( visimpl_VERSION_ABI 4 )
 
 # Disable in source building
 if( "${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}" )
