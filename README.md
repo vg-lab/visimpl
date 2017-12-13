@@ -21,7 +21,8 @@ file formats.
 * Qt5Widgets
 * Qt5OpenGL
 * Eigen3
-* HDF5
+* HDF5 1.10 
+* GLM (https://glm.g-truc.net)
 * ReTo (*)
 * SimIL (*)
 * PReFr (*)
