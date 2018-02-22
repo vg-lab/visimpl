@@ -31,15 +31,15 @@ namespace prefr
 
     if( !current->alive( ))
     {
-      current->life( model->minLife( ));
+      current->set_life( model->minLife( ));
 
-      current->alive( true );
+      current->set_alive( true );
 
       SampledValues values;
       source->sample( &values );
 
-      current->position( values.position );
-      current->velocity( values.direction );
+      current->set_position( values.position );
+      current->set_velocity( values.direction );
 
     }
   }
@@ -59,7 +59,7 @@ namespace prefr
     if( current->alive( ))
     {
 
-      current->life( std::max(0.0f, current->life( ) - deltaTime ));
+      current->set_life( std::max(0.0f, current->life( ) - deltaTime ));
 
       refLife = 1.0f - glm::clamp( current->life( ) * model->inverseMaxLife( ),
                                    0.0f, 1.0f );
@@ -67,18 +67,18 @@ namespace prefr
       if( !source->still( ))
       {
 
-        current->velocityModule( model->velocity.GetValue( refLife ));
+        current->set_velocityModule( model->velocity.GetValue( refLife ));
 
-        current->position( current->position( )
+        current->set_position( current->position( )
                            + current->velocity( ) * current->velocityModule( ) *
                                                                     deltaTime );
       }
 
-      current->color( glm::clamp(
+      current->set_color( glm::clamp(
           model->colorop( source->color( ), model->color.GetValue( refLife )),
           0.0f, 1.0f ));
 
-      current->size( model->size.GetValue( refLife ) + source->size( ));
+      current->set_size( model->size.GetValue( refLife ) + source->size( ));
     }
 
   }
