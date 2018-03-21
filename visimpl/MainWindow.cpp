@@ -759,8 +759,12 @@ namespace visimpl
     connect( _alphaNormalButton, SIGNAL( toggled( bool )),
              this, SLOT( AlphaBlendingToggled( void ) ));
 
+#ifdef VISIMPL_USE_ZEROEQ
+#ifdef VISIMPL_USE_GMRVLEX
     connect( _clearSelectionButton, SIGNAL( clicked( void )),
              this, SLOT( ClearSelection( void )));
+#endif
+#endif
 
     connect( _addGroupButton, SIGNAL( clicked( void )),
              this, SLOT( addGroupFromSelection( )));
@@ -1141,6 +1145,32 @@ namespace visimpl
   }
 
 
+  void MainWindow::playAtButtonClicked( void )
+  {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
+    bool ok;
+    double result =
+        QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
+                                 tr( "Simulation time" ),
+                                 ( double )_openGLWidget->currentTime( ),
+                                 ( double )_openGLWidget->player( )->data( )->startTime( ),
+                                 ( double )_openGLWidget->player( )->data( )->endTime( ),
+                                 3, &ok, Qt::Popup );
+
+    if( ok )
+    {
+      float percentage = ( result - _openGLWidget->player( )->startTime( )) /
+          ( _openGLWidget->player( )->endTime( ) -
+              _openGLWidget->player( )->startTime( ));
+
+      percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
+
+      PlayAt( percentage, true );
+    }
+  }
+
   #ifdef VISIMPL_USE_ZEROEQ
 
   #ifdef VISIMPL_USE_GMRVLEX
@@ -1228,32 +1258,6 @@ namespace visimpl
       _addGroupButton->setEnabled( false );
       _clearSelectionButton->setEnabled( false );
       _selectionSizeLabel->setText( "0" );
-    }
-  }
-
-  void MainWindow::playAtButtonClicked( void )
-  {
-    if( !_openGLWidget || !_openGLWidget->player( ))
-      return;
-
-    bool ok;
-    double result =
-        QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
-                                 tr( "Simulation time" ),
-                                 ( double )_openGLWidget->currentTime( ),
-                                 ( double )_openGLWidget->player( )->data( )->startTime( ),
-                                 ( double )_openGLWidget->player( )->data( )->endTime( ),
-                                 3, &ok, Qt::Popup );
-
-    if( ok )
-    {
-      float percentage = ( result - _openGLWidget->player( )->startTime( )) /
-          ( _openGLWidget->player( )->endTime( ) -
-              _openGLWidget->player( )->startTime( ));
-
-      percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
-
-      PlayAt( percentage, true );
     }
   }
 

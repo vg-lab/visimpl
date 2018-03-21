@@ -164,6 +164,8 @@ namespace visimpl
 
     void showEventsActivityLabels( bool show );
 
+    void updateCameraBoundingBox( void );
+
   protected:
 
     virtual void initializeGL( void );
