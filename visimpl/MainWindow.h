@@ -109,6 +109,7 @@ namespace visimpl
     void checkGroupsVisibility( void );
 
     void completedStep( void );
+    void playAtButtonClicked( void );
 
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
@@ -119,7 +120,6 @@ namespace visimpl
   #endif
 
     void ClearSelection( void );
-    void playAtButtonClicked( void );
 
   protected:
 

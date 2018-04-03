@@ -109,7 +109,7 @@ namespace visimpl
     else
   #endif
     _camera = new reto::Camera( );
-
+    _camera->farPlane( 100000.f );
     _camera->animDuration( 0.5f );
 
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
@@ -488,16 +488,16 @@ namespace visimpl
     unsigned int start;
 
     unsigned int i = 0;
-    glm::vec3 cameraPivot;
     TGIDSet::const_iterator gid = _player->gids( ).begin();
 
 
-    glm::vec3 boundingBoxMin( std::numeric_limits< float >::max( ),
-                              std::numeric_limits< float >::max( ),
-                              std::numeric_limits< float >::max( ));
-    glm::vec3 boundingBoxMax( std::numeric_limits< float >::min( ),
-                              std::numeric_limits< float >::min( ),
-                              std::numeric_limits< float >::min( ));
+    _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),
+                                 std::numeric_limits< float >::max( ),
+                                 std::numeric_limits< float >::max( ));
+
+    _boundingBoxMax = glm::vec3( std::numeric_limits< float >::min( ),
+                                 std::numeric_limits< float >::min( ),
+                                 std::numeric_limits< float >::min( ));
 
     for ( auto brionPos : positions )
     {
@@ -512,8 +512,7 @@ namespace visimpl
       if( scale != 1.0f )
         position *= scale;
 
-      cameraPivot += position;
-      expandBoundingBox( boundingBoxMin, boundingBoxMax, position );
+      expandBoundingBox( _boundingBoxMin, _boundingBoxMax, position );
 
       start = i * partPerEmitter;
 
@@ -549,11 +548,7 @@ namespace visimpl
 
     }
 
-    cameraPivot /= i;
-
-    _camera->pivot( Eigen::Vector3f( cameraPivot.x,
-                                     cameraPivot.y,
-                                     cameraPivot.z ));
+    updateCameraBoundingBox( );
 
     prefr::Sorter* sorter = new prefr::Sorter( );
 
@@ -840,12 +835,7 @@ namespace visimpl
 
       }
 
-      glm::vec3 center = ( _boundingBoxMax + _boundingBoxMin ) * 0.5f;
-      float side = glm::length( _boundingBoxMax - center );
-      float radius = side / std::tan( _camera->fov( ));
-
-      _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),
-                                  radius );
+      updateCameraBoundingBox( );
 
       _particleSystem->run( true );
       _particleSystem->update( 0.0f );
@@ -872,6 +862,17 @@ namespace visimpl
     _inputMux->clearSelection( );
     _selectedGIDs.clear( );
     _updateSelection = true;
+  }
+
+  void OpenGLWidget::updateCameraBoundingBox( void )
+  {
+    glm::vec3 center = ( _boundingBoxMax + _boundingBoxMin ) * 0.5f;
+    float side = glm::length( _boundingBoxMax - center );
+    float radius = side / std::tan( _camera->fov( ));
+
+    _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),
+                                radius );
+
   }
 
   void OpenGLWidget::showEventsActivityLabels( bool show )
