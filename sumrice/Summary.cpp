@@ -692,8 +692,8 @@ namespace visimpl
     visimpl::HistogramWidget* histogram =
         new visimpl::HistogramWidget( *_spikeReport );
 
-    histogram->name( name );
     histogram->filteredGIDs( subset );
+    histogram->name( name );
     histogram->colorMapper( _mainHistogram->colorMapper( ));
     histogram->colorScaleLocal( _colorScaleLocal );
     histogram->colorScaleGlobal( _colorScaleGlobal );
@@ -703,6 +703,11 @@ namespace visimpl
     histogram->representationMode( visimpl::T_REP_CURVE );
     histogram->regionWidth( _regionWidth );
     histogram->gridLinesNumber( _gridLinesNumber );
+
+    histogram->init( _bins, _zoomFactor );
+
+    if( histogram->empty( ))
+      return;
 
     histogram->setMinimumHeight( _heightPerRow );
     histogram->setMaximumHeight( _heightPerRow );
@@ -745,8 +750,6 @@ namespace visimpl
              this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
 
     _histogramWidgets.push_back( histogram );
-
-    histogram->init( _bins, _zoomFactor );
 
     update( );
   }

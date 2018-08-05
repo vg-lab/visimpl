@@ -604,22 +604,22 @@ namespace stackviz
 
       auto eventNames = _player->data( )->subsetsEvents( )->eventNames( );
 
-      auto result = cc.correlate( "grclayer", eventNames, 0.125f );
-
-      for( auto correlation : result )
-      {
-        visimpl::Selection selection;
-        selection.name = correlation.subsetName + correlation.eventName;
-
-        for( auto neuron : correlation.values )
-        {
-          if( neuron.second.result > 0.5f )
-            selection.gids.insert( neuron.first );
-        }
-
-
-        _summary->AddNewHistogram( selection );
-      }
+////      auto result = cc.correlate( "grclayer", eventNames, 0.125f );
+//
+//      for( auto correlation : result )
+//      {
+//        visimpl::Selection selection;
+//        selection.name = correlation.subsetName + correlation.eventName;
+//
+//        for( auto neuron : correlation.values )
+//        {
+//          if( neuron.second.result > 0.5f )
+//            selection.gids.insert( neuron.first );
+//        }
+//
+//
+//        _summary->AddNewHistogram( selection );
+//      }
 
     }
 

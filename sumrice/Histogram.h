@@ -67,10 +67,13 @@ namespace visimpl
     HistogramWidget( const simil::SpikeData& spikeReport );
 
     virtual void init( unsigned int binsNumber = 250, float zoomFactor = 1.5f );
+    bool empty( void ) const;
 
     void Spikes( const simil::Spikes& spikes, float startTime, float endTime );
 
     void Spikes( const simil::SpikeData& spikeReport  );
+
+    void Update( THistogram histogramNumber = T_HIST_MAIN );
 
     void BuildHistogram( THistogram histogram = T_HIST_MAIN );
 
@@ -214,6 +217,13 @@ signals:
 
     std::vector< TEvent >* _events;
     std::vector< QPainterPath >* _cachedEventGraphs;
+
+    bool _builtMain;
+    bool _builtFocus;
+    bool _calculatedColorsMain;
+    bool _calculatedColorsFocus;
+    bool _autoBuildHistogram;
+    bool _autoCalculateColors;
   };
 }
 

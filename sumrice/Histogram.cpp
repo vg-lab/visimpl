@@ -50,6 +50,8 @@ namespace visimpl
   , _pixelsPerCharacter( 10 )
   , _pixelMargin( 5 )
   , _events( nullptr )
+  , _autoBuildHistogram( true )
+  , _autoCalculateColors( true )
   {
 //    init( );
   }
@@ -85,6 +87,8 @@ namespace visimpl
   , _pixelsPerCharacter( 8 )
   , _pixelMargin( 5 )
   , _events( nullptr )
+  , _autoBuildHistogram( true )
+  , _autoCalculateColors( true )
   {
 //    init( );
   }
@@ -117,6 +121,8 @@ namespace visimpl
   , _pixelsPerCharacter( 8 )
   , _pixelMargin( 5 )
   , _events( nullptr )
+  , _autoBuildHistogram( true )
+  , _autoCalculateColors( true )
   {
 //    init( );
   }
@@ -148,6 +154,18 @@ namespace visimpl
 
     _paintRegion = false;
     setMouseTracking( true );
+  }
+
+  bool HistogramWidget::empty( void ) const
+  {
+    return ( _mainHistogram._maxValueHistogramLocal == 0  ||
+              _mainHistogram._maxValueHistogramGlobal == 0 );
+  }
+
+  void HistogramWidget::Update( THistogram histogramNumber )
+  {
+    BuildHistogram( histogramNumber );
+    CalculateColors( histogramNumber );
   }
 
   void HistogramWidget::BuildHistogram( THistogram histogramNumber )
@@ -247,8 +265,6 @@ namespace visimpl
         }
       }
     }
-
-    CalculateColors( histogramNumber );
 
   }
 
@@ -417,7 +433,11 @@ namespace visimpl
     _mainHistogram._maxValueHistogramLocal = 0;
     _mainHistogram._maxValueHistogramGlobal = 0;
 
-    BuildHistogram( T_HIST_MAIN );
+    if( _autoBuildHistogram )
+      BuildHistogram( T_HIST_MAIN );
+
+    if( _autoCalculateColors )
+      CalculateColors( T_HIST_MAIN );
 
     unsigned int focusBins = _bins * _zoomFactor;
 
@@ -426,7 +446,11 @@ namespace visimpl
     _focusHistogram._maxValueHistogramLocal = 0;
     _focusHistogram._maxValueHistogramGlobal = 0;
 
-    BuildHistogram( T_HIST_FOCUS );
+    if( _autoBuildHistogram )
+      BuildHistogram( T_HIST_FOCUS );
+
+    if( _autoCalculateColors )
+      CalculateColors( T_HIST_FOCUS );
   }
 
   unsigned int HistogramWidget::bins( void ) const
