@@ -75,7 +75,7 @@ namespace visimpl
   , _syncScrollsHorizontally( true )
   , _syncScrollsVertically( true )
   , _heightPerRow( 50 )
-  , _maxLabelWidth( 100 )
+  , _maxLabelWidth( 200 )
   , _currentCentralMinWidth( 500 )
   , _showMarker( false )
   , _regionPercentage( 0.0f )
@@ -584,6 +584,7 @@ namespace visimpl
           for( auto it = subsets.first; it != subsets.second; ++it )
           {
             GIDUSet subset( it->second.begin( ), it->second.end( ));
+            std::cout << " <<< inserting " << it->first << " " << subset.size( ) << std::endl;
             insertSubset( it->first, subset );
           }
         }
@@ -617,7 +618,7 @@ namespace visimpl
     if( _stackType == TStackType::T_STACK_EXPANDABLE )
     {
 
-      std::cout << "Adding new selection with size " << selected.size( ) << std::endl;
+      std::cout << "Adding new selection " << selection.name << " with size " << selected.size( ) << std::endl;
   #ifdef VISIMPL_USE_ZEROEQ
 
       if( deferred )
@@ -707,7 +708,13 @@ namespace visimpl
     histogram->init( _bins, _zoomFactor );
 
     if( histogram->empty( ))
+    {
+      std::cout << "Discarding empty histogram " << name << " with elements " << subset.size( ) << std::endl;
+
+      delete histogram;
       return;
+    }
+    //TODO
 
     histogram->setMinimumHeight( _heightPerRow );
     histogram->setMaximumHeight( _heightPerRow );

@@ -94,6 +94,10 @@ namespace stackviz
 
     void UpdateSimulationSlider( float percentage );
 
+    void addCorrelation( const std::string& subset );
+
+    void calculateCorrelations( void );
+
   protected slots:
 
   #ifdef VISIMPL_USE_GMRVLEX
@@ -178,6 +182,8 @@ namespace stackviz
     unsigned int _columnsNumber;
     bool resizingEnabled;
     std::vector< QCheckBox* > _checkBoxes;
+
+    std::vector< std::string > _correlations;
 
   };
 
