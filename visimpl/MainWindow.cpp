@@ -216,47 +216,18 @@ namespace visimpl
     if( path != QString( "" ))
     {
 
-//      bool ok;
-//
+      bool ok;
+
       simil::TSimulationType simType = simil::TSimSpikes;
-//      QString text = QInputDialog::getText(
-//            this, tr( "Please type a target" ),
-//            tr( "Target name:" ), QLineEdit::Normal,
-//            "Mosaic", &ok );
+      QString text = QInputDialog::getText(
+            this, tr( "Please type a target" ),
+            tr( "Target name:" ), QLineEdit::Normal,
+            "Mosaic", &ok );
 
-//      bool ok1, ok2;
-//      QInputDialog simTypeDialog;
-//      simil::TSimulationType simType = simil::TSimSpikes;
-//      QStringList items = {"Spikes", "Voltages"};
-
-
-
-//      QString text = QInputDialog::getItem(
-//        this, tr( "Please select simulation type" ),
-//        tr( "Type:" ), items, 0, false, &ok1 );
-//
-//      if( !ok1 )
-//        return;
-//
-//      if( text == items[0] )
-//      {
-//        simType = simil::TSimSpikes;
-//        ok2 = true;
-//      }
-//      else
-//      {
-//        simType = simil::TSimVoltages;
-//
-//        text = QInputDialog::getText(
-//            this, tr( "Please select report" ),
-//            tr( "Report:" ), QLineEdit::Normal,
-//            "soma", &ok2 );
-//      }
-
-//      if ( ok && !text.isEmpty( ))
+      if ( ok && !text.isEmpty( ))
       {
   //      std::string targetLabel = text.toStdString( );
-        std::string reportLabel;// = text.toStdString( );
+        std::string reportLabel = text.toStdString( );
         _lastOpenedFileName = QFileInfo(path).path( );
         std::string fileName = path.toStdString( );
         openBlueConfig( fileName, simType, reportLabel );
