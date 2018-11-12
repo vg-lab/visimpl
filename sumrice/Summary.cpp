@@ -122,6 +122,7 @@ namespace visimpl
       _eventLabelsScroll = new QScrollArea( );
       _eventLabelsScroll->setWidgetResizable( true );
       _eventLabelsScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _eventLabelsScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _eventLabelsScroll->setVisible( false );
       _eventLabelsScroll->setWidget( eventLabelsContainer );
 
@@ -135,6 +136,7 @@ namespace visimpl
       _eventScroll = new QScrollArea();
       _eventScroll->setWidgetResizable( true );
       _eventScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _eventScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _eventScroll->setVisible( false );
       _eventScroll->setWidget( eventsContainer );
 

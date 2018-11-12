@@ -696,6 +696,11 @@ namespace visimpl
     return _focusHistogram[ position ];
   }
 
+  float HistogramWidget::timeAt( float percentage )
+  {
+    return ( _endTime - _startTime ) * percentage + _startTime;
+  }
+
   bool HistogramWidget::isInitialized( void )
   {
     return _mainHistogram._gradientStops.size( ) > 0 ||
@@ -974,6 +979,15 @@ namespace visimpl
       QPoint position ( positionX + margin, height( ) * 0.75f );
 
       painter.drawText( position, QString::number( valueAt( percentage )));
+
+      if( _paintTimeline )
+      {
+        position.setY( height( ) * 0.25f );
+
+        QString timeText( "t=" );
+        timeText.append( QString::number( timeAt( percentage )));
+        painter.drawText( position, timeText );
+      }
 
       QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
       pen.setColor( QColor( 177, 50, 50 ));

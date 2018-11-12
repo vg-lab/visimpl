@@ -143,6 +143,7 @@ namespace visimpl
 
     unsigned int valueAt( float percentage );
     unsigned int focusValueAt( float percentage );
+    float timeAt( float percentage );
 
     bool isInitialized( void );
 
