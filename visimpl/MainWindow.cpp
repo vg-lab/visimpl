@@ -1263,7 +1263,7 @@ namespace visimpl
 
   void MainWindow::addGroupFromSelection( void )
   {
-    InputMultiplexer* inputMux = _openGLWidget->inputMultiplexer( );
+    DomainManager* inputMux = _openGLWidget->inputMultiplexer( );
 
     unsigned int currentIndex = inputMux->groups( ).size( );
 
@@ -1286,9 +1286,6 @@ namespace visimpl
     inputMux->addVisualGroup( inputMux->selection( ),
                               groupName.toStdString( ),
                               false );
-
-    if( inputMux->showGroups( ))
-      inputMux->showGroups( true );
 
     QFrame* frame = new QFrame( );
     auto colors = _openGLWidget->colorPalette( ).colors( );

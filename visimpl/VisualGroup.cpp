@@ -16,13 +16,17 @@ namespace visimpl
 
   VisualGroup::VisualGroup( )
   : _name( "" )
+  , _cluster( nullptr )
   , _model( nullptr )
+  , _source( nullptr )
   , _active( false )
   { }
 
   VisualGroup::VisualGroup( const std::string& name )
   : _name( name )
+  , _cluster( nullptr )
   , _model( nullptr )
+  , _source( nullptr )
   , _active( false )
   { }
 
@@ -46,14 +50,60 @@ namespace visimpl
     assert( model_ );
 
     _model = model_;
+
+    if( _cluster )
+      _cluster->setModel( _model );
   }
 
-  prefr::Model* VisualGroup::model( void )
+  prefr::Model* VisualGroup::model( void ) const
   {
     return _model;
   }
 
-  bool VisualGroup::active( void )
+  void VisualGroup::active( bool state, bool updateSourceState )
+  {
+    _active = state;
+
+    if( updateSourceState )
+      _source->active( state );
+  }
+
+  void VisualGroup::cluster( prefr::Cluster* cluster_ )
+  {
+    assert( cluster_ );
+
+    _cluster = cluster_;
+
+    if( _model )
+      _cluster->setModel( _model );
+
+    if( _source )
+      _cluster->setSource( _source );
+  }
+
+  prefr::Cluster* VisualGroup::cluster( void ) const
+  {
+    return _cluster;
+  }
+
+  void VisualGroup::source( SourceMultiPosition* source_ )
+  {
+    assert( source_ );
+
+    _source = source_;
+    _source->restart( );
+    _source->active( _active );
+
+    if( _cluster )
+      _cluster->setSource( _source );
+  }
+
+  SourceMultiPosition* VisualGroup::source( void ) const
+  {
+    return _source;
+  }
+
+  bool VisualGroup::active( void ) const
   {
     return _active;
   }
@@ -77,7 +127,7 @@ namespace visimpl
 
    }
 
-  TTransferFunction VisualGroup::colorMapping( void )
+  TTransferFunction VisualGroup::colorMapping( void ) const
    {
      TTransferFunction result;
 
@@ -108,7 +158,7 @@ namespace visimpl
 
    }
 
-   TSizeFunction VisualGroup::sizeFunction( void )
+   TSizeFunction VisualGroup::sizeFunction( void ) const
    {
      TSizeFunction result;
      auto sizeValue = _model->size.values.begin( );

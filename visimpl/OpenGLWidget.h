@@ -29,7 +29,7 @@
 #include "prefr/ColorSource.h"
 #include "prefr/ColorOperationModel.h"
 
-#include "InputMultiplexer.h"
+#include "DomainManager.h"
 
 #include <sumrice/sumrice.h>
 #include <scoop/scoop.h>
@@ -88,7 +88,8 @@ namespace visimpl
                   const std::string& zeqUri = "" );
     ~OpenGLWidget( void );
 
-    void createParticleSystem( float scale = 1.0f );
+    void createParticleSystem( const tGidPosMap& gidPositions,
+                               float scale = 1.0f );
     void loadData( const std::string& fileName,
                    const simil::TDataType = simil::TDataType::TBlueConfig,
                    simil::TSimulationType simulationType = simil::TSimSpikes,
@@ -104,7 +105,7 @@ namespace visimpl
     simil::SimulationPlayer* player( );
     float currentTime( void );
 
-    InputMultiplexer* inputMultiplexer( void );
+    DomainManager* inputMultiplexer( void );
 
     void resetParticles( void );
 
@@ -239,7 +240,6 @@ namespace visimpl
     simil::TSimulationType _simulationType;
     simil::SpikesPlayer* _player;
 
-    float _maxLife;
     double _deltaTime;
 
     double _sbsTimePerStep;
@@ -262,12 +262,6 @@ namespace visimpl
     double _simTimePerSecond;
 
     bool _firstFrame;
-
-    prefr::ColorOperationModel* _prototype;
-    prefr::ColorOperationModel* _offPrototype;
-
-    std::unordered_map< uint32_t, prefr::Cluster* > gidNodesMap;
-    std::unordered_map< prefr::Cluster*, uint32_t > nodesGIDMap;
 
     float _renderSpeed;
     float _maxFPS;
@@ -297,7 +291,7 @@ namespace visimpl
     std::vector< std::vector< bool >> _eventsActivation;
     float _deltaEvents;
 
-    InputMultiplexer* _inputMux;
+    DomainManager* _domainManager;
 
     scoop::ColorPalette _colorPalette;
   };

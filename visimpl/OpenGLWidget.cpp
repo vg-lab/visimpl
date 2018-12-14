@@ -28,9 +28,6 @@
 
 #include "prefr/CompositeColorUpdater.h"
 
-#include "prefr/ValuedSource.h"
-#include "prefr/ValuedUpdater.h"
-
 namespace visimpl
 {
 
@@ -68,7 +65,6 @@ namespace visimpl
   , _particleSystem( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
-  , _maxLife( 0.0f )
   , _deltaTime( 0.0f )
   , _sbsTimePerStep( 5.0f )
   , _sbsBeginTime( 0 )
@@ -83,8 +79,6 @@ namespace visimpl
   , _timeStepsPerSecond( 2.0f )
   , _simTimePerSecond( 0.5f )
   , _firstFrame( true )
-  , _prototype( nullptr )
-  , _offPrototype( nullptr )
   , _renderSpeed( 0.0f )
   , _simPeriod( 0.0f )
   , _simPeriodMicroseconds( 0.0f )
@@ -101,7 +95,7 @@ namespace visimpl
   , _showActiveEvents( true )
   , _subsetEvents( nullptr )
   , _deltaEvents( 0.125f )
-  , _inputMux( nullptr )
+  , _domainManager( nullptr )
   {
   #ifdef VISIMPL_USE_ZEROEQ
     if ( zeqUri != "" )
@@ -198,7 +192,22 @@ namespace visimpl
     _player->deltaTime( _deltaTime );
 
 
+    tGidPosMap gidPositions;
+    auto gids = spPlayer->gids( );
+    auto positions = spPlayer->positions( );
+
+    auto gidit = gids.begin( );
+    for( auto pos : positions )
+    {
+      vec3 position( pos.x( ), pos.y( ), pos.z( ));
+
+      gidPositions.insert( std::make_pair( *gidit, position ));
+      ++gidit;
+    }
+
     float scale = 1.0f;
+
+    createParticleSystem( gidPositions, scale );
 
     switch( fileType )
     {
@@ -218,10 +227,7 @@ namespace visimpl
         break;
     }
 
-    createParticleSystem( scale );
-
-    _inputMux = new InputMultiplexer( _particleSystem, _player->gids( ) );
-    _inputMux->models( _prototype, _offPrototype );
+    _updateSelection = true;
 
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
@@ -273,7 +279,7 @@ namespace visimpl
 
     float currentTime = _player->currentTime( );
 
-    _inputMux->processInput( _player->spikesNow( ), prevTime,
+    _domainManager->processInput( _player->spikesNow( ), prevTime,
                              currentTime, false );
 
   }
@@ -363,7 +369,7 @@ namespace visimpl
       if( spikeIt != _sbsCurrentSpike )
       {
         simil::SpikesCRange frameSpikes = std::make_pair( _sbsCurrentSpike, spikeIt );
-        _inputMux->processInput( frameSpikes, _sbsCurrentTime, nextTime, false );
+        _domainManager->processInput( frameSpikes, _sbsCurrentTime, nextTime, false );
       }
 
       _sbsCurrentTime = nextTime;
@@ -375,198 +381,50 @@ namespace visimpl
   void OpenGLWidget::backtraceSimulation( void )
   {
     float endTime = _player->currentTime( );
-    float startTime = std::max( 0.0f, endTime - _maxLife );
+    float startTime = std::max( 0.0f, endTime - _domainManager->decay( ));
     simil::SpikesCRange context =
         _player->spikesBetween( startTime, endTime );
 
     if( context.first != context.second )
-      _inputMux->processInput( context, startTime, endTime, true );
+      _domainManager->processInput( context, startTime, endTime, true );
   }
 
 
-  void expandBoundingBox( glm::vec3& minBounds,
-                          glm::vec3& maxBounds,
-                          const glm::vec3& position)
-  {
-    for( unsigned int i = 0; i < 3; ++i )
-    {
-      minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
-      maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
-    }
-  }
+//  void expandBoundingBox( glm::vec3& minBounds,
+//                          glm::vec3& maxBounds,
+//                          const glm::vec3& position)
+//  {
+//    for( unsigned int i = 0; i < 3; ++i )
+//    {
+//      minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
+//      maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
+//    }
+//  }
 
-  void OpenGLWidget::createParticleSystem( float scale )
+  void OpenGLWidget::createParticleSystem( const tGidPosMap& gidPositions, float )
   {
     makeCurrent( );
     prefr::Config::init( );
 
-    unsigned int maxParticles = _player->gids( ).size( );
-    unsigned int maxEmitters = maxParticles;
-
-    _particleSystem = new prefr::ParticleSystem( maxParticles );
-    _particleSystem->renderDeadParticles( true );
-
-    _particleSystem->parallel( true );
-
-    const TPosVect& positions = _player->positions( );
-
+    // Initialize shader
     _particlesShader = new reto::ShaderProgram( );
     _particlesShader->loadVertexShaderFromText( prefr::prefrVertexShader );
     _particlesShader->loadFragmentShaderFromText( prefr::prefrFragmentShader );
     _particlesShader->create( );
     _particlesShader->link( );
 
-    _offPrototype = new prefr::ColorOperationModel( _maxLife, _maxLife );
 
-    _offPrototype->color.Insert( 0.0f, ( glm::vec4(0.1f, 0.1f, 0.1f, 0.2f)));
+    unsigned int maxParticles = _player->gids( ).size( );
 
-    _offPrototype->velocity.Insert( 0.0f, 0.0f );
-
-    _offPrototype->size.Insert( 1.0f, 10.0f );
-
-    _particleSystem->addModel( _offPrototype );
-
-
-    _prototype = new prefr::ColorOperationModel( _maxLife, _maxLife );
-
-    _particleSystem->addModel( _prototype );
-
-
-    prefr::Updater* updater;
-
-    switch( _simulationType )
-    {
-     case simil::TSimSpikes:
-
-       updater = new prefr::ValuedUpdater( );
-       std::cout << "Created Spikes Updater" << std::endl;
-
-       _prototype->color.Insert( 0.0f, ( glm::vec4(0.f, 1.f, 0.f, 0.05)));
-       _prototype->color.Insert( 0.35f, ( glm::vec4(1, 0, 0, 0.2 )));
-       _prototype->color.Insert( 0.7f, ( glm::vec4(1.f, 1.f, 0, 0.2 )));
-       _prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 1.f, 0.2 )));
-
-       _prototype->velocity.Insert( 0.0f, 0.0f );
-
-       _prototype->size.Insert( 0.0f, 20.0f );
-       _prototype->size.Insert( 1.0f, 10.0f );
-
-       break;
-     case simil::TSimVoltages:
-
-       updater = new prefr::ValuedUpdater( );
-       std::cout << "Created Voltages Updater" << std::endl;
-
-       _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
-       _prototype->color.Insert( 0.25f, ( glm::vec4(0.2, 0.2, 0.3, 0.07 )));
-       _prototype->color.Insert( 0.5f, ( glm::vec4(0, 0.5, 0, 0.10 )));
-       _prototype->color.Insert( 0.75f, ( glm::vec4(0.3, 0.3, 0.1, 0.15 )));
-       _prototype->color.Insert( 1.0f, ( glm::vec4(1, 0.1, 0.1, 0.2 )));
-
-       _prototype->velocity.Insert( 0.0f, 0.0f );
-
-       _prototype->size.Insert( 0.0f, 5.0f );
-       _prototype->size.Insert( 1.0f, 20.0f );
-
-
-       break;
-     default:
-       VISIMPL_THROW("Simulation type undefined.");
-       break;
-    }
-
-
-    prefr::Cluster* cluster;
-    prefr::Source* source;
-    prefr::PointSampler* sampler = new prefr::PointSampler( );
-
-    int partPerEmitter = 1;
-
-    std::cout << "Creating " << maxEmitters << " emitters with "
-              << partPerEmitter << std::endl;
-
-    unsigned int start;
-
-    unsigned int i = 0;
-    TGIDSet::const_iterator gid = _player->gids( ).begin();
-
-
-    _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),
-                                 std::numeric_limits< float >::max( ),
-                                 std::numeric_limits< float >::max( ));
-
-    _boundingBoxMax = glm::vec3( std::numeric_limits< float >::min( ),
-                                 std::numeric_limits< float >::min( ),
-                                 std::numeric_limits< float >::min( ));
-
-    for ( auto brionPos : positions )
-    {
-      cluster = new prefr::Cluster( );
-      cluster->model( _prototype );
-      cluster->updater( updater );
-      cluster->active( true );
-
-
-      glm::vec3 position( brionPos.x( ), brionPos.y( ), brionPos.z( ));
-
-      if( scale != 1.0f )
-        position *= scale;
-
-      expandBoundingBox( _boundingBoxMin, _boundingBoxMax, position );
-
-      start = i * partPerEmitter;
-
-      switch( _simulationType )
-      {
-      case simil::TSimSpikes:
-        source = new prefr::ValuedSource( -1.0f, position,
-                                         glm::vec4( 0, 0, 0, 0 ),
-                                         true );
-        break;
-      case simil::TSimVoltages:
-        source = new prefr::ValuedSource( -1.0f, position,
-                                          glm::vec4( 0, 0, 0, 0 ),
-                                          true );
-        break;
-      default:
-        source = nullptr;
-        VISIMPL_THROW("Node type undefined");
-        break;
-      }
-
-      source->sampler( sampler );
-      cluster->source( source );
-
-      _particleSystem->addSource( source );
-      _particleSystem->addCluster( cluster, start, partPerEmitter );
-
-      cluster->inactiveKillParticles( false );
-//      source->maxEmissionCycles( 1 );
-
-      i++;
-      gid++;
-
-    }
-
-    updateCameraBoundingBox( );
-
-    prefr::Sorter* sorter = new prefr::Sorter( );
-
-    std::cout << "Created sorter" << std::endl;
-
-    prefr::GLRenderer* renderer = new prefr::GLRenderer( );
-
-    std::cout << "Created systems" << std::endl;
-
-    _particleSystem->addUpdater( updater );
-    _particleSystem->sorter( sorter );
-    _particleSystem->renderer( renderer );
-
-    _particleSystem->start();
-
-
+    _particleSystem = new prefr::ParticleSystem( maxParticles );
     _resetParticles = true;
 
+    _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
+
+    _domainManager->init( gidPositions );
+    _domainManager->initializeParticleSystem( );
+
+    _domainManager->mode( TMODE_SELECTION );
   }
 
 
@@ -654,7 +512,7 @@ namespace visimpl
         updateSelection( );
 
       if( _resetParticles )
-        _inputMux->resetParticles( );
+        _domainManager->resetParticles( );
 
       _resetParticles = false;
 
@@ -789,9 +647,9 @@ namespace visimpl
       _selectedGIDs = gids;
       _pendingSelection = true;
 
-      if( !_inputMux->showGroups( ))
+      if( !_domainManager->showGroups( ))
         setUpdateSelection( );
-      _inputMux->selection( gids );
+      _domainManager->selection( gids );
 
     }
     std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
@@ -811,29 +669,33 @@ namespace visimpl
 
 //      bool baseOn = !_showSelection || _selectedGIDs.empty( );
 
-      _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),
-                                   std::numeric_limits< float >::max( ),
-                                   std::numeric_limits< float >::max( ));
+//      _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),
+//                                   std::numeric_limits< float >::max( ),
+//                                   std::numeric_limits< float >::max( ));
+//
+//      _boundingBoxMax = glm::vec3( std::numeric_limits< float >::min( ),
+//                                   std::numeric_limits< float >::min( ),
+//                                   std::numeric_limits< float >::min( ));
 
-      _boundingBoxMax = glm::vec3( std::numeric_limits< float >::min( ),
-                                   std::numeric_limits< float >::min( ),
-                                   std::numeric_limits< float >::min( ));
+//      std::vector< prefr::Cluster* > active =
+//        _inputMux->activeClusters( );
+//
+//      for( auto cluster : ( !active.empty( ) ? active :_particleSystem->clusters( ) ))
+//      {
+//        auto particleRange = cluster->particles( );
+//        for( prefr::tparticle particle = particleRange.begin( );
+//            particle != particleRange.end( ); ++particle )
+//        {
+//          expandBoundingBox( _boundingBoxMin,
+//                             _boundingBoxMax,
+//                             particle.position( ));
+//        }
+//
+//      }
 
-      std::vector< prefr::Cluster* > active =
-        _inputMux->activeClusters( );
-
-      for( auto cluster : ( !active.empty( ) ? active :_particleSystem->clusters( ) ))
-      {
-        auto particleRange = cluster->particles( );
-        for( prefr::tparticle particle = particleRange.begin( );
-            particle != particleRange.end( ); ++particle )
-        {
-          expandBoundingBox( _boundingBoxMin,
-                             _boundingBoxMax,
-                             particle.position( ));
-        }
-
-      }
+      auto boundingBox = _domainManager->boundingBox( );
+      _boundingBoxMin = boundingBox.first;
+      _boundingBoxMax = boundingBox.second;
 
       updateCameraBoundingBox( );
 
@@ -850,8 +712,8 @@ namespace visimpl
 
     _showSelection = showSelection_;
 
-    if( _inputMux )
-      _inputMux->showGroups( !_showSelection );
+    if( _domainManager )
+      _domainManager->mode( TMODE_SELECTION );
 
     updateSelection( );
 
@@ -859,7 +721,7 @@ namespace visimpl
 
   void OpenGLWidget::clearSelection( void )
   {
-    _inputMux->clearSelection( );
+    _domainManager->clearSelection( );
     _selectedGIDs.clear( );
     _updateSelection = true;
   }
@@ -1132,9 +994,9 @@ namespace visimpl
     }
   }
 
-  InputMultiplexer* OpenGLWidget::inputMultiplexer( void )
+  DomainManager* OpenGLWidget::inputMultiplexer( void )
   {
-    return _inputMux;
+    return _domainManager;
   }
 
   void OpenGLWidget::subsetEventsManager( simil::SubsetEventManager* manager )
@@ -1351,7 +1213,7 @@ namespace visimpl
       gcolors.Insert( c.first, gColor );
     }
 
-    _prototype->color = gcolors;
+    _domainManager->modelSelectionBase( )->color = gcolors;
 
   }
 
@@ -1359,10 +1221,12 @@ namespace visimpl
   {
     TTransferFunction result;
 
-    prefr::vectortvec4 colors = _prototype->color;
+    auto model = _domainManager->modelSelectionBase( );
 
-    auto timeValue = _prototype->color.times.begin( );
-    for( auto c : _prototype->color.values )
+    prefr::vectortvec4 colors = model->color;
+
+    auto timeValue = model->color.times.begin( );
+    for( auto c : model->color.values )
     {
       QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
       result.push_back( std::make_pair( *timeValue, color ));
@@ -1382,15 +1246,18 @@ namespace visimpl
     {
       newSize.Insert( s.first, s.second );
     }
-    _prototype->size = newSize;
+    _domainManager->modelSelectionBase( )->size = newSize;
 
   }
 
   TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
   {
     TSizeFunction result;
-    auto sizeValue = _prototype->size.values.begin( );
-    for( auto s : _prototype->size.times)
+
+    auto model = _domainManager->modelSelectionBase( );
+
+    auto sizeValue = model->size.values.begin( );
+    for( auto s : model->size.times)
     {
       result.push_back( std::make_pair( s, *sizeValue ));
       ++sizeValue;
@@ -1442,18 +1309,14 @@ namespace visimpl
 
   void OpenGLWidget::changeSimulationDecayValue( float value )
   {
-    _maxLife = value;
 
-    if( _inputMux )
-      _inputMux->decay( value );
-
-    if( _prototype)
-      _prototype->setLife( value, value );
+    if( _domainManager )
+      _domainManager->decay( value );
   }
 
   float OpenGLWidget::getSimulationDecayValue( void )
   {
-    return _prototype->maxLife( );
+    return _domainManager->decay( );
   }
 
 } // namespace visimpl
