@@ -14,8 +14,11 @@ namespace visimpl
 
   static float invRGBInt = 1.0f / 255;
 
+  unsigned int VisualGroup::_counter = 0;
+
   VisualGroup::VisualGroup( )
-  : _name( "" )
+  : _idx( _counter++ )
+  , _name( "" )
   , _cluster( nullptr )
   , _model( nullptr )
   , _source( nullptr )
@@ -23,7 +26,8 @@ namespace visimpl
   { }
 
   VisualGroup::VisualGroup( const std::string& name )
-  : _name( name )
+  : _idx( _counter++ )
+  , _name( name )
   , _cluster( nullptr )
   , _model( nullptr )
   , _source( nullptr )
@@ -33,6 +37,11 @@ namespace visimpl
   VisualGroup::~VisualGroup( )
   {
 
+  }
+
+  unsigned int VisualGroup::id( void )
+  {
+    return _idx;
   }
 
   void VisualGroup::gids( const GIDUSet& gids_ )

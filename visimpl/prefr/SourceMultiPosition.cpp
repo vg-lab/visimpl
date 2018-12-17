@@ -13,6 +13,7 @@ namespace visimpl
   SourceMultiPosition::SourceMultiPosition( void )
   : Source( -1, glm::vec3( 0, 0, 0))
   , _positions( nullptr )
+  , _idxTranslate( nullptr )
   { }
 
   SourceMultiPosition::~SourceMultiPosition( void )

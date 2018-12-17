@@ -26,6 +26,8 @@ namespace visimpl
     VisualGroup( const std::string& name );
     ~VisualGroup( );
 
+    unsigned int id( void );
+
     void gids( const GIDUSet& gids_ );
     const GIDUSet& gids( void ) const;
 
@@ -49,6 +51,9 @@ namespace visimpl
 
 
   protected:
+
+    unsigned int _idx;
+    static unsigned int _counter;
 
     std::string _name;
 

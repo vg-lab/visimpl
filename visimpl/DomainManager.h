@@ -60,6 +60,8 @@ namespace visimpl
     void mode( tVisualMode newMode );
     tVisualMode mode( void );
 
+    void clearView( void );
+
 //    void showGroups( bool show );
     bool showGroups( void );
 
@@ -88,14 +90,25 @@ namespace visimpl
                                  float begin, float end );
 
     void _updateGroupsModels( void );
-    void _updateSelectionModels( void );
+    void _updateGroupsIndices( void );
 
     void _updateSelectionIndices( void );
+    void _generateSelectionIndices( void );
 
     void _processFrameInputGroups( const simil::SpikesCRange& spikes_,
                                   float begin, float end );
     void _processFrameInputSelection( const simil::SpikesCRange& spikes_,
                                      float begin, float end );
+
+    void _loadPaletteColors( void );
+
+    void _clearSelectionView( void );
+    void _clearGroupsView( void );
+    void _clearAttribView( void );
+
+    void _resetBoundingBox( void );
+
+    SourceMultiPosition* getSource( unsigned int numParticles );
 
     prefr::ParticleSystem* _particleSystem;
 
@@ -107,7 +120,7 @@ namespace visimpl
     prefr::Cluster* _clusterUnselected;
 
     SourceMultiPosition* _sourceSelected;
-    SourceMultiPosition* _sourceUnselected;
+//    SourceMultiPosition* _sourceUnselected;
 
     std::vector< VisualGroup* > _groups;
 
@@ -136,6 +149,8 @@ namespace visimpl
     bool _showInactive;
 
     tBoundingBox _boundingBox;
+
+    std::vector< std::pair< QColor, QColor >> _paletteColors;
   };
 
 

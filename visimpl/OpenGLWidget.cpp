@@ -227,7 +227,7 @@ namespace visimpl
         break;
     }
 
-    _updateSelection = true;
+//    _updateSelection = true;
 
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
@@ -416,7 +416,7 @@ namespace visimpl
 
     unsigned int maxParticles = _player->gids( ).size( );
 
-    _particleSystem = new prefr::ParticleSystem( maxParticles );
+    _particleSystem = new prefr::ParticleSystem( maxParticles * 2 );
     _resetParticles = true;
 
     _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
@@ -647,9 +647,8 @@ namespace visimpl
       _selectedGIDs = gids;
       _pendingSelection = true;
 
-      if( !_domainManager->showGroups( ))
-        setUpdateSelection( );
-      _domainManager->selection( gids );
+//      if( !_domainManager->showGroups( ))
+      setUpdateSelection( );
 
     }
     std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
@@ -667,6 +666,8 @@ namespace visimpl
     {
       _particleSystem->run( false );
 
+      _domainManager->selection( _selectedGIDs );
+      backtraceSimulation( );
 //      bool baseOn = !_showSelection || _selectedGIDs.empty( );
 
 //      _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),

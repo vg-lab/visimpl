@@ -23,7 +23,7 @@ namespace visimpl
   , _clusterSelected( nullptr )
   , _clusterUnselected( nullptr )
   , _sourceSelected( nullptr )
-  , _sourceUnselected( nullptr )
+//  , _sourceUnselected( nullptr )
   , _modelBase( nullptr )
   , _modelOff( nullptr )
   , _sampler( nullptr )
@@ -56,27 +56,30 @@ namespace visimpl
     _gidPositions = positions;
 
     _sourceSelected = new SourceMultiPosition( );
-    _sourceUnselected = new SourceMultiPosition( );
+//    _sourceUnselected = new SourceMultiPosition( );
 
     _sourceSelected->setPositions( _gidPositions );
-    _sourceUnselected->setPositions( _gidPositions );
+//    _sourceUnselected->setPositions( _gidPositions );
 
-    _particleSystem->addSource( _sourceSelected );
-    _particleSystem->addSource( _sourceUnselected );
+//    _particleSystem->addSource( _sourceSelected );
+//    _particleSystem->addSource( _sourceUnselected );
 
     _clusterSelected = new prefr::Cluster( );
     _clusterUnselected = new prefr::Cluster( );
 
     _particleSystem->addCluster( _clusterSelected );
     _particleSystem->addCluster( _clusterUnselected );
+
+    _loadPaletteColors( );
   }
 
   void DomainManager::initializeParticleSystem( void )
   {
     std::cout << "Initializing particle system..." << std::endl;
-    _updater = new UpdaterStaticPosition( );
-    prefr::Sorter* sorter = new prefr::Sorter( );
 
+    _updater = new UpdaterStaticPosition( );
+
+    prefr::Sorter* sorter = new prefr::Sorter( );
     prefr::GLRenderer* renderer = new prefr::GLRenderer( );
 
     _particleSystem->addUpdater( _updater );
@@ -121,14 +124,14 @@ namespace visimpl
     {
       case TMODE_SELECTION:
 
-        _updateSelectionIndices( );
-        _updateSelectionModels( );
+        _generateSelectionIndices( );
 
         break;
       case TMODE_GROUPS:
 
-        break;
+        _updateGroupsIndices( );
 
+        break;
       case TMODE_ATTRIBUTE:
         //TODO
         break;
@@ -143,37 +146,60 @@ namespace visimpl
     return _mode;
   }
 
-
-  VisualGroup* DomainManager::addVisualGroup( const GIDUSet& gids,
-                                                 const std::string& name,
-                                                 bool overrideGIDS )
+  void DomainManager::clearView( void )
   {
-    VisualGroup* group = new VisualGroup( name );
-
-    prefr::ColorOperationModel* model =
-        new prefr::ColorOperationModel( *_modelBase );
-
-    group->_active = true;
-    group->model( model );
-    group->gids( gids );
-
-    unsigned int counter = 0;
-    for( auto gid : gids )
+    switch( _mode )
     {
-      auto reference = _neuronGroup.find( gid );
+      case TMODE_SELECTION:
+        _clearSelectionView( );
+        break;
 
-      if( overrideGIDS || reference == _neuronGroup.end( ))
-      {
-        _neuronGroup[ gid ] = group;
-        ++counter;
-      }
+      case TMODE_GROUPS:
+
+        for( auto group : _groups )
+        {
+          _particleSystem->releaseParticles( group->source( )->particles( ));
+        }
+
+        break;
+
+
+      case TMODE_ATTRIBUTE:
+
+        break;
+
+      default:
+
+        break;
     }
+  }
 
-    if( counter == 0 )
-    {
-      std::cout << "Warning: This group has no exclusive GIDs so nothing will be shown" << std::endl;
-    }
 
+  void DomainManager::_clearSelectionView( void )
+  {
+    _particleSystem->detachSource( _sourceSelected );
+//    _particleSystem->detachSource( _sourceUnselected );
+
+    _gidToParticle.clear( );
+    _particleToGID.clear( );
+
+    _gidSource.clear( );
+//    _particleSystem->releaseParticles( _clusterSelected->particles( ).indices( ));
+//    _particleSystem->releaseParticles( _clusterUnselected->particles( ).indices( ));
+  }
+
+  void DomainManager::_clearGroupsView( void )
+  {
+
+  }
+
+  void DomainManager::_clearAttribView( void )
+  {
+
+  }
+
+  void DomainManager::_loadPaletteColors( void )
+  {
     scoop::ColorPalette palette =
         scoop::ColorPalette::colorBrewerQualitative(
             ( scoop::ColorPalette::ColorBrewerQualitative::Set1 ), 9 );
@@ -182,48 +208,38 @@ namespace visimpl
 
 //    float invSize = 1.0f / ( colors.size( ) - 1 );
 
+    float brightFactor = 0.4f;
+    float darkFactor = 1.0f - brightFactor;
 
-    std::cout << "Created color: ";
-    TTransferFunction colorVariation;
+    _paletteColors.clear( );
 
-    QColor color = colors[ _groups.size( ) ];
+    for( auto color: colors )
+    {
+//      QColor color = colors[ _groups.size( ) ];
 
-    glm::vec4 baseColor( color.red( ) * invRGBInt,
-                         color.green( ) * invRGBInt,
-                         color.blue( ) * invRGBInt, 0.6f );
+      glm::vec4 baseColor( color.red( ) * invRGBInt,
+                           color.green( ) * invRGBInt,
+                           color.blue( ) * invRGBInt, 0.6f );
 
-    color = QColor( baseColor.r * 255,
-                    baseColor.g * 255,
-                    baseColor.b * 255,
-                    baseColor.a * 255 );
+      color = QColor( baseColor.r * 255,
+                      baseColor.g * 255,
+                      baseColor.b * 255,
+                      baseColor.a * 255 );
 
-    glm::vec4 darkColor =
-        ( baseColor * 0.4f ) + ( glm::vec4( 0.1f, 0.1f, 0.1f, 0.4f ) * 0.6f );
+      glm::vec4 darkColor =
+          ( baseColor * brightFactor ) + ( glm::vec4( 0.1f, 0.1f, 0.1f, 0.4f ) * darkFactor );
 
-    QColor darkqColor = QColor( darkColor.r * 255,
-                                darkColor.g * 255,
-                                darkColor.b * 255,
-                                darkColor.a * 255 );
+      QColor darkqColor = QColor( darkColor.r * 255,
+                                  darkColor.g * 255,
+                                  darkColor.b * 255,
+                                  darkColor.a * 255 );
 
-//    colorVariation.push_back( std::make_pair( 0.0f, darkqColor));
-    colorVariation.push_back( std::make_pair( 0.0f, color ));
-//    colorVariation.push_back( std::make_pair( 0.2f, color ));
-
-//    colorVariation.push_back( std::make_pair( 0.7f, color ));
-
-    colorVariation.push_back( std::make_pair( 1.0f, darkqColor));
-
-    group->colorMapping( colorVariation );
-
-    _groups.push_back( group );
-
-    return group;
-  }
-
-  void DomainManager::removeVisualGroup( unsigned int  )
-  {
+      _paletteColors.emplace_back( std::make_pair( color, darkqColor ));
+    }
 
   }
+
+
 
 //  void DomainManager::showGroups( bool show )
 //  {
@@ -237,16 +253,27 @@ namespace visimpl
     switch( _mode )
     {
       case TMODE_SELECTION:
-        _updateSelectionModels( );
+        _updateGroupsIndices( );
         break;
       case TMODE_GROUPS:
-        _updateGroupsModels( );
+        _updateGroupsIndices( );
         break;
       case TMODE_ATTRIBUTE:
         //TODO
         break;
     }
 
+  }
+
+  void DomainManager::_resetBoundingBox( void )
+  {
+    _boundingBox.first = glm::vec3( std::numeric_limits< float >::max( ),
+                                    std::numeric_limits< float >::max( ),
+                                    std::numeric_limits< float >::max( ));
+
+    _boundingBox.second = glm::vec3( std::numeric_limits< float >::min( ),
+                                     std::numeric_limits< float >::min( ),
+                                     std::numeric_limits< float >::min( ));
   }
 
   //TODO
@@ -269,28 +296,6 @@ namespace visimpl
     //TODO
     if( !_showInactive )
       group->source( )->active( state );
-
-//    if( _showGroups )
-//    {
-//      for( auto gid : group->gids( ))
-//      {
-//        auto cluster = _neuronClusters.find( gid );
-//
-//        cluster->second->setModel( state ? group->model( ) : _off);
-//      }
-//    }
-//    else
-//    {
-//      for( auto gid : group->gids( ))
-//      {
-//        auto cluster = _neuronClusters.find( gid );
-//
-//        auto res = _selection.find( gid );
-//
-//        cluster->second->setModel( res != _selection.end( ) ? _base : _off );
-//
-//      }
-//    }
 
   }
 
@@ -318,25 +323,49 @@ namespace visimpl
 
   void DomainManager::_updateSelectionIndices( void )
   {
+    prefr::ParticleIndices selection;
+    prefr::ParticleIndices other;
+    for( auto gid : _gids )
+    {
+      auto particleId = _gidToParticle.find( gid )->second;
+
+      if( _selection.find( gid ) != _selection.end( ))
+        selection.push_back( particleId );
+      else
+        other.push_back( particleId );
+    }
+
+//    _sourceSelected->particles( ).transferIndicesTo( _sourceUnselected->particles( ), other );
+//    _sourceUnselected->particles( ).transferIndicesTo( _sourceSelected->particles( ), selection );
+
+    _clusterSelected->particles( ).indices( selection );
+    _clusterUnselected->particles( ).indices( other );
+
+//    _clusterSelected->setSource( _sourceSelected, false );
+//    _clusterUnselected->setSource( _sourceUnselected, false );
+
+    _clusterSelected->setModel( _modelBase );
+    _clusterUnselected->setModel( _modelOff );
+
+  }
+
+  void DomainManager::_generateSelectionIndices( void )
+  {
     unsigned int numParticles = _gids.size( );
 
+    prefr::ParticleIndices indices;
     prefr::ParticleIndices indicesSelected;
     prefr::ParticleIndices indicesUnselected;
+
+    indices.reserve( numParticles );
     indicesSelected.reserve( numParticles );
     indicesUnselected.reserve( numParticles );
 
-    _particleSystem->releaseParticles( _clusterSelected->particles( ).indices( ));
-    _particleSystem->releaseParticles( _clusterUnselected->particles( ).indices( ));
-
     auto availableParticles =  _particleSystem->retrieveUnused( numParticles );
 
-    _boundingBox.first = glm::vec3( std::numeric_limits< float >::max( ),
-                                    std::numeric_limits< float >::max( ),
-                                    std::numeric_limits< float >::max( ));
+    std::cout << "Retrieved " << availableParticles.size( ) << std::endl;
 
-    _boundingBox.second = glm::vec3( std::numeric_limits< float >::min( ),
-                                     std::numeric_limits< float >::min( ),
-                                     std::numeric_limits< float >::min( ));
+    _resetBoundingBox( );
 
 //    std::cout << "Particle ids: ";
     auto gidit = _gids.begin( );
@@ -349,20 +378,24 @@ namespace visimpl
       _gidToParticle.insert( std::make_pair( *gidit, id ));
       _particleToGID.insert( std::make_pair( id, *gidit ));
 
+      _gidSource.insert( std::make_pair( *gidit, _sourceSelected ));
+
       // Check if part of selection
       if( _selection.empty( ) || _selection.find( *gidit ) != _selection.end( ))
       {
         indicesSelected.emplace_back( id );
-        _gidSource.insert( std::make_pair( *gidit, _sourceSelected ));
+//        _gidSource.insert( std::make_pair( *gidit, _sourceSelected ));
+
+        auto pos = _gidPositions.find( *gidit )->second;
+        expandBoundingBox( _boundingBox.first, _boundingBox.second, pos );
       }
       else
       {
         indicesUnselected.emplace_back( id );
-        _gidSource.insert( std::make_pair( *gidit, _sourceUnselected ));
+//        _gidSource.insert( std::make_pair( *gidit, _sourceUnselected ));
       }
 
-      auto pos = _gidPositions.find( *gidit )->second;
-      expandBoundingBox( _boundingBox.first, _boundingBox.second, pos );
+      indices.emplace_back( id );
 
       ++gidit;
     }
@@ -379,15 +412,18 @@ namespace visimpl
 //    _sourceSelected->particles( indicesSelected );
 //    _sourceUnselected->particles( indicesUnselected );
 
-    _clusterSelected->setSource( _sourceSelected );
-    _clusterUnselected->setSource( _sourceUnselected );
-
+//    _clusterSelected->setSource( _sourceSelected );
+//    _clusterUnselected->setSource( _sourceUnselected );
+//
     _sourceSelected->setIdxTranslation( _particleToGID );
-    _sourceUnselected->setIdxTranslation( _particleToGID );
+//    _sourceUnselected->setIdxTranslation( _particleToGID );
+//
+//    _sourceSelected->restart( );
+//    _sourceUnselected->restart( );
 
-    _sourceSelected->restart( );
-    _sourceUnselected->restart( );
-
+    _particleSystem->addSource( _sourceSelected, indices );
+//    _particleSystem->addSource( _sourceSelected, indicesSelected );
+//    _particleSystem->addSource( _sourceUnselected, indicesUnselected );
 
     _clusterSelected->setUpdater( _updater );
     _clusterUnselected->setUpdater( _updater );
@@ -399,7 +435,78 @@ namespace visimpl
 
   }
 
-  void DomainManager::_updateSelectionModels( void )
+
+  VisualGroup* DomainManager::addVisualGroup( const GIDUSet& gids,
+                                              const std::string& name,
+                                              bool overrideGIDS )
+   {
+     VisualGroup* group = new VisualGroup( name );
+
+     prefr::ColorOperationModel* model =
+         new prefr::ColorOperationModel( *_modelBase );
+
+
+     auto availableParticles =  _particleSystem->retrieveUnused( gids.size( ));
+
+     prefr::Cluster* cluster = new prefr::Cluster( );
+     _particleSystem->addCluster( cluster, availableParticles.indices( ));
+
+     SourceMultiPosition* source = new SourceMultiPosition( );
+     source->setPositions( _gidPositions );
+     source->setIdxTranslation( _particleToGID );
+
+     _particleSystem->addSource( source, availableParticles.indices( ));
+
+     cluster->setUpdater( _updater );
+
+     group->_active = true;
+     group->model( model );
+     group->gids( gids );
+     group->cluster( cluster );
+     group->source( source );
+
+     unsigned int counter = 0;
+     auto partId = availableParticles.begin( );
+     for( auto gid : gids )
+     {
+       auto reference = _neuronGroup.find( gid );
+
+       if( overrideGIDS || reference == _neuronGroup.end( ))
+       {
+         _neuronGroup[ gid ] = group;
+         ++counter;
+       }
+
+       _gidToParticle.insert( std::make_pair( gid, partId.id( )));
+       _particleToGID.insert( std::make_pair( partId.id( ), gid ));
+
+       ++partId;
+     }
+
+     if( counter == 0 )
+     {
+       std::cout << "Warning: This group has no exclusive GIDs so nothing will be shown" << std::endl;
+     }
+     TTransferFunction colorVariation;
+
+     auto colors = _paletteColors[ group->id( )];
+
+     colorVariation.push_back( std::make_pair( 0.0f, colors.first ));
+     colorVariation.push_back( std::make_pair( 1.0f, colors.second ));
+
+     group->colorMapping( colorVariation );
+
+     _groups.push_back( group );
+
+     return group;
+   }
+
+   void DomainManager::removeVisualGroup( unsigned int  )
+   {
+
+   }
+
+  void DomainManager::_updateGroupsIndices( void )
   {
 
 
@@ -541,8 +648,9 @@ namespace visimpl
 
     if( _mode == TMODE_SELECTION )
     {
+//      _clearSelectionView( );
+//      _generateSelectionIndices( );
       _updateSelectionIndices( );
-      _updateSelectionModels( );
     }
   }
 
@@ -614,11 +722,11 @@ namespace visimpl
   {
     _selection.clear( );
 
-    if( _mode == TMODE_SELECTION )
-    {
-      _updateSelectionIndices( );
-      _updateSelectionModels( );
-    }
+//    if( _mode == TMODE_SELECTION )
+//    {
+//      _updateSelectionIndices( );
+//      _updateGroupsIndices( );
+//    }
   }
 
   void DomainManager::resetParticles( void )
