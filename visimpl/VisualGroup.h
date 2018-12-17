@@ -28,6 +28,9 @@ namespace visimpl
 
     unsigned int id( void );
 
+    void name( const std::string& name_ );
+    const std::string& name( void ) const;
+
     void gids( const GIDUSet& gids_ );
     const GIDUSet& gids( void ) const;
 
@@ -49,6 +52,12 @@ namespace visimpl
     void active( bool state, bool updateSourceState = false );
     bool active( void ) const;
 
+    void cached( bool state );
+    bool cached( void ) const;
+
+    void dirty( bool state );
+    bool dirty( void ) const;
+
 
   protected:
 
@@ -64,6 +73,8 @@ namespace visimpl
     SourceMultiPosition* _source;
 
     bool _active;
+    bool _cached;
+    bool _dirty;
   };
 
 

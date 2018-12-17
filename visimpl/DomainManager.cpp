@@ -118,6 +118,8 @@ namespace visimpl
 
   void DomainManager::mode( tVisualMode newMode )
   {
+    clearView( );
+
     _mode = newMode;
 
     switch( _mode )
@@ -129,7 +131,7 @@ namespace visimpl
         break;
       case TMODE_GROUPS:
 
-        _updateGroupsIndices( );
+        _generateGroupsIndices( );
 
         break;
       case TMODE_ATTRIBUTE:
@@ -139,6 +141,7 @@ namespace visimpl
       default:
         break;
     }
+
   }
 
   tVisualMode DomainManager::mode( void )
@@ -151,21 +154,18 @@ namespace visimpl
     switch( _mode )
     {
       case TMODE_SELECTION:
+
         _clearSelectionView( );
         break;
 
       case TMODE_GROUPS:
 
-        for( auto group : _groups )
-        {
-          _particleSystem->releaseParticles( group->source( )->particles( ));
-        }
-
+        _clearGroupsView( );
         break;
-
 
       case TMODE_ATTRIBUTE:
 
+        _clearAttribView( );
         break;
 
       default:
@@ -174,28 +174,38 @@ namespace visimpl
     }
   }
 
+  void DomainManager::_clearParticlesReference( void )
+  {
+    _gidToParticle.clear( );
+    _particleToGID.clear( );
+
+    _gidSource.clear( );
+  }
 
   void DomainManager::_clearSelectionView( void )
   {
     _particleSystem->detachSource( _sourceSelected );
 //    _particleSystem->detachSource( _sourceUnselected );
 
-    _gidToParticle.clear( );
-    _particleToGID.clear( );
-
-    _gidSource.clear( );
+    _clearParticlesReference( );
 //    _particleSystem->releaseParticles( _clusterSelected->particles( ).indices( ));
 //    _particleSystem->releaseParticles( _clusterUnselected->particles( ).indices( ));
   }
 
   void DomainManager::_clearGroupsView( void )
   {
+    for( auto group : _groups )
+    {
+      _clearGroup( group, false );
+    }
 
+    _clearParticlesReference( );
   }
 
   void DomainManager::_clearAttribView( void )
   {
 
+    _clearParticlesReference( );
   }
 
   void DomainManager::_loadPaletteColors( void )
@@ -253,10 +263,10 @@ namespace visimpl
     switch( _mode )
     {
       case TMODE_SELECTION:
-        _updateGroupsIndices( );
+        _generateSelectionIndices( );
         break;
       case TMODE_GROUPS:
-        _updateGroupsIndices( );
+        _generateGroupsIndices( );
         break;
       case TMODE_ATTRIBUTE:
         //TODO
@@ -281,6 +291,11 @@ namespace visimpl
   {
 //    return _showGroups;
     return _mode == TMODE_GROUPS;
+  }
+
+  void DomainManager::updateGroups( void )
+  {
+    _generateGroupsIndices( );
   }
 
   void DomainManager::setVisualGroupState( unsigned int i, bool state )
@@ -317,7 +332,7 @@ namespace visimpl
 //    for( int i = 0; i < ( int ) )
     for( auto group : _groups )
     {
-      group->model( group->active( ) ? _modelBase : _modelOff );
+      group->model( group->active( ) ? group->model( ) : _modelOff );
     }
   }
 
@@ -329,7 +344,7 @@ namespace visimpl
     {
       auto particleId = _gidToParticle.find( gid )->second;
 
-      if( _selection.find( gid ) != _selection.end( ))
+      if( _selection.empty( ) || _selection.find( gid ) != _selection.end( ))
         selection.push_back( particleId );
       else
         other.push_back( particleId );
@@ -439,77 +454,135 @@ namespace visimpl
   VisualGroup* DomainManager::addVisualGroup( const GIDUSet& gids,
                                               const std::string& name,
                                               bool overrideGIDS )
-   {
-     VisualGroup* group = new VisualGroup( name );
-
-     prefr::ColorOperationModel* model =
-         new prefr::ColorOperationModel( *_modelBase );
-
-
-     auto availableParticles =  _particleSystem->retrieveUnused( gids.size( ));
-
-     prefr::Cluster* cluster = new prefr::Cluster( );
-     _particleSystem->addCluster( cluster, availableParticles.indices( ));
-
-     SourceMultiPosition* source = new SourceMultiPosition( );
-     source->setPositions( _gidPositions );
-     source->setIdxTranslation( _particleToGID );
-
-     _particleSystem->addSource( source, availableParticles.indices( ));
-
-     cluster->setUpdater( _updater );
-
-     group->_active = true;
-     group->model( model );
-     group->gids( gids );
-     group->cluster( cluster );
-     group->source( source );
-
-     unsigned int counter = 0;
-     auto partId = availableParticles.begin( );
-     for( auto gid : gids )
-     {
-       auto reference = _neuronGroup.find( gid );
-
-       if( overrideGIDS || reference == _neuronGroup.end( ))
-       {
-         _neuronGroup[ gid ] = group;
-         ++counter;
-       }
-
-       _gidToParticle.insert( std::make_pair( gid, partId.id( )));
-       _particleToGID.insert( std::make_pair( partId.id( ), gid ));
-
-       ++partId;
-     }
-
-     if( counter == 0 )
-     {
-       std::cout << "Warning: This group has no exclusive GIDs so nothing will be shown" << std::endl;
-     }
-     TTransferFunction colorVariation;
-
-     auto colors = _paletteColors[ group->id( )];
-
-     colorVariation.push_back( std::make_pair( 0.0f, colors.first ));
-     colorVariation.push_back( std::make_pair( 1.0f, colors.second ));
-
-     group->colorMapping( colorVariation );
-
-     _groups.push_back( group );
-
-     return group;
-   }
-
-   void DomainManager::removeVisualGroup( unsigned int  )
-   {
-
-   }
-
-  void DomainManager::_updateGroupsIndices( void )
   {
+    VisualGroup* group = new VisualGroup( name );
+
+    // Create model from base
+    prefr::ColorOperationModel* model =
+        new prefr::ColorOperationModel( *_modelBase );
+    group->model( model );
+
+    TTransferFunction colorVariation;
+    auto colors = _paletteColors[ group->id( )];
+    colorVariation.push_back( std::make_pair( 0.0f, colors.first ));
+    colorVariation.push_back( std::make_pair( 1.0f, colors.second ));
+    group->colorMapping( colorVariation );
+
+    prefr::Cluster* cluster = new prefr::Cluster( );
+
+    SourceMultiPosition* source = new SourceMultiPosition( );
+    source->setPositions( _gidPositions );
+    source->setIdxTranslation( _particleToGID );
+
+    group->cluster( cluster );
+    group->source( source );
+
+    for( auto gid : gids )
+    {
+      auto reference = _neuronGroup.find( gid );
+
+      if( overrideGIDS && reference != _neuronGroup.end( ))
+      {
+        auto& oldGroup = reference->second;
+
+        auto oldGroupGIDs = oldGroup->gids( );
+        oldGroupGIDs.erase( gid );
+        reference->second->gids( oldGroupGIDs );
+
+        oldGroup->cached( false );
+      }
+    }
+
+    group->gids( gids );
+
+    group->active( true );
+    group->cached( false );
+    group->dirty( true );
+
+    _groups.push_back( group );
+
+    return group;
+  }
+
+  void DomainManager::removeVisualGroup( unsigned int i )
+  {
+    auto group = _groups[ i ];
+
+    _clearGroup( group, true );
+
+    delete group;
+
+    _groups.erase( _groups.begin( ) + i );
+  }
+
+  void DomainManager::_clearGroup( VisualGroup* group, bool clearState )
+  {
+    std::cout << "Clearing group " << group->name( )
+              << " size " << group->gids( ).size( )
+              << std::endl;
+
+    _particleSystem->detachSource( group->source( ));
+
+    if( clearState )
+    {
+      for( auto gid : group->gids( ))
+      {
+        auto ref = _gidToParticle.find( gid );
+
+        _particleToGID.erase( ref->second );
+        _gidToParticle.erase( ref );
+
+        _neuronGroup.erase( gid );
+      }
+    }
+
+    group->cached( false );
+    group->dirty( true );
+  }
+
+  void DomainManager::_generateGroupsIndices( void )
+  {
+    for( auto group : _groups )
+    {
+
+      if( !group->dirty( ))
+        continue;
+
+      if( group->cached( ))
+        _clearGroup( group, true );
+
+      const auto& gids = group->gids( );
+
+      auto availableParticles =  _particleSystem->retrieveUnused( gids.size( ));
+
+      auto cluster = group->cluster( );
+
+      _particleSystem->addCluster( cluster, availableParticles.indices( ));
+      _particleSystem->addSource( group->source( ), availableParticles.indices( ));
+
+      cluster->setUpdater( _updater );
+      cluster->setModel( group->model( ));
 
 
+//      unsigned int counter = 0;
+      auto partId = availableParticles.begin( );
+      for( auto gid : gids )
+      {
+//        auto reference = _neuronGroup.find( gid );
+
+        _neuronGroup.insert( std::make_pair( gid, group ));
+
+        _gidToParticle.insert( std::make_pair( gid, partId.id( )));
+        _particleToGID.insert( std::make_pair( partId.id( ), gid ));
+
+        ++partId;
+      }
+
+      group->cached( true );
+      group->dirty( false );
+
+      std::cout << "Generated particles for group with size " << group->gids( ).size( ) << std::endl;
+    }
   }
 
   void DomainManager::processInput( const simil::SpikesCRange& spikes_,
@@ -561,44 +634,6 @@ namespace visimpl
     return result;
   }
 
-  void DomainManager::_processFrameInputGroups( const simil::SpikesCRange& spikes_,
-                                                  float begin, float end )
-  {
-
-    auto state = _parseInput( spikes_, begin, end );
-
-    for( const auto& neuron : state )
-    {
-      auto gid = std::get< 0 >( neuron );
-
-      auto visualGroup = _neuronGroup.find( gid );
-
-      assert( visualGroup != _neuronGroup.end( ));
-
-      if( visualGroup->second->active( ))
-      {
-        unsigned int particleIndex = _gidToParticle.find( gid )->second;
-
-        auto particle = _particleSystem->particles( ).at( particleIndex );
-//        auto particle = visualGroup->second->source( )->particles( ).at( particleIndex );
-        particle.set_life( std::get< 1 >( neuron ) );
-      }
-//      auto cluster = _neuronClusters.find( gid );
-//
-//      assert( cluster != _neuronClusters.end( ));
-//
-//      auto particleRange = cluster->second->particles( );
-//
-//      if( visualGroup != _neuronGroup.end( ) && visualGroup->second->active( ))
-//      {
-//        dynamic_cast< prefr::ValuedSource* >( cluster->second->source( ))->particlesLife( std::get< 1 >( neuron ));
-//      }
-
-
-    }
-
-  }
-
   void DomainManager::_processFrameInputSelection( const simil::SpikesCRange& spikes_,
                                                      float begin, float end )
   {
@@ -623,24 +658,38 @@ namespace visimpl
 
         unsigned int partIdx = _gidToParticle.find( gid )->second;
         auto particle = _particleSystem->particles( ).at( partIdx );
-//        auto particle = source->second->particles( ).at( partIdx );
         particle.set_life( std::get< 1 >( neuron ));
       }
 
     }
-
-//    for( simil::SpikesCIter spike = spikes_.first; spike != spikes_.second; ++spike )
-//    {
-//      if( _selection.empty( ) || _selection.find( spike->second ) != _selection.end( ))
-//      {
-//        auto cluster = _neuronClusters.find( spike->second );
-//
-//        assert( cluster != _neuronClusters.end( ));
-//
-//        cluster->second->killParticles( );
-//      }
-//    }
   }
+
+
+  void DomainManager::_processFrameInputGroups( const simil::SpikesCRange& spikes_,
+                                                  float begin, float end )
+  {
+
+    auto state = _parseInput( spikes_, begin, end );
+
+    for( const auto& neuron : state )
+    {
+      auto gid = std::get< 0 >( neuron );
+
+      auto visualGroup = _neuronGroup.find( gid );
+
+//      assert( visualGroup != _neuronGroup.end( ));
+
+      if( visualGroup != _neuronGroup.end( ) && visualGroup->second->active( ))
+      {
+        unsigned int particleIndex = _gidToParticle.find( gid )->second;
+
+        auto particle = _particleSystem->particles( ).at( particleIndex );
+        particle.set_life( std::get< 1 >( neuron ) );
+      }
+    }
+
+  }
+
 
   void DomainManager::selection( const GIDUSet& newSelection )
   {
@@ -722,11 +771,10 @@ namespace visimpl
   {
     _selection.clear( );
 
-//    if( _mode == TMODE_SELECTION )
-//    {
-//      _updateSelectionIndices( );
-//      _updateGroupsIndices( );
-//    }
+    if( _mode == TMODE_SELECTION )
+    {
+      _updateSelectionIndices( );
+    }
   }
 
   void DomainManager::resetParticles( void )

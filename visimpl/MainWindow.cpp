@@ -1283,9 +1283,7 @@ namespace visimpl
         return;
     }
 
-    inputMux->addVisualGroup( inputMux->selection( ),
-                              groupName.toStdString( ),
-                              false );
+    _openGLWidget->addGroupFromSelection( groupName.toStdString( ));
 
     QFrame* frame = new QFrame( );
     auto colors = _openGLWidget->colorPalette( ).colors( );
@@ -1309,7 +1307,7 @@ namespace visimpl
     _groupLayout->addWidget( new QLabel( groupName ), currentIndex, 1, 1, 1 );
     _groupLayout->addWidget( buttonVisibility, currentIndex, 2, 1, 1 );
 
-    _openGLWidget->setUpdateSelection( );
+    _openGLWidget->setUpdateGroups( );
     _openGLWidget->update( );
   }
 

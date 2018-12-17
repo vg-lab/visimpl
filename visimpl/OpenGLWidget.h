@@ -105,6 +105,8 @@ namespace visimpl
     simil::SimulationPlayer* player( );
     float currentTime( void );
 
+    void addGroupFromSelection( const std::string& name );
+
     DomainManager* inputMultiplexer( void );
 
     void resetParticles( void );
@@ -159,9 +161,16 @@ namespace visimpl
 
     void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
     void showSelection( bool );
+
     void setUpdateSelection( void );
+    void setUpdateGroups( void );
+
     void updateSelection( void );
     void clearSelection( void );
+
+
+    void modeChange( void );
+    void updateGroups( void );
 
     void showEventsActivityLabels( bool show );
 
@@ -211,8 +220,8 @@ namespace visimpl
     reto::Camera* _camera;
     glm::vec3 _lastCameraPosition;
 
-    glm::vec3 _boundingBoxMin;
-    glm::vec3 _boundingBoxMax;
+//    glm::vec3 _boundingBoxMin;
+//    glm::vec3 _boundingBoxMax;
 
     bool _focusOnSelection;
     bool _pendingSelection;
@@ -283,6 +292,10 @@ namespace visimpl
 
     bool _resetParticles;
     bool _updateSelection;
+    bool _updateGroups;
+
+    bool _modeChange;
+    tVisualMode _newMode;
 
     bool _showActiveEvents;
     simil::SubsetEventManager* _subsetEvents;

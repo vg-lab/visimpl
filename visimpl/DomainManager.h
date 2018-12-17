@@ -64,6 +64,7 @@ namespace visimpl
 
 //    void showGroups( bool show );
     bool showGroups( void );
+    void updateGroups( void );
 
     void selection( const GIDUSet& newSelection );
     const GIDUSet& selection( void );
@@ -90,7 +91,7 @@ namespace visimpl
                                  float begin, float end );
 
     void _updateGroupsModels( void );
-    void _updateGroupsIndices( void );
+    void _generateGroupsIndices( void );
 
     void _updateSelectionIndices( void );
     void _generateSelectionIndices( void );
@@ -105,6 +106,9 @@ namespace visimpl
     void _clearSelectionView( void );
     void _clearGroupsView( void );
     void _clearAttribView( void );
+
+    void _clearGroup( VisualGroup* group, bool clearState = true );
+    void _clearParticlesReference( void );
 
     void _resetBoundingBox( void );
 

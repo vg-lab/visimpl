@@ -26,8 +26,6 @@
 #include "prefr/PrefrShaders.h"
 #include "prefr/ColorSource.h"
 
-#include "prefr/CompositeColorUpdater.h"
-
 namespace visimpl
 {
 
@@ -227,8 +225,6 @@ namespace visimpl
         break;
     }
 
-//    _updateSelection = true;
-
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
   #endif
@@ -425,6 +421,8 @@ namespace visimpl
     _domainManager->initializeParticleSystem( );
 
     _domainManager->mode( TMODE_SELECTION );
+
+    updateCameraBoundingBox( );
   }
 
 
@@ -508,8 +506,14 @@ namespace visimpl
       glEnable(GL_DEPTH_TEST);
       glEnable(GL_CULL_FACE);
 
+      if( _modeChange )
+        modeChange( );
+
       if( _updateSelection )
         updateSelection( );
+
+      if( _updateGroups && _domainManager->showGroups( ))
+        updateGroups( );
 
       if( _resetParticles )
         _domainManager->resetParticles( );
@@ -660,6 +664,18 @@ namespace visimpl
     _updateSelection = true;
   }
 
+  void OpenGLWidget::setUpdateGroups( void )
+  {
+    _updateGroups = true;
+  }
+
+  void OpenGLWidget::modeChange( void )
+  {
+    _domainManager->mode( _newMode );
+
+    _modeChange = false;
+  }
+
   void OpenGLWidget::updateSelection( void )
   {
     if( _particleSystem /*&& _pendingSelection*/ )
@@ -667,36 +683,31 @@ namespace visimpl
       _particleSystem->run( false );
 
       _domainManager->selection( _selectedGIDs );
-      backtraceSimulation( );
-//      bool baseOn = !_showSelection || _selectedGIDs.empty( );
 
-//      _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),
-//                                   std::numeric_limits< float >::max( ),
-//                                   std::numeric_limits< float >::max( ));
-//
-//      _boundingBoxMax = glm::vec3( std::numeric_limits< float >::min( ),
-//                                   std::numeric_limits< float >::min( ),
-//                                   std::numeric_limits< float >::min( ));
+      updateCameraBoundingBox( );
 
-//      std::vector< prefr::Cluster* > active =
-//        _inputMux->activeClusters( );
-//
-//      for( auto cluster : ( !active.empty( ) ? active :_particleSystem->clusters( ) ))
-//      {
-//        auto particleRange = cluster->particles( );
-//        for( prefr::tparticle particle = particleRange.begin( );
-//            particle != particleRange.end( ); ++particle )
-//        {
-//          expandBoundingBox( _boundingBoxMin,
-//                             _boundingBoxMax,
-//                             particle.position( ));
-//        }
-//
-//      }
+      _particleSystem->run( true );
+      _particleSystem->update( 0.0f );
 
-      auto boundingBox = _domainManager->boundingBox( );
-      _boundingBoxMin = boundingBox.first;
-      _boundingBoxMax = boundingBox.second;
+      _updateSelection = false;
+    }
+
+  }
+
+  void OpenGLWidget::addGroupFromSelection( const std::string& name )
+  {
+    _domainManager->addVisualGroup( _selectedGIDs, name );
+  }
+
+  void OpenGLWidget::updateGroups( void )
+  {
+    if( _particleSystem /*&& _pendingSelection*/ )
+    {
+      _particleSystem->run( false );
+
+//      _domainManager->selection( _selectedGIDs );
+
+      _domainManager->updateGroups( );
 
       updateCameraBoundingBox( );
 
@@ -711,13 +722,22 @@ namespace visimpl
   void OpenGLWidget::showSelection( bool showSelection_ )
   {
 
-    _showSelection = showSelection_;
+//    _showSelection = showSelection_;
 
-    if( _domainManager )
-      _domainManager->mode( TMODE_SELECTION );
+//    if( _domainManager && _showSelection )
+//      _domainManager->mode( TMODE_SELECTION );
+//    else
+//      _domainManager->mode( TMODE_GROUPS );
 
-    updateSelection( );
+    if( showSelection_ )
+      _newMode = TMODE_SELECTION;
+    else
+      _newMode = TMODE_GROUPS;
 
+    _modeChange = true;
+
+//    updateSelection( );
+//    updateGroups( );
   }
 
   void OpenGLWidget::clearSelection( void )
@@ -729,8 +749,10 @@ namespace visimpl
 
   void OpenGLWidget::updateCameraBoundingBox( void )
   {
-    glm::vec3 center = ( _boundingBoxMax + _boundingBoxMin ) * 0.5f;
-    float side = glm::length( _boundingBoxMax - center );
+    auto boundingBox = _domainManager->boundingBox( );
+
+    glm::vec3 center = ( boundingBox.first + boundingBox.second ) * 0.5f;
+    float side = glm::length( boundingBox.second - center );
     float radius = side / std::tan( _camera->fov( ));
 
     _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),

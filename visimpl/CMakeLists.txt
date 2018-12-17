@@ -37,9 +37,6 @@ set(VISIMPL_SOURCES
   CMakeSetup.rc
   prefr/ColorSource.cpp
   prefr/ColorOperationModel.cpp
-  #prefr/CompositeColorUpdater.cpp
-  #prefr/ValuedSource.cpp
-  #prefr/ValuedUpdater.cpp
   prefr/SourceMultiPosition.cpp
   prefr/UpdaterStaticPosition.cpp
   VisualGroup.cpp
@@ -55,9 +52,6 @@ set(VISIMPL_HEADERS
   prefr/PrefrShaders.h
   prefr/ColorSource.h
   prefr/ColorOperationModel.h
-  #prefr/CompositeColorUpdater.h
-  #prefr/ValuedSource.h
-  #prefr/ValuedUpdater.h
   prefr/SourceMultiPosition.h
   prefr/UpdaterStaticPosition.h
   VisualGroup.h
