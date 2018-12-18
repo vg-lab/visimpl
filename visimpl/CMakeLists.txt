@@ -37,11 +37,10 @@ set(VISIMPL_SOURCES
   CMakeSetup.rc
   prefr/ColorSource.cpp
   prefr/ColorOperationModel.cpp
-  prefr/CompositeColorUpdater.cpp
-  prefr/ValuedSource.cpp
-  prefr/ValuedUpdater.cpp
+  prefr/SourceMultiPosition.cpp
+  prefr/UpdaterStaticPosition.cpp
   VisualGroup.cpp
-  InputMultiplexer.cpp
+  DomainManager.cpp
   visimpl.ui
   resources.qrc
 )
@@ -53,11 +52,10 @@ set(VISIMPL_HEADERS
   prefr/PrefrShaders.h
   prefr/ColorSource.h
   prefr/ColorOperationModel.h
-  prefr/CompositeColorUpdater.h
-  prefr/ValuedSource.h
-  prefr/ValuedUpdater.h
+  prefr/SourceMultiPosition.h
+  prefr/UpdaterStaticPosition.h
   VisualGroup.h
-  InputMultiplexer.h
+  DomainManager.h
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

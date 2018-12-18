@@ -29,7 +29,7 @@
 #include "prefr/ColorSource.h"
 #include "prefr/ColorOperationModel.h"
 
-#include "InputMultiplexer.h"
+#include "DomainManager.h"
 
 #include <sumrice/sumrice.h>
 #include <scoop/scoop.h>
@@ -88,7 +88,8 @@ namespace visimpl
                   const std::string& zeqUri = "" );
     ~OpenGLWidget( void );
 
-    void createParticleSystem( float scale = 1.0f );
+    void createParticleSystem( const tGidPosMap& gidPositions,
+                               float scale = 1.0f );
     void loadData( const std::string& fileName,
                    const simil::TDataType = simil::TDataType::TBlueConfig,
                    simil::TSimulationType simulationType = simil::TSimSpikes,
@@ -104,7 +105,9 @@ namespace visimpl
     simil::SimulationPlayer* player( );
     float currentTime( void );
 
-    InputMultiplexer* inputMultiplexer( void );
+    void addGroupFromSelection( const std::string& name );
+
+    DomainManager* inputMultiplexer( void );
 
     void resetParticles( void );
 
@@ -158,9 +161,16 @@ namespace visimpl
 
     void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
     void showSelection( bool );
+
     void setUpdateSelection( void );
+    void setUpdateGroups( void );
+
     void updateSelection( void );
     void clearSelection( void );
+
+
+    void modeChange( void );
+    void updateGroups( void );
 
     void showEventsActivityLabels( bool show );
 
@@ -210,8 +220,8 @@ namespace visimpl
     reto::Camera* _camera;
     glm::vec3 _lastCameraPosition;
 
-    glm::vec3 _boundingBoxMin;
-    glm::vec3 _boundingBoxMax;
+//    glm::vec3 _boundingBoxMin;
+//    glm::vec3 _boundingBoxMax;
 
     bool _focusOnSelection;
     bool _pendingSelection;
@@ -239,7 +249,6 @@ namespace visimpl
     simil::TSimulationType _simulationType;
     simil::SpikesPlayer* _player;
 
-    float _maxLife;
     double _deltaTime;
 
     double _sbsTimePerStep;
@@ -263,12 +272,6 @@ namespace visimpl
 
     bool _firstFrame;
 
-    prefr::ColorOperationModel* _prototype;
-    prefr::ColorOperationModel* _offPrototype;
-
-    std::unordered_map< uint32_t, prefr::Cluster* > gidNodesMap;
-    std::unordered_map< prefr::Cluster*, uint32_t > nodesGIDMap;
-
     float _renderSpeed;
     float _maxFPS;
 
@@ -289,6 +292,10 @@ namespace visimpl
 
     bool _resetParticles;
     bool _updateSelection;
+    bool _updateGroups;
+
+    bool _modeChange;
+    tVisualMode _newMode;
 
     bool _showActiveEvents;
     simil::SubsetEventManager* _subsetEvents;
@@ -297,7 +304,7 @@ namespace visimpl
     std::vector< std::vector< bool >> _eventsActivation;
     float _deltaEvents;
 
-    InputMultiplexer* _inputMux;
+    DomainManager* _domainManager;
 
     scoop::ColorPalette _colorPalette;
   };

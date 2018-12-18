@@ -60,8 +60,7 @@ namespace prefr
 
     _particlesToEmit.clear( );
 
-    for( auto particle = particlesRange.begin( );
-         particle != particlesRange.end( ); ++particle )
+    for( auto particle : particlesRange )
     {
       if( !particle.alive( ))
       {
@@ -83,10 +82,9 @@ namespace prefr
 
     float lifeValue = relativeLife * lifeRange + cluster( )->model( )->minLife( );
 
-    for( auto particle = particlesRange.begin( );
-         particle != particlesRange.end( ); ++particle )
+    for( auto particle : particlesRange )
     {
-      particle.life( lifeValue );
+      particle.set_life( lifeValue );
     }
 
   }
@@ -97,10 +95,9 @@ namespace prefr
 
     auto particlesRange = cluster( )->particles( );
 
-    for( auto particle = particlesRange.begin( );
-         particle != particlesRange.end( ); ++particle )
+    for( auto particle : particlesRange )
     {
-      particle.life( life );
+      particle.set_life( life );
     }
 
   }

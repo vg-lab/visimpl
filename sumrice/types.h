@@ -36,6 +36,9 @@ namespace visimpl
   typedef std::pair< float, float > TSize;
   typedef std::vector< TSize > TSizeFunction;
 
+  typedef glm::vec3 vec3;
+  typedef glm::vec4 vec4;
+
   typedef enum
   {
     T_STACK_FIXED = 0,
