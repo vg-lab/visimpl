@@ -73,11 +73,11 @@ namespace visimpl
   , _repeatButton( nullptr )
   , _goToButton( nullptr )
   , _simConfigurationDock( nullptr )
-  , _tfGroupBox( nullptr )
+  , _groupBoxTransferFunction( nullptr )
   , _tfEditor( nullptr )
   , _tfWidget( nullptr )
   , _autoNameGroups( false )
-  , _groupsGroupBox( nullptr )
+  , _groupBoxGroups( nullptr )
   , _groupLayout( nullptr )
   , _decayBox( nullptr )
   , _deltaTimeBox( nullptr )
@@ -135,27 +135,26 @@ namespace visimpl
 
 
     connect( _ui->actionHome, SIGNAL( triggered( )),
-             _openGLWidget, SLOT( updateSelection( )));
+             _openGLWidget, SLOT( home( )));
 
     connect( _openGLWidget, SIGNAL( stepCompleted( void )),
              this, SLOT( completedStep( void )));
 
   #ifdef VISIMPL_USE_ZEROEQ
-    _ui->actionShowSelection->setEnabled( true );
-    _ui->actionShowSelection->setChecked( true );
+    _ui->actionShowInactive->setEnabled( true );
+    _ui->actionShowInactive->setChecked( true );
 
-    _openGLWidget->showSelection( true );
+    _openGLWidget->showInactive( true );
 
-    connect( _ui->actionShowSelection, SIGNAL( toggled( bool )),
-             this, SLOT( showSelection( bool )));
+    connect( _ui->actionShowInactive, SIGNAL( toggled( bool )),
+             this, SLOT( showInactive( bool )));
 
   #else
     _ui->actionShowSelection->setEnabled( false );
   #endif
 
-
-    initPlaybackDock( );
-    initSimControlDock( );
+    _initPlaybackDock( );
+    _initSimControlDock( );
 
     connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool )),
                _ui->actionTogglePlaybackDock, SLOT( setChecked( bool )));
@@ -200,7 +199,7 @@ namespace visimpl
 
     openSubsetEventFile( subsetEventFile, true );
 
-    configurePlayer( );
+    _configurePlayer( );
 
   }
 
@@ -253,7 +252,7 @@ namespace visimpl
 
     openSubsetEventFile( subsetEventFile, true );
 
-    configurePlayer( );
+    _configurePlayer( );
   }
 
 
@@ -416,7 +415,7 @@ namespace visimpl
     update( );
   }
 
-  void MainWindow::configurePlayer( void )
+  void MainWindow::_configurePlayer( void )
   {
     connect( _openGLWidget, SIGNAL( updateSlider( float )),
                this, SLOT( UpdateSimulationSlider( float )));
@@ -443,10 +442,10 @@ namespace visimpl
     changeEditorSizeFunction( );
     changeEditorDecayValue( );
     changeEditorStepByStepDuration( );
-    initSummaryWidget( );
+    _initSummaryWidget( );
   }
 
-  void MainWindow::initPlaybackDock( void )
+  void MainWindow::_initPlaybackDock( void )
   {
     _simulationDock = new QDockWidget( );
     _simulationDock->setMinimumHeight( 100 );
@@ -465,7 +464,6 @@ namespace visimpl
     _simSlider->setSizePolicy( QSizePolicy::Preferred,
                                QSizePolicy::Preferred );
 
-  //  QPushButton* playButton = new QPushButton( );
     _playButton = new QPushButton( );
     _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
                                 QSizePolicy::MinimumExpanding );
@@ -480,8 +478,6 @@ namespace visimpl
     _goToButton = new QPushButton( );
     _goToButton->setText( QString( "Play at..." ));
 
-  //  QIcon playIcon;
-  //  QIcon pauseIcon;
     QIcon stopIcon;
     QIcon nextIcon;
     QIcon prevIcon;
@@ -564,7 +560,7 @@ namespace visimpl
              this, SLOT( PlayAt( float )));
   }
 
-  void MainWindow::initSimControlDock( void )
+  void MainWindow::_initSimControlDock( void )
   {
     _simConfigurationDock = new QDockWidget( );
     _simConfigurationDock->setMinimumHeight( 100 );
@@ -619,15 +615,15 @@ namespace visimpl
     _addGroupButton->setEnabled( false );
     _addGroupButton->setToolTip( "Click to create a group from current selection.");
 
-    QWidget* container = new QWidget( );
+    QWidget* topContainer = new QWidget( );
     QVBoxLayout* verticalLayout = new QVBoxLayout( );
   //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
 
-    _tfGroupBox = new QGroupBox( "Color and Size transfer function" );
+    _groupBoxTransferFunction = new QGroupBox( "Color and Size transfer function" );
     QVBoxLayout* tfLayout = new QVBoxLayout( );
     tfLayout->addWidget( _tfWidget );
-    _tfGroupBox->setLayout( tfLayout );
-    _tfGroupBox->setMaximumHeight( 250 );
+    _groupBoxTransferFunction->setLayout( tfLayout );
+//    _groupBoxTransferFunction->setMaximumHeight( 250 );
 
     QGroupBox* tSpeedGB = new QGroupBox( "Simulation playback speed" );
     QGridLayout* sfLayout = new QGridLayout( );
@@ -665,8 +661,8 @@ namespace visimpl
     selFunctionGB->setMaximumHeight( 200 );
 
 
-    _groupsGroupBox = new QGroupBox( "Current visualization groups" );
-    _groupsGroupBox->setMaximumHeight( 200 );
+    _groupBoxGroups = new QGroupBox( "Current visualization groups" );
+//    _groupBoxGroups->setMaximumHeight( 200 );
     _groupLayout = new QGridLayout( );
     _groupLayout->setAlignment( Qt::AlignTop );
 
@@ -686,25 +682,52 @@ namespace visimpl
     groupOuterLayout->setMargin( 0 );
     groupOuterLayout->addWidget( groupScroll );
 
-    _groupsGroupBox->setLayout( groupOuterLayout );
-    _groupsGroupBox->setVisible( false );
+    _groupBoxGroups->setLayout( groupOuterLayout );
+
+    _groupBoxAttrib = new QGroupBox( );
+
+    QWidget* containerTabSelection = new QWidget( );
+    QVBoxLayout* tabSelectionLayout = new QVBoxLayout( );
+    containerTabSelection->setLayout( tabSelectionLayout );
+    tabSelectionLayout->addWidget( _groupBoxTransferFunction );
+
+    QWidget* containerTabGroups = new QWidget( );
+    QVBoxLayout* tabGroupsLayout = new QVBoxLayout( );
+    containerTabGroups->setLayout( tabGroupsLayout );
+    tabGroupsLayout->addWidget( _groupBoxGroups );
+
+    QWidget* containerTabAttrib = new QWidget( );
+    QVBoxLayout* tabAttribLayout = new QVBoxLayout( );
+    containerTabAttrib->setLayout( tabAttribLayout );
+    tabAttribLayout->addWidget( _groupBoxAttrib );
+
+//TODO
+    QTabWidget* tabWidget = new QTabWidget( );
+    tabWidget->addTab( containerTabSelection, tr( "Selection" ));
+    tabWidget->addTab( containerTabGroups, tr( "Groups" ));
+    tabWidget->addTab( containerTabAttrib, tr( "Attribute" ));
+
 
     verticalLayout->setAlignment( Qt::AlignTop );
-    verticalLayout->addWidget( _tfGroupBox );
-    verticalLayout->addWidget( _groupsGroupBox );
+//    verticalLayout->addWidget( _groupBoxTransferFunction );
+//    verticalLayout->addWidget( _groupBoxGroups );
+    verticalLayout->addWidget( tabWidget );
     verticalLayout->addWidget( tSpeedGB );
     verticalLayout->addWidget( dFunctionGB );
     verticalLayout->addWidget( rFunctionGB );
     verticalLayout->addWidget( selFunctionGB  );
 
-    container->setLayout( verticalLayout );
-    _simConfigurationDock->setWidget( container );
+    topContainer->setLayout( verticalLayout );
+    _simConfigurationDock->setWidget( topContainer );
 
     this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/RightDockWidgetArea,
                          _simConfigurationDock );
 
   //  connect( applyColorButton, SIGNAL( clicked( void )),
   //             this, SLOT( UpdateSimulationColorMapping( void )));
+
+    connect( tabWidget, SIGNAL( currentChanged( int )),
+             _openGLWidget, SLOT( setMode( int )));
 
     connect( _tfWidget, SIGNAL( colorChanged( void )),
              this, SLOT( UpdateSimulationColorMapping( void )));
@@ -746,7 +769,7 @@ namespace visimpl
     _alphaNormalButton->setChecked( true );
   }
 
-  void MainWindow::initSummaryWidget( void )
+  void MainWindow::_initSummaryWidget( void )
   {
     simil::TSimulationType simType =
         _openGLWidget->player( )->simulationType( );
@@ -1105,14 +1128,9 @@ namespace visimpl
     }
   }
 
-  void MainWindow::showSelection( bool show )
+  void MainWindow::showInactive( bool show )
   {
-    _tfGroupBox->setVisible( show );
-    _groupsGroupBox->setVisible( !show );
-//    _tfWidget->setEnabled( show );
-
-
-    _openGLWidget->showSelection( show );
+    _openGLWidget->showInactive( show );
   }
 
 
@@ -1326,7 +1344,7 @@ namespace visimpl
       ++counter;
     }
 
-    _openGLWidget->setUpdateSelection( );
+    _openGLWidget->setUpdateGroups( );
     _openGLWidget->update( );
   }
 

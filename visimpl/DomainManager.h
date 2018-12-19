@@ -29,7 +29,8 @@ namespace visimpl
   {
     TMODE_SELECTION = 0,
     TMODE_GROUPS,
-    TMODE_ATTRIBUTE
+    TMODE_ATTRIBUTE,
+    TMODE_UNDEFINED
   };
 
   class DomainManager
@@ -40,7 +41,7 @@ namespace visimpl
                       const TGIDSet& gids );
     ~DomainManager( );
 
-    void init( const tGidPosMap& positions );
+    void init( const tGidPosMap& positions, const tNeuronAttribs& types );
 
     void initializeParticleSystem( void );
 
@@ -49,6 +50,7 @@ namespace visimpl
                                  bool overrideGIDs = false );
 
     void setVisualGroupState( unsigned int i, bool state );
+    void showInactive( bool state );
 
     void removeVisualGroup( unsigned int i );
 
@@ -117,6 +119,7 @@ namespace visimpl
     prefr::ParticleSystem* _particleSystem;
 
     tGidPosMap _gidPositions;
+    tNeuronAttribs _gidTypes;
 
     TGIDSet _gids;
 
@@ -155,6 +158,8 @@ namespace visimpl
     tBoundingBox _boundingBox;
 
     std::vector< std::pair< QColor, QColor >> _paletteColors;
+
+
   };
 
 

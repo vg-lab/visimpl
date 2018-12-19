@@ -93,7 +93,7 @@ namespace visimpl
     void changeEditorSimTimestepsPS( void );
     void updateSimTimestepsPS( void );
 
-    void showSelection( bool show );
+    void showInactive( bool show );
 
     void changeEditorDecayValue( void );
     void updateSimulationDecayValue( void );
@@ -111,8 +111,19 @@ namespace visimpl
     void completedStep( void );
     void playAtButtonClicked( void );
 
+  protected:
+
+    void _initSimControlDock( void );
+    void _initPlaybackDock( void );
+    void _initSummaryWidget( void );
+
+    void _configurePlayer( void );
+
+
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
+
+  protected slots:
 
     void ApplyPlaybackOperation( unsigned int playbackOp );
     void _zeqEventRepeat( bool repeat );
@@ -134,20 +145,11 @@ namespace visimpl
 
   #endif // VISIMPL_USE_ZEROEQ
 
-  protected:
-    void configurePlayer( void );
-
     Ui::MainWindow* _ui;
 
     QString _lastOpenedFileName;
     QIcon _playIcon;
     QIcon _pauseIcon;
-
-  private:
-
-    void initPlaybackDock( void );
-    void initSimControlDock( void );
-    void initSummaryWidget( void );
 
     OpenGLWidget* _openGLWidget;
     visimpl::Summary* _summary;
@@ -164,14 +166,16 @@ namespace visimpl
 
     QDockWidget* _simConfigurationDock;
 
-    QGroupBox* _tfGroupBox;
+    QGroupBox* _groupBoxTransferFunction;
     TransferFunctionEditor* _tfEditor;
     TransferFunctionWidget* _tfWidget;
 
     bool _autoNameGroups;
-    QGroupBox* _groupsGroupBox;
+    QGroupBox* _groupBoxGroups;
     QGridLayout* _groupLayout;
     std::vector< QCheckBox* > _groupsVisButtons;
+
+    QGroupBox* _groupBoxAttrib;
 
     QDoubleSpinBox* _decayBox;
     QDoubleSpinBox* _deltaTimeBox;

@@ -581,45 +581,26 @@ namespace stackviz
 
     if( _autoCalculateCorrelations )
     {
-      simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
-//      for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
-//      {
-//        cc.compute( "grclayer", event );
-//      }
+//      simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
 //
-//      for( auto name : cc.correlationNames( ))
-//      {
-//        simil::Correlation* correlation = cc.correlation( name );
+//      auto eventNames = _player->data( )->subsetsEvents( )->eventNames( );
 //
+//      auto result = cc.correlate( "grclayer", eventNames, 0.125f );
+//
+//      for( auto correlation : result )
+//      {
 //        visimpl::Selection selection;
-//        selection.name = name;
-//        for( auto value : correlation->values )
+//        selection.name = correlation.subsetName + correlation.eventName;
+//
+//        for( auto neuron : correlation.values )
 //        {
-//          if( value.second.hit > 0.7f )
-//            selection.gids.insert( value.first );
+//          if( neuron.second.result > 0.5f )
+//            selection.gids.insert( neuron.first );
 //        }
+//
 //
 //        _summary->AddNewHistogram( selection );
 //      }
-
-      auto eventNames = _player->data( )->subsetsEvents( )->eventNames( );
-
-      auto result = cc.correlate( "grclayer", eventNames, 0.125f );
-
-      for( auto correlation : result )
-      {
-        visimpl::Selection selection;
-        selection.name = correlation.subsetName + correlation.eventName;
-
-        for( auto neuron : correlation.values )
-        {
-          if( neuron.second.result > 0.5f )
-            selection.gids.insert( neuron.first );
-        }
-
-
-        _summary->AddNewHistogram( selection );
-      }
 
     }
 

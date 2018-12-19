@@ -15,6 +15,7 @@
 #include <QLabel>
 #include <chrono>
 #include <unordered_set>
+#include <queue>
 
 #define VISIMPL_SKIP_GLEW_INCLUDE 1
 
@@ -89,7 +90,7 @@ namespace visimpl
     ~OpenGLWidget( void );
 
     void createParticleSystem( const tGidPosMap& gidPositions,
-                               float scale = 1.0f );
+                               const tNeuronAttribs& attribs );
     void loadData( const std::string& fileName,
                    const simil::TDataType = simil::TDataType::TBlueConfig,
                    simil::TSimulationType simulationType = simil::TSimSpikes,
@@ -105,6 +106,7 @@ namespace visimpl
     simil::SimulationPlayer* player( );
     float currentTime( void );
 
+    void setGroupVisibility( unsigned int i, bool state );
     void addGroupFromSelection( const std::string& name );
 
     DomainManager* inputMultiplexer( void );
@@ -117,6 +119,9 @@ namespace visimpl
 
     const scoop::ColorPalette& colorPalette( void );
 
+    const std::vector< std::string >& namesMorpho( void ) const;
+    const std::vector< std::string >& namesFunction( void ) const;
+
   signals:
 
     void updateSlider( float );
@@ -125,7 +130,7 @@ namespace visimpl
 
   public slots:
 
-    void togglePaintNeurons( void );
+    void toggleShowUnselected( void );
     void changeClearColor( void );
     void toggleUpdateOnIdle( void );
     void toggleShowFPS( void );
@@ -160,23 +165,46 @@ namespace visimpl
     float getSimulationDecayValue( void );
 
     void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
-    void showSelection( bool );
+
+    void setMode( int mode );
+    void showInactive( bool state );
 
     void setUpdateSelection( void );
     void setUpdateGroups( void );
 
-    void updateSelection( void );
     void clearSelection( void );
-
-
-    void modeChange( void );
-    void updateGroups( void );
 
     void showEventsActivityLabels( bool show );
 
+    void home( void );
     void updateCameraBoundingBox( void );
 
   protected:
+
+    tNeuronAttribs _loadNeuronTypes( void );
+
+    void _updateParticles( float renderDelta );
+    void _paintParticles( void );
+
+    void _focusOn( const tBoundingBox& boundingBox );
+
+    void _backtraceSimulation( void );
+
+    void _configureSimulationFrame( void );
+    void _configureStepByStepFrame( double elapsedRenderTimeMilliseconds );
+
+    void _configurePreviousStep( void );
+    void _configureStepByStep( void );
+
+    void _modeChange( void );
+    void _updateSelection( void );
+    void _updateGroups( void );
+    void _updateGroupsVisibility( void );
+
+    void _createEventLabels( void );
+    void _updateEventLabelsVisibility( void );
+
+    std::vector< bool > _activeEventsAt( float time );
 
     virtual void initializeGL( void );
     virtual void paintGL( void );
@@ -188,23 +216,10 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
-    void configurePreviousStep( void );
-    void configureStepByStep( void );
-
-    void backtraceSimulation( void );
-
-    void configureSimulationFrame( void );
-    void configureStepByStepFrame( double elapsedRenderTimeMilliseconds );
-
-    void updateParticles( float renderDelta );
-    void paintParticles( void );
-
-    void createEventLabels( void );
-    void updateEventLabelsVisibility( void );
-
-    std::vector< bool > activeEventsAt( float time );
 
     std::unordered_set< uint32_t > _selectedGIDs;
+
+    std::queue< std::pair< unsigned int, bool >> _pendingGroupStateChanges;
 
   #ifdef VISIMPL_USE_ZEROEQ
 
@@ -290,11 +305,11 @@ namespace visimpl
     bool _alphaBlendingAccumulative;
     bool _showSelection;
 
-    bool _resetParticles;
-    bool _updateSelection;
-    bool _updateGroups;
+    bool _flagResetParticles;
+    bool _flagUpdateSelection;
+    bool _flagUpdateGroups;
 
-    bool _modeChange;
+    bool _flagModeChange;
     tVisualMode _newMode;
 
     bool _showActiveEvents;
@@ -305,8 +320,12 @@ namespace visimpl
     float _deltaEvents;
 
     DomainManager* _domainManager;
+    tBoundingBox _boundingBoxHome;
 
     scoop::ColorPalette _colorPalette;
+
+    std::vector< std::string > _namesTypesMorpho;
+    std::vector< std::string > _namesTypesFunction;
   };
 
 } // namespace visimpl

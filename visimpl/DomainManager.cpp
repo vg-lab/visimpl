@@ -51,9 +51,11 @@ namespace visimpl
 
   }
 
-  void DomainManager::init( const tGidPosMap& positions )
+  void DomainManager::init( const tGidPosMap& positions,
+                            const tNeuronAttribs& types )
   {
     _gidPositions = positions;
+    _gidTypes = types;
 
     _sourceSelected = new SourceMultiPosition( );
 //    _sourceUnselected = new SourceMultiPosition( );
@@ -271,6 +273,9 @@ namespace visimpl
       case TMODE_ATTRIBUTE:
         //TODO
         break;
+      default:
+
+        break;
     }
 
   }
@@ -296,6 +301,11 @@ namespace visimpl
   void DomainManager::updateGroups( void )
   {
     _generateGroupsIndices( );
+  }
+
+  void DomainManager::showInactive( bool state )
+  {
+    _showInactive = state;
   }
 
   void DomainManager::setVisualGroupState( unsigned int i, bool state )
@@ -601,6 +611,9 @@ namespace visimpl
         break;
       case TMODE_ATTRIBUTE:
         //TODO
+        break;
+
+      default:
         break;
     }
 

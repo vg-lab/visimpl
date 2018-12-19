@@ -5,5 +5,5 @@
 #git_subproject( Brion https://github.com/BlueBrain/Brion.git 073f356 )
 git_subproject( ReTo git@gitlab.gmrv.es:nsviz/ReTo.git 7561862 )
 git_subproject( prefr git@gitlab.gmrv.es:nsviz/prefr.git e1883a3)
-git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git c3f7b1d )
+git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git 05a55ee )
 git_subproject( scoop git@gitlab.gmrv.es:gmrv/scoop.git b3326cd )

@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -48,17 +48,21 @@
     <property name="title">
      <string>Options</string>
     </property>
+    <addaction name="actionHome"/>
+    <addaction name="actionBackgroundColor"/>
+    <addaction name="separator"/>
     <addaction name="actionTogglePlaybackDock"/>
     <addaction name="actionToggleSimConfigDock"/>
+    <addaction name="separator"/>
     <addaction name="actionShowSelection"/>
+    <addaction name="actionactionShowGroups"/>
+    <addaction name="actionShowAttributeMapping"/>
+    <addaction name="separator"/>
+    <addaction name="actionShowInactive"/>
     <addaction name="actionShowEventsActivity"/>
     <addaction name="separator"/>
     <addaction name="actionUpdateOnIdle"/>
     <addaction name="actionShowFPSOnIdleUpdate"/>
-    <addaction name="separator"/>
-    <addaction name="actionHome"/>
-    <addaction name="separator"/>
-    <addaction name="actionBackgroundColor"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
@@ -79,13 +83,14 @@
    <addaction name="actionCloseData"/>
    <addaction name="separator"/>
    <addaction name="actionOpenSWCFile"/>
-   <addaction name="actionTogglePlaybackDock"/>
-   <addaction name="separator"/>
    <addaction name="actionHome"/>
    <addaction name="actionBackgroundColor"/>
-   <addaction name="actionShowSelection"/>
+   <addaction name="separator"/>
+   <addaction name="actionTogglePlaybackDock"/>
    <addaction name="actionToggleSimConfigDock"/>
    <addaction name="actionOpenXMLScene"/>
+   <addaction name="separator"/>
+   <addaction name="actionShowInactive"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -265,16 +270,11 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/hide.png</normaloff>
-     <normalon>:/icons/show.png</normalon>:/icons/hide.png</iconset>
-   </property>
    <property name="text">
-    <string>Show selection / Show groups</string>
+    <string>Selection view</string>
    </property>
    <property name="toolTip">
-    <string>Show selection / Show groups</string>
+    <string>Enable selection view</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
@@ -289,6 +289,53 @@
    </property>
    <property name="toolTip">
     <string>Show/Hide events activity</string>
+   </property>
+  </action>
+  <action name="actionactionShowGroups">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Groups view</string>
+   </property>
+   <property name="toolTip">
+    <string>Enable groups view</string>
+   </property>
+  </action>
+  <action name="actionShowAttributeMapping">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Attribute mapping view</string>
+   </property>
+   <property name="toolTip">
+    <string>Enable attribute mapping view</string>
+   </property>
+  </action>
+  <action name="actionShowInactive">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/hide.png</normaloff>
+     <normalon>:/icons/show.png</normalon>:/icons/hide.png</iconset>
+   </property>
+   <property name="text">
+    <string>Show inactive</string>
+   </property>
+   <property name="toolTip">
+    <string>Show inactive elements</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
    </property>
   </action>
  </widget>

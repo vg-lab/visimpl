@@ -18,6 +18,28 @@ namespace visimpl
 
   typedef std::unordered_map< unsigned int, vec3 > tGidPosMap;
   typedef std::unordered_map< unsigned int, unsigned int > tIdxTransMap;
+
+  enum tNeuronAttributes
+  {
+    T_TYPE_MORPHO = 0,
+    T_TYPE_FUNCTION
+  };
+
+  typedef std::tuple< unsigned int,
+                      unsigned int > NeuronAttributes;
+
+  typedef std::unordered_map< unsigned, NeuronAttributes > tNeuronAttribs;
+
+  enum tInitialConfig
+  {
+    T_DELTATIME = 0,
+    T_STEPS_PER_SEC,
+    T_DECAY,
+    T_SCALE
+  };
+
+  typedef std::tuple< float, float, float, float > InitialConfig;
+
 }
 
 
