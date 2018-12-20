@@ -25,6 +25,7 @@ namespace visimpl
   , _active( false )
   , _cached( false )
   , _dirty( false )
+  , _custom( false )
   { }
 
   VisualGroup::VisualGroup( const std::string& name )
@@ -36,6 +37,7 @@ namespace visimpl
   , _active( false )
   , _cached( false )
   , _dirty( false )
+  , _custom( false )
   { }
 
   VisualGroup::~VisualGroup( )
@@ -106,6 +108,16 @@ namespace visimpl
   bool VisualGroup::dirty( void ) const
   {
     return _dirty;
+  }
+
+  void VisualGroup::custom( bool state )
+  {
+    _custom = state;
+  }
+
+  bool VisualGroup::custom( void ) const
+  {
+    return _custom;
   }
 
   void VisualGroup::cluster( prefr::Cluster* cluster_ )

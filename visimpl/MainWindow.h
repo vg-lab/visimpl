@@ -63,23 +63,11 @@ namespace visimpl
                               bool append = false );
 
     void aboutDialog( void );
+
     void togglePlaybackDock( void );
     void toggleSimConfigDock( void );
 
-    void PlayPause( bool notify = true );
-    void Play( bool notify = true );
-    void Pause( bool notify = true );
-    void Stop( bool notify = true );
-    void Repeat( bool notify = true );
-    void PlayAt( bool notify = true );
-    void PlayAt( float, bool notify = true );
-    void PlayAt( int, bool notify = true );
-    void requestPlayAt( float );
-    void PreviousStep( bool notify = true );
-    void NextStep( bool notify = true );
-
     void UpdateSimulationSlider( float percentage );
-
     void UpdateSimulationColorMapping( void );
     void PreviewSimulationColorMapping( void );
     void changeEditorColorMapping( void );
@@ -103,10 +91,25 @@ namespace visimpl
 
     void AlphaBlendingToggled( void );
 
+    void updateAttributeStats( void );
+
+    void PlayPause( bool notify = true );
+    void Play( bool notify = true );
+    void Pause( bool notify = true );
+    void Stop( bool notify = true );
+    void Repeat( bool notify = true );
+    void PlayAt( bool notify = true );
+    void PlayAt( float, bool notify = true );
+    void PlayAt( int, bool notify = true );
+    void requestPlayAt( float );
+    void PreviousStep( bool notify = true );
+    void NextStep( bool notify = true );
+
   protected slots:
 
     void addGroupFromSelection( void );
     void checkGroupsVisibility( void );
+    void checkAttributeGroupsVisibility( void );
 
     void completedStep( void );
     void playAtButtonClicked( void );
@@ -175,8 +178,6 @@ namespace visimpl
     QGridLayout* _groupLayout;
     std::vector< QCheckBox* > _groupsVisButtons;
 
-    QGroupBox* _groupBoxAttrib;
-
     QDoubleSpinBox* _decayBox;
     QDoubleSpinBox* _deltaTimeBox;
     QDoubleSpinBox* _timeStepsPSBox;
@@ -188,6 +189,13 @@ namespace visimpl
 
     QRadioButton* _alphaNormalButton;
     QRadioButton* _alphaAccumulativeButton;
+
+    QGroupBox* _groupBoxAttrib;
+    QComboBox* _comboAttribSelection;
+    QVBoxLayout* _layoutAttribStats;
+    QGridLayout* _layoutAttribGroups;
+    std::vector< QCheckBox* > _attribGroupsVisButtons;
+
   };
 
 } // namespace visimpl

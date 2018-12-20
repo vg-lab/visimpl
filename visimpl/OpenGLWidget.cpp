@@ -34,6 +34,12 @@
 namespace visimpl
 {
 
+  static std::unordered_map< std::string, std::string > _attributeNameLabels =
+  {
+    {"PYR", "Pyramidal"}, {"INT", "Interneuron"},
+    {"EXC", "Excitatory"}, {"INH", "Inhibitory"}
+  };
+
   static InitialConfig _initialConfigSimBlueConfig =
       std::make_tuple( 0.5f, 20.0f, 20.0f, 1.0f );
   static InitialConfig _initialConfigSimH5 =
@@ -101,8 +107,12 @@ namespace visimpl
   , _flagResetParticles( false )
   , _flagUpdateSelection( false )
   , _flagUpdateGroups( false )
+  , _flagUpdateAttributes( false )
   , _flagModeChange( false )
   , _newMode( TMODE_UNDEFINED )
+  , _flagAttribChange( false )
+  , _newAttrib( T_TYPE_UNDEFINED )
+  , _currentAttrib( T_TYPE_MORPHO )
   , _showActiveEvents( true )
   , _subsetEvents( nullptr )
   , _deltaEvents( 0.125f )
@@ -239,14 +249,11 @@ namespace visimpl
 
     tNeuronAttribs gidTypes = _loadNeuronTypes( );
 
-
     createParticleSystem( gidPositions, gidTypes );
 
     simulationDeltaTime( std::get< T_DELTATIME >( config ) );
     simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
     changeSimulationDecayValue( std::get< T_DECAY >( config ) );
-
-    _loadNeuronTypes( );
 
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
@@ -307,8 +314,41 @@ namespace visimpl
         unsigned int functionType =
             boost::lexical_cast< uint16_t >( attribsData[ counter ][ 2 ]);
 
-        std::get< T_TYPE_MORPHO >( attribs ) = morphoType;
-        std::get< T_TYPE_FUNCTION >( attribs ) = functionType;
+        auto name = _namesTypesMorpho[ morphoType ];
+
+        auto idxMorpho = _typesIdxMorpho.find( name );
+        if( idxMorpho == _typesIdxMorpho.end( ))
+        {
+          unsigned int idx = _typesIdxMorpho.size( );
+
+          idxMorpho =
+              _typesIdxMorpho.insert( std::make_pair( name, idx )).first;
+
+          _idxToTypeMorpho.insert( std::make_pair( idx, morphoType ));
+        }
+
+        _typeToIdxMorpho.insert( std::make_pair( morphoType, idxMorpho->second ));
+
+        _typesMorpho.push_back( morphoType );
+
+        name = _namesTypesFunction[ functionType ];
+
+        auto idxFunction = _typesIdxFunction.find( name );
+        if( idxFunction == _typesIdxFunction.end( ))
+        {
+          unsigned int idx = _typesIdxFunction.size( );
+
+          idxFunction =
+              _typesIdxFunction.insert( std::make_pair( name, idx )).first;
+
+          _idxToTypeFunction.insert( std::make_pair( idx, functionType ));
+        }
+
+        _typeToIdxFunction.insert( std::make_pair( functionType, idxFunction->second ));
+        _typesFunction.push_back( functionType );
+
+        std::get< T_TYPE_MORPHO >( attribs ) = idxMorpho->second;
+        std::get< T_TYPE_FUNCTION >( attribs ) = idxFunction->second;
 
 //        std::cout << " " << gid
 //                  << "," << morphoType << ",\"" << _namesTypesMorpho[ morphoType ] << "\""
@@ -319,7 +359,7 @@ namespace visimpl
         ++counter;
       }
 
-      std::cout << std::endl;
+      std::cout << "Loaded attributes." << std::endl;
     }
 #endif
 
@@ -575,6 +615,35 @@ namespace visimpl
 
     }
 
+  void OpenGLWidget::_resolveFlagsOperations( void )
+  {
+    if( _flagModeChange )
+      _modeChange( );
+
+    if( _flagUpdateSelection )
+      _updateSelection( );
+
+    if( _flagUpdateGroups )
+      _updateGroupsVisibility( );
+
+    if( _flagUpdateGroups && _domainManager->showGroups( ))
+      _updateGroups( );
+
+    if( _flagAttribChange )
+      _attributeChange( );
+
+    if( _flagUpdateAttributes )
+      _updateAttributes( );
+
+    if( _flagResetParticles )
+    {
+      _domainManager->resetParticles( );
+      _flagResetParticles = false;
+    }
+
+    _particleSystem->update( 0.0f );
+  }
+
     void OpenGLWidget::paintGL( void )
     {
       std::chrono::time_point< std::chrono::system_clock > now =
@@ -601,29 +670,13 @@ namespace visimpl
       glEnable(GL_DEPTH_TEST);
       glEnable(GL_CULL_FACE);
 
-      if( _flagModeChange )
-        _modeChange( );
-
-      if( _flagUpdateSelection )
-        _updateSelection( );
-
-      if( _flagUpdateGroups )
-        _updateGroupsVisibility( );
-
-      if( _flagUpdateGroups && _domainManager->showGroups( ))
-        _updateGroups( );
-
-      if( _flagResetParticles )
-      {
-        _domainManager->resetParticles( );
-        _flagResetParticles = false;
-      }
+      _resolveFlagsOperations( );
 
       if ( _paint )
       {
         _camera->anim( );
 
-        if ( _particleSystem )
+        if( _particleSystem )
         {
           if( _player && _player->isPlaying( ))
           {
@@ -631,7 +684,6 @@ namespace visimpl
             {
               // Continuous mode (Default)
               case TPlaybackMode::CONTINUOUS:
-              {
                 if( _elapsedTimeSimAcc >= _simPeriodMicroseconds )
                 {
                   _configureSimulationFrame( );
@@ -639,13 +691,9 @@ namespace visimpl
 
                   _elapsedTimeSimAcc = 0.0f;
                 }
-
-
                 break;
-              }
               // Step by step mode
               case TPlaybackMode::STEP_BY_STEP:
-              {
                 if( _sbsPrevStep )
                 {
                   _configurePreviousStep( );
@@ -657,7 +705,6 @@ namespace visimpl
                   _sbsNextStep = false;
                 }
                 break;
-              }
               default:
                 break;
             }
@@ -683,12 +730,10 @@ namespace visimpl
               _updateParticles( renderDelta );
               _elapsedTimeRenderAcc = 0.0f;
             }
-
-          }
-
+          } // if player && player->isPlayint
           _paintParticles( );
+        } // if particleSystem
 
-        }
         glUseProgram( 0 );
         glFlush( );
 
@@ -768,12 +813,119 @@ namespace visimpl
     _flagUpdateGroups = true;
   }
 
+  void OpenGLWidget::setUpdateAttributes( void )
+  {
+    _flagAttribChange = true;
+  }
+
+  void OpenGLWidget::selectAttrib( int newAttrib )
+  {
+    if( newAttrib < 0 || newAttrib >= ( int ) T_TYPE_UNDEFINED ||
+        _domainManager->mode( ) != TMODE_ATTRIBUTE )
+      return;
+
+    _newAttrib = ( tNeuronAttributes ) newAttrib;
+    _flagAttribChange = true;
+  }
+
   void OpenGLWidget::_modeChange( void )
   {
     _domainManager->mode( _newMode );
 
     _flagModeChange = false;
+
+    if( _domainManager->mode( ) == TMODE_ATTRIBUTE )
+      emit attributeStatsComputed( );
   }
+
+  void OpenGLWidget::_attributeChange( void )
+  {
+    _domainManager->generateAttributesGroups( _newAttrib );
+
+    _currentAttrib = _newAttrib;
+
+    _flagAttribChange = false;
+//    _flagUpdateAttributes = true;
+
+    emit attributeStatsComputed( );
+  }
+
+  const std::vector< unsigned int >& OpenGLWidget::attributeValues( int attribNumber ) const
+  {
+    if(( tNeuronAttributes )attribNumber == T_TYPE_MORPHO )
+      return _typesMorpho;
+    else
+      return _typesFunction;
+  }
+
+  Strings OpenGLWidget::attributeNames( int attribNumber, bool labels ) const
+  {
+    Strings result;
+
+    auto statistics = _domainManager->attributeStatistics( );
+    result.reserve( statistics.size( ));
+
+    const auto& names = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
+                        &_namesTypesMorpho : &_namesTypesFunction;
+
+    const auto& indices = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
+                        &_idxToTypeMorpho : &_idxToTypeFunction;
+
+
+//    auto typeIds = ( _currentAttrib == T_TYPE_MORPHO ) ? &_typesMorpho : &_typesFunction;
+
+    for( auto attrib : statistics )
+    {
+      auto attribIdx = indices->find( attrib.first );
+
+      if( attribIdx == indices->end( ))
+      {
+        std::cout << "Attrib index not found " << attrib.first
+                  << " in map " << indices->size( )
+                  << std::endl;
+        continue;
+      }
+//      unsigned int attribId = ( *typeIds )[ attrib.first ];
+
+      auto name = ( *names )[ attribIdx->second ];
+
+      if( labels )
+      {
+        auto labelIt = _attributeNameLabels.find( name );
+        if( labelIt != _attributeNameLabels.end( ))
+          name = labelIt->second;
+      }
+
+      result.push_back( name );
+    }
+
+    result.shrink_to_fit( );
+
+    std::cout << "Attribute names: ";
+    for( auto name : result )
+      std::cout << " " << name;
+    std::cout << std::endl;
+
+    return result;
+  }
+
+  const tUintUMap& OpenGLWidget::attributeStatistics( void ) const
+  {
+//    tUintUMap result;
+//
+//    auto typeIds = ( _currentAttrib == T_TYPE_MORPHO ) ? &_typesMorpho : &_typesFunction;
+//
+//    for( auto attrib : _domainManager->attributeStatistics( ))
+//    {
+//      unsigned int attribId = ( *typeIds )[ attrib.first ];
+//
+//      result.insert( std::make_pair( attribId, attrib.second ));
+//    }
+//
+//    return result;
+    return _domainManager->attributeStatistics( );
+  }
+
 
   void OpenGLWidget::_updateSelection( void )
   {
@@ -827,9 +979,26 @@ namespace visimpl
       _particleSystem->run( true );
       _particleSystem->update( 0.0f );
 
-      _flagUpdateSelection = false;
+      _flagUpdateGroups = false;
     }
 
+  }
+
+  void OpenGLWidget::_updateAttributes( void )
+  {
+    if( _particleSystem )
+      {
+        _particleSystem->run( false );
+
+        _domainManager->updateAttributes( );
+
+        updateCameraBoundingBox( );
+
+        _particleSystem->run( true );
+        _particleSystem->update( 0.0f );
+
+        _flagUpdateAttributes = false;
+      }
   }
 
   void OpenGLWidget::setMode( int mode )
@@ -1134,7 +1303,7 @@ namespace visimpl
     }
   }
 
-  DomainManager* OpenGLWidget::inputMultiplexer( void )
+  DomainManager* OpenGLWidget::domainManager( void )
   {
     return _domainManager;
   }

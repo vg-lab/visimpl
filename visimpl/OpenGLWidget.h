@@ -109,7 +109,7 @@ namespace visimpl
     void setGroupVisibility( unsigned int i, bool state );
     void addGroupFromSelection( const std::string& name );
 
-    DomainManager* inputMultiplexer( void );
+    DomainManager* domainManager( void );
 
     void resetParticles( void );
 
@@ -128,7 +128,26 @@ namespace visimpl
 
     void stepCompleted( void );
 
+    void attributeStatsComputed( void );
+
   public slots:
+
+    void home( void );
+    void updateCameraBoundingBox( void );
+
+    void setMode( int mode );
+    void showInactive( bool state );
+
+    void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
+    void clearSelection( void );
+
+    void setUpdateSelection( void );
+    void setUpdateGroups( void );
+    void setUpdateAttributes( void );
+
+    void selectAttrib( int newAttrib );
+
+    void showEventsActivityLabels( bool show );
 
     void toggleShowUnselected( void );
     void changeClearColor( void );
@@ -164,24 +183,16 @@ namespace visimpl
     void changeSimulationDecayValue( float value );
     float getSimulationDecayValue( void );
 
-    void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
+    const std::vector< unsigned int >& attributeValues( int attribNumber ) const;
+    Strings attributeNames( int attribNumber, bool labels = false ) const;
 
-    void setMode( int mode );
-    void showInactive( bool state );
-
-    void setUpdateSelection( void );
-    void setUpdateGroups( void );
-
-    void clearSelection( void );
-
-    void showEventsActivityLabels( bool show );
-
-    void home( void );
-    void updateCameraBoundingBox( void );
+    const tUintUMap& attributeStatistics( void ) const;
 
   protected:
 
     tNeuronAttribs _loadNeuronTypes( void );
+
+    void _resolveFlagsOperations( void );
 
     void _updateParticles( float renderDelta );
     void _paintParticles( void );
@@ -197,9 +208,12 @@ namespace visimpl
     void _configureStepByStep( void );
 
     void _modeChange( void );
+    void _attributeChange( void );
+
     void _updateSelection( void );
     void _updateGroups( void );
     void _updateGroupsVisibility( void );
+    void _updateAttributes( void );
 
     void _createEventLabels( void );
     void _updateEventLabelsVisibility( void );
@@ -308,9 +322,14 @@ namespace visimpl
     bool _flagResetParticles;
     bool _flagUpdateSelection;
     bool _flagUpdateGroups;
+    bool _flagUpdateAttributes;
 
     bool _flagModeChange;
     tVisualMode _newMode;
+
+    bool _flagAttribChange;
+    tNeuronAttributes _newAttrib;
+    tNeuronAttributes _currentAttrib;
 
     bool _showActiveEvents;
     simil::SubsetEventManager* _subsetEvents;
@@ -326,8 +345,21 @@ namespace visimpl
 
     std::vector< std::string > _namesTypesMorpho;
     std::vector< std::string > _namesTypesFunction;
+
+    std::vector< unsigned int > _typesMorpho;
+    std::vector< unsigned int > _typesFunction;
+
+    tUintUMap _typeToIdxMorpho;
+    tUintUMap _typeToIdxFunction;
+
+    tUintUMap _idxToTypeMorpho;
+    tUintUMap _idxToTypeFunction;
+
+    std::unordered_map< std::string, unsigned int > _typesIdxMorpho;
+    std::unordered_map< std::string, unsigned int > _typesIdxFunction;
   };
 
 } // namespace visimpl
 
 #endif // __VISIMPL__OPENGLWIDGET__
+

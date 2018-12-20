@@ -58,6 +58,8 @@ namespace visimpl
     void dirty( bool state );
     bool dirty( void ) const;
 
+    void custom( bool state );
+    bool custom( void ) const;
 
   protected:
 
@@ -75,6 +77,8 @@ namespace visimpl
     bool _active;
     bool _cached;
     bool _dirty;
+
+    bool _custom;
   };
 
 
