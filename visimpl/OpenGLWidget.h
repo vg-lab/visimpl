@@ -183,7 +183,7 @@ namespace visimpl
     void changeSimulationDecayValue( float value );
     float getSimulationDecayValue( void );
 
-    const std::vector< unsigned int >& attributeValues( int attribNumber ) const;
+    const std::vector< long unsigned int >& attributeValues( int attribNumber ) const;
     Strings attributeNames( int attribNumber, bool labels = false ) const;
 
     const tUintUMap& attributeStatistics( void ) const;
@@ -346,8 +346,8 @@ namespace visimpl
     std::vector< std::string > _namesTypesMorpho;
     std::vector< std::string > _namesTypesFunction;
 
-    std::vector< unsigned int > _typesMorpho;
-    std::vector< unsigned int > _typesFunction;
+    std::vector< long unsigned int > _typesMorpho;
+    std::vector< long unsigned int > _typesFunction;
 
     tUintUMap _typeToIdxMorpho;
     tUintUMap _typeToIdxFunction;

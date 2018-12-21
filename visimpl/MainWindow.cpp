@@ -708,9 +708,22 @@ namespace visimpl
     gbAttribSel->setLayout( lyAttribSel );
 
     QGroupBox* gbAttribStats = new QGroupBox( "Statistics" );
+    QScrollArea* attribScroll = new QScrollArea( );
+    QWidget* attribContainer = new QWidget( );
+    QVBoxLayout* attribContainerLayout = new QVBoxLayout( );
+    gbAttribStats->setLayout( attribContainerLayout );
+    attribContainerLayout->addWidget( attribScroll );
+
+    attribScroll->setWidget( attribContainer );
+    attribScroll->setWidgetResizable( true );
+    attribScroll->setFrameShape( QFrame::Shape::NoFrame );
+    attribScroll->setFrameShadow( QFrame::Shadow::Plain );
+    attribScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+    attribScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+
     _layoutAttribStats = new QVBoxLayout( );
     _layoutAttribStats->setAlignment( Qt::AlignTop );
-    gbAttribStats->setLayout( _layoutAttribStats );
+    attribContainer->setLayout( _layoutAttribStats );
 
     QGroupBox* gbAttribGroups = new QGroupBox( "Groups" );
     _layoutAttribGroups = new QGridLayout( );
@@ -981,7 +994,7 @@ namespace visimpl
       auto label = labels[ i ];
       auto number = stats.find( i )->second;
 
-      QString text = ( QString( name.c_str( )) + " - " + QString( label.c_str( ))
+      QString text = ( QString( name.c_str( )) //+ " - " + QString( label.c_str( ))
           + ":\t" + QString::number( number ) );
 
       QLabel* textLabel = new QLabel( text );
@@ -1004,7 +1017,7 @@ namespace visimpl
       QFrame* frame = new QFrame( );
 //      auto colors = _openGLWidget->colorPalette( ).colors( );
 
-      frame->setStyleSheet( "background-color: " + colors[ currentIndex ].first.name( ) );
+      frame->setStyleSheet( "background-color: " + colors[ currentIndex % colors.size( )].first.name( ) );
       frame->setMinimumSize( 20, 20 );
       frame->setMaximumSize( 20, 20 );
 

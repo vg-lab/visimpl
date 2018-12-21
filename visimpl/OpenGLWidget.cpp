@@ -282,17 +282,46 @@ namespace visimpl
     {
       auto gids = _player->gids( );
 
-      brion::Circuit circuit( _player->data( )->blueConfig( )->getCircuitSource( ));
+      try
+      {
+        brion::Circuit circuit( _player->data( )->blueConfig( )->getCircuitSource( ));
 
-      uint32_t attributes = brion::NEURON_COLUMN_GID |
-                            brion::NEURON_MTYPE |
-                            brion::NEURON_ETYPE;
+        uint32_t attributes = brion::NEURON_COLUMN_GID |
+                              brion::NEURON_MTYPE |
+                              brion::NEURON_ETYPE;
 
 
-      const brion::NeuronMatrix& attribsData = circuit.get( gids, attributes );
+        const brion::NeuronMatrix& attribsData = circuit.get( gids, attributes );
 
-      _namesTypesMorpho = circuit.getTypes( brion::NEURONCLASS_MORPHOLOGY_CLASS );
-      _namesTypesFunction = circuit.getTypes( brion::NEURONCLASS_FUNCTION_CLASS );
+        _namesTypesMorpho = circuit.getTypes( brion::NEURONCLASS_MORPHOLOGY_CLASS );
+        _namesTypesFunction = circuit.getTypes( brion::NEURONCLASS_FUNCTION_CLASS );
+
+        _typesMorpho.reserve( gids.size( ));
+        _typesFunction.reserve( gids.size( ));
+
+        for( unsigned int i = 0; i < gids.size( ); ++i )
+        {
+          unsigned int morphoType =
+              boost::lexical_cast< uint16_t >( attribsData[ i ][ 1 ]);
+
+          unsigned int functionType =
+              boost::lexical_cast< uint16_t >( attribsData[ i ][ 2 ]);
+
+          _typesMorpho.push_back( morphoType );
+          _typesFunction.push_back( functionType );
+        }
+
+      }
+      catch( ... )
+      {
+        brain::Circuit circuit( *_player->data( )->blueConfig( ));
+        _namesTypesMorpho = circuit.getMorphologyTypeNames( );
+        _namesTypesFunction = circuit.getElectrophysiologyTypeNames( );
+
+        _typesMorpho = circuit.getMorphologyTypes( gids );
+        _typesFunction = circuit.getElectrophysiologyTypes( gids );
+
+      }
 
       std::cout << "Morphology types";
       for( auto name : _namesTypesMorpho )
@@ -309,10 +338,8 @@ namespace visimpl
 
       for( auto gid : gids )
       {
-        unsigned int morphoType =
-            boost::lexical_cast< uint16_t >( attribsData[ counter ][ 1 ]);
-        unsigned int functionType =
-            boost::lexical_cast< uint16_t >( attribsData[ counter ][ 2 ]);
+        unsigned int morphoType = _typesMorpho[ counter ];
+        unsigned int functionType = _typesFunction[ counter ];
 
         auto name = _namesTypesMorpho[ morphoType ];
 
@@ -329,8 +356,6 @@ namespace visimpl
 
         _typeToIdxMorpho.insert( std::make_pair( morphoType, idxMorpho->second ));
 
-        _typesMorpho.push_back( morphoType );
-
         name = _namesTypesFunction[ functionType ];
 
         auto idxFunction = _typesIdxFunction.find( name );
@@ -345,7 +370,6 @@ namespace visimpl
         }
 
         _typeToIdxFunction.insert( std::make_pair( functionType, idxFunction->second ));
-        _typesFunction.push_back( functionType );
 
         std::get< T_TYPE_MORPHO >( attribs ) = idxMorpho->second;
         std::get< T_TYPE_FUNCTION >( attribs ) = idxFunction->second;
@@ -850,7 +874,7 @@ namespace visimpl
     emit attributeStatsComputed( );
   }
 
-  const std::vector< unsigned int >& OpenGLWidget::attributeValues( int attribNumber ) const
+  const std::vector< long unsigned int >& OpenGLWidget::attributeValues( int attribNumber ) const
   {
     if(( tNeuronAttributes )attribNumber == T_TYPE_MORPHO )
       return _typesMorpho;
