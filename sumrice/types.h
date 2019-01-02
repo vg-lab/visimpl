@@ -22,8 +22,21 @@
 #include <prefr/prefr.h>
 #include <vmmlib/vmmlib.h>
 
+#include <simil/simil.h>
+
 namespace visimpl
 {
+  typedef simil::Event Event;
+  typedef simil::GIDVec GIDVec;
+  typedef simil::EventVec EventVec;
+
+  typedef simil::TGIDSet TGIDSet;
+  typedef simil::TGIDUSet TGIDUSet;
+  typedef simil::TPosVect TPosVect;
+
+  typedef simil::Spike Spike;
+  typedef simil::TSpikes TSpikes;
+
   typedef std::set< uint32_t > TGIDSet;
   typedef std::vector< vmml::Vector3f > TPosVect;
 
@@ -92,6 +105,43 @@ namespace visimpl
     T_REP_CURVE
 
   } TRepresentation_Mode;
+
+  struct CorrelationValues
+  {
+  public:
+
+    double hit;
+    double falseAlarm;
+    double cr;
+    double miss;
+
+    double result;
+
+    double entropy;
+    double jointEntropy;
+    double mutualInformation;
+
+    bool operator==( const CorrelationValues& other ) const
+    { return result == other.result; }
+
+    bool operator>( const CorrelationValues& other ) const
+    { return result > other.result; }
+  };
+
+  typedef std::unordered_map< uint32_t, CorrelationValues > TNeuronCorrelationUMap;
+  typedef TNeuronCorrelationUMap::const_iterator TNeuronCorrelUMapCIt;
+  typedef std::pair< TNeuronCorrelUMapCIt,
+                     TNeuronCorrelUMapCIt > TNeuronCorrelationRange;
+
+  struct Correlation
+  {
+  public:
+
+    std::string subsetName;
+    std::string eventName;
+
+    TNeuronCorrelationUMap values;
+  };
 
 }
 

@@ -18,6 +18,7 @@ set(SUMRICE_PUBLIC_HEADERS
   TransferFunctionWidget.h
   log.h
   EventWidget.h  
+  CorrelationComputer.h
 )
 
 set(SUMRICE_HEADERS
@@ -32,6 +33,7 @@ set(SUMRICE_SOURCES
   Histogram.cpp
   FocusFrame.cpp
   EventWidget.cpp
+  CorrelationComputer.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES

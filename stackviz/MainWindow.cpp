@@ -972,7 +972,7 @@ namespace stackviz
 
   void MainWindow::calculateCorrelations( void )
   {
-    simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
+    visimpl::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
 
     auto eventNames = _player->data( )->subsetsEvents( )->eventNames( );
 
