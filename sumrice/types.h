@@ -137,6 +137,9 @@ namespace visimpl
   {
   public:
 
+    GIDUSet gids;
+
+    std::string fullName;
     std::string subsetName;
     std::string eventName;
 

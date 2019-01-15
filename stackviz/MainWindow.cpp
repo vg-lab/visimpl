@@ -976,25 +976,29 @@ namespace stackviz
 
     auto eventNames = _player->data( )->subsetsEvents( )->eventNames( );
 
+    double deltaTime = 0.125;
+
+    cc.configureEvents( eventNames, deltaTime );
+
     for( auto correl : _correlations )
     {
-      auto result = cc.correlate( correl, eventNames, 0.125f );
-
-      for( auto correlation : result )
-      {
-        visimpl::Selection selection;
-        selection.name = correlation.subsetName + correlation.eventName;
-
-        for( auto neuron : correlation.values )
-        {
-          if( neuron.second.result > 0.5f )
-            selection.gids.insert( neuron.first );
-        }
-
-       _summary->AddNewHistogram( selection );
-      }
-
+      auto result = cc.correlateSubset( correl, eventNames, deltaTime, 2600, 2900 );
     }
+
+    for( auto correlationName : cc.correlationNames( ))
+    {
+      auto correlation = cc.correlation( correlationName );
+
+      if( !correlation )
+        continue;
+
+      visimpl::Selection selection;
+      selection.name = correlation->fullName;
+      selection.gids = cc.getCorrelatedNeurons( correlation->fullName );
+
+     _summary->AddNewHistogram( selection );
+    }
+
 
   }
 

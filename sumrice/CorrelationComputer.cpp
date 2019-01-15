@@ -17,6 +17,28 @@ namespace visimpl
   , _subsetEvents( simData->subsetsEvents( ))
   { }
 
+  void CorrelationComputer::configureEvents( const std::vector< std::string >& eventsNames,
+                                             double deltaTime )
+  {
+    _startTime = _simData->startTime( );
+    _endTime =
+        std::max( _simData->subsetsEvents( )->totalTime( ), _simData->endTime( ));
+
+    std::cout << "Simulation time: [" << _startTime
+              << ", " << _endTime << "]"
+              << std::endl;
+
+    _eventNames = eventsNames;
+
+    for( auto eventName : eventsNames )
+    {
+      _eventTimeBins[ eventName ] =
+          _eventTimePerBin( eventName, _startTime, _endTime, deltaTime );
+    }
+
+  }
+
+
   double CorrelationComputer::_entropy( unsigned int active, unsigned int totalBins ) const
   {
     double result = 0.0;
@@ -34,20 +56,28 @@ namespace visimpl
     return result;
   }
 
-  void CorrelationComputer::compute( const std::string& subset,
-                                     const std::string& eventName,
-                                     float initTime,
-                                     float endTime,
-                                     float deltaTime,
-                                     float selectionThreshold )
+  Correlation CorrelationComputer::computeCorrelation( const std::string& subset,
+                                            const std::string& eventName,
+                                            float initTime,
+                                            float endTime,
+                                            float deltaTime,
+                                            float /*selectionThreshold*/ )
   {
 
     GIDVec gids = _subsetEvents->getSubset( subset );
+    Correlation correlation_;
 
     if( gids.empty( ))
     {
       std::cout << "Warning: subset " << subset << " NOT found." << std::endl;
-      return;
+      return correlation_;
+    }
+
+    auto eventTime = _eventTimeBins.find( eventName );
+    if( eventTime == _eventTimeBins.end( ))
+    {
+      std::cout << "Event " << eventName << " not configured." << std::endl;
+      return correlation_;
     }
 
     TGIDUSet giduset( gids.begin( ), gids.end( ));
@@ -65,22 +95,10 @@ namespace visimpl
     // Threshold for considering an event active during bin time.
     float threshold = deltaTime * 0.5f;
 
-    double startTime = _simData->startTime( );
-    double totalTime =
-        std::max( _simData->subsetsEvents( )->totalTime( ), _simData->endTime( ));
-
-//    double invTotalTime = 1.0 / totalTime;
-
-    std::cout << "Start time " << startTime << " end time " << totalTime << std::endl;
-
     // Calculate bins number.
-    unsigned int totalBins = std::ceil( totalTime * invDeltaTime );
+    unsigned int totalBins = std::ceil( _endTime * invDeltaTime );
     unsigned int analysisTotalBins =
         std::ceil( ( endTime - initTime ) * invDeltaTime );
-//    double invBinsNumber = 1.0 / binsNumber;
-
-    auto eventTime = _eventTimePerBin( eventName, 0, totalTime, deltaTime );
-    _eventTimeBins[ eventName ] = eventTime;
 
     // Initialize vector storing delta time spaced event's activity.
     std::vector< unsigned int > eventBins( totalBins, 0 );
@@ -92,7 +110,7 @@ namespace visimpl
     double currentTime = 0.0;
     for( unsigned int i = 0; i < totalBins; ++i, currentTime += deltaTime )
     {
-      auto time = eventTime[ i ];
+      auto time = eventTime->second[ i ];
       bool value = ( time >= threshold );
 
       if( value )
@@ -212,9 +230,10 @@ namespace visimpl
 //      }
 //    }
 
-    Correlation correlation_;
+
     correlation_.subsetName = subset;
     correlation_.eventName = eventName;
+    correlation_.gids = giduset;
 
     // Calculate normalization factors by the inverse of active/inactive bins.
     double normBins = 1.0 / analysisTotalBins;
@@ -275,21 +294,21 @@ namespace visimpl
           entropyPattern + values.entropy - values.jointEntropy;
 
       // Result responds to Hit minus False Hit.
-      values.result = values.hit - values.falseAlarm;
+      values.result = values.mutualInformation;
 
-      std::cout << "Neuron " << gid
-//                << " " << binsFiringPattern
-//                << " " << binsNotFiringNotPattern
-//                << " " << binsNotFiringPattern
-//                << " " << binsFiringNotPattern
-                << " Hit " << values.hit
-                << " CR " << values.cr
-                << " Miss " << values.miss
-                << " FA " << values.falseAlarm
-                << " ent " << values.entropy
-                << " joint " << values.jointEntropy
-                << " MI " << values.mutualInformation
-                << std::endl;
+//      std::cout << "Neuron " << gid
+////                << " " << binsFiringPattern
+////                << " " << binsNotFiringNotPattern
+////                << " " << binsNotFiringPattern
+////                << " " << binsFiringNotPattern
+//                << " Hit " << values.hit
+//                << " CR " << values.cr
+//                << " Miss " << values.miss
+//                << " FA " << values.falseAlarm
+//                << " ent " << values.entropy
+//                << " joint " << values.jointEntropy
+//                << " MI " << values.mutualInformation
+//                << std::endl;
 
 
       // Store maximum values.
@@ -307,10 +326,10 @@ namespace visimpl
       avgResValue += values.result;
 
       // If result is above the given threshold...
-      if( values.result >= selectionThreshold )
+//      if( values.result >= selectionThreshold )
 
         // Store neuron correlation value.
-        correlation_.values.insert( std::make_pair( gid, values ));
+      correlation_.values.insert( std::make_pair( gid, values ));
 
     }
 
@@ -328,90 +347,94 @@ namespace visimpl
 
 
     // Store the full subset correlation for filtered neurons.
-    _correlations.insert( std::make_pair( subset + eventName, correlation_ ));
+//    _correlations.insert( std::make_pair( , correlation_ ));
 
     std::cout << "Computed correlation for event " << subset
               << " with "<< correlation_.values.size( ) << " elements."
               << std::endl;
 
     std::cout << "-------------------------" << std::endl;
+
+    return correlation_;
   }
 
   std::vector< Correlation >
-  CorrelationComputer::correlate( const std::string& subsetName,
+  CorrelationComputer::correlateSubset( const std::string& subsetName,
                                   const std::vector< std::string >& eventNames,
                                   float deltaTime,
+                                  float initTime,
+                                  float endTime,
                                   float selectionThreshold )
   {
     std::vector< uint32_t > gids =
         _subsetEvents->getSubset( subsetName );
 
+    std::vector< Correlation > result;
+
     if( gids.empty( ))
     {
       std::cerr << "Error: Destination GID subset " << subsetName
                 << " is empty or does not exist!" << std::endl;
-      exit( -1 );
+      return result;
     }
 
     std::vector< std::string > composedNames( eventNames.size( ));
-    auto it = composedNames.begin( );
-    for( auto name : eventNames )
-    {
-      *it = subsetName + name;
-      ++it;
-    }
 
-    std::vector< Correlation* > impliedCorrelations;
-    it = composedNames.begin( );
-    for( auto eventName : eventNames )
+    for( unsigned int i = 0; i < eventNames.size( ); ++i )
     {
-      auto res = _correlations.find( *it );
+      auto eventName = eventNames[ i ];
+      auto composedName = _composeName( subsetName, eventName );
+
+      composedNames[ i ] = composedName;
+
+      auto res = _correlations.find( composedName );
 
       if( res == _correlations.end( ))
       {
-        compute( subsetName, eventName, 2600, 2900, deltaTime, selectionThreshold );
+        auto correlation =
+            std::move( computeCorrelation( subsetName, eventName, initTime, endTime, deltaTime, selectionThreshold ));
 
-        res = _correlations.find( *it );
+        correlation.fullName = composedNames[ i ];
+
+        if( !correlation.values.empty( ))
+          res = _correlations.insert( std::make_pair( composedName, correlation )).first;
       }
-
-      impliedCorrelations.push_back( &res->second );
-
-      ++it;
     }
 
-    unsigned int counter = 0;
-    std::vector< Correlation > result( eventNames.size( ));
-    for( auto& c : result )
-    {
-      c.subsetName = subsetName;
-      c.eventName = eventNames[ counter ];
+//    unsigned int counter = 0;
 
-      ++counter;
-    }
+//    result.reserve( eventNames.size( ));
+//    for( auto& c : result )
+//    {
+//      c.subsetName = subsetName;
+//      c.eventName = eventNames[ counter ];
+//
+//      ++counter;
+//    }
 
-    for( auto gid : gids )
-    {
-      CorrelationValues max;
-      max.falseAlarm = max.hit = max.result = std::numeric_limits< float >::min( );
-
-      int maxNumber = -1;
-
-      counter = 0;
-      for( const auto corr : impliedCorrelations )
-      {
-        auto res = corr->values.find( gid );
-        if( res != corr->values.end( ) && res->second > max )
-        {
-          max = res->second;
-          maxNumber = counter;
-        }
-
-        ++counter;
-      }
-
-      if( maxNumber > -1 )
-        result[ maxNumber ].values.insert( std::make_pair( gid, max ));
-    }
+//    for( auto gid : gids )
+//    {
+//      CorrelationValues max;
+//      max.falseAlarm = max.hit = max.result = std::numeric_limits< float >::min( );
+//
+//      int maxNumber = -1;
+//
+//      counter = 0;
+//      for( const auto corr : impliedCorrelations )
+//      {
+//        auto res = corr->values.find( gid );
+//        if( res != corr->values.end( ) && res->second > max )
+//        {
+//          max = res->second;
+//          maxNumber = counter;
+//        }
+//
+//        ++counter;
+//      }
+//
+//      if( maxNumber > -1 )
+//        result[ maxNumber ].values.insert( std::make_pair( gid, max ));
+//    }
 
     return result;
   }
@@ -546,4 +569,58 @@ namespace visimpl
     return result;
   }
 
-}
+  std::string CorrelationComputer::_composeName( const std::string& subsetName,
+                                                 const std::string& eventName ) const
+  {
+    return subsetName + eventName;
+  }
+
+  GIDUSet CorrelationComputer::getCorrelatedNeurons( const std::string& correlationName ) const
+  {
+    GIDUSet result;
+
+    auto correl = _correlations.find( correlationName );
+
+    if( correl == _correlations.end( ))
+    {
+      std::cout << "No correlated neurons for " << correlationName << std::endl;
+      return result;
+    }
+
+    const auto& correlation = correl->second;
+
+    unsigned int eventsNumber = _eventNames.size( );
+    if( eventsNumber == 1 )
+      ++eventsNumber;
+
+    unsigned int selectionNumber = correlation.gids.size( ) / eventsNumber;
+
+    typedef std::pair< unsigned int, double > TvalueTuple;
+     std::vector< TvalueTuple > sortedValues;
+     sortedValues.reserve( correlation.values.size( ));
+
+     for( auto neuron : correlation.values )
+     {
+       sortedValues.emplace_back( std::make_pair( neuron.first, neuron.second.result ));
+     }
+
+     std::sort( sortedValues.begin( ), sortedValues.end( ),
+                [ ]( const TvalueTuple& a, const TvalueTuple& b )
+                { return a.second > b.second; });
+
+     std::cout << "Correlated neurons: (" << selectionNumber
+               << "/" << sortedValues.size( ) << ")" << std::endl;;
+
+     for( unsigned int i = 0; i < selectionNumber; ++i )
+     {
+       auto value = sortedValues[ i ];
+       std::cout << " " << value.first; //<< ":" << value.second;
+       result.insert( value.first );
+     }
+
+     std::cout << std::endl;
+
+     return result;
+  }
+
+} // namespace visimpl
