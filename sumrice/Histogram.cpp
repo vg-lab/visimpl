@@ -888,6 +888,11 @@ namespace visimpl
         localColor.setAlpha( 100 );
 
         painter.setBrush( Qt::NoBrush );
+        painter.setPen( QPen( Qt::black, Qt::SolidLine ));
+
+        QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
+        painter.drawLine( line );
+
         painter.setPen( QPen( globalColor, Qt::SolidLine ));
         painter.drawPath( _mainHistogram._cachedGlobalRep );
 

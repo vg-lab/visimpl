@@ -23,3 +23,23 @@ build/
 bld/
 [Bb]in/
 [Oo]bj/
+
+
+# Dependencies
+
+.settings
+Brion
+Keyv
+Lexis
+Lunchbox
+MVDTool
+Pression
+ReTo
+Servus
+SimIL
+ZeroBuf
+ZeroEQ
+gmrvlex
+prefr
+scoop
+vmmlib

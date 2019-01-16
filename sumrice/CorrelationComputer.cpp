@@ -285,10 +285,18 @@ namespace visimpl
 
       values.entropy = _entropy( binsTotalFiring, analysisTotalBins );
 
-      values.jointEntropy = - ( values.hit * std::log2( values.hit ));
-      values.jointEntropy -= ( values.cr * std::log2( values.cr ));
-      values.jointEntropy -= ( values.miss * std::log2( values.miss ));
-      values.jointEntropy -= ( values.falseAlarm * std::log2( values.falseAlarm ));
+      values.jointEntropy = 0.0;
+      if( values.hit > 0 )
+        values.jointEntropy -= ( values.hit * std::log2( values.hit ));
+
+      if( values.cr > 0 )
+        values.jointEntropy -= ( values.cr * std::log2( values.cr ));
+
+      if( values.miss > 0 )
+        values.jointEntropy -= ( values.miss * std::log2( values.miss ));
+
+      if( values.falseAlarm > 0 )
+        values.jointEntropy -= ( values.falseAlarm * std::log2( values.falseAlarm ));
 
       values.mutualInformation =
           entropyPattern + values.entropy - values.jointEntropy;
@@ -297,10 +305,10 @@ namespace visimpl
       values.result = values.mutualInformation;
 
 //      std::cout << "Neuron " << gid
-////                << " " << binsFiringPattern
-////                << " " << binsNotFiringNotPattern
-////                << " " << binsNotFiringPattern
-////                << " " << binsFiringNotPattern
+//                << " " << binsFiringPattern
+//                << " " << binsNotFiringNotPattern
+//                << " " << binsNotFiringPattern
+//                << " " << binsFiringNotPattern
 //                << " Hit " << values.hit
 //                << " CR " << values.cr
 //                << " Miss " << values.miss
@@ -590,37 +598,34 @@ namespace visimpl
     const auto& correlation = correl->second;
 
     unsigned int eventsNumber = _eventNames.size( );
-    if( eventsNumber == 1 )
-      ++eventsNumber;
 
     unsigned int selectionNumber = correlation.gids.size( ) / eventsNumber;
 
     typedef std::pair< unsigned int, double > TvalueTuple;
-     std::vector< TvalueTuple > sortedValues;
-     sortedValues.reserve( correlation.values.size( ));
+    std::vector< TvalueTuple > sortedValues;
+    sortedValues.reserve( correlation.values.size( ));
 
-     for( auto neuron : correlation.values )
-     {
-       sortedValues.emplace_back( std::make_pair( neuron.first, neuron.second.result ));
-     }
+    for( auto neuron : correlation.values )
+    {
+      sortedValues.emplace_back( std::make_pair( neuron.first, neuron.second.result ));
+    }
+    std::sort( sortedValues.begin( ), sortedValues.end( ),
+               [ ]( const TvalueTuple& a, const TvalueTuple& b )
+               { return a.second > b.second; });
 
-     std::sort( sortedValues.begin( ), sortedValues.end( ),
-                [ ]( const TvalueTuple& a, const TvalueTuple& b )
-                { return a.second > b.second; });
+    std::cout << "Correlated neurons: (" << selectionNumber
+              << "/" << sortedValues.size( ) << ")" << std::endl;;
 
-     std::cout << "Correlated neurons: (" << selectionNumber
-               << "/" << sortedValues.size( ) << ")" << std::endl;;
+    for( unsigned int i = 0; i < selectionNumber; ++i )
+    {
+      auto value = sortedValues[ i ];
+      std::cout << " " << value.first; //<< ":" << value.second;
+      result.insert( value.first );
+    }
 
-     for( unsigned int i = 0; i < selectionNumber; ++i )
-     {
-       auto value = sortedValues[ i ];
-       std::cout << " " << value.first; //<< ":" << value.second;
-       result.insert( value.first );
-     }
+    std::cout << std::endl;
 
-     std::cout << std::endl;
-
-     return result;
+    return result;
   }
 
 } // namespace visimpl
