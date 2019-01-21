@@ -22,6 +22,7 @@
 #include <QTimer>
 #include <QScrollArea>
 #include <QSplitter>
+#include <QSpinBox>
 
 #include "EventWidget.h"
 #include "FocusFrame.h"
@@ -113,6 +114,7 @@ namespace visimpl
   public slots:
 
     void bins( int bins_ );
+    void binsChanged( void );
     void zoomFactor( double zoom );
     void fillPlots( bool fillPlots_ );
 
@@ -277,6 +279,8 @@ namespace visimpl
     QLabel* _currentValueLabel;
     QLabel* _globalMaxLabel;
     QLabel* _localMaxLabel;
+
+    QSpinBox* _spinBoxBins;
 
 //    simil::SubsetEventManager* _subsetEventManager;
     unsigned int _maxNumEvents;

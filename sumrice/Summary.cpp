@@ -15,7 +15,6 @@
 #include <QVBoxLayout>
 #include <QScrollArea>
 #include <QInputDialog>
-#include <QSpinBox>
 #include <QScrollBar>
 #include <QApplication>
 
@@ -270,11 +269,11 @@ namespace visimpl
       _localMaxLabel = new QLabel( "" );
       _localMaxLabel->setMaximumWidth( 50 );
 
-      QSpinBox* binSpinBox = new QSpinBox( );
-      binSpinBox->setMinimum( 50 );
-      binSpinBox->setMaximum( 100000 );
-      binSpinBox->setSingleStep( 50 );
-      binSpinBox->setValue( _bins );
+      _spinBoxBins = new QSpinBox( );
+      _spinBoxBins->setMinimum( 50 );
+      _spinBoxBins->setMaximum( 100000 );
+      _spinBoxBins->setSingleStep( 50 );
+      _spinBoxBins->setValue( _bins );
 
       QDoubleSpinBox* zoomFactorSpinBox = new QDoubleSpinBox( );
       zoomFactorSpinBox->setMinimum( 1.0 );
@@ -305,7 +304,7 @@ namespace visimpl
       footLayout->addWidget( _focusWidget, 0, 2, 5, 7 );
 
       footLayout->addWidget( new QLabel( "Bins:" ), 0, 9, 1, 1 );
-      footLayout->addWidget( binSpinBox, 0, 10, 1, 1 );
+      footLayout->addWidget( _spinBoxBins, 0, 10, 1, 1 );
       footLayout->addWidget( focusButton, 0, 11, 1, 1);
       footLayout->addWidget( new QLabel( "ZoomFactor:" ), 1, 9, 1, 1 );
       footLayout->addWidget( zoomFactorSpinBox, 1, 10, 1, 1 );
@@ -325,8 +324,8 @@ namespace visimpl
       connect( globalComboBox, SIGNAL( currentIndexChanged( int ) ),
                  this, SLOT( colorScaleGlobal( int )));
 
-      connect( binSpinBox, SIGNAL( valueChanged( int )),
-               this,  SLOT( bins( int )));
+      connect( _spinBoxBins, SIGNAL( editingFinished( void )),
+               this,  SLOT( binsChanged( void )));
 
       connect( zoomFactorSpinBox, SIGNAL( valueChanged( double )),
                this,  SLOT( zoomFactor( double )));
@@ -1073,6 +1072,12 @@ namespace visimpl
     return _histogramWidgets.size( );
   }
 
+
+  void Summary::binsChanged( void )
+  {
+    unsigned int binsNumber = _spinBoxBins->value( );
+    bins( binsNumber );
+  }
 
   void Summary::bins( int bins_ )
   {
