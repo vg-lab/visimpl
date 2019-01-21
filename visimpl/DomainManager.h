@@ -29,7 +29,8 @@ namespace visimpl
   {
     TMODE_SELECTION = 0,
     TMODE_GROUPS,
-    TMODE_ATTRIBUTE
+    TMODE_ATTRIBUTE,
+    TMODE_UNDEFINED
   };
 
   class DomainManager
@@ -40,17 +41,19 @@ namespace visimpl
                       const TGIDSet& gids );
     ~DomainManager( );
 
-    void init( const tGidPosMap& positions );
+    void init( const tGidPosMap& positions, const tNeuronAttribs& types );
 
     void initializeParticleSystem( void );
 
-    VisualGroup* addVisualGroup( const GIDUSet& group_,
-                                 const std::string& name,
+    VisualGroup* addVisualGroup( const GIDUSet& group_, const std::string& name,
                                  bool overrideGIDs = false );
-
-    void setVisualGroupState( unsigned int i, bool state );
-
+    void setVisualGroupState( unsigned int i, bool state, bool attrib = false );
     void removeVisualGroup( unsigned int i );
+
+    void showInactive( bool state );
+
+
+    void generateAttributesGroups( tNeuronAttributes attrib );
 
     void processInput( const simil::SpikesCRange& spikes_,
                        float begin, float end, bool clear );
@@ -65,6 +68,7 @@ namespace visimpl
 //    void showGroups( bool show );
     bool showGroups( void );
     void updateGroups( void );
+    void updateAttributes( void );
 
     void selection( const GIDUSet& newSelection );
     const GIDUSet& selection( void );
@@ -78,10 +82,16 @@ namespace visimpl
     void resetParticles( void );
 
     const std::vector< VisualGroup* >& groups( void ) const;
+    const std::vector< VisualGroup* >& attributeGroups( void ) const;
+
 
     tBoundingBox boundingBox( void ) const;
 
     prefr::ColorOperationModel* modelSelectionBase( void );
+
+    const tUintUMap& attributeStatistics( void ) const;
+
+    const std::vector< std::pair< QColor, QColor >>& paletteColors( void ) const;
 
   protected:
 
@@ -90,22 +100,34 @@ namespace visimpl
     TModifiedNeurons _parseInput( const simil::SpikesCRange& spikes_,
                                  float begin, float end );
 
+
+    VisualGroup* _generateGroup( const GIDUSet& gids, const std::string& name,
+                                 unsigned int idx ) const;
+
     void _updateGroupsModels( void );
     void _generateGroupsIndices( void );
 
     void _updateSelectionIndices( void );
     void _generateSelectionIndices( void );
 
-    void _processFrameInputGroups( const simil::SpikesCRange& spikes_,
-                                  float begin, float end );
+    void _updateAttributesIndices( void );
+    void _generateAttributesIndices( void );
+
     void _processFrameInputSelection( const simil::SpikesCRange& spikes_,
-                                     float begin, float end );
+                                      float begin, float end );
+    void _processFrameInputGroups( const simil::SpikesCRange& spikes_,
+                                   float begin, float end );
+    void _processFrameInputAttributes( const simil::SpikesCRange& spikes_,
+                                       float begin, float end );
 
     void _loadPaletteColors( void );
 
     void _clearSelectionView( void );
     void _clearGroupsView( void );
     void _clearAttribView( void );
+
+    void _clearGroups( void );
+    void _clearAttribs( bool clearCustom = true );
 
     void _clearGroup( VisualGroup* group, bool clearState = true );
     void _clearParticlesReference( void );
@@ -117,6 +139,7 @@ namespace visimpl
     prefr::ParticleSystem* _particleSystem;
 
     tGidPosMap _gidPositions;
+    tNeuronAttribs _gidTypes;
 
     TGIDSet _gids;
 
@@ -126,9 +149,17 @@ namespace visimpl
     SourceMultiPosition* _sourceSelected;
 //    SourceMultiPosition* _sourceUnselected;
 
+//    std::queue< Cluster* > _availableClusters;
+//    std::queue< SourceMultiPosition* > _availableSources;
+
     std::vector< VisualGroup* > _groups;
+    std::vector< VisualGroup* > _attributeGroups;
+    tNeuronAttributes _currentAttrib;
+
+    tUintUMap _attribStatistics;
 
     std::unordered_map< uint32_t, VisualGroup* > _neuronGroup;
+//    std::unordered_multimap< uint32_t, VisualGroup* > _neuronGroup;
 
     std::unordered_map< unsigned int, SourceMultiPosition* > _gidSource;
 //    std::unordered_map< uint32_t, prefr::Cluster* > _neuronClusters;
@@ -155,6 +186,8 @@ namespace visimpl
     tBoundingBox _boundingBox;
 
     std::vector< std::pair< QColor, QColor >> _paletteColors;
+
+
   };
 
 

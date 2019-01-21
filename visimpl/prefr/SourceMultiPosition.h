@@ -21,7 +21,7 @@ namespace visimpl
     SourceMultiPosition( void );
     ~SourceMultiPosition( void );
 
-    void setIdxTranslation( const tIdxTransMap& idxTranslation );
+    void setIdxTranslation( const tUintUMap& idxTranslation );
     void setPositions( const tGidPosMap& positions );
 
     void removeElements( const prefr::ParticleSet& indices );
@@ -31,7 +31,7 @@ namespace visimpl
   protected:
 
     const tGidPosMap* _positions;
-    const tIdxTransMap* _idxTranslate;
+    const tUintUMap* _idxTranslate;
   };
 
 

@@ -63,23 +63,11 @@ namespace visimpl
                               bool append = false );
 
     void aboutDialog( void );
+
     void togglePlaybackDock( void );
     void toggleSimConfigDock( void );
 
-    void PlayPause( bool notify = true );
-    void Play( bool notify = true );
-    void Pause( bool notify = true );
-    void Stop( bool notify = true );
-    void Repeat( bool notify = true );
-    void PlayAt( bool notify = true );
-    void PlayAt( float, bool notify = true );
-    void PlayAt( int, bool notify = true );
-    void requestPlayAt( float );
-    void PreviousStep( bool notify = true );
-    void NextStep( bool notify = true );
-
     void UpdateSimulationSlider( float percentage );
-
     void UpdateSimulationColorMapping( void );
     void PreviewSimulationColorMapping( void );
     void changeEditorColorMapping( void );
@@ -93,7 +81,7 @@ namespace visimpl
     void changeEditorSimTimestepsPS( void );
     void updateSimTimestepsPS( void );
 
-    void showSelection( bool show );
+    void showInactive( bool show );
 
     void changeEditorDecayValue( void );
     void updateSimulationDecayValue( void );
@@ -103,16 +91,42 @@ namespace visimpl
 
     void AlphaBlendingToggled( void );
 
+    void updateAttributeStats( void );
+
+    void PlayPause( bool notify = true );
+    void Play( bool notify = true );
+    void Pause( bool notify = true );
+    void Stop( bool notify = true );
+    void Repeat( bool notify = true );
+    void PlayAt( bool notify = true );
+    void PlayAt( float, bool notify = true );
+    void PlayAt( int, bool notify = true );
+    void requestPlayAt( float );
+    void PreviousStep( bool notify = true );
+    void NextStep( bool notify = true );
+
   protected slots:
 
     void addGroupFromSelection( void );
     void checkGroupsVisibility( void );
+    void checkAttributeGroupsVisibility( void );
 
     void completedStep( void );
     void playAtButtonClicked( void );
 
+  protected:
+
+    void _initSimControlDock( void );
+    void _initPlaybackDock( void );
+    void _initSummaryWidget( void );
+
+    void _configurePlayer( void );
+
+
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
+
+  protected slots:
 
     void ApplyPlaybackOperation( unsigned int playbackOp );
     void _zeqEventRepeat( bool repeat );
@@ -134,20 +148,11 @@ namespace visimpl
 
   #endif // VISIMPL_USE_ZEROEQ
 
-  protected:
-    void configurePlayer( void );
-
     Ui::MainWindow* _ui;
 
     QString _lastOpenedFileName;
     QIcon _playIcon;
     QIcon _pauseIcon;
-
-  private:
-
-    void initPlaybackDock( void );
-    void initSimControlDock( void );
-    void initSummaryWidget( void );
 
     OpenGLWidget* _openGLWidget;
     visimpl::Summary* _summary;
@@ -164,12 +169,12 @@ namespace visimpl
 
     QDockWidget* _simConfigurationDock;
 
-    QGroupBox* _tfGroupBox;
+    QGroupBox* _groupBoxTransferFunction;
     TransferFunctionEditor* _tfEditor;
     TransferFunctionWidget* _tfWidget;
 
     bool _autoNameGroups;
-    QGroupBox* _groupsGroupBox;
+    QGroupBox* _groupBoxGroups;
     QGridLayout* _groupLayout;
     std::vector< QCheckBox* > _groupsVisButtons;
 
@@ -184,6 +189,13 @@ namespace visimpl
 
     QRadioButton* _alphaNormalButton;
     QRadioButton* _alphaAccumulativeButton;
+
+    QGroupBox* _groupBoxAttrib;
+    QComboBox* _comboAttribSelection;
+    QVBoxLayout* _layoutAttribStats;
+    QGridLayout* _layoutAttribGroups;
+    std::vector< QCheckBox* > _attribGroupsVisButtons;
+
   };
 
 } // namespace visimpl

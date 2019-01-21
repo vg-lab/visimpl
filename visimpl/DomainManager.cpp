@@ -24,6 +24,7 @@ namespace visimpl
   , _clusterUnselected( nullptr )
   , _sourceSelected( nullptr )
 //  , _sourceUnselected( nullptr )
+  , _currentAttrib( T_TYPE_UNDEFINED )
   , _modelBase( nullptr )
   , _modelOff( nullptr )
   , _sampler( nullptr )
@@ -51,9 +52,11 @@ namespace visimpl
 
   }
 
-  void DomainManager::init( const tGidPosMap& positions )
+  void DomainManager::init( const tGidPosMap& positions,
+                            const tNeuronAttribs& types )
   {
     _gidPositions = positions;
+    _gidTypes = types;
 
     _sourceSelected = new SourceMultiPosition( );
 //    _sourceUnselected = new SourceMultiPosition( );
@@ -135,7 +138,11 @@ namespace visimpl
 
         break;
       case TMODE_ATTRIBUTE:
-        //TODO
+
+        generateAttributesGroups( _currentAttrib == T_TYPE_UNDEFINED ?
+                                  T_TYPE_MORPHO : _currentAttrib );
+//        generateAttributesGroups( _currentAttrib );
+
         break;
 
       default:
@@ -204,9 +211,52 @@ namespace visimpl
 
   void DomainManager::_clearAttribView( void )
   {
+    for( auto group : _attributeGroups )
+    {
+      _clearGroup( group, false );
+    }
 
     _clearParticlesReference( );
+
+
+    //TODO
+//    _currentAttrib = T_TYPE_UNDEFINED;
   }
+
+  void DomainManager::_clearGroups( void )
+  {
+    for( auto group : _groups )
+      delete group;
+
+    _groups.clear( );
+  }
+
+  void DomainManager::_clearAttribs( bool clearCustom )
+  {
+
+    if( clearCustom )
+    {
+      for( auto group : _attributeGroups )
+        delete group;
+
+      _attributeGroups.clear( );
+    }
+    else
+    {
+      std::vector< VisualGroup* > aux;
+      aux.reserve( _attributeGroups.size( ));
+      for( auto group : _attributeGroups )
+        if( group->custom( ))
+          aux.push_back( group );
+        else
+          delete group;
+      aux.shrink_to_fit( );
+      _attributeGroups = aux;
+    }
+
+    _attribStatistics.clear( );
+  }
+
 
   void DomainManager::_loadPaletteColors( void )
   {
@@ -269,7 +319,10 @@ namespace visimpl
         _generateGroupsIndices( );
         break;
       case TMODE_ATTRIBUTE:
-        //TODO
+        _generateAttributesIndices( );
+        break;
+      default:
+
         break;
     }
 
@@ -298,12 +351,30 @@ namespace visimpl
     _generateGroupsIndices( );
   }
 
-  void DomainManager::setVisualGroupState( unsigned int i, bool state )
+  void DomainManager::updateAttributes( void )
   {
-    assert( i < _groups.size( ));
+    _generateAttributesIndices( );
+  }
 
-    VisualGroup* group = _groups[ i ];
+  void DomainManager::showInactive( bool state )
+  {
+    _showInactive = state;
+  }
 
+  void DomainManager::setVisualGroupState( unsigned int i, bool state, bool attrib )
+  {
+    VisualGroup* group = nullptr;
+
+    if( !attrib )
+    {
+      assert( i < _groups.size( ));
+      group = _groups[ i ];
+    }
+    else
+    {
+      assert( i < _attributeGroups.size( ));
+      group = _attributeGroups[ i ];
+    }
 
     group->active( state );
     group->cluster( )->setModel( state ? group->model( ) : _modelOff );
@@ -450,10 +521,9 @@ namespace visimpl
 
   }
 
-
-  VisualGroup* DomainManager::addVisualGroup( const GIDUSet& gids,
+  VisualGroup* DomainManager::_generateGroup( const GIDUSet& gids,
                                               const std::string& name,
-                                              bool overrideGIDS )
+                                              unsigned int idx ) const
   {
     VisualGroup* group = new VisualGroup( name );
 
@@ -463,7 +533,7 @@ namespace visimpl
     group->model( model );
 
     TTransferFunction colorVariation;
-    auto colors = _paletteColors[ group->id( )];
+    auto colors = _paletteColors[ idx % _paletteColors.size( )];
     colorVariation.push_back( std::make_pair( 0.0f, colors.first ));
     colorVariation.push_back( std::make_pair( 1.0f, colors.second ));
     group->colorMapping( colorVariation );
@@ -476,6 +546,23 @@ namespace visimpl
 
     group->cluster( cluster );
     group->source( source );
+
+    group->gids( gids );
+
+    group->active( true );
+    group->cached( false );
+    group->dirty( true );
+
+    return group;
+  }
+
+
+  VisualGroup* DomainManager::addVisualGroup( const GIDUSet& gids,
+                                              const std::string& name,
+                                              bool overrideGIDS )
+  {
+    VisualGroup* group = _generateGroup( gids, name, _groups.size( ));
+    group->custom( true );
 
     for( auto gid : gids )
     {
@@ -492,13 +579,6 @@ namespace visimpl
         oldGroup->cached( false );
       }
     }
-
-    group->gids( gids );
-
-    group->active( true );
-    group->cached( false );
-    group->dirty( true );
-
     _groups.push_back( group );
 
     return group;
@@ -585,6 +665,100 @@ namespace visimpl
     }
   }
 
+  void DomainManager::generateAttributesGroups( tNeuronAttributes attrib )
+  {
+    if( attrib == _currentAttrib || attrib == T_TYPE_UNDEFINED || _mode != TMODE_ATTRIBUTE  )
+      return;
+
+    _clearAttribView( );
+
+    _clearAttribs( );
+
+    _clearParticlesReference( );
+
+    // Clustering
+    // TODO auto-detect attribute type
+    std::unordered_set< unsigned int > differentValues;
+    std::unordered_multimap< unsigned int, unsigned int > valueGids;
+
+    auto functor = ( [&]( const NeuronAttributes& att )
+        { return ( attrib == T_TYPE_MORPHO ) ? ( std::get< T_TYPE_MORPHO >( att )) :
+                                                 std::get< T_TYPE_FUNCTION >( att ); });
+
+    for( auto attribs : _gidTypes )
+    {
+      unsigned int gid = attribs.first;
+      unsigned int value = functor( attribs.second );
+
+      differentValues.insert( value );
+      valueGids.insert( std::make_pair( value, gid ));
+    }
+
+    _attributeGroups.resize( differentValues.size( ));
+
+    // Generate attrib groups
+    for( auto val : differentValues )
+    {
+      GIDUSet gids;
+
+      auto elements = valueGids.equal_range( val );
+      for( auto it = elements.first; it != elements.second; ++it )
+        gids.insert( it->second );
+
+      auto group = _generateGroup( gids, "", val );
+      group->custom( false );
+
+      _attributeGroups[ val ] = group;
+
+      // Fill statistics
+      _attribStatistics.insert( std::make_pair( val, gids.size( )));
+    }
+
+    _generateAttributesIndices( );
+  }
+
+  void DomainManager::_generateAttributesIndices( void )
+  {
+    for( auto group : _attributeGroups )
+    {
+
+      if( !group->dirty( ))
+        continue;
+
+      if( group->cached( ))
+        _clearGroup( group, true );
+
+      const auto& gids = group->gids( );
+
+      auto availableParticles =  _particleSystem->retrieveUnused( gids.size( ));
+
+      auto cluster = group->cluster( );
+
+      _particleSystem->addCluster( cluster, availableParticles.indices( ));
+      _particleSystem->addSource( group->source( ), availableParticles.indices( ));
+
+      cluster->setUpdater( _updater );
+      cluster->setModel( group->model( ));
+
+      //      unsigned int counter = 0;
+      auto partId = availableParticles.begin( );
+      for( auto gid : gids )
+      {
+        _neuronGroup.insert( std::make_pair( gid, group ));
+
+        _gidToParticle.insert( std::make_pair( gid, partId.id( )));
+        _particleToGID.insert( std::make_pair( partId.id( ), gid ));
+
+        ++partId;
+      }
+
+      group->cached( true );
+      group->dirty( false );
+
+      std::cout << "Generated particles for attrib group with size " << group->gids( ).size( ) << std::endl;
+    }
+  }
+
   void DomainManager::processInput( const simil::SpikesCRange& spikes_,
                                        float begin, float end, bool clear )
   {
@@ -600,7 +774,10 @@ namespace visimpl
         _processFrameInputGroups( spikes_, begin, end );
         break;
       case TMODE_ATTRIBUTE:
-        //TODO
+        _processFrameInputAttributes( spikes_, begin, end );
+        break;
+
+      default:
         break;
     }
 
@@ -669,6 +846,9 @@ namespace visimpl
                                                   float begin, float end )
   {
 
+    if( !_particleSystem || !_particleSystem->run( ) || _mode != TMODE_GROUPS )
+      return;
+
     auto state = _parseInput( spikes_, begin, end );
 
     for( const auto& neuron : state )
@@ -681,10 +861,56 @@ namespace visimpl
 
       if( visualGroup != _neuronGroup.end( ) && visualGroup->second->active( ))
       {
-        unsigned int particleIndex = _gidToParticle.find( gid )->second;
+//        auto particles = _gidToParticle.equal_range( gid );
+//
+//        for( auto partIt = particles.first; partIt != particles.second; ++partIt )
+        auto partIt = _gidToParticle.find( gid );
+        if( partIt != _gidToParticle.end( ))
+        {
+          unsigned int particleIndex = partIt->second;
 
-        auto particle = _particleSystem->particles( ).at( particleIndex );
-        particle.set_life( std::get< 1 >( neuron ) );
+          auto particle = _particleSystem->particles( ).at( particleIndex );
+          particle.set_life( std::get< 1 >( neuron ) );
+        }
+      }
+    }
+
+  }
+
+
+  void DomainManager::_processFrameInputAttributes( const simil::SpikesCRange& spikes_,
+                                                  float begin, float end )
+  {
+
+    if( !_particleSystem || !_particleSystem->run( ) || _mode != TMODE_ATTRIBUTE )
+      return;
+
+    auto state = _parseInput( spikes_, begin, end );
+
+    for( const auto& neuron : state )
+    {
+      auto gid = std::get< 0 >( neuron );
+
+      auto visualGroup = _neuronGroup.find( gid );
+//      auto groups = _neuronGroup.equal_range( gid );
+//      assert( visualGroup != _neuronGroup.end( ));
+
+      if( visualGroup != _neuronGroup.end( ) && visualGroup->second->active( ))
+//      for( auto groupIt = groups.first; groupIt != groups.second; ++groupIt )
+      {
+//        auto particles = _gidToParticle.equal_range( gid );
+//        for( auto partIt = particles.first; partIt != particles.second; ++partIt )
+        auto partIt = _gidToParticle.find( gid );
+        if( partIt != _gidToParticle.end( ))
+        {
+          unsigned int particleIndex = partIt->second;
+//          auto group = groupIt->second;
+//          if( group && group->source( )->particles( ).hasElement( particleIndex ))
+//          {
+          auto particle = _particleSystem->particles( ).at( particleIndex );
+          particle.set_life( std::get< 1 >( neuron ) );
+//          }
+        }
       }
     }
 
@@ -813,6 +1039,19 @@ namespace visimpl
     return _groups;
   }
 
+  const std::vector< VisualGroup* >& DomainManager::attributeGroups( void ) const
+  {
+    return _attributeGroups;
+  }
 
+  const tUintUMap& DomainManager::attributeStatistics( void ) const
+  {
+    return _attribStatistics;
+  }
 
+  const std::vector< std::pair< QColor, QColor >>&
+    DomainManager::paletteColors( void ) const
+  {
+    return _paletteColors;
+  }
 }

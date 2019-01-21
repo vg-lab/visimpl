@@ -26,8 +26,24 @@
 #include "prefr/PrefrShaders.h"
 #include "prefr/ColorSource.h"
 
+#ifdef SIMIL_USE_BRION
+#include <brain/brain.h>
+#include <brion/brion.h>
+#endif
+
 namespace visimpl
 {
+
+  static std::unordered_map< std::string, std::string > _attributeNameLabels =
+  {
+    {"PYR", "Pyramidal"}, {"INT", "Interneuron"},
+    {"EXC", "Excitatory"}, {"INH", "Inhibitory"}
+  };
+
+  static InitialConfig _initialConfigSimBlueConfig =
+      std::make_tuple( 0.5f, 20.0f, 20.0f, 1.0f );
+  static InitialConfig _initialConfigSimH5 =
+      std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
 
   static float invRGBInt = 1.0f / 255;
 
@@ -88,8 +104,15 @@ namespace visimpl
   , _elapsedTimeSimAcc( 0.0f )
   , _alphaBlendingAccumulative( false )
   , _showSelection( false )
-  , _resetParticles( false )
-  , _updateSelection( false )
+  , _flagResetParticles( false )
+  , _flagUpdateSelection( false )
+  , _flagUpdateGroups( false )
+  , _flagUpdateAttributes( false )
+  , _flagModeChange( false )
+  , _newMode( TMODE_UNDEFINED )
+  , _flagAttribChange( false )
+  , _newAttrib( T_TYPE_UNDEFINED )
+  , _currentAttrib( T_TYPE_MORPHO )
   , _showActiveEvents( true )
   , _subsetEvents( nullptr )
   , _deltaEvents( 0.125f )
@@ -190,6 +213,27 @@ namespace visimpl
     _player->deltaTime( _deltaTime );
 
 
+    InitialConfig config;
+    float scale = 1.0f;
+
+    switch( fileType )
+    {
+      case simil::TBlueConfig:
+
+        config = _initialConfigSimBlueConfig;
+
+      break;
+      case simil::THDF5:
+
+        config = _initialConfigSimH5;
+
+        break;
+      default:
+        break;
+    }
+
+    scale = std::get< T_SCALE >( config );
+
     tGidPosMap gidPositions;
     auto gids = spPlayer->gids( );
     auto positions = spPlayer->positions( );
@@ -199,31 +243,17 @@ namespace visimpl
     {
       vec3 position( pos.x( ), pos.y( ), pos.z( ));
 
-      gidPositions.insert( std::make_pair( *gidit, position ));
+      gidPositions.insert( std::make_pair( *gidit, position * scale ));
       ++gidit;
     }
 
-    float scale = 1.0f;
+    tNeuronAttribs gidTypes = _loadNeuronTypes( );
 
-    createParticleSystem( gidPositions, scale );
+    createParticleSystem( gidPositions, gidTypes );
 
-    switch( fileType )
-    {
-      case simil::TBlueConfig:
-
-        simulationDeltaTime( 0.5f );
-        simulationStepsPerSecond( 20.0f );
-        changeSimulationDecayValue( 20.0f );
-        break;
-      case simil::THDF5:
-        simulationDeltaTime( 0.005f );
-        simulationStepsPerSecond( 20.0f );
-        changeSimulationDecayValue( 0.1f );
-        scale = 500.f;
-        break;
-      default:
-        break;
-    }
+    simulationDeltaTime( std::get< T_DELTATIME >( config ) );
+    simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
+    changeSimulationDecayValue( std::get< T_DECAY >( config ) );
 
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
@@ -232,6 +262,134 @@ namespace visimpl
     update( );
 
   }
+
+  const std::vector< std::string >& OpenGLWidget::namesMorpho( void ) const
+  {
+    return _namesTypesMorpho;
+  }
+  const std::vector< std::string >& OpenGLWidget::namesFunction( void ) const
+  {
+    return _namesTypesFunction;
+  }
+
+
+  tNeuronAttribs OpenGLWidget::_loadNeuronTypes( void )
+  {
+    tNeuronAttribs result;
+
+#ifdef SIMIL_USE_BRION
+    if( _player )
+    {
+      auto gids = _player->gids( );
+
+      try
+      {
+        brion::Circuit circuit( _player->data( )->blueConfig( )->getCircuitSource( ));
+
+        uint32_t attributes = brion::NEURON_COLUMN_GID |
+                              brion::NEURON_MTYPE |
+                              brion::NEURON_ETYPE;
+
+
+        const brion::NeuronMatrix& attribsData = circuit.get( gids, attributes );
+
+        _namesTypesMorpho = circuit.getTypes( brion::NEURONCLASS_MORPHOLOGY_CLASS );
+        _namesTypesFunction = circuit.getTypes( brion::NEURONCLASS_FUNCTION_CLASS );
+
+        _typesMorpho.reserve( gids.size( ));
+        _typesFunction.reserve( gids.size( ));
+
+        for( unsigned int i = 0; i < gids.size( ); ++i )
+        {
+          unsigned int morphoType =
+              boost::lexical_cast< uint16_t >( attribsData[ i ][ 1 ]);
+
+          unsigned int functionType =
+              boost::lexical_cast< uint16_t >( attribsData[ i ][ 2 ]);
+
+          _typesMorpho.push_back( morphoType );
+          _typesFunction.push_back( functionType );
+        }
+
+      }
+      catch( ... )
+      {
+        brain::Circuit circuit( *_player->data( )->blueConfig( ));
+        _namesTypesMorpho = circuit.getMorphologyTypeNames( );
+        _namesTypesFunction = circuit.getElectrophysiologyTypeNames( );
+
+        _typesMorpho = circuit.getMorphologyTypes( gids );
+        _typesFunction = circuit.getElectrophysiologyTypes( gids );
+
+      }
+
+      std::cout << "Morphology types";
+      for( auto name : _namesTypesMorpho )
+        std::cout << " " << name;
+      std::cout << std::endl;
+
+      std::cout << "Functional types";
+      for( auto name : _namesTypesFunction )
+        std::cout << " " << name;
+      std::cout << std::endl;
+
+      unsigned int counter = 0;
+      NeuronAttributes attribs;
+
+      for( auto gid : gids )
+      {
+        unsigned int morphoType = _typesMorpho[ counter ];
+        unsigned int functionType = _typesFunction[ counter ];
+
+        auto name = _namesTypesMorpho[ morphoType ];
+
+        auto idxMorpho = _typesIdxMorpho.find( name );
+        if( idxMorpho == _typesIdxMorpho.end( ))
+        {
+          unsigned int idx = _typesIdxMorpho.size( );
+
+          idxMorpho =
+              _typesIdxMorpho.insert( std::make_pair( name, idx )).first;
+
+          _idxToTypeMorpho.insert( std::make_pair( idx, morphoType ));
+        }
+
+        _typeToIdxMorpho.insert( std::make_pair( morphoType, idxMorpho->second ));
+
+        name = _namesTypesFunction[ functionType ];
+
+        auto idxFunction = _typesIdxFunction.find( name );
+        if( idxFunction == _typesIdxFunction.end( ))
+        {
+          unsigned int idx = _typesIdxFunction.size( );
+
+          idxFunction =
+              _typesIdxFunction.insert( std::make_pair( name, idx )).first;
+
+          _idxToTypeFunction.insert( std::make_pair( idx, functionType ));
+        }
+
+        _typeToIdxFunction.insert( std::make_pair( functionType, idxFunction->second ));
+
+        std::get< T_TYPE_MORPHO >( attribs ) = idxMorpho->second;
+        std::get< T_TYPE_FUNCTION >( attribs ) = idxFunction->second;
+
+//        std::cout << " " << gid
+//                  << "," << morphoType << ",\"" << _namesTypesMorpho[ morphoType ] << "\""
+//                  << "," << functionType << ",\"" << _namesTypesFunction[ functionType ] << "\"";
+
+        result.insert( std::make_pair( gid, attribs ));
+
+        ++counter;
+      }
+
+      std::cout << "Loaded attributes." << std::endl;
+    }
+#endif
+
+    return result;
+  }
+
 
 
   void OpenGLWidget::initializeGL( void )
@@ -256,7 +414,7 @@ namespace visimpl
 
   }
 
-  void OpenGLWidget::configureSimulationFrame( void )
+  void OpenGLWidget::_configureSimulationFrame( void )
   {
     if( !_player || !_player->isPlaying( ) || !_particleSystem->run( ))
       return;
@@ -266,7 +424,7 @@ namespace visimpl
     if( _backtrace )
     {
 
-      backtraceSimulation( );
+      _backtraceSimulation( );
 
       _backtrace = false;
     }
@@ -280,7 +438,7 @@ namespace visimpl
 
   }
 
-  void OpenGLWidget::configurePreviousStep( void )
+  void OpenGLWidget::_configurePreviousStep( void )
   {
     if( !_player || !_particleSystem->run( ))
       return;
@@ -296,7 +454,7 @@ namespace visimpl
 
     _player->GoTo( _sbsBeginTime );
 
-    backtraceSimulation( );
+    _backtraceSimulation( );
 
     _sbsStepSpikes = _player->spikesBetween( _sbsBeginTime, _sbsEndTime );
 
@@ -307,7 +465,7 @@ namespace visimpl
     _sbsPlaying = true;
   }
 
-  void OpenGLWidget::configureStepByStep( void )
+  void OpenGLWidget::_configureStepByStep( void )
   {
 
     if( !_player || ! _player->isPlaying( ) || !_particleSystem->run( ))
@@ -321,7 +479,7 @@ namespace visimpl
     {
       _player->GoTo( _sbsBeginTime );
 
-      backtraceSimulation( );
+      _backtraceSimulation( );
     }
 
     _sbsStepSpikes = _player->spikesBetween( _sbsBeginTime, _sbsEndTime );
@@ -334,7 +492,7 @@ namespace visimpl
 
   }
 
-  void OpenGLWidget::configureStepByStepFrame( double elapsedRenderTime )
+  void OpenGLWidget::_configureStepByStepFrame( double elapsedRenderTime )
   {
 
     _sbsCurrentRenderDelta = 0;
@@ -374,7 +532,7 @@ namespace visimpl
 
   }
 
-  void OpenGLWidget::backtraceSimulation( void )
+  void OpenGLWidget::_backtraceSimulation( void )
   {
     float endTime = _player->currentTime( );
     float startTime = std::max( 0.0f, endTime - _domainManager->decay( ));
@@ -397,7 +555,8 @@ namespace visimpl
 //    }
 //  }
 
-  void OpenGLWidget::createParticleSystem( const tGidPosMap& gidPositions, float )
+  void OpenGLWidget::createParticleSystem( const tGidPosMap& gidPositions,
+                                           const tNeuronAttribs& attribs )
   {
     makeCurrent( );
     prefr::Config::init( );
@@ -413,11 +572,11 @@ namespace visimpl
     unsigned int maxParticles = _player->gids( ).size( );
 
     _particleSystem = new prefr::ParticleSystem( maxParticles * 2 );
-    _resetParticles = true;
+    _flagResetParticles = true;
 
     _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
 
-    _domainManager->init( gidPositions );
+    _domainManager->init( gidPositions, attribs );
     _domainManager->initializeParticleSystem( );
 
     _domainManager->mode( TMODE_SELECTION );
@@ -426,7 +585,7 @@ namespace visimpl
   }
 
 
-  void OpenGLWidget::paintParticles( void )
+  void OpenGLWidget::_paintParticles( void )
     {
       if( !_particleSystem )
         return;
@@ -480,6 +639,35 @@ namespace visimpl
 
     }
 
+  void OpenGLWidget::_resolveFlagsOperations( void )
+  {
+    if( _flagModeChange )
+      _modeChange( );
+
+    if( _flagUpdateSelection )
+      _updateSelection( );
+
+    if( _flagUpdateGroups )
+      _updateGroupsVisibility( );
+
+    if( _flagUpdateGroups && _domainManager->showGroups( ))
+      _updateGroups( );
+
+    if( _flagAttribChange )
+      _attributeChange( );
+
+    if( _flagUpdateAttributes )
+      _updateAttributes( );
+
+    if( _flagResetParticles )
+    {
+      _domainManager->resetParticles( );
+      _flagResetParticles = false;
+    }
+
+    _particleSystem->update( 0.0f );
+  }
+
     void OpenGLWidget::paintGL( void )
     {
       std::chrono::time_point< std::chrono::system_clock > now =
@@ -506,25 +694,13 @@ namespace visimpl
       glEnable(GL_DEPTH_TEST);
       glEnable(GL_CULL_FACE);
 
-      if( _modeChange )
-        modeChange( );
-
-      if( _updateSelection )
-        updateSelection( );
-
-      if( _updateGroups && _domainManager->showGroups( ))
-        updateGroups( );
-
-      if( _resetParticles )
-        _domainManager->resetParticles( );
-
-      _resetParticles = false;
+      _resolveFlagsOperations( );
 
       if ( _paint )
       {
         _camera->anim( );
 
-        if ( _particleSystem )
+        if( _particleSystem )
         {
           if( _player && _player->isPlaying( ))
           {
@@ -532,33 +708,27 @@ namespace visimpl
             {
               // Continuous mode (Default)
               case TPlaybackMode::CONTINUOUS:
-              {
                 if( _elapsedTimeSimAcc >= _simPeriodMicroseconds )
                 {
-                  configureSimulationFrame( );
-                  updateEventLabelsVisibility( );
+                  _configureSimulationFrame( );
+                  _updateEventLabelsVisibility( );
 
                   _elapsedTimeSimAcc = 0.0f;
                 }
-
-
                 break;
-              }
               // Step by step mode
               case TPlaybackMode::STEP_BY_STEP:
-              {
                 if( _sbsPrevStep )
                 {
-                  configurePreviousStep( );
+                  _configurePreviousStep( );
                   _sbsPrevStep = false;
                 }
                 else if( _sbsNextStep )
                 {
-                  configureStepByStep( );
+                  _configureStepByStep( );
                   _sbsNextStep = false;
                 }
                 break;
-              }
               default:
                 break;
             }
@@ -574,22 +744,20 @@ namespace visimpl
                 renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;
                 break;
               case  TPlaybackMode::STEP_BY_STEP:
-                configureStepByStepFrame( _elapsedTimeRenderAcc * 0.000001 );
+                _configureStepByStepFrame( _elapsedTimeRenderAcc * 0.000001 );
                 renderDelta = _sbsCurrentRenderDelta;
                 break;
               default:
                 renderDelta = 0;
               }
 
-              updateParticles( renderDelta );
+              _updateParticles( renderDelta );
               _elapsedTimeRenderAcc = 0.0f;
             }
+          } // if player && player->isPlayint
+          _paintParticles( );
+        } // if particleSystem
 
-          }
-
-          paintParticles( );
-
-        }
         glUseProgram( 0 );
         glFlush( );
 
@@ -661,22 +829,129 @@ namespace visimpl
 
   void OpenGLWidget::setUpdateSelection( void )
   {
-    _updateSelection = true;
+    _flagUpdateSelection = true;
   }
 
   void OpenGLWidget::setUpdateGroups( void )
   {
-    _updateGroups = true;
+    _flagUpdateGroups = true;
   }
 
-  void OpenGLWidget::modeChange( void )
+  void OpenGLWidget::setUpdateAttributes( void )
+  {
+    _flagAttribChange = true;
+  }
+
+  void OpenGLWidget::selectAttrib( int newAttrib )
+  {
+    if( newAttrib < 0 || newAttrib >= ( int ) T_TYPE_UNDEFINED ||
+        _domainManager->mode( ) != TMODE_ATTRIBUTE )
+      return;
+
+    _newAttrib = ( tNeuronAttributes ) newAttrib;
+    _flagAttribChange = true;
+  }
+
+  void OpenGLWidget::_modeChange( void )
   {
     _domainManager->mode( _newMode );
 
-    _modeChange = false;
+    _flagModeChange = false;
+
+    if( _domainManager->mode( ) == TMODE_ATTRIBUTE )
+      emit attributeStatsComputed( );
   }
 
-  void OpenGLWidget::updateSelection( void )
+  void OpenGLWidget::_attributeChange( void )
+  {
+    _domainManager->generateAttributesGroups( _newAttrib );
+
+    _currentAttrib = _newAttrib;
+
+    _flagAttribChange = false;
+//    _flagUpdateAttributes = true;
+
+    emit attributeStatsComputed( );
+  }
+
+  const std::vector< long unsigned int >& OpenGLWidget::attributeValues( int attribNumber ) const
+  {
+    if(( tNeuronAttributes )attribNumber == T_TYPE_MORPHO )
+      return _typesMorpho;
+    else
+      return _typesFunction;
+  }
+
+  Strings OpenGLWidget::attributeNames( int attribNumber, bool labels ) const
+  {
+    Strings result;
+
+    auto statistics = _domainManager->attributeStatistics( );
+    result.reserve( statistics.size( ));
+
+    const auto& names = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
+                        &_namesTypesMorpho : &_namesTypesFunction;
+
+    const auto& indices = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
+                        &_idxToTypeMorpho : &_idxToTypeFunction;
+
+
+//    auto typeIds = ( _currentAttrib == T_TYPE_MORPHO ) ? &_typesMorpho : &_typesFunction;
+
+    for( auto attrib : statistics )
+    {
+      auto attribIdx = indices->find( attrib.first );
+
+      if( attribIdx == indices->end( ))
+      {
+        std::cout << "Attrib index not found " << attrib.first
+                  << " in map " << indices->size( )
+                  << std::endl;
+        continue;
+      }
+//      unsigned int attribId = ( *typeIds )[ attrib.first ];
+
+      auto name = ( *names )[ attribIdx->second ];
+
+      if( labels )
+      {
+        auto labelIt = _attributeNameLabels.find( name );
+        if( labelIt != _attributeNameLabels.end( ))
+          name = labelIt->second;
+      }
+
+      result.push_back( name );
+    }
+
+    result.shrink_to_fit( );
+
+    std::cout << "Attribute names: ";
+    for( auto name : result )
+      std::cout << " " << name;
+    std::cout << std::endl;
+
+    return result;
+  }
+
+  const tUintUMap& OpenGLWidget::attributeStatistics( void ) const
+  {
+//    tUintUMap result;
+//
+//    auto typeIds = ( _currentAttrib == T_TYPE_MORPHO ) ? &_typesMorpho : &_typesFunction;
+//
+//    for( auto attrib : _domainManager->attributeStatistics( ))
+//    {
+//      unsigned int attribId = ( *typeIds )[ attrib.first ];
+//
+//      result.insert( std::make_pair( attribId, attrib.second ));
+//    }
+//
+//    return result;
+    return _domainManager->attributeStatistics( );
+  }
+
+
+  void OpenGLWidget::_updateSelection( void )
   {
     if( _particleSystem /*&& _pendingSelection*/ )
     {
@@ -689,9 +964,15 @@ namespace visimpl
       _particleSystem->run( true );
       _particleSystem->update( 0.0f );
 
-      _updateSelection = false;
+      _flagUpdateSelection = false;
     }
 
+  }
+
+  void OpenGLWidget::setGroupVisibility( unsigned int i, bool state )
+  {
+    _pendingGroupStateChanges.push( std::make_pair( i, state ));
+    _flagUpdateGroups = true;
   }
 
   void OpenGLWidget::addGroupFromSelection( const std::string& name )
@@ -699,13 +980,21 @@ namespace visimpl
     _domainManager->addVisualGroup( _selectedGIDs, name );
   }
 
-  void OpenGLWidget::updateGroups( void )
+  void OpenGLWidget::_updateGroupsVisibility( void )
+  {
+    while( !_pendingGroupStateChanges.empty( ))
+    {
+      auto state = _pendingGroupStateChanges.front( );
+      _domainManager->setVisualGroupState( state.first, state.second );
+      _pendingGroupStateChanges.pop( );
+    }
+  }
+
+  void OpenGLWidget::_updateGroups( void )
   {
     if( _particleSystem /*&& _pendingSelection*/ )
     {
       _particleSystem->run( false );
-
-//      _domainManager->selection( _selectedGIDs );
 
       _domainManager->updateGroups( );
 
@@ -714,50 +1003,72 @@ namespace visimpl
       _particleSystem->run( true );
       _particleSystem->update( 0.0f );
 
-      _updateSelection = false;
+      _flagUpdateGroups = false;
     }
 
   }
 
-  void OpenGLWidget::showSelection( bool showSelection_ )
+  void OpenGLWidget::_updateAttributes( void )
   {
+    if( _particleSystem )
+      {
+        _particleSystem->run( false );
 
-//    _showSelection = showSelection_;
+        _domainManager->updateAttributes( );
 
-//    if( _domainManager && _showSelection )
-//      _domainManager->mode( TMODE_SELECTION );
-//    else
-//      _domainManager->mode( TMODE_GROUPS );
+        updateCameraBoundingBox( );
 
-    if( showSelection_ )
-      _newMode = TMODE_SELECTION;
-    else
-      _newMode = TMODE_GROUPS;
+        _particleSystem->run( true );
+        _particleSystem->update( 0.0f );
 
-    _modeChange = true;
+        _flagUpdateAttributes = false;
+      }
+  }
 
-//    updateSelection( );
-//    updateGroups( );
+  void OpenGLWidget::setMode( int mode )
+  {
+    if( mode < 0 || ( mode >= ( int )TMODE_UNDEFINED ))
+      return;
+
+    _newMode = ( tVisualMode ) mode;
+    _flagModeChange = true;
+
+  }
+
+  void OpenGLWidget::showInactive( bool state )
+  {
+    if( _domainManager)
+      _domainManager->showInactive( state );
   }
 
   void OpenGLWidget::clearSelection( void )
   {
     _domainManager->clearSelection( );
     _selectedGIDs.clear( );
-    _updateSelection = true;
+    _flagUpdateSelection = true;
+  }
+
+  void OpenGLWidget::home( void )
+  {
+    _focusOn( _boundingBoxHome );
   }
 
   void OpenGLWidget::updateCameraBoundingBox( void )
   {
     auto boundingBox = _domainManager->boundingBox( );
 
+    _focusOn( boundingBox );
+
+  }
+
+  void OpenGLWidget::_focusOn( const tBoundingBox& boundingBox )
+  {
     glm::vec3 center = ( boundingBox.first + boundingBox.second ) * 0.5f;
     float side = glm::length( boundingBox.second - center );
     float radius = side / std::tan( _camera->fov( ));
 
     _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),
                                 radius );
-
   }
 
   void OpenGLWidget::showEventsActivityLabels( bool show )
@@ -770,7 +1081,7 @@ namespace visimpl
   }
 
 
-  void OpenGLWidget::updateParticles( float renderDelta )
+  void OpenGLWidget::_updateParticles( float renderDelta )
   {
     if( _player->isPlaying( ) || _firstFrame )
     {
@@ -782,9 +1093,9 @@ namespace visimpl
 
 
 
-  void OpenGLWidget::updateEventLabelsVisibility( void )
+  void OpenGLWidget::_updateEventLabelsVisibility( void )
   {
-    std::vector< bool > visibility = activeEventsAt( _player->currentTime( ));
+    std::vector< bool > visibility = _activeEventsAt( _player->currentTime( ));
 
     unsigned int counter = 0;
     for( auto showLabel : visibility )
@@ -803,7 +1114,7 @@ namespace visimpl
   }
 
 
-  std::vector< bool > OpenGLWidget::activeEventsAt( float time )
+  std::vector< bool > OpenGLWidget::_activeEventsAt( float time )
   {
     std::vector< bool > result( _eventLabels.size( ), false);
 
@@ -909,7 +1220,7 @@ namespace visimpl
     switch ( event_->key( ))
     {
     case Qt::Key_C:
-        _updateSelection = true;
+        _flagUpdateSelection = true;
       break;
     }
   }
@@ -974,10 +1285,9 @@ namespace visimpl
     update( );
   }
 
-  void OpenGLWidget::togglePaintNeurons( void )
+  void OpenGLWidget::toggleShowUnselected( void )
   {
-    _focusOnSelection = !_focusOnSelection;
-    update( );
+
   }
 
   void OpenGLWidget::idleUpdate( bool idleUpdate_ )
@@ -1017,7 +1327,7 @@ namespace visimpl
     }
   }
 
-  DomainManager* OpenGLWidget::inputMultiplexer( void )
+  DomainManager* OpenGLWidget::domainManager( void )
   {
     return _domainManager;
   }
@@ -1026,7 +1336,7 @@ namespace visimpl
   {
     _subsetEvents = manager;
 
-    createEventLabels( );
+    _createEventLabels( );
 
     update( );
   }
@@ -1036,7 +1346,7 @@ namespace visimpl
     return _colorPalette;
   }
 
-  void OpenGLWidget::createEventLabels( void )
+  void OpenGLWidget::_createEventLabels( void )
   {
     const auto& eventNames = _subsetEvents->eventNames( );
 
@@ -1150,7 +1460,7 @@ namespace visimpl
     if( _player )
     {
       _player->Stop( );
-      _resetParticles = true;
+      _flagResetParticles = true;
       _firstFrame = true;
     }
   }
@@ -1168,7 +1478,7 @@ namespace visimpl
     if( _player )
     {
       _particleSystem->run( false );
-      _resetParticles = true;
+      _flagResetParticles = true;
 
       _backtrace = true;
 
@@ -1187,7 +1497,7 @@ namespace visimpl
       if( playing )
         _player->Play( );
   //    resetParticles( );
-      _resetParticles = true;
+      _flagResetParticles = true;
       _firstFrame = true;
     }
   }

@@ -12,7 +12,7 @@ jambs*
 .cproject
 .project
 .metadata/
-
+.settings/
 
 # Build results
 [Dd]ebug/
@@ -23,3 +23,20 @@ build/
 bld/
 [Bb]in/
 [Oo]bj/
+
+# Dependences
+Brion/
+Keyv/
+Lexis/
+Lunchbox/
+MVDTool/
+Pression/
+ReTo/
+Servus/
+SimIL/
+ZeroBuf/
+ZeroEQ/
+gmrvlex/
+prefr/
+scoop/
+vmmlib/
