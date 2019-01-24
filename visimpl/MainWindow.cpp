@@ -995,10 +995,10 @@ namespace visimpl
       auto number = stats.find( i )->second;
 
       QString text = ( QString( name.c_str( )) //+ " - " + QString( label.c_str( ))
-          + ":\t" + QString::number( number ) );
+          + ": " + QString::number( number ) );
 
       QLabel* textLabel = new QLabel( text );
-      std::cout << "Text " << text.toStdString( ) << std::endl;
+//      std::cout << "Text " << text.toStdString( ) << std::endl;
       _layoutAttribStats->addWidget( textLabel );
     }
 

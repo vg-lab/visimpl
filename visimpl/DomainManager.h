@@ -156,8 +156,6 @@ namespace visimpl
     std::vector< VisualGroup* > _attributeGroups;
     tNeuronAttributes _currentAttrib;
 
-    tUintUMap _attribStatistics;
-
     std::unordered_map< uint32_t, VisualGroup* > _neuronGroup;
 //    std::unordered_multimap< uint32_t, VisualGroup* > _neuronGroup;
 

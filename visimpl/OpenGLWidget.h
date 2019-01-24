@@ -186,7 +186,7 @@ namespace visimpl
     const std::vector< long unsigned int >& attributeValues( int attribNumber ) const;
     Strings attributeNames( int attribNumber, bool labels = false ) const;
 
-    const tUintUMap& attributeStatistics( void ) const;
+    tUintUMap attributeStatistics( void ) const;
 
   protected:
 
@@ -352,8 +352,8 @@ namespace visimpl
     tUintUMap _typeToIdxMorpho;
     tUintUMap _typeToIdxFunction;
 
-    tUintUMap _idxToTypeMorpho;
-    tUintUMap _idxToTypeFunction;
+    tUintUMap _statsMorpho;
+    tUintUMap _statsFunction;
 
     std::unordered_map< std::string, unsigned int > _typesIdxMorpho;
     std::unordered_map< std::string, unsigned int > _typesIdxFunction;

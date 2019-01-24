@@ -31,7 +31,7 @@ namespace visimpl
   typedef std::tuple< unsigned int,
                       unsigned int > NeuronAttributes;
 
-  typedef std::unordered_map< unsigned, NeuronAttributes > tNeuronAttribs;
+  typedef std::unordered_map< unsigned int, NeuronAttributes > tNeuronAttribs;
 
   enum tInitialConfig
   {
