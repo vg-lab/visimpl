@@ -75,6 +75,7 @@ namespace visimpl
   , _idleUpdate( true )
   , _paint( false )
   , _currentClearColor( 20, 20, 20, 0 )
+  , _particleRadiusThreshold( 0.8 )
   , _particlesShader( nullptr )
   , _particleSystem( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
@@ -590,7 +591,7 @@ namespace visimpl
     // Initialize shader
     _particlesShader = new reto::ShaderProgram( );
     _particlesShader->loadVertexShaderFromText( prefr::prefrVertexShader );
-    _particlesShader->loadFragmentShaderFromText( prefr::prefrFragmentShader );
+    _particlesShader->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
     _particlesShader->create( );
     _particlesShader->link( );
 
@@ -636,7 +637,7 @@ namespace visimpl
       unsigned int shader;
       shader = _particlesShader->program( );
 
-      unsigned int uModelViewProjM, cameraUp, cameraRight;
+      unsigned int uModelViewProjM, cameraUp, cameraRight, particleRadius;
 
       uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
       glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
@@ -645,10 +646,14 @@ namespace visimpl
       cameraUp = glGetUniformLocation( shader, "cameraUp" );
       cameraRight = glGetUniformLocation( shader, "cameraRight" );
 
+      particleRadius = glGetUniformLocation( shader, "radiusThreshold" );
+
       float* viewM = _camera->viewMatrix( );
 
       glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
       glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
+
+      glUniform1f( particleRadius, _particleRadiusThreshold );
 
       glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
                                  _camera->position( )[ 1 ],
