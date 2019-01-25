@@ -210,7 +210,7 @@ namespace visimpl
     simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer( );
     spPlayer->LoadData( spikeData );
     _player = spPlayer;
-    _player->deltaTime( _deltaTime );
+//    _player->deltaTime( _deltaTime );
 
 
     InitialConfig config;
@@ -302,10 +302,10 @@ namespace visimpl
         for( unsigned int i = 0; i < gids.size( ); ++i )
         {
           unsigned int morphoType =
-              boost::lexical_cast< uint16_t >( attribsData[ i ][ 1 ]);
+              boost::lexical_cast< unsigned int >( attribsData[ i ][ 1 ]);
 
           unsigned int functionType =
-              boost::lexical_cast< uint16_t >( attribsData[ i ][ 2 ]);
+              boost::lexical_cast< unsigned int >( attribsData[ i ][ 2 ]);
 
           _typesMorpho.push_back( morphoType );
           _typesFunction.push_back( functionType );
@@ -341,41 +341,54 @@ namespace visimpl
         unsigned int morphoType = _typesMorpho[ counter ];
         unsigned int functionType = _typesFunction[ counter ];
 
+        auto statsMorpho = _statsMorpho.find( morphoType );
+        if( statsMorpho == _statsMorpho.end( ))
+          statsMorpho =
+              _statsMorpho.insert( std::make_pair( morphoType, 0 )).first;
+
+        ++statsMorpho->second;
+
+        auto statsFunction = _statsFunction.find( functionType );
+        if( statsFunction == _statsFunction.end( ))
+          statsFunction =
+              _statsFunction.insert( std::make_pair( functionType, 0 )).first;
+
+        ++statsFunction->second;
+
         auto name = _namesTypesMorpho[ morphoType ];
 
-        auto idxMorpho = _typesIdxMorpho.find( name );
-        if( idxMorpho == _typesIdxMorpho.end( ))
+        auto idxMorphoName = _typesIdxMorpho.find( name );
+        if( idxMorphoName == _typesIdxMorpho.end( ))
         {
           unsigned int idx = _typesIdxMorpho.size( );
 
-          idxMorpho =
+          idxMorphoName =
               _typesIdxMorpho.insert( std::make_pair( name, idx )).first;
 
-          _idxToTypeMorpho.insert( std::make_pair( idx, morphoType ));
         }
 
-        _typeToIdxMorpho.insert( std::make_pair( morphoType, idxMorpho->second ));
+        _typeToIdxMorpho.insert( std::make_pair( morphoType, idxMorphoName->second ));
 
         name = _namesTypesFunction[ functionType ];
 
-        auto idxFunction = _typesIdxFunction.find( name );
-        if( idxFunction == _typesIdxFunction.end( ))
+        auto idxFunctionName = _typesIdxFunction.find( name );
+        if( idxFunctionName == _typesIdxFunction.end( ))
         {
           unsigned int idx = _typesIdxFunction.size( );
 
-          idxFunction =
+          idxFunctionName =
               _typesIdxFunction.insert( std::make_pair( name, idx )).first;
 
-          _idxToTypeFunction.insert( std::make_pair( idx, functionType ));
+          _statsFunction.insert( std::make_pair( idx, functionType ));
         }
 
-        _typeToIdxFunction.insert( std::make_pair( functionType, idxFunction->second ));
+        _typeToIdxFunction.insert( std::make_pair( functionType, idxFunctionName->second ));
 
-        std::get< T_TYPE_MORPHO >( attribs ) = idxMorpho->second;
-        std::get< T_TYPE_FUNCTION >( attribs ) = idxFunction->second;
+        std::get< T_TYPE_MORPHO >( attribs ) = idxMorphoName->second;
+        std::get< T_TYPE_FUNCTION >( attribs ) = idxFunctionName->second;
 
 //        std::cout << " " << gid
-//                  << "," << morphoType << ",\"" << _namesTypesMorpho[ morphoType ] << "\""
+//                  << "," int << morphoType << ",\"" << _namesTypesMorpho[ morphoType ] << "\""
 //                  << "," << functionType << ",\"" << _namesTypesFunction[ functionType ] << "\"";
 
         result.insert( std::make_pair( gid, attribs ));
@@ -384,6 +397,19 @@ namespace visimpl
       }
 
       std::cout << "Loaded attributes." << std::endl;
+      std::cout << "- Morphological: " << std::endl;
+      for( auto type : _statsMorpho )
+        std::cout << _namesTypesMorpho[ type.first ]
+                  << " -> " << type.first
+                  << " # " << type.second
+                  << std::endl;
+
+      std::cout << "- Functional: " << std::endl;
+      for( auto type : _statsFunction )
+        std::cout << _namesTypesFunction[ type.first ]
+                  << " -> " << type.first
+                  << " # " << type.second
+                  << std::endl;
     }
 #endif
 
@@ -886,15 +912,17 @@ namespace visimpl
   {
     Strings result;
 
-    auto statistics = _domainManager->attributeStatistics( );
-    result.reserve( statistics.size( ));
+//    auto statistics = _domainManager->attributeStatistics( );
+    auto statistics =
+        ( _currentAttrib == T_TYPE_MORPHO ) ? _statsMorpho : _statsFunction;
+
+    result.resize( statistics.size( ));
 
     const auto& names = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
                         &_namesTypesMorpho : &_namesTypesFunction;
 
     const auto& indices = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
-                        &_idxToTypeMorpho : &_idxToTypeFunction;
-
+                        &_typeToIdxMorpho : &_typeToIdxFunction;
 
 //    auto typeIds = ( _currentAttrib == T_TYPE_MORPHO ) ? &_typesMorpho : &_typesFunction;
 
@@ -911,7 +939,7 @@ namespace visimpl
       }
 //      unsigned int attribId = ( *typeIds )[ attrib.first ];
 
-      auto name = ( *names )[ attribIdx->second ];
+      auto name = ( *names )[ attrib.first ];
 
       if( labels )
       {
@@ -920,34 +948,51 @@ namespace visimpl
           name = labelIt->second;
       }
 
-      result.push_back( name );
+      result[ attribIdx->second ] = ( name );
     }
 
     result.shrink_to_fit( );
 
-    std::cout << "Attribute names: ";
-    for( auto name : result )
-      std::cout << " " << name;
-    std::cout << std::endl;
+//    std::cout << "Attribute names: ";
+//    for( auto name : result )
+//      std::cout << " " << name;
+//    std::cout << std::endl;
 
     return result;
   }
 
-  const tUintUMap& OpenGLWidget::attributeStatistics( void ) const
+  tUintUMap OpenGLWidget::attributeStatistics( void ) const
   {
-//    tUintUMap result;
-//
-//    auto typeIds = ( _currentAttrib == T_TYPE_MORPHO ) ? &_typesMorpho : &_typesFunction;
-//
-//    for( auto attrib : _domainManager->attributeStatistics( ))
-//    {
-//      unsigned int attribId = ( *typeIds )[ attrib.first ];
-//
-//      result.insert( std::make_pair( attribId, attrib.second ));
-//    }
-//
-//    return result;
-    return _domainManager->attributeStatistics( );
+    tUintUMap result;
+
+    auto stats =
+        ( _currentAttrib == T_TYPE_MORPHO ) ? _statsMorpho : _statsFunction;
+
+    auto typeIds =
+        ( _currentAttrib == T_TYPE_MORPHO ) ? &_typeToIdxMorpho : &_typeToIdxFunction;
+
+
+//    std::cout << "Stats" << std::endl;
+    for( auto attrib : stats )
+    {
+      auto idxIt = typeIds->find( attrib.first );
+      assert( idxIt != typeIds->end( ));
+
+      unsigned int idx = idxIt->second;
+
+      result.insert( std::make_pair( idx, attrib.second ));
+
+//      std::cout << " " << idx
+//                << " " << (( _currentAttrib == T_TYPE_MORPHO ) ?
+//                            _namesTypesMorpho : _namesTypesFunction)[ attrib.first ]
+//                << ": " << attrib.second << std::endl;
+    }
+
+    return result;
+
+
+
+//    return _domainManager->attributeStatistics( );
   }
 
 

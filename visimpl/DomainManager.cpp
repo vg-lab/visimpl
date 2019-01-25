@@ -114,7 +114,7 @@ namespace visimpl
     _sampler = new prefr::PointSampler( );
 
     _particleSystem->renderDeadParticles( true );
-    _particleSystem->parallel( false );
+    _particleSystem->parallel( true );
 
     _particleSystem->start();
   }
@@ -253,8 +253,6 @@ namespace visimpl
       aux.shrink_to_fit( );
       _attributeGroups = aux;
     }
-
-    _attribStatistics.clear( );
   }
 
 
@@ -597,9 +595,9 @@ namespace visimpl
 
   void DomainManager::_clearGroup( VisualGroup* group, bool clearState )
   {
-    std::cout << "Clearing group " << group->name( )
-              << " size " << group->gids( ).size( )
-              << std::endl;
+//    std::cout << "Clearing group " << group->name( )
+//              << " size " << group->gids( ).size( )
+//              << std::endl;
 
     _particleSystem->detachSource( group->source( ));
 
@@ -661,7 +659,7 @@ namespace visimpl
       group->cached( true );
       group->dirty( false );
 
-      std::cout << "Generated particles for group with size " << group->gids( ).size( ) << std::endl;
+//      std::cout << "Generated particles for group with size " << group->gids( ).size( ) << std::endl;
     }
   }
 
@@ -710,8 +708,6 @@ namespace visimpl
 
       _attributeGroups[ val ] = group;
 
-      // Fill statistics
-      _attribStatistics.insert( std::make_pair( val, gids.size( )));
     }
 
     _generateAttributesIndices( );
@@ -755,7 +751,7 @@ namespace visimpl
       group->cached( true );
       group->dirty( false );
 
-      std::cout << "Generated particles for attrib group with size " << group->gids( ).size( ) << std::endl;
+//      std::cout << "Generated particles for attrib group with size " << group->gids( ).size( ) << std::endl;
     }
   }
 
@@ -1042,11 +1038,6 @@ namespace visimpl
   const std::vector< VisualGroup* >& DomainManager::attributeGroups( void ) const
   {
     return _attributeGroups;
-  }
-
-  const tUintUMap& DomainManager::attributeStatistics( void ) const
-  {
-    return _attribStatistics;
   }
 
   const std::vector< std::pair< QColor, QColor >>&
