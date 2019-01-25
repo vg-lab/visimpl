@@ -581,7 +581,7 @@ namespace visimpl
 
     _domainManager->mode( TMODE_SELECTION );
 
-    updateCameraBoundingBox( );
+    updateCameraBoundingBox( true );
   }
 
 
@@ -1053,9 +1053,12 @@ namespace visimpl
     _focusOn( _boundingBoxHome );
   }
 
-  void OpenGLWidget::updateCameraBoundingBox( void )
+  void OpenGLWidget::updateCameraBoundingBox( bool setBoundingBox )
   {
     auto boundingBox = _domainManager->boundingBox( );
+
+    if( setBoundingBox )
+      _boundingBoxHome = boundingBox;
 
     _focusOn( boundingBox );
 

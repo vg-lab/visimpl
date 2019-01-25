@@ -133,7 +133,7 @@ namespace visimpl
   public slots:
 
     void home( void );
-    void updateCameraBoundingBox( void );
+    void updateCameraBoundingBox( bool setBoundingBox = false );
 
     void setMode( int mode );
     void showInactive( bool state );
