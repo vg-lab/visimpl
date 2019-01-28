@@ -155,6 +155,7 @@ namespace visimpl
     QIcon _pauseIcon;
 
     OpenGLWidget* _openGLWidget;
+    DomainManager* _domainManager;
     visimpl::Summary* _summary;
 
     scoop::ColorPalette _colorPalette;

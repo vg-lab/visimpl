@@ -37,11 +37,11 @@ namespace visimpl
   {
   public:
 
-    DomainManager( prefr::ParticleSystem* particleSystem,
-                      const TGIDSet& gids );
+    DomainManager( prefr::ParticleSystem* particleSystem, const TGIDSet& gids );
+
     ~DomainManager( );
 
-    void init( const tGidPosMap& positions, const tNeuronAttribs& types );
+    void init( const tGidPosMap& positions, const brion::BlueConfig* blueConfig );
 
     void initializeParticleSystem( void );
 
@@ -89,9 +89,16 @@ namespace visimpl
 
     prefr::ColorOperationModel* modelSelectionBase( void );
 
-    const tUintUMap& attributeStatistics( void ) const;
-
     const std::vector< std::pair< QColor, QColor >>& paletteColors( void ) const;
+
+    // Statistics
+    const std::vector< std::string >& namesMorpho( void ) const;
+    const std::vector< std::string >& namesFunction( void ) const;
+
+    const std::vector< long unsigned int >& attributeValues( int attribNumber ) const;
+    Strings attributeNames( int attribNumber, bool labels = false ) const;
+
+    tAppStats attributeStatistics( void ) const;
 
   protected:
 
@@ -134,12 +141,13 @@ namespace visimpl
 
     void _resetBoundingBox( void );
 
-    SourceMultiPosition* getSource( unsigned int numParticles );
+    SourceMultiPosition* _getSource( unsigned int numParticles );
+
+    tNeuronAttribs _loadNeuronTypes( const brion::BlueConfig& blueConfig );
 
     prefr::ParticleSystem* _particleSystem;
 
     tGidPosMap _gidPositions;
-    tNeuronAttribs _gidTypes;
 
     TGIDSet _gids;
 
@@ -185,7 +193,33 @@ namespace visimpl
 
     std::vector< std::pair< QColor, QColor >> _paletteColors;
 
+    // Statistics
+    bool _groupByName;
+    bool _autoGroupByName;
 
+    tNeuronAttribs _gidTypes;
+
+
+    std::vector< std::string > _namesTypesMorpho;
+    std::vector< std::string > _namesTypesFunction;
+
+    std::vector< std::string > _namesTypesMorphoGrouped;
+    std::vector< std::string > _namesTypesFunctionGrouped;
+
+    std::vector< long unsigned int > _typesMorpho;
+    std::vector< long unsigned int > _typesFunction;
+
+    tUintUMap _typeToIdxMorpho;
+    tUintUMap _typeToIdxFunction;
+
+    tUintUMultimap _idxToTypeMorpho;
+    tUintUMultimap _idxToTypeFunction;
+
+    tUintUMap _statsMorpho;
+    tUintUMap _statsFunction;
+
+    std::unordered_map< std::string, unsigned int > _namesIdxMorpho;
+    std::unordered_map< std::string, unsigned int > _namesIdxFunction;
   };
 
 

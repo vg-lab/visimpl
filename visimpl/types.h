@@ -43,7 +43,21 @@ namespace visimpl
 
   typedef std::tuple< float, float, float, float > InitialConfig;
 
+  typedef std::tuple< unsigned int,
+                      std::string,
+                      std::string,
+                      unsigned int > tStatsGroup;
+
+  enum tTypeAttributes
+  {
+    T_TYPE_VALUE = 0,
+    T_TYPE_NAME,
+    T_TYPE_LABEL,
+    T_TYPE_STATS
+  };
+
   typedef std::vector< std::string > Strings;
+  typedef std::vector< tStatsGroup > tAppStats;
 }
 
 

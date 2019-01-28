@@ -16,6 +16,13 @@ namespace visimpl
 {
   static float invRGBInt = 1.0f / 255;
 
+  static std::unordered_map< std::string, std::string > _attributeNameLabels =
+  {
+    {"PYR", "Pyramidal"}, {"INT", "Interneuron"},
+    {"EXC", "Excitatory"}, {"INH", "Inhibitory"}
+  };
+
+
   DomainManager::DomainManager( prefr::ParticleSystem* particleSystem,
                                       const TGIDSet& gids)
   : _particleSystem( particleSystem )
@@ -32,6 +39,8 @@ namespace visimpl
   , _mode( TMODE_SELECTION )
   , _decayValue( 0.0f )
   , _showInactive( true )
+  , _groupByName( false )
+  , _autoGroupByName( true )
 //  , _showGroups( false )
   {
 //TODO
@@ -53,10 +62,12 @@ namespace visimpl
   }
 
   void DomainManager::init( const tGidPosMap& positions,
-                            const tNeuronAttribs& types )
+                            const brion::BlueConfig* blueConfig  )
   {
     _gidPositions = positions;
-    _gidTypes = types;
+
+    if( blueConfig )
+      _gidTypes = _loadNeuronTypes( *blueConfig );
 
     _sourceSelected = new SourceMultiPosition( );
 //    _sourceUnselected = new SourceMultiPosition( );
@@ -683,34 +694,54 @@ namespace visimpl
         { return ( attrib == T_TYPE_MORPHO ) ? ( std::get< T_TYPE_MORPHO >( att )) :
                                                  std::get< T_TYPE_FUNCTION >( att ); });
 
+    const auto& typeIndices =
+        ( attrib == T_TYPE_MORPHO ) ? _typeToIdxMorpho : _typeToIdxFunction;
+
+//    const auto& names =
+//        ( attrib == T_TYPE_MORPHO ) ? _namesTypesMorpho : _namesTypesFunction;
+
+//    const auto& stats =
+//        ( attrib == T_TYPE_MORPHO ) ? _statsMorpho : _statsFunction;
+
+    const auto& nameIndices =
+        ( attrib == T_TYPE_MORPHO ) ? _namesIdxMorpho : _namesIdxFunction;
+
     for( auto attribs : _gidTypes )
     {
       unsigned int gid = attribs.first;
-      unsigned int value = functor( attribs.second );
+      unsigned int value = typeIndices.find( functor( attribs.second ))->second;
 
       differentValues.insert( value );
       valueGids.insert( std::make_pair( value, gid ));
     }
 
-    _attributeGroups.resize( differentValues.size( ));
+    _attributeGroups.resize( nameIndices.size( ));
 
     // Generate attrib groups
-    for( auto val : differentValues )
+    for( auto typeIndex : nameIndices )
     {
       GIDUSet gids;
 
-      auto elements = valueGids.equal_range( val );
+      auto elements = valueGids.equal_range( typeIndex.second );
       for( auto it = elements.first; it != elements.second; ++it )
         gids.insert( it->second );
 
-      auto group = _generateGroup( gids, "", val );
+//      auto number = stats.find()
+
+//      auto name = names[ typeIndex ];
+
+//      unsigned int index = typeIndices.find( typeIndex.first )->second;
+
+      auto group = _generateGroup( gids, typeIndex.first, typeIndex.second );
       group->custom( false );
 
-      _attributeGroups[ val ] = group;
+      _attributeGroups[ typeIndex.second ] = group;
 
     }
 
     _generateAttributesIndices( );
+
+    _currentAttrib = attrib;
   }
 
   void DomainManager::_generateAttributesIndices( void )
@@ -1045,4 +1076,331 @@ namespace visimpl
   {
     return _paletteColors;
   }
+
+
+
+  const std::vector< std::string >& DomainManager::namesMorpho( void ) const
+  {
+    return _namesTypesMorpho;
+  }
+  const std::vector< std::string >& DomainManager::namesFunction( void ) const
+  {
+    return _namesTypesFunction;
+  }
+
+  tNeuronAttribs DomainManager::_loadNeuronTypes( const brion::BlueConfig& blueConfig )
+  {
+    tNeuronAttribs result;
+
+#ifdef SIMIL_USE_BRION
+    const auto& gids = _gids;
+
+    try
+    {
+      brion::Circuit circuit( blueConfig.getCircuitSource( ));
+
+      uint32_t attributes = brion::NEURON_COLUMN_GID |
+                            brion::NEURON_MTYPE |
+                            brion::NEURON_ETYPE;
+
+
+      const brion::NeuronMatrix& attribsData = circuit.get( gids, attributes );
+
+      _namesTypesMorpho = circuit.getTypes( brion::NEURONCLASS_MORPHOLOGY_CLASS );
+      _namesTypesFunction = circuit.getTypes( brion::NEURONCLASS_FUNCTION_CLASS );
+
+      _typesMorpho.reserve( gids.size( ));
+      _typesFunction.reserve( gids.size( ));
+
+      for( unsigned int i = 0; i < gids.size( ); ++i )
+      {
+        unsigned int morphoType =
+            boost::lexical_cast< unsigned int >( attribsData[ i ][ 1 ]);
+
+        unsigned int functionType =
+            boost::lexical_cast< unsigned int >( attribsData[ i ][ 2 ]);
+
+        _typesMorpho.push_back( morphoType );
+        _typesFunction.push_back( functionType );
+      }
+
+    }
+    catch( ... )
+    {
+      brain::Circuit circuit( blueConfig );
+      _namesTypesMorpho = circuit.getMorphologyTypeNames( );
+      _namesTypesFunction = circuit.getElectrophysiologyTypeNames( );
+
+      _typesMorpho = circuit.getMorphologyTypes( gids );
+      _typesFunction = circuit.getElectrophysiologyTypes( gids );
+
+    }
+
+    unsigned int counter = 0;
+
+    for( auto gid : gids )
+    {
+      NeuronAttributes attribs;
+
+      for( unsigned int i = 0; i < ( unsigned int ) T_TYPE_UNDEFINED; ++i )
+      {
+        unsigned int typeValue =
+            (( i == 0 ) ? _typesMorpho : _typesFunction )[ counter ];
+
+        auto& stats = (( i == 0 ) ? _statsMorpho : _statsFunction );
+//        auto& typeIdx = ( i == 0 ) ? _typeToIdxMorpho : _typeToIdxFunction;
+
+        auto& indexBack =
+            ( i == 0 ) ? _idxToTypeMorpho : _idxToTypeFunction;
+
+        auto attribFunctor =
+            ( i == 0 ) ?  &std::get< T_TYPE_MORPHO >( attribs ) :
+                           &std::get< T_TYPE_FUNCTION >( attribs );
+
+        auto statsIt = stats.find( typeValue );
+        if( statsIt == stats.end( ))
+          statsIt = stats.insert( std::make_pair( typeValue, 0 )).first;
+
+        ++statsIt->second;
+
+        indexBack.insert( std::make_pair( i, typeValue ));
+
+        *attribFunctor = typeValue;
+      }
+
+      ++counter;
+
+      result.insert( std::make_pair( gid, attribs ));
+    }
+
+
+    if( _autoGroupByName )
+    {
+      for( unsigned int i = 0; i < ( unsigned int ) T_TYPE_UNDEFINED; ++i )
+      {
+//        std::unordered_map< std::string, unsigned int > uniqueNames;
+
+        const auto& names = ( i == 0 ) ? _namesTypesMorpho : _namesTypesFunction;
+        auto& groupedNameStorage =
+            ( i == 0 ) ? _namesTypesMorphoGrouped : _namesTypesFunctionGrouped;
+
+        auto& groupedIndices =
+            ( i == 0 ) ? _typeToIdxMorpho : _typeToIdxFunction;
+
+        auto& nameIndexer = ( i == 0 ) ? _namesIdxMorpho : _namesIdxFunction;
+
+        const auto& stats = (( i == 0 ) ? _statsMorpho : _statsFunction );
+
+        counter = 0;
+        for( auto name : names )
+        {
+
+          if( stats.find( counter ) != stats.end( ))
+          {
+
+            auto nameIndex = nameIndexer.find( name );
+            if( nameIndex == nameIndexer.end( ))
+            {
+              unsigned int index = nameIndexer.size( );
+              nameIndex = nameIndexer.insert( std::make_pair( name, index )).first;
+            }
+
+            groupedIndices.insert( std::make_pair( counter, nameIndex->second ));
+          }
+
+          ++counter;
+
+        }
+        std::cout << std::endl;
+
+        groupedNameStorage.resize( nameIndexer.size( ));
+
+//        unsigned int counter = 0;
+        for( auto name : nameIndexer )
+        {
+          groupedNameStorage[ name.second ] = name.first;
+
+//          ++counter;
+        }
+
+        if( groupedNameStorage.size( ) != names.size( ))
+          _groupByName = true;
+
+      }
+    }
+
+
+    std::cout << "Loaded attributes." << std::endl;
+    std::cout << "- Morphological: " << std::endl;
+    for( auto type : _statsMorpho )
+      std::cout << _namesTypesMorpho[ type.first ]
+                << " -> " << type.first
+                << " # " << type.second
+                << std::endl;
+
+    std::cout << " Grouped in: " << std::endl;
+    for( auto type : _namesIdxMorpho )
+      std::cout << type.second << ": " << type.first << std::endl;
+
+    std::cout << "- Functional: " << std::endl;
+    for( auto type : _statsFunction )
+      std::cout << _namesTypesFunction[ type.first ]
+                << " -> " << type.first
+                << " # " << type.second
+                << std::endl;
+
+    std::cout << " Grouped in: " << std::endl;
+    for( auto type : _namesIdxFunction )
+      std::cout << type.second << ": " << type.first << std::endl;
+
+#endif
+
+    return result;
+  }
+
+  const std::vector< long unsigned int >& DomainManager::attributeValues( int attribNumber ) const
+   {
+     if(( tNeuronAttributes )attribNumber == T_TYPE_MORPHO )
+       return _typesMorpho;
+     else
+       return _typesFunction;
+   }
+
+   Strings DomainManager::attributeNames( int attribNumber, bool  ) const
+   {
+     Strings result;
+
+// //    auto statistics = _domainManager->attributeStatistics( );
+//     auto statistics =
+//         ( _currentAttrib == T_TYPE_MORPHO ) ? _statsMorpho : _statsFunction;
+//
+//     result.resize( statistics.size( ));
+//
+//     const auto& names = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
+//                         &_namesTypesMorpho : &_namesTypesFunction;
+//
+//     const auto& indices = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
+//                         &_typeToIdxMorpho : &_typeToIdxFunction;
+//
+// //    auto typeIds = ( _currentAttrib == T_TYPE_MORPHO ) ? &_typesMorpho : &_typesFunction;
+//
+//     for( auto attrib : statistics )
+//     {
+//       auto attribIdx = indices->find( attrib.first );
+//
+//       if( attribIdx == indices->end( ))
+//       {
+//         std::cout << "Attrib index not found " << attrib.first
+//                   << " in map " << indices->size( )
+//                   << std::endl;
+//         continue;
+//       }
+// //      unsigned int attribId = ( *typeIds )[ attrib.first ];
+//
+//       auto name = ( *names )[ attrib.first ];
+//
+//       if( labels )
+//       {
+//         auto labelIt = _attributeNameLabels.find( name );
+//         if( labelIt != _attributeNameLabels.end( ))
+//           name = labelIt->second;
+//       }
+//
+//       result[ attribIdx->second ] = ( name );
+//     }
+
+
+     if( _groupByName )
+     {
+       result = ( attribNumber == 0 ) ? _namesTypesMorphoGrouped :
+                                       _namesTypesFunctionGrouped;
+     }
+     else
+     {
+//       const auto& names = ( attribNumber == 0 ) ? _namesTypesMorpho : _namesTypesFunction;
+       const auto& namesIdx = ( attribNumber == 0 ) ? _namesIdxMorpho : _namesIdxFunction;
+
+       result.resize( namesIdx.size( ));
+
+       for( auto name : namesIdx )
+       {
+         result[ name.second ] = name.first;
+       }
+
+     }
+     result.shrink_to_fit( );
+
+ //    std::cout << "Attribute names: ";
+ //    for( auto name : result )
+ //      std::cout << " " << name;
+ //    std::cout << std::endl;
+
+     return result;
+   }
+
+   tAppStats DomainManager::attributeStatistics( void ) const
+   {
+     tAppStats result;
+
+     const auto& stats =
+         ( _currentAttrib == T_TYPE_MORPHO ) ? _statsMorpho : _statsFunction;
+
+     const auto& typeIdx =
+         ( _currentAttrib == T_TYPE_MORPHO ) ? &_typeToIdxMorpho : &_typeToIdxFunction;
+
+//     const auto& names =
+//         ( _currentAttrib == T_TYPE_MORPHO ) ? _namesTypesMorpho : _namesTypesFunction;
+
+     const auto& nameIndices =
+         ( _currentAttrib == T_TYPE_MORPHO ) ? _namesIdxMorpho : _namesIdxFunction;
+
+//     const auto& backIndex =
+//         ( _currentAttrib == T_TYPE_MORPHO ) ? _idxToTypeMorpho : _idxToTypeFunction;
+
+     unsigned int numberOfValues = nameIndices.size( );
+
+     result.resize( numberOfValues );
+
+     std::vector< unsigned int > statsTotal( numberOfValues, 0 );
+
+     for( auto valueStats : stats )
+     {
+       unsigned int index = typeIdx->find( valueStats.first )->second;
+
+       statsTotal[ index ] += valueStats.second;
+     }
+
+ //    std::cout << "Stats" << std::endl;
+     for( auto attrib : nameIndices )
+     {
+       auto& name = attrib.first;
+
+       auto idxIt = nameIndices.find( name );
+       unsigned int idx = idxIt->second;
+
+       unsigned int value = statsTotal[ idx ];
+
+       std::string label = "";
+       auto labelIt = _attributeNameLabels.find( name );
+       if( labelIt != _attributeNameLabels.end( ))
+         label = labelIt->second;
+
+       tStatsGroup attribs = std::make_tuple( 0, name, label, value );
+
+       result[ idx ] = attribs;
+
+ //      std::cout << " " << idx
+ //                << " " << (( _currentAttrib == T_TYPE_MORPHO ) ?
+ //                            _namesTypesMorpho : _namesTypesFunction)[ attrib.first ]
+ //                << ": " << attrib.second << std::endl;
+     }
+
+     return result;
+
+
+
+ //    return _domainManager->attributeStatistics( );
+   }
+
+
 }
