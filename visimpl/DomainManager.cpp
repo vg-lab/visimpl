@@ -94,7 +94,7 @@ namespace visimpl
     _updater = new UpdaterStaticPosition( );
 
     prefr::Sorter* sorter = new prefr::Sorter( );
-    prefr::GLRenderer* renderer = new prefr::GLRenderer( );
+    prefr::GLRenderer* renderer = new prefr::GLPickRenderer( );
 
     _particleSystem->addUpdater( _updater );
     _particleSystem->sorter( sorter );
@@ -1402,5 +1402,41 @@ namespace visimpl
  //    return _domainManager->attributeStatistics( );
    }
 
+
+   tParticleInfo DomainManager::pickingInfoSimple( unsigned int particleId ) const
+   {
+     tParticleInfo result;
+
+     unsigned int gid = 0;
+     bool valid = false;
+     vec3 position( 0, 0, 0 );
+     QPoint screenPos( 0, 0 );
+
+     auto gidIt = _particleToGID.find( particleId );
+     if( gidIt != _particleToGID.end( ))
+     {
+       gid = gidIt->second;
+
+       auto particle = _particleSystem->particles( ).at( particleId );
+
+       position = particle.position( );
+
+       valid = true;
+     }
+
+     std::get< T_PART_GID >( result ) = gid;
+     std::get< T_PART_INTERNAL_GID >( result ) = particleId;
+     std::get< T_PART_POSITION >( result ) = position;
+     std::get< T_PART_SCREEN_POS >( result ) = screenPos;
+     std::get< T_PART_VALID >( result ) = valid;
+
+     std::cout << "Selected neuron " << gid
+               << " at position " << position.x
+               << " " << position.y
+               << " " << position.z
+               << std::endl;
+
+     return result;
+   }
 
 }

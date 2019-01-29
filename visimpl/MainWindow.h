@@ -93,6 +93,8 @@ namespace visimpl
 
     void updateAttributeStats( void );
 
+    void updateSelectedStatsPickingSingle( unsigned int selected );
+
     void PlayPause( bool notify = true );
     void Play( bool notify = true );
     void Pause( bool notify = true );

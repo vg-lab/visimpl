@@ -126,6 +126,8 @@ namespace visimpl
 
     void attributeStatsComputed( void );
 
+    void pickedSingle( unsigned int );
+
   public slots:
 
     void home( void );
@@ -188,6 +190,8 @@ namespace visimpl
 
     void _focusOn( const tBoundingBox& boundingBox );
 
+    void _pickSingle( void );
+
     void _backtraceSimulation( void );
 
     void _configureSimulationFrame( void );
@@ -235,7 +239,7 @@ namespace visimpl
 
     bool _wireframe;
 
-    reto::Camera* _camera;
+    Camera* _camera;
     glm::vec3 _lastCameraPosition;
 
 //    glm::vec3 _boundingBoxMin;
@@ -261,8 +265,10 @@ namespace visimpl
     std::chrono::time_point< std::chrono::system_clock > _then;
     std::chrono::time_point< std::chrono::system_clock > _lastFrame;
 
-    reto::ShaderProgram* _particlesShader;
+    reto::ShaderProgram* _shaderParticles;
+    prefr::RenderProgram* _shaderPicking;
     prefr::ParticleSystem* _particleSystem;
+    prefr::GLPickRenderer* _pickRenderer;
 
     simil::TSimulationType _simulationType;
     simil::SpikesPlayer* _player;
@@ -312,6 +318,7 @@ namespace visimpl
     bool _flagUpdateSelection;
     bool _flagUpdateGroups;
     bool _flagUpdateAttributes;
+    bool _flagPickingSingle;
 
     bool _flagModeChange;
     tVisualMode _newMode;
@@ -332,6 +339,8 @@ namespace visimpl
 
     scoop::ColorPalette _colorPalette;
 
+    QPoint _pickingPosition;
+    unsigned int _selectedPickingSingle;
   };
 
 } // namespace visimpl

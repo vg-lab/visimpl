@@ -100,6 +100,8 @@ namespace visimpl
 
     tAppStats attributeStatistics( void ) const;
 
+    tParticleInfo pickingInfoSimple( unsigned int particleId ) const;
+
   protected:
 
     typedef std::vector< std::tuple< uint32_t, float >> TModifiedNeurons;

@@ -146,6 +146,10 @@ namespace visimpl
     connect( _openGLWidget, SIGNAL( stepCompleted( void )),
              this, SLOT( completedStep( void )));
 
+    connect( _openGLWidget, SIGNAL( pickedSingle( unsigned int )),
+             this, SLOT( updateSelectedStatsPickingSingle( unsigned int )));
+
+
   #ifdef VISIMPL_USE_ZEROEQ
     _ui->actionShowInactive->setEnabled( true );
     _ui->actionShowInactive->setChecked( true );
@@ -1051,6 +1055,12 @@ namespace visimpl
 
     _layoutAttribGroups->update( );
   }
+
+  void MainWindow::updateSelectedStatsPickingSingle( unsigned int selected )
+  {
+    _domainManager->pickingInfoSimple( selected );
+  }
+
 
   void MainWindow::showInactive( bool show )
   {

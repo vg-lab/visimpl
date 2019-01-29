@@ -58,6 +58,61 @@ namespace visimpl
 
   typedef std::vector< std::string > Strings;
   typedef std::vector< tStatsGroup > tAppStats;
+
+  typedef std::tuple< unsigned int,
+                      unsigned int,
+                      vec3,
+                      QPoint,
+                      bool
+                      > tParticleInfo;
+
+  enum tParticleInfoAttribs
+  {
+    T_PART_GID = 0,
+    T_PART_INTERNAL_GID,
+    T_PART_POSITION,
+    T_PART_SCREEN_POS,
+    T_PART_VALID,
+    T_PART_UNDEFINED
+  };
+
+
+  static glm::vec3 floatPtrToVec3( float* floatPos )
+  {
+    return glm::vec3( floatPos[ 0 ],
+                      floatPos[ 1 ],
+                      floatPos[ 2 ]);
+  }
+
+  static glm::mat4x4 floatPtrToMat4( float* floatPos )
+  {
+    return glm::mat4x4( floatPos[ 0 ], floatPos[ 1 ],
+                        floatPos[ 2 ], floatPos[ 3 ],
+                        floatPos[ 4 ], floatPos[ 5 ],
+                        floatPos[ 6 ], floatPos[ 7 ],
+                        floatPos[ 8 ], floatPos[ 9 ],
+                        floatPos[ 10 ], floatPos[ 11 ],
+                        floatPos[ 12 ], floatPos[ 13 ],
+                        floatPos[ 14 ], floatPos[ 15 ]);
+  }
+
+  class Camera : public prefr::ICamera, public reto::Camera
+  {
+    glm::vec3 PReFrCameraPosition( void )
+    {
+      return floatPtrToVec3( position( ));
+    }
+
+    glm::mat4x4 PReFrCameraViewMatrix( void )
+    {
+      return floatPtrToMat4( viewMatrix( ));
+    }
+
+    glm::mat4x4 PReFrCameraViewProjectionMatrix( void )
+    {
+      return floatPtrToMat4( viewProjectionMatrix( ));
+    }
+  };
 }
 
 
