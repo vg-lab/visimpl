@@ -41,7 +41,13 @@ namespace visimpl
 
     ~DomainManager( );
 
+
+#ifdef SIMIL_USE_BRION
     void init( const tGidPosMap& positions, const brion::BlueConfig* blueConfig );
+#else
+    void init( const tGidPosMap& positions );
+#endif
+
 
     void initializeParticleSystem( void );
 
@@ -143,7 +149,9 @@ namespace visimpl
 
     SourceMultiPosition* _getSource( unsigned int numParticles );
 
+#ifdef SIMIL_USE_BRION
     tNeuronAttribs _loadNeuronTypes( const brion::BlueConfig& blueConfig );
+#endif
 
     prefr::ParticleSystem* _particleSystem;
 

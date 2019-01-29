@@ -438,7 +438,11 @@ namespace visimpl
 
     _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
 
+#ifdef SIMIL_USE_BRION
     _domainManager->init( gidPositions, _player->data( )->blueConfig( ));
+#else
+    _domainManager->init( gidPositions );
+#endif
     _domainManager->initializeParticleSystem( );
 
     _domainManager->mode( TMODE_SELECTION );

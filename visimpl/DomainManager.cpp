@@ -61,13 +61,19 @@ namespace visimpl
 
   }
 
-  void DomainManager::init( const tGidPosMap& positions,
-                            const brion::BlueConfig* blueConfig  )
+  void DomainManager::init( const tGidPosMap& positions
+#ifdef SIMIL_USE_BRION
+                            , const brion::BlueConfig* blueConfig
+#endif
+  )
   {
     _gidPositions = positions;
 
+#ifdef SIMIL_USE_BRION
     if( blueConfig )
       _gidTypes = _loadNeuronTypes( *blueConfig );
+#endif
+
 
     _sourceSelected = new SourceMultiPosition( );
 //    _sourceUnselected = new SourceMultiPosition( );
@@ -152,7 +158,8 @@ namespace visimpl
 
         generateAttributesGroups( _currentAttrib == T_TYPE_UNDEFINED ?
                                   T_TYPE_MORPHO : _currentAttrib );
-//        generateAttributesGroups( _currentAttrib );
+
+        _generateAttributesIndices( );
 
         break;
 
@@ -1088,11 +1095,11 @@ namespace visimpl
     return _namesTypesFunction;
   }
 
+#ifdef SIMIL_USE_BRION
   tNeuronAttribs DomainManager::_loadNeuronTypes( const brion::BlueConfig& blueConfig )
   {
     tNeuronAttribs result;
 
-#ifdef SIMIL_USE_BRION
     const auto& gids = _gids;
 
     try
@@ -1253,10 +1260,9 @@ namespace visimpl
     for( auto type : _namesIdxFunction )
       std::cout << type.second << ": " << type.first << std::endl;
 
-#endif
-
     return result;
   }
+#endif // SIMIL_USE_BRION
 
   const std::vector< long unsigned int >& DomainManager::attributeValues( int attribNumber ) const
    {
