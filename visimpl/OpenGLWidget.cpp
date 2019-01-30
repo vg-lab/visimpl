@@ -70,8 +70,10 @@ namespace visimpl
   , _paint( false )
   , _currentClearColor( 20, 20, 20, 0 )
   , _particleRadiusThreshold( 0.8 )
-  , _particlesShader( nullptr )
+  , _shaderParticles( nullptr )
+  , _shaderPicking( nullptr )
   , _particleSystem( nullptr )
+  , _pickRenderer( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
   , _deltaTime( 0.0f )
@@ -103,6 +105,7 @@ namespace visimpl
   , _flagUpdateSelection( false )
   , _flagUpdateGroups( false )
   , _flagUpdateAttributes( false )
+  , _flagPickingSingle( false )
   , _flagModeChange( false )
   , _newMode( TMODE_UNDEFINED )
   , _flagAttribChange( false )
@@ -112,13 +115,14 @@ namespace visimpl
   , _subsetEvents( nullptr )
   , _deltaEvents( 0.125f )
   , _domainManager( nullptr )
+  , _selectedPickingSingle( 0 )
   {
   #ifdef VISIMPL_USE_ZEROEQ
     if ( zeqUri != "" )
-      _camera = new reto::Camera( zeqUri );
+      _camera = new Camera( zeqUri );
     else
   #endif
-    _camera = new reto::Camera( );
+    _camera = new Camera( );
     _camera->farPlane( 100000.f );
     _camera->animDuration( 0.5f );
 
@@ -173,8 +177,8 @@ namespace visimpl
   {
     delete _camera;
 
-    if( _particlesShader )
-      delete _particlesShader;
+    if( _shaderParticles )
+      delete _shaderParticles;
 
     if( _particleSystem )
       delete _particleSystem;
@@ -425,16 +429,21 @@ namespace visimpl
     prefr::Config::init( );
 
     // Initialize shader
-    _particlesShader = new reto::ShaderProgram( );
-    _particlesShader->loadVertexShaderFromText( prefr::prefrVertexShader );
-    _particlesShader->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
-    _particlesShader->create( );
-    _particlesShader->link( );
+    _shaderParticles = new reto::ShaderProgram( );
+    _shaderParticles->loadVertexShaderFromText( prefr::prefrVertexShader );
+    _shaderParticles->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
+    _shaderParticles->create( );
+    _shaderParticles->link( );
 
+    _shaderPicking = new prefr::RenderProgram( );
+    _shaderPicking->loadVertexShaderFromText( prefr::prefrVertexShaderPicking );
+    _shaderPicking->loadFragmentShaderFromText( prefr::prefrFragmentShaderPicking );
+    _shaderPicking->create( );
+    _shaderPicking->link( );
 
     unsigned int maxParticles = _player->gids( ).size( );
 
-    _particleSystem = new prefr::ParticleSystem( maxParticles * 2 );
+    _particleSystem = new prefr::ParticleSystem( maxParticles * 2, _camera );
     _flagResetParticles = true;
 
     _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
@@ -445,6 +454,13 @@ namespace visimpl
     _domainManager->init( gidPositions );
 #endif
     _domainManager->initializeParticleSystem( );
+
+    _pickRenderer =
+        dynamic_cast< prefr::GLPickRenderer* >( _particleSystem->renderer( ));
+
+    _pickRenderer->glPickProgram( _shaderPicking );
+    _pickRenderer->setDefaultFBO( defaultFramebufferObject( ));
+
 
     _domainManager->mode( TMODE_SELECTION );
 
@@ -471,11 +487,11 @@ namespace visimpl
 
       glFrontFace(GL_CCW);
 
-      _particlesShader->use( );
+      _shaderParticles->use( );
           // unsigned int shader;
           // shader = _particlesShader->getID();
       unsigned int shader;
-      shader = _particlesShader->program( );
+      shader = _shaderParticles->program( );
 
       unsigned int uModelViewProjM, cameraUp, cameraRight, particleRadius;
 
@@ -506,7 +522,7 @@ namespace visimpl
       _particleSystem->updateRender( );
       _particleSystem->render( );
 
-      _particlesShader->unuse( );
+      _shaderParticles->unuse( );
 
     }
 
@@ -536,7 +552,8 @@ namespace visimpl
       _flagResetParticles = false;
     }
 
-    _particleSystem->update( 0.0f );
+    if( _particleSystem )
+      _particleSystem->update( 0.0f );
   }
 
     void OpenGLWidget::paintGL( void )
@@ -627,6 +644,11 @@ namespace visimpl
             }
           } // if player && player->isPlayint
           _paintParticles( );
+
+          if( _flagPickingSingle )
+          {
+            _pickSingle( );
+          }
         } // if particleSystem
 
         glUseProgram( 0 );
@@ -868,6 +890,29 @@ namespace visimpl
                                 radius );
   }
 
+  void OpenGLWidget::_pickSingle( void )
+  {
+
+    auto result =
+        _pickRenderer->pick( _pickingPosition.x( ), _pickingPosition.y( ));
+
+    _flagPickingSingle = false;
+
+    if( result == 0 )
+    {
+      _domainManager->clearHighlighting( );
+      return;
+    }
+
+    _selectedPickingSingle = result - 1;
+
+    std::unordered_set< unsigned int > selected = { _selectedPickingSingle };
+
+    _domainManager->highlightElements( selected );
+
+    emit pickedSingle( _selectedPickingSingle );
+  }
+
   void OpenGLWidget::showEventsActivityLabels( bool show )
   {
     for( auto container : _eventLabels )
@@ -935,7 +980,10 @@ namespace visimpl
     _camera->ratio((( double ) w ) / h );
     glViewport( 0, 0, w, h );
 
-
+    if( _pickRenderer )
+    {
+      _pickRenderer->setWindowSize( w, h );
+    }
   }
 
 
@@ -944,17 +992,29 @@ namespace visimpl
 
     if ( event_->button( ) == Qt::LeftButton )
     {
-      _rotation = true;
-      _mouseX = event_->x( );
-      _mouseY = event_->y( );
-    }
+      if( event_->modifiers( ) == Qt::CTRL )
+      {
+        _pickingPosition = event_->pos( );
 
-    if ( event_->button( ) ==  Qt::RightButton )
+        _pickingPosition.setY( height() - _pickingPosition.y( ) );
+
+        _flagPickingSingle = true;
+      }
+      else
+      {
+        _rotation = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
+    }
+    else if ( event_->button( ) ==  Qt::RightButton )
     {
       _translation = true;
       _mouseX = event_->x( );
       _mouseY = event_->y( );
     }
+
+
 
     update( );
 

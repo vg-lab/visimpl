@@ -29,11 +29,13 @@ namespace visimpl
   , _gids( gids )
   , _clusterSelected( nullptr )
   , _clusterUnselected( nullptr )
+  , _clusterHighlighted( nullptr )
   , _sourceSelected( nullptr )
 //  , _sourceUnselected( nullptr )
   , _currentAttrib( T_TYPE_UNDEFINED )
   , _modelBase( nullptr )
   , _modelOff( nullptr )
+  , _modelHighlighted( nullptr )
   , _sampler( nullptr )
   , _updater( nullptr )
   , _mode( TMODE_SELECTION )
@@ -86,9 +88,11 @@ namespace visimpl
 
     _clusterSelected = new prefr::Cluster( );
     _clusterUnselected = new prefr::Cluster( );
+    _clusterHighlighted = new prefr::Cluster( );
 
     _particleSystem->addCluster( _clusterSelected );
     _particleSystem->addCluster( _clusterUnselected );
+    _particleSystem->addCluster( _clusterHighlighted );
 
     _loadPaletteColors( );
   }
@@ -100,7 +104,7 @@ namespace visimpl
     _updater = new UpdaterStaticPosition( );
 
     prefr::Sorter* sorter = new prefr::Sorter( );
-    prefr::GLRenderer* renderer = new prefr::GLRenderer( );
+    prefr::GLRenderer* renderer = new prefr::GLPickRenderer( );
 
     _particleSystem->addUpdater( _updater );
     _particleSystem->sorter( sorter );
@@ -114,6 +118,16 @@ namespace visimpl
     _modelOff->size.Insert( 1.0f, 10.0f );
 
     _particleSystem->addModel( _modelOff );
+
+
+    _modelHighlighted = new prefr::ColorOperationModel( _decayValue, _decayValue );
+    _modelHighlighted->color.Insert( 0.0f, ( glm::vec4( 0.9f, 0.9f, 0.9f, 0.5f )));
+    _modelHighlighted->color.Insert( 1.0f, ( glm::vec4( 0.75f, 0.75f, 0.75f, 0.2f )));
+    _modelHighlighted->velocity.Insert( 0.0f, 0.0f );
+    _modelHighlighted->size.Insert( 0.0f, 20.0f );
+    _modelHighlighted->size.Insert( 1.0f, 10.0f );
+    _particleSystem->addModel( _modelHighlighted );
+
 
     _modelBase = new prefr::ColorOperationModel( _decayValue, _decayValue );
     _modelBase->color.Insert( 0.0f, ( glm::vec4(0.f, 1.f, 0.f, 0.05)));
@@ -1020,6 +1034,7 @@ namespace visimpl
     _decayValue = decayValue;
 
     _modelBase->setLife( decayValue, decayValue );
+    _modelHighlighted->setLife( decayValue, decayValue );
   }
 
   float DomainManager::decay( void ) const
@@ -1408,5 +1423,70 @@ namespace visimpl
  //    return _domainManager->attributeStatistics( );
    }
 
+
+   tParticleInfo DomainManager::pickingInfoSimple( unsigned int particleId ) const
+   {
+     tParticleInfo result;
+
+     unsigned int gid = 0;
+     bool valid = false;
+     vec3 position( 0, 0, 0 );
+     QPoint screenPos( 0, 0 );
+
+     auto gidIt = _particleToGID.find( particleId );
+     if( gidIt != _particleToGID.end( ))
+     {
+       gid = gidIt->second;
+
+       auto particle = _particleSystem->particles( ).at( particleId );
+
+       position = particle.position( );
+
+       valid = true;
+     }
+
+     std::get< T_PART_GID >( result ) = gid;
+     std::get< T_PART_INTERNAL_GID >( result ) = particleId;
+     std::get< T_PART_POSITION >( result ) = position;
+     std::get< T_PART_SCREEN_POS >( result ) = screenPos;
+     std::get< T_PART_VALID >( result ) = valid;
+
+     return result;
+   }
+
+   void DomainManager::highlightElements( const std::unordered_set< unsigned int >& highlighted )
+   {
+     clearHighlighting( );
+
+     prefr::ParticleIndices indices;
+     indices.reserve( highlighted.size( ));
+
+     for( auto gid : highlighted )
+       indices.push_back( gid );
+
+     _clusterHighlighted->particles( ).indices( indices );
+
+     _clusterHighlighted->setModel( _modelHighlighted );
+
+   }
+
+   void DomainManager::clearHighlighting( void )
+   {
+
+     if( _mode == TMODE_SELECTION )
+     {
+       _clusterSelected->setModel( _modelBase );
+       _clusterUnselected->setModel( _modelOff );
+     }
+     else
+     {
+       auto groupArray = ( _mode == TMODE_GROUPS ) ? _groups : _attributeGroups;
+
+       for( auto group : groupArray )
+       {
+         group->cluster( )->setModel( group->model( ));
+       }
+     }
+   }
 
 }
