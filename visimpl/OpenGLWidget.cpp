@@ -435,8 +435,8 @@ namespace visimpl
     _shaderParticles->link( );
 
     _shaderPicking = new prefr::RenderProgram( );
-    _shaderPicking->loadVertexShader( "/home/sgalindo/dev/visimpl/prefr/prefr/GL/shd/GLpick-vert.glsl" );
-    _shaderPicking->loadFragmentShader( "/home/sgalindo/dev/visimpl/prefr/prefr/GL/shd/GLpick-frag.glsl" );
+    _shaderPicking->loadVertexShader( "/home/crodriguezbe/Desktop/Projects/qtcarbonic/visimpl/prefr/prefr/GL/shd/GLpick-vert.glsl" );
+    _shaderPicking->loadFragmentShader( "/home/crodriguezbe/Desktop/Projects/qtcarbonic/visimpl/prefr/prefr/GL/shd/GLpick-frag.glsl" );
     _shaderPicking->create( );
     _shaderPicking->link( );
 
@@ -537,18 +537,14 @@ namespace visimpl
     if( _flagUpdateAttributes )
       _updateAttributes( );
 
-    if( _flagPickingSingle )
-    {
-      _pickSingle( );
-    }
-
     if( _flagResetParticles )
     {
       _domainManager->resetParticles( );
       _flagResetParticles = false;
     }
 
-    _particleSystem->update( 0.0f );
+    if( _particleSystem )
+      _particleSystem->update( 0.0f );
   }
 
     void OpenGLWidget::paintGL( void )
@@ -639,6 +635,11 @@ namespace visimpl
             }
           } // if player && player->isPlayint
           _paintParticles( );
+
+          if( _flagPickingSingle )
+          {
+            _pickSingle( );
+          }
         } // if particleSystem
 
         glUseProgram( 0 );
@@ -883,12 +884,12 @@ namespace visimpl
     auto result =
         _pickRenderer->pick( _pickingPosition.x( ), _pickingPosition.y( ));
 
+    _flagPickingSingle = false;
+
     if( result == 0 )
       return;
 
     _selectedPickingSingle = result - 1;
-
-    _flagPickingSingle = false;
 
     emit pickedSingle( _selectedPickingSingle );
   }
@@ -961,7 +962,9 @@ namespace visimpl
     glViewport( 0, 0, w, h );
 
     if( _pickRenderer )
+    {
       _pickRenderer->setWindowSize( w, h );
+    }
   }
 
 
@@ -973,6 +976,8 @@ namespace visimpl
       if( event_->modifiers( ) == Qt::CTRL )
       {
         _pickingPosition = event_->pos( );
+
+        _pickingPosition.setY( height() - _pickingPosition.y( ) );
 
         std::cout << "Picking at " << _pickingPosition.x( )
                   << ", " << _pickingPosition.y( )
