@@ -71,7 +71,6 @@ namespace visimpl
 
     void clearView( void );
 
-//    void showGroups( bool show );
     bool showGroups( void );
     void updateGroups( void );
     void updateAttributes( void );
@@ -81,8 +80,6 @@ namespace visimpl
 
     void decay( float decayValue );
     float decay( void ) const;
-
-//    std::vector< prefr::Cluster* > activeClusters( void );
 
     void clearSelection( void );
     void resetParticles( void );
@@ -107,6 +104,9 @@ namespace visimpl
     tAppStats attributeStatistics( void ) const;
 
     tParticleInfo pickingInfoSimple( unsigned int particleId ) const;
+
+    void highlightElements( const std::unordered_set< unsigned int >& highlighted );
+    void clearHighlighting( void );
 
   protected:
 
@@ -163,34 +163,28 @@ namespace visimpl
 
     prefr::Cluster* _clusterSelected;
     prefr::Cluster* _clusterUnselected;
+    prefr::Cluster* _clusterHighlighted;
 
     SourceMultiPosition* _sourceSelected;
-//    SourceMultiPosition* _sourceUnselected;
-
-//    std::queue< Cluster* > _availableClusters;
-//    std::queue< SourceMultiPosition* > _availableSources;
 
     std::vector< VisualGroup* > _groups;
     std::vector< VisualGroup* > _attributeGroups;
     tNeuronAttributes _currentAttrib;
 
     std::unordered_map< uint32_t, VisualGroup* > _neuronGroup;
-//    std::unordered_multimap< uint32_t, VisualGroup* > _neuronGroup;
 
     std::unordered_map< unsigned int, SourceMultiPosition* > _gidSource;
-//    std::unordered_map< uint32_t, prefr::Cluster* > _neuronClusters;
-//    std::unordered_map< prefr::Cluster*, uint32_t > _clusterNeurons;
 
     std::unordered_map< unsigned int, unsigned int > _gidToParticle;
     std::unordered_map< unsigned int, unsigned int > _particleToGID;
 
     prefr::ColorOperationModel* _modelBase;
     prefr::ColorOperationModel* _modelOff;
+    prefr::ColorOperationModel* _modelHighlighted;
 
     prefr::PointSampler* _sampler;
     prefr::Updater* _updater;
 
-//    bool _showGroups;
     tVisualMode _mode;
 
     GIDUSet _selection;

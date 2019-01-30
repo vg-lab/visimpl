@@ -899,9 +899,16 @@ namespace visimpl
     _flagPickingSingle = false;
 
     if( result == 0 )
+    {
+      _domainManager->clearHighlighting( );
       return;
+    }
 
     _selectedPickingSingle = result - 1;
+
+    std::unordered_set< unsigned int > selected = { _selectedPickingSingle };
+
+    _domainManager->highlightElements( selected );
 
     emit pickedSingle( _selectedPickingSingle );
   }
