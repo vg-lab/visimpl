@@ -34,12 +34,6 @@
 namespace visimpl
 {
 
-  static std::unordered_map< std::string, std::string > _attributeNameLabels =
-  {
-    {"PYR", "Pyramidal"}, {"INT", "Interneuron"},
-    {"EXC", "Excitatory"}, {"INH", "Inhibitory"}
-  };
-
   static InitialConfig _initialConfigSimBlueConfig =
       std::make_tuple( 0.5f, 20.0f, 20.0f, 1.0f );
   static InitialConfig _initialConfigSimH5 =
@@ -248,9 +242,7 @@ namespace visimpl
       ++gidit;
     }
 
-    tNeuronAttribs gidTypes = _loadNeuronTypes( );
-
-    createParticleSystem( gidPositions, gidTypes );
+    createParticleSystem( gidPositions );
 
     simulationDeltaTime( std::get< T_DELTATIME >( config ) );
     simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
@@ -263,161 +255,6 @@ namespace visimpl
     update( );
 
   }
-
-  const std::vector< std::string >& OpenGLWidget::namesMorpho( void ) const
-  {
-    return _namesTypesMorpho;
-  }
-  const std::vector< std::string >& OpenGLWidget::namesFunction( void ) const
-  {
-    return _namesTypesFunction;
-  }
-
-
-  tNeuronAttribs OpenGLWidget::_loadNeuronTypes( void )
-  {
-    tNeuronAttribs result;
-
-#ifdef SIMIL_USE_BRION
-    if( _player )
-    {
-      auto gids = _player->gids( );
-
-      try
-      {
-        brion::Circuit circuit( _player->data( )->blueConfig( )->getCircuitSource( ));
-
-        uint32_t attributes = brion::NEURON_COLUMN_GID |
-                              brion::NEURON_MTYPE |
-                              brion::NEURON_ETYPE;
-
-
-        const brion::NeuronMatrix& attribsData = circuit.get( gids, attributes );
-
-        _namesTypesMorpho = circuit.getTypes( brion::NEURONCLASS_MORPHOLOGY_CLASS );
-        _namesTypesFunction = circuit.getTypes( brion::NEURONCLASS_FUNCTION_CLASS );
-
-        _typesMorpho.reserve( gids.size( ));
-        _typesFunction.reserve( gids.size( ));
-
-        for( unsigned int i = 0; i < gids.size( ); ++i )
-        {
-          unsigned int morphoType =
-              boost::lexical_cast< unsigned int >( attribsData[ i ][ 1 ]);
-
-          unsigned int functionType =
-              boost::lexical_cast< unsigned int >( attribsData[ i ][ 2 ]);
-
-          _typesMorpho.push_back( morphoType );
-          _typesFunction.push_back( functionType );
-        }
-
-      }
-      catch( ... )
-      {
-        brain::Circuit circuit( *_player->data( )->blueConfig( ));
-        _namesTypesMorpho = circuit.getMorphologyTypeNames( );
-        _namesTypesFunction = circuit.getElectrophysiologyTypeNames( );
-
-        _typesMorpho = circuit.getMorphologyTypes( gids );
-        _typesFunction = circuit.getElectrophysiologyTypes( gids );
-
-      }
-
-      std::cout << "Morphology types";
-      for( auto name : _namesTypesMorpho )
-        std::cout << " " << name;
-      std::cout << std::endl;
-
-      std::cout << "Functional types";
-      for( auto name : _namesTypesFunction )
-        std::cout << " " << name;
-      std::cout << std::endl;
-
-      unsigned int counter = 0;
-      NeuronAttributes attribs;
-
-      for( auto gid : gids )
-      {
-        unsigned int morphoType = _typesMorpho[ counter ];
-        unsigned int functionType = _typesFunction[ counter ];
-
-        auto statsMorpho = _statsMorpho.find( morphoType );
-        if( statsMorpho == _statsMorpho.end( ))
-          statsMorpho =
-              _statsMorpho.insert( std::make_pair( morphoType, 0 )).first;
-
-        ++statsMorpho->second;
-
-        auto statsFunction = _statsFunction.find( functionType );
-        if( statsFunction == _statsFunction.end( ))
-          statsFunction =
-              _statsFunction.insert( std::make_pair( functionType, 0 )).first;
-
-        ++statsFunction->second;
-
-        auto name = _namesTypesMorpho[ morphoType ];
-
-        auto idxMorphoName = _typesIdxMorpho.find( name );
-        if( idxMorphoName == _typesIdxMorpho.end( ))
-        {
-          unsigned int idx = _typesIdxMorpho.size( );
-
-          idxMorphoName =
-              _typesIdxMorpho.insert( std::make_pair( name, idx )).first;
-
-        }
-
-        _typeToIdxMorpho.insert( std::make_pair( morphoType, idxMorphoName->second ));
-
-        name = _namesTypesFunction[ functionType ];
-
-        auto idxFunctionName = _typesIdxFunction.find( name );
-        if( idxFunctionName == _typesIdxFunction.end( ))
-        {
-          unsigned int idx = _typesIdxFunction.size( );
-
-          idxFunctionName =
-              _typesIdxFunction.insert( std::make_pair( name, idx )).first;
-
-          _statsFunction.insert( std::make_pair( idx, functionType ));
-        }
-
-        _typeToIdxFunction.insert( std::make_pair( functionType, idxFunctionName->second ));
-
-        std::get< T_TYPE_MORPHO >( attribs ) = idxMorphoName->second;
-        std::get< T_TYPE_FUNCTION >( attribs ) = idxFunctionName->second;
-
-//        std::cout << " " << gid
-//                  << "," int << morphoType << ",\"" << _namesTypesMorpho[ morphoType ] << "\""
-//                  << "," << functionType << ",\"" << _namesTypesFunction[ functionType ] << "\"";
-
-        result.insert( std::make_pair( gid, attribs ));
-
-        ++counter;
-      }
-
-      std::cout << "Loaded attributes." << std::endl;
-      std::cout << "- Morphological: " << std::endl;
-      for( auto type : _statsMorpho )
-        std::cout << _namesTypesMorpho[ type.first ]
-                  << " -> " << type.first
-                  << " # " << type.second
-                  << std::endl;
-
-      std::cout << "- Functional: " << std::endl;
-      for( auto type : _statsFunction )
-        std::cout << _namesTypesFunction[ type.first ]
-                  << " -> " << type.first
-                  << " # " << type.second
-                  << std::endl;
-    }
-#endif
-
-    return result;
-  }
-
-
 
   void OpenGLWidget::initializeGL( void )
   {
@@ -582,8 +419,7 @@ namespace visimpl
 //    }
 //  }
 
-  void OpenGLWidget::createParticleSystem( const tGidPosMap& gidPositions,
-                                           const tNeuronAttribs& attribs )
+  void OpenGLWidget::createParticleSystem( const tGidPosMap& gidPositions )
   {
     makeCurrent( );
     prefr::Config::init( );
@@ -603,7 +439,11 @@ namespace visimpl
 
     _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
 
-    _domainManager->init( gidPositions, attribs );
+#ifdef SIMIL_USE_BRION
+    _domainManager->init( gidPositions, _player->data( )->blueConfig( ));
+#else
+    _domainManager->init( gidPositions );
+#endif
     _domainManager->initializeParticleSystem( );
 
     _domainManager->mode( TMODE_SELECTION );
@@ -904,102 +744,6 @@ namespace visimpl
 
     emit attributeStatsComputed( );
   }
-
-  const std::vector< long unsigned int >& OpenGLWidget::attributeValues( int attribNumber ) const
-  {
-    if(( tNeuronAttributes )attribNumber == T_TYPE_MORPHO )
-      return _typesMorpho;
-    else
-      return _typesFunction;
-  }
-
-  Strings OpenGLWidget::attributeNames( int attribNumber, bool labels ) const
-  {
-    Strings result;
-
-//    auto statistics = _domainManager->attributeStatistics( );
-    auto statistics =
-        ( _currentAttrib == T_TYPE_MORPHO ) ? _statsMorpho : _statsFunction;
-
-    result.resize( statistics.size( ));
-
-    const auto& names = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
-                        &_namesTypesMorpho : &_namesTypesFunction;
-
-    const auto& indices = (( tNeuronAttributes ) attribNumber ) == T_TYPE_MORPHO ?
-                        &_typeToIdxMorpho : &_typeToIdxFunction;
-
-//    auto typeIds = ( _currentAttrib == T_TYPE_MORPHO ) ? &_typesMorpho : &_typesFunction;
-
-    for( auto attrib : statistics )
-    {
-      auto attribIdx = indices->find( attrib.first );
-
-      if( attribIdx == indices->end( ))
-      {
-        std::cout << "Attrib index not found " << attrib.first
-                  << " in map " << indices->size( )
-                  << std::endl;
-        continue;
-      }
-//      unsigned int attribId = ( *typeIds )[ attrib.first ];
-
-      auto name = ( *names )[ attrib.first ];
-
-      if( labels )
-      {
-        auto labelIt = _attributeNameLabels.find( name );
-        if( labelIt != _attributeNameLabels.end( ))
-          name = labelIt->second;
-      }
-
-      result[ attribIdx->second ] = ( name );
-    }
-
-    result.shrink_to_fit( );
-
-//    std::cout << "Attribute names: ";
-//    for( auto name : result )
-//      std::cout << " " << name;
-//    std::cout << std::endl;
-
-    return result;
-  }
-
-  tUintUMap OpenGLWidget::attributeStatistics( void ) const
-  {
-    tUintUMap result;
-
-    auto stats =
-        ( _currentAttrib == T_TYPE_MORPHO ) ? _statsMorpho : _statsFunction;
-
-    auto typeIds =
-        ( _currentAttrib == T_TYPE_MORPHO ) ? &_typeToIdxMorpho : &_typeToIdxFunction;
-
-
-//    std::cout << "Stats" << std::endl;
-    for( auto attrib : stats )
-    {
-      auto idxIt = typeIds->find( attrib.first );
-      assert( idxIt != typeIds->end( ));
-
-      unsigned int idx = idxIt->second;
-
-      result.insert( std::make_pair( idx, attrib.second ));
-
-//      std::cout << " " << idx
-//                << " " << (( _currentAttrib == T_TYPE_MORPHO ) ?
-//                            _namesTypesMorpho : _namesTypesFunction)[ attrib.first ]
-//                << ": " << attrib.second << std::endl;
-    }
-
-    return result;
-
-
-
-//    return _domainManager->attributeStatistics( );
-  }
-
 
   void OpenGLWidget::_updateSelection( void )
   {

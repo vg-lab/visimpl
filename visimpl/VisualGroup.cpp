@@ -170,6 +170,11 @@ namespace visimpl
     return _source;
   }
 
+  QColor VisualGroup::color( void ) const
+  {
+    return _color;
+  }
+
   void VisualGroup::colorMapping( const TTransferFunction& colors )
    {
 
@@ -185,6 +190,7 @@ namespace visimpl
        gcolors.Insert( c.first, gColor );
      }
 
+     _color = colors[ 0 ].second;
      _model->color = gcolors;
 
    }

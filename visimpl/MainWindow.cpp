@@ -203,6 +203,8 @@ namespace visimpl
                              simil::TDataType::TBlueConfig,
                              simulationType, reportLabel );
 
+    _domainManager = _openGLWidget->domainManager( );
+
     openSubsetEventFile( subsetEventFile, true );
 
     _configurePlayer( );
@@ -971,6 +973,9 @@ namespace visimpl
   void MainWindow::updateAttributeStats( void )
   {
 
+    if( !_domainManager )
+      return;
+
     QLayoutItem* item;
     while(( item = _layoutAttribStats->takeAt( 0 )))
     {
@@ -980,19 +985,20 @@ namespace visimpl
 
     std::cout << "Updating stats..." << std::endl;
 
-    int attribNumber = _comboAttribSelection->currentIndex( );
+//    int attribNumber = _comboAttribSelection->currentIndex( );
 
-    auto values = _openGLWidget->attributeValues( attribNumber );
-    auto names = _openGLWidget->attributeNames( attribNumber );
-    auto labels = _openGLWidget->attributeNames( attribNumber, true );
+//    auto values = _domainManager->attributeValues( attribNumber );
+//    auto names = _domainManager->attributeNames( attribNumber );
+//    auto labels = _domainManager->attributeNames( attribNumber, true );
 
-    auto stats = _openGLWidget->attributeStatistics( );
+    auto stats = _domainManager->attributeStatistics( );
 
-    for( unsigned int i = 0; i < names.size( ); ++i )
+//    for( unsigned int i = 0; i < stats.size( ); ++i )
+    for( auto stat : stats )
     {
-      auto name = names[ i ];
-      auto label = labels[ i ];
-      auto number = stats.find( i )->second;
+      auto name = std::get< T_TYPE_NAME >( stat );//names[ i ];
+      auto label = std::get< T_TYPE_LABEL >( stat ); //labels[ i ];
+      auto number = std::get< T_TYPE_STATS >( stat );//stats.find( i )->second;
 
       QString text = ( QString( name.c_str( )) //+ " - " + QString( label.c_str( ))
           + ": " + QString::number( number ) );
@@ -1010,18 +1016,18 @@ namespace visimpl
 
     _attribGroupsVisButtons.clear( );
 
-    auto colors = _openGLWidget->domainManager( )->paletteColors( );
+//    auto colors = _openGLWidget->domainManager( )->paletteColors( );
     unsigned int currentIndex = 0;
     for( auto group : _openGLWidget->domainManager( )->attributeGroups( ))
     {
       QFrame* frame = new QFrame( );
 //      auto colors = _openGLWidget->colorPalette( ).colors( );
-
-      frame->setStyleSheet( "background-color: " + colors[ currentIndex % colors.size( )].first.name( ) );
+//colors[ currentIndex % colors.size( )].first
+      frame->setStyleSheet( "background-color: " + group->color( ).name( ) );
       frame->setMinimumSize( 20, 20 );
       frame->setMaximumSize( 20, 20 );
 
-      group->name( names[ currentIndex] );
+      group->name( std::get< T_TYPE_NAME >( stats[ currentIndex ])); //names[ currentIndex] );
 
       //    QIcon* eye = new QIcon( ":/icons/show.png" );
       QCheckBox* buttonVisibility = new QCheckBox( group->name( ).c_str( ));

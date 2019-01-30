@@ -89,8 +89,7 @@ namespace visimpl
                   const std::string& zeqUri = "" );
     ~OpenGLWidget( void );
 
-    void createParticleSystem( const tGidPosMap& gidPositions,
-                               const tNeuronAttribs& attribs );
+    void createParticleSystem( const tGidPosMap& gidPositions );
     void loadData( const std::string& fileName,
                    const simil::TDataType = simil::TDataType::TBlueConfig,
                    simil::TSimulationType simulationType = simil::TSimSpikes,
@@ -118,9 +117,6 @@ namespace visimpl
     void subsetEventsManager( simil::SubsetEventManager* manager );
 
     const scoop::ColorPalette& colorPalette( void );
-
-    const std::vector< std::string >& namesMorpho( void ) const;
-    const std::vector< std::string >& namesFunction( void ) const;
 
   signals:
 
@@ -183,14 +179,7 @@ namespace visimpl
     void changeSimulationDecayValue( float value );
     float getSimulationDecayValue( void );
 
-    const std::vector< long unsigned int >& attributeValues( int attribNumber ) const;
-    Strings attributeNames( int attribNumber, bool labels = false ) const;
-
-    tUintUMap attributeStatistics( void ) const;
-
   protected:
-
-    tNeuronAttribs _loadNeuronTypes( void );
 
     void _resolveFlagsOperations( void );
 
@@ -344,20 +333,6 @@ namespace visimpl
 
     scoop::ColorPalette _colorPalette;
 
-    std::vector< std::string > _namesTypesMorpho;
-    std::vector< std::string > _namesTypesFunction;
-
-    std::vector< long unsigned int > _typesMorpho;
-    std::vector< long unsigned int > _typesFunction;
-
-    tUintUMap _typeToIdxMorpho;
-    tUintUMap _typeToIdxFunction;
-
-    tUintUMap _statsMorpho;
-    tUintUMap _statsFunction;
-
-    std::unordered_map< std::string, unsigned int > _typesIdxMorpho;
-    std::unordered_map< std::string, unsigned int > _typesIdxFunction;
   };
 
 } // namespace visimpl
