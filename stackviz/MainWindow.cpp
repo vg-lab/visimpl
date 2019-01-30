@@ -570,8 +570,10 @@ namespace stackviz
     connect( _summary, SIGNAL( histogramClicked( float )),
              this, SLOT( PlayAt( float )));
 
+#ifdef VISIMPL_USE_ZEROEQ
     connect( _summary, SIGNAL( histogramClicked( visimpl::HistogramWidget* )),
                this, SLOT( HistogramClicked( visimpl::HistogramWidget* )));
+#endif
 
     _ui->actionFocusOnPlayhead->setVisible( true );
     connect( _ui->actionFocusOnPlayhead, SIGNAL( triggered( )),
@@ -854,29 +856,6 @@ namespace stackviz
       _publisher->publish( lexis::data::SelectedIDs( selected ));
     }
 
-
-    void MainWindow::playAtButtonClicked( void )
-    {
-      bool ok;
-      double result =
-          QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
-                                   tr( "Simulation time" ),
-                                   ( double )_player->currentTime( ),
-                                   ( double )_player->data( )->startTime( ),
-                                   ( double )_player->data( )->endTime( ),
-                                   3, &ok, Qt::Popup );
-
-      if( ok )
-      {
-        float percentage = ( result - _player->data( )->startTime( )) /
-            ( _player->data( )->endTime( ) - _player->data( )->startTime( ));
-
-        percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
-
-        PlayAt( percentage, true );
-      }
-    }
-
   #endif
 
   void MainWindow::_setZeqUri( const std::string& uri_ )
@@ -934,6 +913,10 @@ namespace stackviz
   {
     QMainWindow::resizeEvent( event_ );
 
+    std::cout << "Window " << size( ).width( ) << "x" << size( ).height( ) << std::endl;
+    if( _summary )
+    std::cout << "Central " << _summary->size( ).width( ) << "x" << _summary->size( ).height( ) << std::endl;
+
     if( resizingEnabled )
     {
   //    unsigned int columnsWidth = width( ) / _columnsNumber;
@@ -947,6 +930,28 @@ namespace stackviz
   //    std::cout << width( ) << " -> " << currentWidth << std::endl;
   ////    _summary->setMinimumWidth( currentWidth );
   //    _summary->resize( currentWidth, currentHeight );
+    }
+  }
+
+  void MainWindow::playAtButtonClicked( void )
+  {
+    bool ok;
+    double result =
+        QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
+                                 tr( "Simulation time" ),
+                                 ( double )_player->currentTime( ),
+                                 ( double )_player->data( )->startTime( ),
+                                 ( double )_player->data( )->endTime( ),
+                                 3, &ok, Qt::Popup );
+
+    if( ok )
+    {
+      float percentage = ( result - _player->data( )->startTime( )) /
+          ( _player->data( )->endTime( ) - _player->data( )->startTime( ));
+
+      percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
+
+      PlayAt( percentage, true );
     }
   }
 

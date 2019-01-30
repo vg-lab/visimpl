@@ -23,6 +23,9 @@ unsigned int visimpl::Selection::_counter = 0;
 unsigned int DEFAULT_BINS = 2500;
 float DEFAULT_ZOOM_FACTOR = 1.5f;
 
+float DEFAULT_SCALE = 1.0f;
+float DEFAULT_SCALE_STEP = 0.3f;
+
 static QString colorScaleToString( visimpl::TColorScale colorScale )
 {
   switch( colorScale )
@@ -46,6 +49,12 @@ namespace visimpl
   : QWidget( parent_ )
   , _bins( DEFAULT_BINS )
   , _zoomFactor( DEFAULT_ZOOM_FACTOR )
+  , _flagUpdateChartSize( true )
+  , _sizeCharts( 500 )
+  , _sizeView( 200 )
+  , _sizeMargin( 0 )
+  , _scaleCurrent( DEFAULT_SCALE )
+  , _scaleStep( DEFAULT_SCALE_STEP )
   , _gridLinesNumber( 3 )
   , _simData( nullptr )
   , _spikeReport( nullptr )
@@ -75,7 +84,6 @@ namespace visimpl
   , _syncScrollsVertically( true )
   , _heightPerRow( 50 )
   , _maxLabelWidth( 200 )
-  , _currentCentralMinWidth( 500 )
   , _showMarker( false )
   , _regionPercentage( 0.0f )
   , _regionWidthPixels( -1 )
@@ -107,8 +115,8 @@ namespace visimpl
       _regionWidth = 0.1f;
       _summaryColumns = _maxColumns - 2;
 
-      QVBoxLayout* upperLayout = new QVBoxLayout( );
-      upperLayout->setAlignment( Qt::AlignTop );
+      _layoutMain = new QVBoxLayout( );
+      _layoutMain->setAlignment( Qt::AlignTop );
 
       _eventLabelsLayout = new QGridLayout( );
       _eventLabelsLayout->setAlignment( Qt::AlignTop );
@@ -341,10 +349,10 @@ namespace visimpl
       auto splitter = new QSplitter( Qt::Vertical, this );
       splitter->addWidget( _eventsSplitter );
       splitter->addWidget( _histoSplitter );
-      upperLayout->addWidget( splitter );
-      upperLayout->addWidget( foot );
+      _layoutMain->addWidget( splitter );
+      _layoutMain->addWidget( foot );
 
-      this->setLayout( upperLayout );
+      this->setLayout( _layoutMain );
 
     #ifdef VISIMPL_USE_ZEROEQ
 
@@ -424,16 +432,16 @@ namespace visimpl
     _mainHistogram->regionWidth( _regionWidth );
     _mainHistogram->gridLinesNumber( _gridLinesNumber );
     _mainHistogram->firstHistogram( true );
-    _mainHistogram->setMinimumWidth( _currentCentralMinWidth );
+    _mainHistogram->setMinimumWidth( _sizeCharts );
     _mainHistogram->simPlayer( _player );
 //    _focusedHistogram = _mainHistogram;
 
     TColorMapper colorMapper;
-    colorMapper.Insert(0.0f, glm::vec4( 157, 206, 111, 255 ));
-    colorMapper.Insert(0.25f, glm::vec4( 125, 195, 90, 255 ));
-    colorMapper.Insert(0.50f, glm::vec4( 109, 178, 113, 255 ));
-    colorMapper.Insert(0.75f, glm::vec4( 76, 165, 86, 255 ));
-    colorMapper.Insert(1.0f, glm::vec4( 63, 135, 61, 255 ));
+    colorMapper.Insert( 0.0f, glm::vec4( 157, 206, 111, 255 ));
+    colorMapper.Insert( 0.25f, glm::vec4( 125, 195, 90, 255 ));
+    colorMapper.Insert( 0.50f, glm::vec4( 109, 178, 113, 255 ));
+    colorMapper.Insert( 0.75f, glm::vec4( 76, 165, 86, 255 ));
+    colorMapper.Insert( 1.0f, glm::vec4( 63, 135, 61, 255 ));
 
     _mainHistogram->colorMapper( colorMapper );
 
@@ -555,7 +563,7 @@ namespace visimpl
             eventWidget->setSizePolicy( QSizePolicy::Expanding,
                                         QSizePolicy::Expanding );
             eventWidget->timeFrames( &_events );
-            eventWidget->setMinimumWidth( _currentCentralMinWidth );
+            eventWidget->setMinimumWidth( _sizeCharts );
             eventWidget->setMinimumHeight( _heightPerRow );
             eventWidget->setMaximumHeight( _heightPerRow );
             eventWidget->index( counter );
@@ -719,7 +727,7 @@ namespace visimpl
 
     histogram->setMinimumHeight( _heightPerRow );
     histogram->setMaximumHeight( _heightPerRow );
-    histogram->setMinimumWidth( _currentCentralMinWidth );
+    histogram->setMinimumWidth( _sizeCharts );
     //    histogram->setMinimumWidth( 500 );
 
     histogram->simPlayer( _player );
@@ -1273,12 +1281,18 @@ namespace visimpl
 
     auto& summaryRow = _histogramRows[ i ];
 
+    // Avoid deleting last histogram
+    if( _mainHistogram == summaryRow.histogram && _histogramRows.size( ) <= 1 )
+        return;
+
     if( _focusedHistogram == summaryRow.histogram )
     {
       _focusedHistogram = nullptr;
       _focusWidget->clear( );
       _focusWidget->update( );
     }
+
+
 
     _histoLabelsLayout->removeWidget( summaryRow.label );
     _histogramsLayout->removeWidget( summaryRow.histogram );
@@ -1396,28 +1410,97 @@ namespace visimpl
       histogram->update( );
   }
 
+
+  void Summary::_resizeCharts( unsigned int newMinSize )
+  {
+    for( auto histogram : _histogramWidgets )
+    {
+      histogram->setMinimumWidth( newMinSize );
+//        histogram->update( );
+    }
+  }
+
+  void Summary::_resizeEvents( unsigned int newMinSize )
+  {
+    for( auto subsetEventWidget : _eventWidgets )
+    {
+      subsetEventWidget->setMinimumWidth( newMinSize );
+//        subsetEventWidget->update( );
+    }
+  }
+
+  void Summary::resizeEvent( QResizeEvent* event_ )
+  {
+    QWidget::resizeEvent( event_ );
+
+    if( ( _stackType != T_STACK_EXPANDABLE) || !_layoutMain || !_histogramScroll )
+      return;
+
+    _layoutMain->activate( );
+    _histogramsLayout->activate( );
+
+    unsigned int splitterRightSide = _histogramScroll->size( ).width( ); //_histoSplitter->sizes( )[ 1 ];
+
+//
+//    _sizeMargin =
+//        ( _histogramScroll->contentsMargins( ).right( ) + _histogramsLayout->margin( ));
+    _sizeCharts = _mainHistogram->size( ).width( );
+
+    if( _flagUpdateChartSize && _mainHistogram->size( ).width( ) > 0)
+    {
+//      _sizeView = _mainHistogram->size( ).width( );
+
+      _sizeMargin = ( splitterRightSide - _sizeCharts ) / 2;
+
+      _flagUpdateChartSize = false;
+    }
+
+    unsigned int rightMarginFactor = splitterRightSide > _sizeCharts ? 2 : 1;
+//
+    _sizeView = splitterRightSide - _sizeMargin * rightMarginFactor;
+
+    _scaleCurrent = ( float )_sizeCharts / ( float )_sizeView;
+
+    std::cout << "RESIZE: view " << _sizeView
+              << " charts " << _sizeCharts
+              << " margin " << _sizeMargin
+              << " scale " << _scaleCurrent
+              << std::endl;
+
+  }
+
   void Summary::wheelEvent( QWheelEvent* event_ )
   {
     if( event_->modifiers( ).testFlag( Qt::ControlModifier ))
     {
+      float minScale = 1.0f;
 
-      _currentCentralMinWidth = _mainHistogram->width( );
-      _currentCentralMinWidth += event_->delta( ) * 3;
+      if( _scaleCurrent == minScale )
+        _sizeView = _mainHistogram->size( ).width( );
 
-      if( _currentCentralMinWidth < 200 )
-        _currentCentralMinWidth = 200;
+      bool sign = ( event_->delta( ) > 0 );
 
-      for( auto histogram : _histogramWidgets )
-      {
-        histogram->setMinimumWidth( _currentCentralMinWidth );
-//        histogram->update( );
-      }
+      float adjustment = ( _scaleStep * ( sign ? 1 : ( -1 )));
+//      float adjustment = ( _scaleStep * _scaleCurrent * ( sign ? 1 : ( -1 )));
 
-      for( auto subsetEventWidget : _eventWidgets )
-      {
-        subsetEventWidget->setMinimumWidth( _currentCentralMinWidth );
-//        subsetEventWidget->update( );
-      }
+      _scaleCurrent = std::max( minScale, _scaleCurrent + adjustment );
+
+      _sizeCharts = ( _scaleCurrent * _sizeView );
+
+      _resizeCharts( _sizeCharts );
+      _resizeEvents( _sizeCharts );
+
+
+      std::cout << "ZOOM: view " << _sizeView
+                << " charts " << _sizeCharts
+                << " margin " << _sizeMargin
+                << " scale " << _scaleCurrent
+                << std::endl;
+
+
+      std::cout << "Inner: " << _mainHistogram->size( ).width( ) << "x" << _mainHistogram->size( ).height( ) << " "
+                << "Outer: " << _histogramScroll->size( ).width( ) << "x" << _histogramScroll->size( ).height( ) << " "
+                << std::endl;
 
       int pos = 0;
       if( sender( ) == _histogramScroll )
@@ -1482,6 +1565,32 @@ namespace visimpl
       _histoSplitter->setSizes( _eventsSplitter->sizes( ));
     else
       _eventsSplitter->setSizes( _histoSplitter->sizes( ));
+
+    unsigned int splitterRightSide = _histogramScroll->size( ).width( );
+
+    unsigned int rightMarginFactor = splitterRightSide > _sizeCharts ? 2 : 1;
+
+    _sizeView = splitterRightSide - ( _sizeMargin * rightMarginFactor );
+    _sizeCharts =
+        _mainHistogram ? _mainHistogram->size( ).width( ) : _sizeView * _scaleCurrent;
+
+    _scaleCurrent = ( float )_sizeCharts / ( float )_sizeView;
+
+
+//    std::cout << "Horizontal sizes " << horizontalSizes[ 0 ]
+//              << "x" << horizontalSizes[ 1 ]
+//              << " " << _histoSplitter->contentsMargins( ).left( )
+//              << " " << _histoSplitter->contentsMargins( ).right( )
+//              << " " << _histogramsLayout->contentsMargins( ).left( )
+//              << " " << _histogramsLayout->contentsMargins( ).right( )
+//              << " " << _histogramsLayout->spacing( )
+//              << std::endl;
+
+    std::cout << "SPLITTER: view " << _sizeView
+              << " charts " << _sizeCharts
+              << " margin " << _sizeMargin
+              << " scale " << _scaleCurrent
+              << std::endl;
 
   }
 

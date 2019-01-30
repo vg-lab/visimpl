@@ -102,20 +102,20 @@ namespace stackviz
 
   #ifdef VISIMPL_USE_GMRVLEX
 
+    void HistogramClicked( visimpl::HistogramWidget* );
     void ApplyPlaybackOperation( unsigned int playbackOp );
     void _zeqEventRepeat( bool repeat );
 
-    void HistogramClicked( visimpl::HistogramWidget* );
+  #endif
 
     void playAtButtonClicked( void );
 
-  #endif
-
     void loadComplete( void );
+
 
   protected:
 
-    void resizeEvent(QResizeEvent * event);
+    void resizeEvent( QResizeEvent* event );
     void configurePlayer( void );
 
     void initSummaryWidget( void );

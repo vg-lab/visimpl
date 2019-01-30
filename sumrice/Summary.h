@@ -223,10 +223,23 @@ namespace visimpl
     void calculateRegionBounds( void );
     void SetFocusRegionPosition( const QPoint& localPosition );
 
+    void _resizeCharts( unsigned int newMinSize );
+    void _resizeEvents( unsigned int newMinSize );
+
     virtual void wheelEvent( QWheelEvent* event );
+    virtual void resizeEvent( QResizeEvent* event );
 
     unsigned int _bins;
     float _zoomFactor;
+
+    bool _flagUpdateChartSize;
+
+    unsigned int _sizeCharts;
+    unsigned int _sizeView;
+    unsigned int _sizeMargin;
+
+    float _scaleCurrent;
+    float _scaleStep;
 
     unsigned int _gridLinesNumber;
 
@@ -271,6 +284,7 @@ namespace visimpl
     QGridLayout* _eventsLayout;
     QScrollArea* _eventScroll;
 
+    QVBoxLayout* _layoutMain;
     QSplitter* _eventsSplitter;
     QSplitter* _histoSplitter;
 
@@ -296,7 +310,7 @@ namespace visimpl
     unsigned int _summaryColumns;
     unsigned int _heightPerRow;
     unsigned int _maxLabelWidth;
-    unsigned int _currentCentralMinWidth;
+//    unsigned int _currentCentralMinWidth;
 
     QPoint _lastMousePosition;
     QPoint _regionGlobalPosition;
