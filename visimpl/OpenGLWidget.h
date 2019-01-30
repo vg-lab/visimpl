@@ -131,7 +131,7 @@ namespace visimpl
   public slots:
 
     void home( void );
-    void updateCameraBoundingBox( void );
+    void updateCameraBoundingBox( bool setBoundingBox = false );
 
     void setMode( int mode );
     void showInactive( bool state );
@@ -261,6 +261,7 @@ namespace visimpl
     bool _paint;
 
     QColor _currentClearColor;
+    float _particleRadiusThreshold;
 
     std::chrono::time_point< std::chrono::system_clock > _then;
     std::chrono::time_point< std::chrono::system_clock > _lastFrame;

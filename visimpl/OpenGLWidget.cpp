@@ -69,6 +69,7 @@ namespace visimpl
   , _idleUpdate( true )
   , _paint( false )
   , _currentClearColor( 20, 20, 20, 0 )
+  , _particleRadiusThreshold( 0.8 )
   , _shaderParticles( nullptr )
   , _shaderPicking( nullptr )
   , _particleSystem( nullptr )
@@ -430,13 +431,13 @@ namespace visimpl
     // Initialize shader
     _shaderParticles = new reto::ShaderProgram( );
     _shaderParticles->loadVertexShaderFromText( prefr::prefrVertexShader );
-    _shaderParticles->loadFragmentShaderFromText( prefr::prefrFragmentShader );
+    _shaderParticles->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
     _shaderParticles->create( );
     _shaderParticles->link( );
 
     _shaderPicking = new prefr::RenderProgram( );
-    _shaderPicking->loadVertexShader( "/home/crodriguezbe/Desktop/Projects/qtcarbonic/visimpl/prefr/prefr/GL/shd/GLpick-vert.glsl" );
-    _shaderPicking->loadFragmentShader( "/home/crodriguezbe/Desktop/Projects/qtcarbonic/visimpl/prefr/prefr/GL/shd/GLpick-frag.glsl" );
+    _shaderPicking->loadVertexShaderFromText( prefr::prefrVertexShaderPicking );
+    _shaderPicking->loadFragmentShaderFromText( prefr::prefrFragmentShaderPicking );
     _shaderPicking->create( );
     _shaderPicking->link( );
 
@@ -447,7 +448,11 @@ namespace visimpl
 
     _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
 
+#ifdef SIMIL_USE_BRION
     _domainManager->init( gidPositions, _player->data( )->blueConfig( ));
+#else
+    _domainManager->init( gidPositions );
+#endif
     _domainManager->initializeParticleSystem( );
 
     _pickRenderer =
@@ -459,7 +464,7 @@ namespace visimpl
 
     _domainManager->mode( TMODE_SELECTION );
 
-    updateCameraBoundingBox( );
+    updateCameraBoundingBox( true );
   }
 
 
@@ -488,7 +493,7 @@ namespace visimpl
       unsigned int shader;
       shader = _shaderParticles->program( );
 
-      unsigned int uModelViewProjM, cameraUp, cameraRight;
+      unsigned int uModelViewProjM, cameraUp, cameraRight, particleRadius;
 
       uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
       glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
@@ -497,10 +502,14 @@ namespace visimpl
       cameraUp = glGetUniformLocation( shader, "cameraUp" );
       cameraRight = glGetUniformLocation( shader, "cameraRight" );
 
+      particleRadius = glGetUniformLocation( shader, "radiusThreshold" );
+
       float* viewM = _camera->viewMatrix( );
 
       glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
       glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
+
+      glUniform1f( particleRadius, _particleRadiusThreshold );
 
       glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
                                  _camera->position( )[ 1 ],
@@ -860,9 +869,12 @@ namespace visimpl
     _focusOn( _boundingBoxHome );
   }
 
-  void OpenGLWidget::updateCameraBoundingBox( void )
+  void OpenGLWidget::updateCameraBoundingBox( bool setBoundingBox )
   {
     auto boundingBox = _domainManager->boundingBox( );
+
+    if( setBoundingBox )
+      _boundingBoxHome = boundingBox;
 
     _focusOn( boundingBox );
 
@@ -992,7 +1004,7 @@ namespace visimpl
         _mouseY = event_->y( );
       }
     }
-    else if ( event_->button( ) ==  Qt::MidButton )
+    else if ( event_->button( ) ==  Qt::RightButton )
     {
       _translation = true;
       _mouseX = event_->x( );
@@ -1011,8 +1023,7 @@ namespace visimpl
     {
       _rotation = false;
     }
-
-    if ( event_->button( ) ==  Qt::MidButton )
+    if ( event_->button( ) ==  Qt::RightButton )
     {
       _translation = false;
     }
@@ -1032,6 +1043,10 @@ namespace visimpl
     }
     if( _translation )
     {
+      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
+      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+
+      _camera->localTranslation( Eigen::Vector3f( -xDis, yDis, 0.0f ));
       _mouseX = event_->x( );
       _mouseY = event_->y( );
     }
