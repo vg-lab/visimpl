@@ -1436,12 +1436,6 @@ namespace visimpl
      std::get< T_PART_SCREEN_POS >( result ) = screenPos;
      std::get< T_PART_VALID >( result ) = valid;
 
-     std::cout << "Selected neuron " << gid
-               << " at position " << position.x
-               << " " << position.y
-               << " " << position.z
-               << std::endl;
-
      return result;
    }
 

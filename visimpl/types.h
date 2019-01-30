@@ -10,6 +10,7 @@
 #define VISIMPL_TYPES_H_
 
 #include <sumrice/sumrice.h>
+#include <reto/reto.h>
 
 namespace visimpl
 {
@@ -98,6 +99,14 @@ namespace visimpl
 
   class Camera : public prefr::ICamera, public reto::Camera
   {
+  public:
+
+    Camera( void ) : prefr::ICamera( ), reto::Camera( ){ }
+
+#ifdef VISIMPL_USE_ZEROEQ
+    Camera( std::string zeqUri_ ): prefr::ICamera( ), reto::Camera( zeqUri_ ){ }
+#endif
+
     glm::vec3 PReFrCameraPosition( void )
     {
       return floatPtrToVec3( position( ));

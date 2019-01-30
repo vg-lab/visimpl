@@ -15,6 +15,7 @@
 #include <QRadioButton>
 #include <QGroupBox>
 #include <QPushButton>
+#include <QToolBox>
 
 #include "OpenGLWidget.h"
 
@@ -172,6 +173,9 @@ namespace visimpl
 
     QDockWidget* _simConfigurationDock;
 
+    QTabWidget* _modeSelectionWidget;
+    QToolBox* _toolBoxOptions;
+
     QGroupBox* _groupBoxTransferFunction;
     TransferFunctionEditor* _tfEditor;
     TransferFunctionWidget* _tfWidget;
@@ -192,6 +196,9 @@ namespace visimpl
 
     QRadioButton* _alphaNormalButton;
     QRadioButton* _alphaAccumulativeButton;
+
+    QLabel* _labelGID;
+    QLabel* _labelPosition;
 
     QGroupBox* _groupBoxAttrib;
     QComboBox* _comboAttribSelection;

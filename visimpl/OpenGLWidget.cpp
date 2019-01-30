@@ -119,7 +119,7 @@ namespace visimpl
   {
   #ifdef VISIMPL_USE_ZEROEQ
     if ( zeqUri != "" )
-      _camera = new reto::Camera( zeqUri );
+      _camera = new Camera( zeqUri );
     else
   #endif
     _camera = new Camera( );
@@ -990,10 +990,6 @@ namespace visimpl
         _pickingPosition = event_->pos( );
 
         _pickingPosition.setY( height() - _pickingPosition.y( ) );
-
-        std::cout << "Picking at " << _pickingPosition.x( )
-                  << ", " << _pickingPosition.y( )
-                  << std::endl;
 
         _flagPickingSingle = true;
       }

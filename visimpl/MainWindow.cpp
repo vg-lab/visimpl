@@ -40,6 +40,7 @@
 #include <QGridLayout>
 #include <QShortcut>
 #include <QMessageBox>
+
 // #include "qt/CustomSlider.h"
 
 #ifdef VISIMPL_USE_GMRVLEX
@@ -53,6 +54,15 @@
 namespace visimpl
 {
 
+
+  enum toolIndex
+  {
+    T_TOOL_Playback = 0,
+    T_TOOL_Visual,
+    T_TOOL_Selection,
+    T_TOOL_Inpector
+  };
+
   MainWindow::MainWindow( QWidget* parent_,
                           bool updateOnIdle )
   : QMainWindow( parent_ )
@@ -64,6 +74,7 @@ namespace visimpl
   , _ui( new Ui::MainWindow )
   , _lastOpenedFileName( "" )
   , _openGLWidget( nullptr )
+  , _domainManager( nullptr )
   , _summary( nullptr )
   , _simulationDock( nullptr )
   , _simSlider( nullptr )
@@ -73,6 +84,8 @@ namespace visimpl
   , _repeatButton( nullptr )
   , _goToButton( nullptr )
   , _simConfigurationDock( nullptr )
+  , _modeSelectionWidget( nullptr )
+  , _toolBoxOptions( nullptr )
   , _groupBoxTransferFunction( nullptr )
   , _tfEditor( nullptr )
   , _tfWidget( nullptr )
@@ -88,6 +101,8 @@ namespace visimpl
   , _selectionSizeLabel( nullptr )
   , _alphaNormalButton( nullptr )
   , _alphaAccumulativeButton( nullptr )
+  , _labelGID( nullptr )
+  , _labelPosition( nullptr )
   , _groupBoxAttrib( nullptr )
   , _comboAttribSelection( nullptr )
   , _layoutAttribStats( nullptr )
@@ -631,6 +646,9 @@ namespace visimpl
     _addGroupButton->setEnabled( false );
     _addGroupButton->setToolTip( "Click to create a group from current selection.");
 
+    _labelGID = new QLabel( "" );
+    _labelPosition = new QLabel( "" );
+
     QWidget* topContainer = new QWidget( );
     QVBoxLayout* verticalLayout = new QVBoxLayout( );
   //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
@@ -641,8 +659,9 @@ namespace visimpl
     _groupBoxTransferFunction->setLayout( tfLayout );
 //    _groupBoxTransferFunction->setMaximumHeight( 250 );
 
-    QGroupBox* tSpeedGB = new QGroupBox( "Simulation playback speed" );
+    QGroupBox* tSpeedGB = new QGroupBox( "Simulation playback Configuration" );
     QGridLayout* sfLayout = new QGridLayout( );
+    sfLayout->setAlignment( Qt::AlignTop );
     sfLayout->addWidget( new QLabel( "Simulation timestep:" ), 0, 0, 1, 1 );
     sfLayout->addWidget( _deltaTimeBox, 0, 1, 1, 1  );
     sfLayout->addWidget( new QLabel( "Timesteps per second:" ), 1, 0, 1, 1 );
@@ -650,32 +669,51 @@ namespace visimpl
     sfLayout->addWidget( new QLabel( "Step playback duration (s):"), 2, 0, 1, 1);
     sfLayout->addWidget( _stepByStepDurationBox, 2, 1, 1, 1 );
     tSpeedGB->setLayout( sfLayout );
-    tSpeedGB->setMaximumHeight( 200 );
+//    tSpeedGB->setMaximumHeight( 200 );
 
     QGroupBox* dFunctionGB = new QGroupBox( "Decay function" );
     QHBoxLayout* dfLayout = new QHBoxLayout( );
-    dfLayout->addWidget( new QLabel( "Decay \n(simulation time): " ));
+    dfLayout->setAlignment( Qt::AlignTop );
+    dfLayout->addWidget( new QLabel( "Decay (simulation time): " ));
     dfLayout->addWidget( _decayBox );
     dFunctionGB->setLayout( dfLayout );
-    dFunctionGB->setMaximumHeight( 200 );
+//    dFunctionGB->setMaximumHeight( 200 );
 
     QGroupBox* rFunctionGB = new QGroupBox( "Alpha blending function" );
     QHBoxLayout* rfLayout = new QHBoxLayout( );
-    rfLayout->addWidget( new QLabel( "Alpha\nBlending: " ));
+    rfLayout->setAlignment( Qt::AlignTop );
+    rfLayout->addWidget( new QLabel( "Alpha Blending: " ));
     rfLayout->addWidget( _alphaNormalButton );
     rfLayout->addWidget( _alphaAccumulativeButton );
     rFunctionGB->setLayout( rfLayout );
-    rFunctionGB->setMaximumHeight( 200 );
+//    rFunctionGB->setMaximumHeight( 200 );
+
+    QWidget* vcContainer = new QWidget( );
+    QVBoxLayout* vcLayout = new QVBoxLayout( );
+    vcLayout->setAlignment( Qt::AlignTop );
+    vcLayout->addWidget( dFunctionGB );
+    vcLayout->addWidget( rFunctionGB );
+    vcContainer->setLayout( vcLayout );
+
 
     QGroupBox* selFunctionGB = new QGroupBox( "Current selection");
     QHBoxLayout* selLayout = new QHBoxLayout( );
+    selLayout->setAlignment( Qt::AlignTop );
     selLayout->addWidget( new QLabel( "Selection size: " ));
     selLayout->addWidget( _selectionSizeLabel );
     selLayout->addWidget( _addGroupButton );
     selLayout->addWidget( _clearSelectionButton );
     selFunctionGB->setLayout( selLayout );
-    selFunctionGB->setMaximumHeight( 200 );
+//    selFunctionGB->setMaximumHeight( 200 );
 
+    QGroupBox* objectInspectoGB = new QGroupBox( "Object inspector" );
+    QGridLayout* oiLayout = new QGridLayout( );
+    oiLayout->setAlignment( Qt::AlignTop );
+    oiLayout->addWidget( new QLabel( "GID:" ), 0, 0, 1, 1 );
+    oiLayout->addWidget( _labelGID, 0, 1, 1, 3 );
+    oiLayout->addWidget( new QLabel( "Position: " ), 1, 0, 1, 1 );
+    oiLayout->addWidget( _labelPosition, 1, 1, 1, 3 );
+    objectInspectoGB->setLayout( oiLayout );
 
     _groupBoxGroups = new QGroupBox( "Current visualization groups" );
 //    _groupBoxGroups->setMaximumHeight( 200 );
@@ -773,20 +811,26 @@ namespace visimpl
     tabAttribLayout->addWidget( _groupBoxAttrib );
 
 //TODO
-    QTabWidget* tabWidget = new QTabWidget( );
-    tabWidget->addTab( containerTabSelection, tr( "Selection" ));
-    tabWidget->addTab( containerTabGroups, tr( "Groups" ));
-    tabWidget->addTab( containerTabAttrib, tr( "Attribute" ));
+    _modeSelectionWidget = new QTabWidget( );
+    _modeSelectionWidget->addTab( containerTabSelection, tr( "Selection" ));
+    _modeSelectionWidget->addTab( containerTabGroups, tr( "Groups" ));
+    _modeSelectionWidget->addTab( containerTabAttrib, tr( "Attribute" ));
 
+    _toolBoxOptions = new QToolBox( );
+    _toolBoxOptions->addItem( tSpeedGB, tr( "Playback" ));
+    _toolBoxOptions->addItem( vcContainer, tr( "Visual Config" ));
+    _toolBoxOptions->addItem( selFunctionGB, tr( "Selection" ));
+    _toolBoxOptions->addItem( objectInspectoGB, tr( "Inspector" ));
 
     verticalLayout->setAlignment( Qt::AlignTop );
 //    verticalLayout->addWidget( _groupBoxTransferFunction );
 //    verticalLayout->addWidget( _groupBoxGroups );
-    verticalLayout->addWidget( tabWidget );
-    verticalLayout->addWidget( tSpeedGB );
-    verticalLayout->addWidget( dFunctionGB );
-    verticalLayout->addWidget( rFunctionGB );
-    verticalLayout->addWidget( selFunctionGB  );
+    verticalLayout->addWidget( _modeSelectionWidget );
+    verticalLayout->addWidget( _toolBoxOptions );
+//    verticalLayout->addWidget( tSpeedGB );
+//    verticalLayout->addWidget( dFunctionGB );
+//    verticalLayout->addWidget( rFunctionGB );
+//    verticalLayout->addWidget( selFunctionGB  );
 
     topContainer->setLayout( verticalLayout );
     _simConfigurationDock->setWidget( topContainer );
@@ -797,7 +841,7 @@ namespace visimpl
   //  connect( applyColorButton, SIGNAL( clicked( void )),
   //             this, SLOT( UpdateSimulationColorMapping( void )));
 
-    connect( tabWidget, SIGNAL( currentChanged( int )),
+    connect( _modeSelectionWidget, SIGNAL( currentChanged( int )),
              _openGLWidget, SLOT( setMode( int )));
 
     connect( _openGLWidget, SIGNAL( attributeStatsComputed( void )),
@@ -1058,7 +1102,23 @@ namespace visimpl
 
   void MainWindow::updateSelectedStatsPickingSingle( unsigned int selected )
   {
-    _domainManager->pickingInfoSimple( selected );
+    auto pickingInfo = _domainManager->pickingInfoSimple( selected );
+
+    _labelGID->setText( QString::number( std::get< T_PART_GID >( pickingInfo )));
+
+    auto position = std::get< T_PART_POSITION >( pickingInfo );
+
+    QString posText = "( " + QString::number( position.x )
+                    + ", " + QString::number( position.y )
+                    + ", " + QString::number( position.z )
+                    + " )";
+
+
+
+    _labelPosition->setText( posText );
+
+    _toolBoxOptions->setCurrentIndex( ( unsigned int ) T_TOOL_Inpector );
+
   }
 
 
