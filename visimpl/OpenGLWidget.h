@@ -15,6 +15,7 @@
 #include <QLabel>
 #include <chrono>
 #include <unordered_set>
+#include <queue>
 
 #define VISIMPL_SKIP_GLEW_INCLUDE 1
 
@@ -88,8 +89,7 @@ namespace visimpl
                   const std::string& zeqUri = "" );
     ~OpenGLWidget( void );
 
-    void createParticleSystem( const tGidPosMap& gidPositions,
-                               float scale = 1.0f );
+    void createParticleSystem( const tGidPosMap& gidPositions );
     void loadData( const std::string& fileName,
                    const simil::TDataType = simil::TDataType::TBlueConfig,
                    simil::TSimulationType simulationType = simil::TSimSpikes,
@@ -105,9 +105,10 @@ namespace visimpl
     simil::SimulationPlayer* player( );
     float currentTime( void );
 
+    void setGroupVisibility( unsigned int i, bool state );
     void addGroupFromSelection( const std::string& name );
 
-    DomainManager* inputMultiplexer( void );
+    DomainManager* domainManager( void );
 
     void resetParticles( void );
 
@@ -123,9 +124,30 @@ namespace visimpl
 
     void stepCompleted( void );
 
+    void attributeStatsComputed( void );
+
+    void pickedSingle( unsigned int );
+
   public slots:
 
-    void togglePaintNeurons( void );
+    void home( void );
+    void updateCameraBoundingBox( bool setBoundingBox = false );
+
+    void setMode( int mode );
+    void showInactive( bool state );
+
+    void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
+    void clearSelection( void );
+
+    void setUpdateSelection( void );
+    void setUpdateGroups( void );
+    void setUpdateAttributes( void );
+
+    void selectAttrib( int newAttrib );
+
+    void showEventsActivityLabels( bool show );
+
+    void toggleShowUnselected( void );
     void changeClearColor( void );
     void toggleUpdateOnIdle( void );
     void toggleShowFPS( void );
@@ -159,24 +181,37 @@ namespace visimpl
     void changeSimulationDecayValue( float value );
     float getSimulationDecayValue( void );
 
-    void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
-    void showSelection( bool );
-
-    void setUpdateSelection( void );
-    void setUpdateGroups( void );
-
-    void updateSelection( void );
-    void clearSelection( void );
-
-
-    void modeChange( void );
-    void updateGroups( void );
-
-    void showEventsActivityLabels( bool show );
-
-    void updateCameraBoundingBox( void );
-
   protected:
+
+    void _resolveFlagsOperations( void );
+
+    void _updateParticles( float renderDelta );
+    void _paintParticles( void );
+
+    void _focusOn( const tBoundingBox& boundingBox );
+
+    void _pickSingle( void );
+
+    void _backtraceSimulation( void );
+
+    void _configureSimulationFrame( void );
+    void _configureStepByStepFrame( double elapsedRenderTimeMilliseconds );
+
+    void _configurePreviousStep( void );
+    void _configureStepByStep( void );
+
+    void _modeChange( void );
+    void _attributeChange( void );
+
+    void _updateSelection( void );
+    void _updateGroups( void );
+    void _updateGroupsVisibility( void );
+    void _updateAttributes( void );
+
+    void _createEventLabels( void );
+    void _updateEventLabelsVisibility( void );
+
+    std::vector< bool > _activeEventsAt( float time );
 
     virtual void initializeGL( void );
     virtual void paintGL( void );
@@ -188,23 +223,10 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
-    void configurePreviousStep( void );
-    void configureStepByStep( void );
-
-    void backtraceSimulation( void );
-
-    void configureSimulationFrame( void );
-    void configureStepByStepFrame( double elapsedRenderTimeMilliseconds );
-
-    void updateParticles( float renderDelta );
-    void paintParticles( void );
-
-    void createEventLabels( void );
-    void updateEventLabelsVisibility( void );
-
-    std::vector< bool > activeEventsAt( float time );
 
     std::unordered_set< uint32_t > _selectedGIDs;
+
+    std::queue< std::pair< unsigned int, bool >> _pendingGroupStateChanges;
 
   #ifdef VISIMPL_USE_ZEROEQ
 
@@ -217,7 +239,7 @@ namespace visimpl
 
     bool _wireframe;
 
-    reto::Camera* _camera;
+    Camera* _camera;
     glm::vec3 _lastCameraPosition;
 
 //    glm::vec3 _boundingBoxMin;
@@ -239,12 +261,15 @@ namespace visimpl
     bool _paint;
 
     QColor _currentClearColor;
+    float _particleRadiusThreshold;
 
     std::chrono::time_point< std::chrono::system_clock > _then;
     std::chrono::time_point< std::chrono::system_clock > _lastFrame;
 
-    reto::ShaderProgram* _particlesShader;
+    reto::ShaderProgram* _shaderParticles;
+    prefr::RenderProgram* _shaderPicking;
     prefr::ParticleSystem* _particleSystem;
+    prefr::GLPickRenderer* _pickRenderer;
 
     simil::TSimulationType _simulationType;
     simil::SpikesPlayer* _player;
@@ -290,12 +315,18 @@ namespace visimpl
     bool _alphaBlendingAccumulative;
     bool _showSelection;
 
-    bool _resetParticles;
-    bool _updateSelection;
-    bool _updateGroups;
+    bool _flagResetParticles;
+    bool _flagUpdateSelection;
+    bool _flagUpdateGroups;
+    bool _flagUpdateAttributes;
+    bool _flagPickingSingle;
 
-    bool _modeChange;
+    bool _flagModeChange;
     tVisualMode _newMode;
+
+    bool _flagAttribChange;
+    tNeuronAttributes _newAttrib;
+    tNeuronAttributes _currentAttrib;
 
     bool _showActiveEvents;
     simil::SubsetEventManager* _subsetEvents;
@@ -305,10 +336,15 @@ namespace visimpl
     float _deltaEvents;
 
     DomainManager* _domainManager;
+    tBoundingBox _boundingBoxHome;
 
     scoop::ColorPalette _colorPalette;
+
+    QPoint _pickingPosition;
+    unsigned int _selectedPickingSingle;
   };
 
 } // namespace visimpl
 
 #endif // __VISIMPL__OPENGLWIDGET__
+

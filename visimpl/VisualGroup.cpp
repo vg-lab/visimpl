@@ -25,6 +25,7 @@ namespace visimpl
   , _active( false )
   , _cached( false )
   , _dirty( false )
+  , _custom( false )
   { }
 
   VisualGroup::VisualGroup( const std::string& name )
@@ -36,6 +37,7 @@ namespace visimpl
   , _active( false )
   , _cached( false )
   , _dirty( false )
+  , _custom( false )
   { }
 
   VisualGroup::~VisualGroup( )
@@ -108,6 +110,16 @@ namespace visimpl
     return _dirty;
   }
 
+  void VisualGroup::custom( bool state )
+  {
+    _custom = state;
+  }
+
+  bool VisualGroup::custom( void ) const
+  {
+    return _custom;
+  }
+
   void VisualGroup::cluster( prefr::Cluster* cluster_ )
   {
     assert( cluster_ );
@@ -158,6 +170,11 @@ namespace visimpl
     return _source;
   }
 
+  QColor VisualGroup::color( void ) const
+  {
+    return _color;
+  }
+
   void VisualGroup::colorMapping( const TTransferFunction& colors )
    {
 
@@ -173,6 +190,7 @@ namespace visimpl
        gcolors.Insert( c.first, gColor );
      }
 
+     _color = colors[ 0 ].second;
      _model->color = gcolors;
 
    }

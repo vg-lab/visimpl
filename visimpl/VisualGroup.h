@@ -34,6 +34,8 @@ namespace visimpl
     void gids( const GIDUSet& gids_ );
     const GIDUSet& gids( void ) const;
 
+    QColor color( void ) const;
+
     void colorMapping( const TTransferFunction& colors );
     TTransferFunction colorMapping( void ) const;
 
@@ -58,6 +60,8 @@ namespace visimpl
     void dirty( bool state );
     bool dirty( void ) const;
 
+    void custom( bool state );
+    bool custom( void ) const;
 
   protected:
 
@@ -72,9 +76,13 @@ namespace visimpl
     prefr::Model* _model;
     SourceMultiPosition* _source;
 
+    QColor _color;
+
     bool _active;
     bool _cached;
     bool _dirty;
+
+    bool _custom;
   };
 
 

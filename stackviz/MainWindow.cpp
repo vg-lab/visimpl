@@ -58,6 +58,7 @@ namespace stackviz
   , _simulationType( simil::TSimNetwork )
   , _summary( nullptr )
   , _player( nullptr )
+  , _data( nullptr )
   , _autoAddAvailableSubsets( true )
   , _autoCalculateCorrelations( false )
   , _simulationDock( nullptr )

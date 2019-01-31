@@ -29,28 +29,37 @@ namespace visimpl
   {
     TMODE_SELECTION = 0,
     TMODE_GROUPS,
-    TMODE_ATTRIBUTE
+    TMODE_ATTRIBUTE,
+    TMODE_UNDEFINED
   };
 
   class DomainManager
   {
   public:
 
-    DomainManager( prefr::ParticleSystem* particleSystem,
-                      const TGIDSet& gids );
+    DomainManager( prefr::ParticleSystem* particleSystem, const TGIDSet& gids );
+
     ~DomainManager( );
 
+
+#ifdef SIMIL_USE_BRION
+    void init( const tGidPosMap& positions, const brion::BlueConfig* blueConfig );
+#else
     void init( const tGidPosMap& positions );
+#endif
+
 
     void initializeParticleSystem( void );
 
-    VisualGroup* addVisualGroup( const GIDUSet& group_,
-                                 const std::string& name,
+    VisualGroup* addVisualGroup( const GIDUSet& group_, const std::string& name,
                                  bool overrideGIDs = false );
-
-    void setVisualGroupState( unsigned int i, bool state );
-
+    void setVisualGroupState( unsigned int i, bool state, bool attrib = false );
     void removeVisualGroup( unsigned int i );
+
+    void showInactive( bool state );
+
+
+    void generateAttributesGroups( tNeuronAttributes attrib );
 
     void processInput( const simil::SpikesCRange& spikes_,
                        float begin, float end, bool clear );
@@ -62,9 +71,9 @@ namespace visimpl
 
     void clearView( void );
 
-//    void showGroups( bool show );
     bool showGroups( void );
     void updateGroups( void );
+    void updateAttributes( void );
 
     void selection( const GIDUSet& newSelection );
     const GIDUSet& selection( void );
@@ -72,16 +81,32 @@ namespace visimpl
     void decay( float decayValue );
     float decay( void ) const;
 
-//    std::vector< prefr::Cluster* > activeClusters( void );
-
     void clearSelection( void );
     void resetParticles( void );
 
     const std::vector< VisualGroup* >& groups( void ) const;
+    const std::vector< VisualGroup* >& attributeGroups( void ) const;
+
 
     tBoundingBox boundingBox( void ) const;
 
     prefr::ColorOperationModel* modelSelectionBase( void );
+
+    const std::vector< std::pair< QColor, QColor >>& paletteColors( void ) const;
+
+    // Statistics
+    const std::vector< std::string >& namesMorpho( void ) const;
+    const std::vector< std::string >& namesFunction( void ) const;
+
+    const std::vector< long unsigned int >& attributeValues( int attribNumber ) const;
+    Strings attributeNames( int attribNumber, bool labels = false ) const;
+
+    tAppStats attributeStatistics( void ) const;
+
+    tParticleInfo pickingInfoSimple( unsigned int particleId ) const;
+
+    void highlightElements( const std::unordered_set< unsigned int >& highlighted );
+    void clearHighlighting( void );
 
   protected:
 
@@ -90,16 +115,25 @@ namespace visimpl
     TModifiedNeurons _parseInput( const simil::SpikesCRange& spikes_,
                                  float begin, float end );
 
+
+    VisualGroup* _generateGroup( const GIDUSet& gids, const std::string& name,
+                                 unsigned int idx ) const;
+
     void _updateGroupsModels( void );
     void _generateGroupsIndices( void );
 
     void _updateSelectionIndices( void );
     void _generateSelectionIndices( void );
 
-    void _processFrameInputGroups( const simil::SpikesCRange& spikes_,
-                                  float begin, float end );
+    void _updateAttributesIndices( void );
+    void _generateAttributesIndices( void );
+
     void _processFrameInputSelection( const simil::SpikesCRange& spikes_,
-                                     float begin, float end );
+                                      float begin, float end );
+    void _processFrameInputGroups( const simil::SpikesCRange& spikes_,
+                                   float begin, float end );
+    void _processFrameInputAttributes( const simil::SpikesCRange& spikes_,
+                                       float begin, float end );
 
     void _loadPaletteColors( void );
 
@@ -107,12 +141,19 @@ namespace visimpl
     void _clearGroupsView( void );
     void _clearAttribView( void );
 
+    void _clearGroups( void );
+    void _clearAttribs( bool clearCustom = true );
+
     void _clearGroup( VisualGroup* group, bool clearState = true );
     void _clearParticlesReference( void );
 
     void _resetBoundingBox( void );
 
-    SourceMultiPosition* getSource( unsigned int numParticles );
+    SourceMultiPosition* _getSource( unsigned int numParticles );
+
+#ifdef SIMIL_USE_BRION
+    tNeuronAttribs _loadNeuronTypes( const brion::BlueConfig& blueConfig );
+#endif
 
     prefr::ParticleSystem* _particleSystem;
 
@@ -122,28 +163,28 @@ namespace visimpl
 
     prefr::Cluster* _clusterSelected;
     prefr::Cluster* _clusterUnselected;
+    prefr::Cluster* _clusterHighlighted;
 
     SourceMultiPosition* _sourceSelected;
-//    SourceMultiPosition* _sourceUnselected;
 
     std::vector< VisualGroup* > _groups;
+    std::vector< VisualGroup* > _attributeGroups;
+    tNeuronAttributes _currentAttrib;
 
     std::unordered_map< uint32_t, VisualGroup* > _neuronGroup;
 
     std::unordered_map< unsigned int, SourceMultiPosition* > _gidSource;
-//    std::unordered_map< uint32_t, prefr::Cluster* > _neuronClusters;
-//    std::unordered_map< prefr::Cluster*, uint32_t > _clusterNeurons;
 
     std::unordered_map< unsigned int, unsigned int > _gidToParticle;
     std::unordered_map< unsigned int, unsigned int > _particleToGID;
 
     prefr::ColorOperationModel* _modelBase;
     prefr::ColorOperationModel* _modelOff;
+    prefr::ColorOperationModel* _modelHighlighted;
 
     prefr::PointSampler* _sampler;
     prefr::Updater* _updater;
 
-//    bool _showGroups;
     tVisualMode _mode;
 
     GIDUSet _selection;
@@ -155,6 +196,34 @@ namespace visimpl
     tBoundingBox _boundingBox;
 
     std::vector< std::pair< QColor, QColor >> _paletteColors;
+
+    // Statistics
+    bool _groupByName;
+    bool _autoGroupByName;
+
+    tNeuronAttribs _gidTypes;
+
+
+    std::vector< std::string > _namesTypesMorpho;
+    std::vector< std::string > _namesTypesFunction;
+
+    std::vector< std::string > _namesTypesMorphoGrouped;
+    std::vector< std::string > _namesTypesFunctionGrouped;
+
+    std::vector< long unsigned int > _typesMorpho;
+    std::vector< long unsigned int > _typesFunction;
+
+    tUintUMap _typeToIdxMorpho;
+    tUintUMap _typeToIdxFunction;
+
+    tUintUMultimap _idxToTypeMorpho;
+    tUintUMultimap _idxToTypeFunction;
+
+    tUintUMap _statsMorpho;
+    tUintUMap _statsFunction;
+
+    std::unordered_map< std::string, unsigned int > _namesIdxMorpho;
+    std::unordered_map< std::string, unsigned int > _namesIdxFunction;
   };
 
 
