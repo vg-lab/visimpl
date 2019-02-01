@@ -101,6 +101,8 @@ void main()
 
 const static std::string prefrFragmentShaderPicking = R"(#version 330
 
+uniform float radiusThreshold;
+
 in vec4 color;
 in vec2 uvCoord;
 in float id;
@@ -118,6 +120,14 @@ vec3 unpackColor( float f )
 
 void main( )
 { 
+
+  vec2 p = -1.0 + 2.0 * uvCoord;
+  float l = sqrt(dot(p,p));
+  l = clamp(l, 0.0, 1.0);
+
+  if( l > radiusThreshold )
+    discard;
+
   vec3 cc = unpackColor(id);
   outputColor = vec4(cc, 1.0);
 })";
