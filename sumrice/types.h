@@ -69,6 +69,7 @@ namespace visimpl
 
     std::vector< QPainterPath > _cachedCustomSolidRep;
     std::vector< QPainterPath > _cachedCustomTransRep;
+    std::vector< QPainterPath > _cachedCustomHistoRep;
     std::vector< QPainterPath > _cachedCommonRep;
   };
 

@@ -146,7 +146,7 @@ namespace stackviz
     bool _autoCalculateCorrelations;
 
     // Playback Control
-    QDockWidget* _simulationDock;
+    QDockWidget* _dockSimulation;
     QPushButton* _playButton;
     CustomSlider* _simSlider;
     QPushButton* _repeatButton;

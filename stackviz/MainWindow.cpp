@@ -61,7 +61,7 @@ namespace stackviz
   , _data( nullptr )
   , _autoAddAvailableSubsets( true )
   , _autoCalculateCorrelations( false )
-  , _simulationDock( nullptr )
+  , _dockSimulation( nullptr )
   , _playButton( nullptr )
   , _simSlider( nullptr )
   , _repeatButton( nullptr )
@@ -113,7 +113,7 @@ namespace stackviz
 
     initPlaybackDock( );
 
-    connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool )),
+    connect( _dockSimulation->toggleViewAction( ), SIGNAL( toggled( bool )),
                _ui->actionTogglePlaybackDock, SLOT( setChecked( bool )));
 
     connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( )),
@@ -125,6 +125,8 @@ namespace stackviz
     #ifdef VISIMPL_USE_ZEROEQ
 
     _setZeqUri( zeqUri );
+
+    _ui->actionTogglePlaybackDock->setChecked( true );
 
     #endif
 
@@ -355,9 +357,9 @@ namespace stackviz
   void MainWindow::togglePlaybackDock( void )
   {
     if( _ui->actionTogglePlaybackDock->isChecked( ))
-      _simulationDock->show( );
+      _dockSimulation->show( );
     else
-      _simulationDock->close( );
+      _dockSimulation->close( );
 
 
     update( );
@@ -435,9 +437,9 @@ namespace stackviz
 
   void MainWindow::initPlaybackDock( )
   {
-    _simulationDock = new QDockWidget( );
-    _simulationDock->setMinimumHeight( 100 );
-    _simulationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
+    _dockSimulation = new QDockWidget( );
+    _dockSimulation->setMinimumHeight( 100 );
+    _dockSimulation->setSizePolicy( QSizePolicy::MinimumExpanding,
                                     QSizePolicy::MinimumExpanding );
 
     _playing = false;
@@ -535,9 +537,15 @@ namespace stackviz
     connect( _goToButton, SIGNAL( clicked( )),
              this, SLOT( playAtButtonClicked( )));
 
-    _simulationDock->setWidget( content );
+    _dockSimulation->setWidget( content );
     this->addDockWidget( Qt::BottomDockWidgetArea,
-                         _simulationDock );
+                         _dockSimulation );
+
+#ifdef VISIMPL_USE_ZEROEQ
+
+#else
+
+#endif
   }
 
 

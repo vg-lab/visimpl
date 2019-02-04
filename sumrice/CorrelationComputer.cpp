@@ -400,7 +400,8 @@ namespace visimpl
       if( res == _correlations.end( ))
       {
         auto correlation =
-            std::move( computeCorrelation( subsetName, eventName, initTime, endTime, deltaTime, selectionThreshold ));
+            computeCorrelation( subsetName, eventName, initTime, endTime,
+                                deltaTime, selectionThreshold );
 
         correlation.fullName = composedNames[ i ];
 
