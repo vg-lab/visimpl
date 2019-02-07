@@ -59,6 +59,7 @@
     <addaction name="actionShowAttributeMapping"/>
     <addaction name="separator"/>
     <addaction name="actionShowInactive"/>
+    <addaction name="actionShowCurrentTime"/>
     <addaction name="actionShowEventsActivity"/>
     <addaction name="separator"/>
     <addaction name="actionUpdateOnIdle"/>
@@ -336,6 +337,23 @@
    </property>
    <property name="visible">
     <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionShowCurrentTime">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Current Simulation Time</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the current simulation time value</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
    </property>
   </action>
  </widget>

@@ -146,14 +146,17 @@ namespace visimpl
 //      _splitVertCentralFoot = new QSplitter( Qt::Vertical, this );
 //      _splitVertCentralFoot->addWidget( )
 
-      _splitVertEventsHisto = new QSplitter( Qt::Vertical, this );
-      _splitVertEventsHisto->addWidget( _splitHorizEvents );
-      _splitVertEventsHisto->addWidget( _splitHorizHisto );
-      _splitVertEventsHisto->addWidget( footWidget );
+      if( _stackType == T_STACK_EXPANDABLE )
+      {
+        _splitVertEventsHisto = new QSplitter( Qt::Vertical, this );
+        _splitVertEventsHisto->addWidget( _splitHorizEvents );
+        _splitVertEventsHisto->addWidget( _splitHorizHisto );
+        _splitVertEventsHisto->addWidget( footWidget );
 
-      _splitVertEventsHisto->setSizes( { 1000, 1000, 1000 } );
+        _splitVertEventsHisto->setSizes( { 1000, 1000, 1000 } );
 
-      _layoutMain->addWidget(_splitVertEventsHisto );
+        _layoutMain->addWidget(_splitVertEventsHisto );
+      }
 //      _layoutMain->addWidget( foot );
 
       this->setLayout( _layoutMain );

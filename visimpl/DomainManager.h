@@ -175,8 +175,8 @@ namespace visimpl
 
     std::unordered_map< unsigned int, SourceMultiPosition* > _gidSource;
 
-    std::unordered_map< unsigned int, unsigned int > _gidToParticle;
-    std::unordered_map< unsigned int, unsigned int > _particleToGID;
+    tUintUMap _gidToParticle;
+    tUintUMap _particleToGID;
 
     prefr::ColorOperationModel* _modelBase;
     prefr::ColorOperationModel* _modelOff;

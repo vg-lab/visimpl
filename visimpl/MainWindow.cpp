@@ -144,6 +144,9 @@ namespace visimpl
     connect( _ui->actionShowEventsActivity, SIGNAL( triggered( bool )),
              _openGLWidget, SLOT( showEventsActivityLabels( bool )));
 
+    connect( _ui->actionShowCurrentTime, SIGNAL( triggered( bool )),
+             _openGLWidget, SLOT( showCurrentTimeLabel( bool )));
+
     connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
              this, SLOT( openBlueConfigThroughDialog( )));
 
@@ -163,6 +166,12 @@ namespace visimpl
 
     connect( _openGLWidget, SIGNAL( pickedSingle( unsigned int )),
              this, SLOT( updateSelectedStatsPickingSingle( unsigned int )));
+
+    QAction* actionTogglePause = new QAction(this);
+    actionTogglePause->setShortcut( Qt::Key_Space );
+
+    connect( actionTogglePause, SIGNAL( triggered( )), this, SLOT( PlayPause( )));
+    addAction( actionTogglePause );
 
 
   #ifdef VISIMPL_USE_ZEROEQ
@@ -671,6 +680,16 @@ namespace visimpl
     tSpeedGB->setLayout( sfLayout );
 //    tSpeedGB->setMaximumHeight( 200 );
 
+    QComboBox* comboShader = new QComboBox( );
+    comboShader->addItems( { "Default", "Solid" });
+    comboShader->setCurrentIndex( 0 );
+
+    QGroupBox* shaderGB = new QGroupBox( "Shader Configuration" );
+    QHBoxLayout* shaderLayout = new QHBoxLayout( );
+    shaderLayout->addWidget( new QLabel( "Current shader: "));
+    shaderLayout->addWidget( comboShader );
+    shaderGB->setLayout( shaderLayout );
+
     QGroupBox* dFunctionGB = new QGroupBox( "Decay function" );
     QHBoxLayout* dfLayout = new QHBoxLayout( );
     dfLayout->setAlignment( Qt::AlignTop );
@@ -688,9 +707,11 @@ namespace visimpl
     rFunctionGB->setLayout( rfLayout );
 //    rFunctionGB->setMaximumHeight( 200 );
 
+    // Visual Configuration Container
     QWidget* vcContainer = new QWidget( );
     QVBoxLayout* vcLayout = new QVBoxLayout( );
     vcLayout->setAlignment( Qt::AlignTop );
+    vcLayout->addWidget( shaderGB );
     vcLayout->addWidget( dFunctionGB );
     vcLayout->addWidget( rFunctionGB );
     vcContainer->setLayout( vcLayout );
@@ -817,8 +838,8 @@ namespace visimpl
     _modeSelectionWidget->addTab( containerTabAttrib, tr( "Attribute" ));
 
     _toolBoxOptions = new QToolBox( );
-    _toolBoxOptions->addItem( tSpeedGB, tr( "Playback" ));
-    _toolBoxOptions->addItem( vcContainer, tr( "Visual Config" ));
+    _toolBoxOptions->addItem( tSpeedGB, tr( "Playback Configuration" ));
+    _toolBoxOptions->addItem( vcContainer, tr( "Visual Configuration" ));
     _toolBoxOptions->addItem( selFunctionGB, tr( "Selection" ));
     _toolBoxOptions->addItem( objectInspectoGB, tr( "Inspector" ));
 
@@ -849,6 +870,9 @@ namespace visimpl
 
     connect( _comboAttribSelection, SIGNAL( currentIndexChanged( int )),
              _openGLWidget, SLOT( selectAttrib( int )));
+
+    connect( comboShader, SIGNAL( currentIndexChanged( int )),
+             _openGLWidget, SLOT( changeShader( int )));
 
     connect( _tfWidget, SIGNAL( colorChanged( void )),
              this, SLOT( UpdateSimulationColorMapping( void )));

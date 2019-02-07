@@ -136,6 +136,8 @@ namespace visimpl
     void setMode( int mode );
     void showInactive( bool state );
 
+    void changeShader( int i );
+
     void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
     void clearSelection( void );
 
@@ -146,6 +148,8 @@ namespace visimpl
     void selectAttrib( int newAttrib );
 
     void showEventsActivityLabels( bool show );
+    void showCurrentTimeLabel( bool show );
+
 
     void toggleShowUnselected( void );
     void changeClearColor( void );
@@ -189,6 +193,8 @@ namespace visimpl
     void _paintParticles( void );
 
     void _focusOn( const tBoundingBox& boundingBox );
+
+    void _setShaderParticles( void );
 
     void _pickSingle( void );
 
@@ -235,7 +241,9 @@ namespace visimpl
   #endif
 
     QLabel* _fpsLabel;
+    QLabel* _labelCurrentTime;
     bool _showFps;
+    bool _showCurrentTime;
 
     bool _wireframe;
 
@@ -266,8 +274,12 @@ namespace visimpl
     std::chrono::time_point< std::chrono::system_clock > _then;
     std::chrono::time_point< std::chrono::system_clock > _lastFrame;
 
-    reto::ShaderProgram* _shaderParticles;
+    tShaderParticlesType _currentShader;
+    reto::ShaderProgram* _shaderParticlesCurrent;
+    reto::ShaderProgram* _shaderParticlesDefault;
+    reto::ShaderProgram* _shaderParticlesSolid;
     prefr::RenderProgram* _shaderPicking;
+
     prefr::ParticleSystem* _particleSystem;
     prefr::GLPickRenderer* _pickRenderer;
 
@@ -320,6 +332,7 @@ namespace visimpl
     bool _flagUpdateGroups;
     bool _flagUpdateAttributes;
     bool _flagPickingSingle;
+    bool _flagChangeShader;
 
     bool _flagModeChange;
     tVisualMode _newMode;
