@@ -548,7 +548,10 @@ namespace visimpl
       unsigned int shader;
       shader = _shaderParticlesCurrent->program( );
 
-      unsigned int uModelViewProjM, cameraUp, cameraRight, particleRadius;
+      unsigned int uModelViewProjM;
+      unsigned int cameraUp;
+      unsigned int cameraRight;
+      unsigned int particleRadius;
 
       uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
       glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
@@ -959,6 +962,13 @@ namespace visimpl
 
   void OpenGLWidget::_pickSingle( void )
   {
+
+    _shaderPicking->use( );
+    unsigned int shader = _shaderPicking->program( );
+
+    unsigned int particleRadius =
+        glGetUniformLocation( shader, "radiusThreshold" );
+    glUniform1f( particleRadius, _particleRadiusThreshold );
 
     auto result =
         _pickRenderer->pick( _pickingPosition.x( ), _pickingPosition.y( ));
