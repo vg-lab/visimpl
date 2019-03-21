@@ -34,6 +34,8 @@ namespace visimpl
     void name( const std::string& name_ );
     const std::string& name( void ) const;
 
+    void updateCommonRepSizeVert( unsigned int newHeight );
+
   protected:
 
     virtual void resizeEvent( QResizeEvent* event );

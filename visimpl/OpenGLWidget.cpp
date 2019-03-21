@@ -53,7 +53,9 @@ namespace visimpl
   , _zeqUri( zeqUri )
   #endif
   , _fpsLabel( nullptr )
+  , _labelCurrentTime( nullptr )
   , _showFps( false )
+  , _showCurrentTime( true )
   , _wireframe( false )
   , _camera( nullptr )
   , _lastCameraPosition( 0, 0, 0)
@@ -70,7 +72,10 @@ namespace visimpl
   , _paint( false )
   , _currentClearColor( 20, 20, 20, 0 )
   , _particleRadiusThreshold( 0.8 )
-  , _shaderParticles( nullptr )
+  , _currentShader( T_SHADER_UNDEFINED )
+  , _shaderParticlesCurrent( nullptr )
+  , _shaderParticlesDefault( nullptr )
+  , _shaderParticlesSolid( nullptr )
   , _shaderPicking( nullptr )
   , _particleSystem( nullptr )
   , _pickRenderer( nullptr )
@@ -106,6 +111,7 @@ namespace visimpl
   , _flagUpdateGroups( false )
   , _flagUpdateAttributes( false )
   , _flagPickingSingle( false )
+  , _flagChangeShader( false )
   , _flagModeChange( false )
   , _newMode( TMODE_UNDEFINED )
   , _flagAttribChange( false )
@@ -148,12 +154,22 @@ namespace visimpl
     _fpsLabel->setVisible( _showFps );
     _fpsLabel->setMaximumSize( 100, 50 );
 
+    _labelCurrentTime = new QLabel( );
+    _labelCurrentTime->setStyleSheet(
+          "QLabel { background-color : #333;"
+          "color : white;"
+          "padding: 3px;"
+          "margin: 10px;"
+          " border-radius: 10px;}" );
+    _labelCurrentTime->setVisible( _showCurrentTime );
+    _labelCurrentTime->setMaximumSize( 100, 50 );
 
     _eventLabelsLayout = new QGridLayout( );
     _eventLabelsLayout->setAlignment( Qt::AlignTop );
     _eventLabelsLayout->setMargin( 0 );
     setLayout( _eventLabelsLayout );
-    _eventLabelsLayout->addWidget( _fpsLabel, 0, 0, 1, 9 );
+    _eventLabelsLayout->addWidget( _labelCurrentTime, 0, 0, 1, 9 );
+    _eventLabelsLayout->addWidget( _fpsLabel, 1, 0, 1, 9 );
 
     _colorPalette =
         scoop::ColorPalette::colorBrewerQualitative(
@@ -163,7 +179,7 @@ namespace visimpl
     this->setFocusPolicy( Qt::WheelFocus );
 
 
-
+//    new QShortcut( QKeySequence( Qt::Key_Space ), this, SLOT( pressedPlayPause( )));
 
   //  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Minus ),
   //                 this, SLOT( reducePlaybackSpeed( ) ));
@@ -177,8 +193,14 @@ namespace visimpl
   {
     delete _camera;
 
-    if( _shaderParticles )
-      delete _shaderParticles;
+    if( _shaderParticlesDefault )
+      delete _shaderParticlesDefault;
+
+    if( _shaderParticlesSolid )
+      delete _shaderParticlesSolid;
+
+    if( _shaderPicking )
+      delete _shaderPicking;
 
     if( _particleSystem )
       delete _particleSystem;
@@ -310,7 +332,7 @@ namespace visimpl
   {
     if( !_player || !_particleSystem->run( ))
       return;
-//TODO
+
     _sbsBeginTime = _sbsFirstStep ?
                     _player->currentTime( ):
                     _sbsPlaying ? _sbsBeginTime : _sbsEndTime;
@@ -411,17 +433,39 @@ namespace visimpl
       _domainManager->processInput( context, startTime, endTime, true );
   }
 
+  void OpenGLWidget::changeShader( int shaderIndex )
+  {
+    if( shaderIndex < 0 || shaderIndex >= ( int ) T_SHADER_UNDEFINED )
+      return;
 
-//  void expandBoundingBox( glm::vec3& minBounds,
-//                          glm::vec3& maxBounds,
-//                          const glm::vec3& position)
-//  {
-//    for( unsigned int i = 0; i < 3; ++i )
-//    {
-//      minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
-//      maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
-//    }
-//  }
+    _currentShader = ( tShaderParticlesType ) shaderIndex;
+    _flagChangeShader = true;
+  }
+
+  void OpenGLWidget::_setShaderParticles( void )
+  {
+    if( _currentShader == T_SHADER_UNDEFINED )
+      return;
+
+    switch( _currentShader )
+    {
+      case T_SHADER_DEFAULT:
+
+        _shaderParticlesCurrent = _shaderParticlesDefault;
+
+        break;
+
+      case T_SHADER_SOLID:
+
+        _shaderParticlesCurrent = _shaderParticlesSolid;
+
+        break;
+
+      default:
+
+        break;
+    }
+  }
 
   void OpenGLWidget::createParticleSystem( const tGidPosMap& gidPositions )
   {
@@ -429,11 +473,22 @@ namespace visimpl
     prefr::Config::init( );
 
     // Initialize shader
-    _shaderParticles = new reto::ShaderProgram( );
-    _shaderParticles->loadVertexShaderFromText( prefr::prefrVertexShader );
-    _shaderParticles->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
-    _shaderParticles->create( );
-    _shaderParticles->link( );
+    _shaderParticlesDefault = new reto::ShaderProgram( );
+    _shaderParticlesDefault->loadVertexShaderFromText( prefr::prefrVertexShader );
+    _shaderParticlesDefault->loadFragmentShaderFromText( prefr::prefrFragmentShaderDefault );
+    _shaderParticlesDefault->create( );
+    _shaderParticlesDefault->link( );
+
+    _shaderParticlesCurrent = _shaderParticlesDefault;
+    _currentShader = T_SHADER_DEFAULT;
+
+    // Initialize shader
+    _shaderParticlesSolid = new reto::ShaderProgram( );
+    _shaderParticlesSolid->loadVertexShaderFromText( prefr::prefrVertexShader );
+    _shaderParticlesSolid->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
+    _shaderParticlesSolid->create( );
+    _shaderParticlesSolid->link( );
+
 
     _shaderPicking = new prefr::RenderProgram( );
     _shaderPicking->loadVertexShaderFromText( prefr::prefrVertexShaderPicking );
@@ -487,11 +542,11 @@ namespace visimpl
 
       glFrontFace(GL_CCW);
 
-      _shaderParticles->use( );
+      _shaderParticlesCurrent->use( );
           // unsigned int shader;
           // shader = _particlesShader->getID();
       unsigned int shader;
-      shader = _shaderParticles->program( );
+      shader = _shaderParticlesCurrent->program( );
 
       unsigned int uModelViewProjM;
       unsigned int cameraUp;
@@ -525,12 +580,15 @@ namespace visimpl
       _particleSystem->updateRender( );
       _particleSystem->render( );
 
-      _shaderParticles->unuse( );
+      _shaderParticlesCurrent->unuse( );
 
     }
 
   void OpenGLWidget::_resolveFlagsOperations( void )
   {
+    if( _flagChangeShader )
+      _setShaderParticles( );
+
     if( _flagModeChange )
       _modeChange( );
 
@@ -644,7 +702,8 @@ namespace visimpl
 
               _updateParticles( renderDelta );
               _elapsedTimeRenderAcc = 0.0f;
-            }
+            } // elapsed > render period
+
           } // if player && player->isPlayint
           _paintParticles( );
 
@@ -669,7 +728,15 @@ namespace visimpl
     #endif
 
         emit updateSlider( _player->GetRelativeTime( ));
+
+
+        if( _showCurrentTime )
+        {
+          _labelCurrentTime->setText( tr( "t=") + QString::number( _player->currentTime( )));
+        }
       }
+
+
 
 
       #define FRAMES_PAINTED_TO_MEASURE_FPS 10
@@ -932,6 +999,11 @@ namespace visimpl
     }
   }
 
+  void OpenGLWidget::showCurrentTimeLabel( bool show )
+  {
+    _labelCurrentTime->setVisible( show );
+    _labelCurrentTime->update( );
+  }
 
   void OpenGLWidget::_updateParticles( float renderDelta )
   {

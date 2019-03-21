@@ -50,6 +50,8 @@ namespace visimpl
   , _pixelsPerCharacter( 10 )
   , _pixelMargin( 5 )
   , _events( nullptr )
+  , _autoBuildHistogram( true )
+  , _autoCalculateColors( true )
   {
 //    init( );
   }
@@ -85,6 +87,8 @@ namespace visimpl
   , _pixelsPerCharacter( 8 )
   , _pixelMargin( 5 )
   , _events( nullptr )
+  , _autoBuildHistogram( true )
+  , _autoCalculateColors( true )
   {
 //    init( );
   }
@@ -117,6 +121,8 @@ namespace visimpl
   , _pixelsPerCharacter( 8 )
   , _pixelMargin( 5 )
   , _events( nullptr )
+  , _autoBuildHistogram( true )
+  , _autoCalculateColors( true )
   {
 //    init( );
   }
@@ -148,6 +154,18 @@ namespace visimpl
 
     _paintRegion = false;
     setMouseTracking( true );
+  }
+
+  bool HistogramWidget::empty( void ) const
+  {
+    return ( _mainHistogram._maxValueHistogramLocal == 0  ||
+              _mainHistogram._maxValueHistogramGlobal == 0 );
+  }
+
+  void HistogramWidget::Update( THistogram histogramNumber )
+  {
+    BuildHistogram( histogramNumber );
+    CalculateColors( histogramNumber );
   }
 
   void HistogramWidget::BuildHistogram( THistogram histogramNumber )
@@ -247,8 +265,6 @@ namespace visimpl
         }
       }
     }
-
-    CalculateColors( histogramNumber );
 
   }
 
@@ -417,7 +433,11 @@ namespace visimpl
     _mainHistogram._maxValueHistogramLocal = 0;
     _mainHistogram._maxValueHistogramGlobal = 0;
 
-    BuildHistogram( T_HIST_MAIN );
+    if( _autoBuildHistogram )
+      BuildHistogram( T_HIST_MAIN );
+
+    if( _autoCalculateColors )
+      CalculateColors( T_HIST_MAIN );
 
     unsigned int focusBins = _bins * _zoomFactor;
 
@@ -426,7 +446,11 @@ namespace visimpl
     _focusHistogram._maxValueHistogramLocal = 0;
     _focusHistogram._maxValueHistogramGlobal = 0;
 
-    BuildHistogram( T_HIST_FOCUS );
+    if( _autoBuildHistogram )
+      BuildHistogram( T_HIST_FOCUS );
+
+    if( _autoCalculateColors )
+      CalculateColors( T_HIST_FOCUS );
   }
 
   unsigned int HistogramWidget::bins( void ) const
@@ -672,6 +696,11 @@ namespace visimpl
     return _focusHistogram[ position ];
   }
 
+  float HistogramWidget::timeAt( float percentage )
+  {
+    return ( _endTime - _startTime ) * percentage + _startTime;
+  }
+
   bool HistogramWidget::isInitialized( void )
   {
     return _mainHistogram._gradientStops.size( ) > 0 ||
@@ -859,6 +888,11 @@ namespace visimpl
         localColor.setAlpha( 100 );
 
         painter.setBrush( Qt::NoBrush );
+        painter.setPen( QPen( Qt::black, Qt::SolidLine ));
+
+        QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
+        painter.drawLine( line );
+
         painter.setPen( QPen( globalColor, Qt::SolidLine ));
         painter.drawPath( _mainHistogram._cachedGlobalRep );
 
@@ -950,6 +984,15 @@ namespace visimpl
       QPoint position ( positionX + margin, height( ) * 0.75f );
 
       painter.drawText( position, QString::number( valueAt( percentage )));
+
+      if( _paintTimeline )
+      {
+        position.setY( height( ) * 0.25f );
+
+        QString timeText( "t=" );
+        timeText.append( QString::number( timeAt( percentage )));
+        painter.drawText( position, timeText );
+      }
 
       QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
       pen.setColor( QColor( 177, 50, 50 ));

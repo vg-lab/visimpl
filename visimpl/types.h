@@ -15,6 +15,13 @@
 namespace visimpl
 {
 
+  enum tShaderParticlesType
+  {
+    T_SHADER_DEFAULT = 0,
+    T_SHADER_SOLID,
+    T_SHADER_UNDEFINED
+  };
+
   typedef std::pair< vec3, vec3 > tBoundingBox;
 
   typedef std::unordered_map< unsigned int, vec3 > tGidPosMap;

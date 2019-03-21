@@ -24,19 +24,21 @@ bld/
 [Bb]in/
 [Oo]bj/
 
-# Dependences
-Brion/
-Keyv/
-Lexis/
-Lunchbox/
-MVDTool/
-Pression/
-ReTo/
-Servus/
-SimIL/
-ZeroBuf/
-ZeroEQ/
-gmrvlex/
-prefr/
-scoop/
-vmmlib/
+# Dependencies
+
+.settings
+Brion
+Keyv
+Lexis
+Lunchbox
+MVDTool
+Pression
+ReTo
+Servus
+SimIL
+ZeroBuf
+ZeroEQ
+gmrvlex
+prefr
+scoop
+vmmlib

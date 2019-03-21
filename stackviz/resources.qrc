@@ -22,5 +22,6 @@
     <file>icons/hide.png</file>
     <file>icons/show.png</file>
     <file>icons/trash.png</file>
+    <file>icons/lines.png</file>
   </qresource>
 </RCC>

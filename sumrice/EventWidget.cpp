@@ -93,6 +93,34 @@ namespace visimpl
     }
   }
 
+  void EventWidget::updateCommonRepSizeVert( unsigned int newHeight )
+  {
+    _heightPerRow = newHeight;
+
+    unsigned int w = width( );
+
+    unsigned int left;
+    unsigned int right;
+    for( auto& e : *_events )
+    {
+      e._cachedCommonRep.clear( );
+      for( const auto& timeFrameChunk : e.percentages )
+      {
+        left = timeFrameChunk.first * w;
+        right = timeFrameChunk.second * w;
+
+        // Create cached common representation for histograms.
+        QPainterPath common;
+        common.moveTo( left, 0 );
+        common.lineTo( left, _heightPerRow);
+        common.lineTo( right, _heightPerRow );
+        common.lineTo( right, 0 );
+        common.closeSubpath( );
+
+        e._cachedCommonRep.push_back( common );
+      }
+    }
+  }
 
   void EventWidget::paintEvent( QPaintEvent* /*event_*/ )
   {

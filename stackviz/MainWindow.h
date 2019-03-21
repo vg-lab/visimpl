@@ -94,24 +94,28 @@ namespace stackviz
 
     void UpdateSimulationSlider( float percentage );
 
+    void addCorrelation( const std::string& subset );
+
+    void calculateCorrelations( void );
+
   protected slots:
 
   #ifdef VISIMPL_USE_GMRVLEX
 
+    void HistogramClicked( visimpl::HistogramWidget* );
     void ApplyPlaybackOperation( unsigned int playbackOp );
     void _zeqEventRepeat( bool repeat );
 
-    void HistogramClicked( visimpl::HistogramWidget* );
+  #endif
 
     void playAtButtonClicked( void );
 
-  #endif
-
     void loadComplete( void );
+
 
   protected:
 
-    void resizeEvent(QResizeEvent * event);
+    void resizeEvent( QResizeEvent* event );
     void configurePlayer( void );
 
     void initSummaryWidget( void );
@@ -142,7 +146,7 @@ namespace stackviz
     bool _autoCalculateCorrelations;
 
     // Playback Control
-    QDockWidget* _simulationDock;
+    QDockWidget* _dockSimulation;
     QPushButton* _playButton;
     CustomSlider* _simSlider;
     QPushButton* _repeatButton;
@@ -178,6 +182,8 @@ namespace stackviz
     unsigned int _columnsNumber;
     bool resizingEnabled;
     std::vector< QCheckBox* > _checkBoxes;
+
+    std::vector< std::string > _correlations;
 
   };
 
