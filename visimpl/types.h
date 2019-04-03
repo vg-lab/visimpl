@@ -15,6 +15,20 @@
 namespace visimpl
 {
 
+  typedef Eigen::Vector3f evec3;
+  typedef Eigen::Vector4f evec4;
+  typedef Eigen::Matrix4f emat4;
+
+  static inline evec3 vec4ToVec3( evec4 vec )
+  {
+    return evec3( vec.x( ), vec.y( ), vec.z( ));
+  }
+
+  static inline evec4 vec3ToVec4( evec3 vec )
+  {
+    return evec4( vec.x( ), vec.y( ), vec.z( ), 1.0);
+  }
+
   enum tShaderParticlesType
   {
     T_SHADER_DEFAULT = 0,
@@ -84,6 +98,39 @@ namespace visimpl
     T_PART_UNDEFINED
   };
 
+  static inline std::string vecToStr( const glm::vec3& vec )
+  {
+    return std::string( "(" + std::to_string( vec.x) +
+                        ", " + std::to_string( vec.y) +
+                        ", " + std::to_string( vec.z) + ")");
+  }
+
+  static inline std::string vecToStr( const Eigen::Vector3f& vec )
+  {
+    return std::string( "(" + std::to_string( vec.x( )) +
+                        ", " + std::to_string( vec.y( )) +
+                        ", " + std::to_string( vec.z( )) + ")");
+  }
+
+  static inline Eigen::Vector3f glmToEigen( const glm::vec3& vect )
+  {
+    return Eigen::Vector3f( vect.x, vect.y, vect.z );
+  }
+
+  static inline Eigen::Vector4f glmToEigen( const glm::vec4& vect )
+  {
+    return Eigen::Vector4f( vect.x, vect.y, vect.z, vect.w );
+  }
+
+  static inline glm::vec3 eigenToGLM( const Eigen::Vector3f& vect )
+  {
+    return glm::vec3( vect.x( ), vect.y( ), vect.z( ) );
+  }
+
+  static inline glm::vec4 eigenToGLM( const Eigen::Vector4f& vect )
+  {
+    return glm::vec4( vect.x( ), vect.y( ), vect.z( ), vect.w( ) );
+  }
 
   static glm::vec3 floatPtrToVec3( float* floatPos )
   {

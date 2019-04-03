@@ -27,8 +27,12 @@
 #include <reto/reto.h>
 #include <simil/simil.h>
 
+#include "types.h"
+
 #include "prefr/ColorSource.h"
 #include "prefr/ColorOperationModel.h"
+
+#include "render/Plane.h"
 
 #include "DomainManager.h"
 
@@ -150,6 +154,8 @@ namespace visimpl
     void showEventsActivityLabels( bool show );
     void showCurrentTimeLabel( bool show );
 
+    void clippingPlanes( bool active );
+    void toggleClippingPlanes( void );
 
     void toggleShowUnselected( void );
     void changeClearColor( void );
@@ -191,8 +197,16 @@ namespace visimpl
 
     void _updateParticles( float renderDelta );
     void _paintParticles( void );
+    void _paintPlanes( void );
 
     void _focusOn( const tBoundingBox& boundingBox );
+
+    void _initClippingPlanes( void );
+
+    void _genPlanesFromBoundingBox( void );
+    void _genPlanesFromParameters( void );
+    void _updatePlanes( void );
+    void _rotatePlanes( float yaw, float pitch );
 
     void _setShaderParticles( void );
 
@@ -279,12 +293,30 @@ namespace visimpl
     reto::ShaderProgram* _shaderParticlesDefault;
     reto::ShaderProgram* _shaderParticlesSolid;
     prefr::RenderProgram* _shaderPicking;
+    reto::ShaderProgram* _shaderClippingPlanes;
 
     prefr::ParticleSystem* _particleSystem;
     prefr::GLPickRenderer* _pickRenderer;
 
     simil::TSimulationType _simulationType;
     simil::SpikesPlayer* _player;
+
+    reto::ClippingPlane* _clippingPlaneLeft;
+    reto::ClippingPlane* _clippingPlaneRight;
+    reto::ClippingSystem* _clippingSystem;
+    glm::vec3 _planesCenter;
+    std::vector< Eigen::Vector3f > _planePosLeft;
+    std::vector< Eigen::Vector3f > _planePosRight;
+    Eigen::Matrix4f _planeRotation;
+    float _planeHeight;
+    float _planeWidth;
+    float _planeDistance;
+    bool _generatePlanes;
+    bool _rotationPlanes;
+    bool _clipping;
+    Plane _planeLeft;
+    Plane _planeRight;
+
 
     double _deltaTime;
 
