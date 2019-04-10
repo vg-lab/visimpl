@@ -155,7 +155,17 @@ namespace visimpl
     void showCurrentTimeLabel( bool show );
 
     void clippingPlanes( bool active );
+    void paintClippingPlanes( int paint_ );
     void toggleClippingPlanes( void );
+    void clippingPlanesReset( void );
+    void clippingPlanesHeight( float height_ );
+    float clippingPlanesHeight( void );
+    void clippingPlanesWidth( float width_ );
+    float clippingPlanesWidth( void );
+    void clippingPlanesDistance( float distance_ );
+    float clippingPlanesDistance( void );
+    void clippingPlanesColor( const QColor& color_ );
+    QColor clippingPlanesColor( void );
 
     void toggleShowUnselected( void );
     void changeClearColor( void );
@@ -304,7 +314,7 @@ namespace visimpl
     reto::ClippingPlane* _clippingPlaneLeft;
     reto::ClippingPlane* _clippingPlaneRight;
     reto::ClippingSystem* _clippingSystem;
-    glm::vec3 _planesCenter;
+    evec3 _planesCenter;
     std::vector< Eigen::Vector3f > _planePosLeft;
     std::vector< Eigen::Vector3f > _planePosRight;
     Eigen::Matrix4f _planeRotation;
@@ -313,9 +323,12 @@ namespace visimpl
     float _planeDistance;
     bool _generatePlanes;
     bool _rotationPlanes;
+    bool _translationPlanes;
     bool _clipping;
+    bool _paintClippingPlanes;
     Plane _planeLeft;
     Plane _planeRight;
+    evec4 _planesColor;
 
 
     double _deltaTime;

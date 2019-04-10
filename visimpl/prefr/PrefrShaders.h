@@ -160,16 +160,14 @@ const static std::string planeVertCode = R"(
 
 in vec3 inPos;
 
-//uniform vec2 planeSize;
-//uniform vec3 center;
-uniform mat4 rotation;
 uniform mat4 viewProj;
+uniform vec4 inColor;
 
-//const vec2 quadVertices[4] = { vec2(-1.0, -1.0), vec2(1.0, -1.0),
-//                               vec2(-1.0, 1.0), vec2(1.0, 1.0) };
+out vec4 outColor;
 
 void main( )
 {
+  outColor = inColor;
   //gl_Position = vec4( quadVertices[ gl_VertexID ], 0.0, 1.0 );
   //gl_Position = vec4( inPos.rg, 1.0 );
   gl_Position = viewProj * vec4( inPos, 1.0 ); 
@@ -181,11 +179,14 @@ void main( )
 const static std::string planeFragCode = R"(
 #version 430
 
+in vec4 inputColor;
 out vec4 outputColor;
 
 void main( )
 {
-  outputColor = vec4( 0.0, 1.0, 0.0, 1.0 ); 
+  //outputColor = inputColor;
+  outputColor = vec4( 1.0, 1.0, 1.0, 1.0 );
+  
 }
 
 )";

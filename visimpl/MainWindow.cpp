@@ -107,6 +107,13 @@ namespace visimpl
   , _comboAttribSelection( nullptr )
   , _layoutAttribStats( nullptr )
   , _layoutAttribGroups( nullptr )
+  , _checkClipping( nullptr )
+  , _checkShowPlanes( nullptr )
+  , _buttonResetPlanes( nullptr )
+  , _spinBoxClippingHeight( nullptr )
+  , _spinBoxClippingWidth( nullptr )
+  , _spinBoxClippingDist( nullptr )
+  , _frameClippingColor( nullptr )
   {
     _ui->setupUi( this );
 
@@ -658,6 +665,34 @@ namespace visimpl
     _labelGID = new QLabel( "" );
     _labelPosition = new QLabel( "" );
 
+
+    _checkClipping = new QCheckBox( tr( "Clipping" ));
+    _checkShowPlanes = new QCheckBox( "Show planes" );
+    _buttonResetPlanes = new QPushButton( "Reset" );
+    _spinBoxClippingHeight = new QDoubleSpinBox( );
+    _spinBoxClippingHeight->setDecimals( 2 );
+    _spinBoxClippingHeight->setMinimum( 1 );
+    _spinBoxClippingHeight->setMaximum( 99999 );
+
+    _spinBoxClippingWidth = new QDoubleSpinBox( );
+    _spinBoxClippingWidth->setDecimals( 2 );
+    _spinBoxClippingWidth->setMinimum( 1 );
+    _spinBoxClippingWidth->setMaximum( 99999 );
+
+    _spinBoxClippingDist = new QDoubleSpinBox( );
+    _spinBoxClippingDist->setDecimals( 2 );
+    _spinBoxClippingDist->setMinimum( 1 );
+    _spinBoxClippingDist->setMaximum( 99999 );
+
+    QColor clippingColor ( 255, 255, 255, 255 );
+    _frameClippingColor = new QFrame( );
+//      auto colors = _openGLWidget->colorPalette( ).colors( );
+//colors[ currentIndex % colors.size( )].first
+    _frameClippingColor->setStyleSheet( "background-color: " + clippingColor.name( ) );
+    _frameClippingColor->setMinimumSize( 20, 20 );
+    _frameClippingColor->setMaximumSize( 20, 20 );
+
+
     QWidget* topContainer = new QWidget( );
     QVBoxLayout* verticalLayout = new QVBoxLayout( );
   //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
@@ -726,6 +761,41 @@ namespace visimpl
     selLayout->addWidget( _clearSelectionButton );
     selFunctionGB->setLayout( selLayout );
 //    selFunctionGB->setMaximumHeight( 200 );
+
+    QFrame* line = new QFrame( );
+    line->setFrameShape( QFrame::HLine );
+    line->setFrameShadow( QFrame::Sunken );
+
+//    QGridLayout* layoutClippingParams = new QGridLayout( );
+//    QWidget* containerClippingParams = new QWidget( );
+//    containerClippingParams->setLayout( layoutClippingParams );
+
+
+
+
+    QGroupBox* gbClippingPlanes = new QGroupBox( "Clipping planes" );
+    QGridLayout* layoutClippingPlanes = new QGridLayout( );
+    gbClippingPlanes->setLayout( layoutClippingPlanes );
+    layoutClippingPlanes->addWidget( _checkClipping, 0, 0, 1, 2 );
+    layoutClippingPlanes->addWidget( _checkShowPlanes, 0, 2, 1, 2 );
+//    layoutClippingPlanes->addWidget( containerClippingParams, 0, 0, 1, 4 );
+    layoutClippingPlanes->addWidget( line, 1, 0, 1, 4 );
+//    layoutClippingPlanes->addWidget( new QLabel( "Color" ), 2, 0, 1, 1 );
+    layoutClippingPlanes->addWidget( _frameClippingColor, 2, 0, 1, 1 );
+    layoutClippingPlanes->addWidget( _buttonResetPlanes, 2, 1, 1, 1 );
+    layoutClippingPlanes->addWidget( new QLabel( "Height" ), 2, 2, 1, 1 );
+    layoutClippingPlanes->addWidget( _spinBoxClippingHeight, 2, 3, 1, 1  );
+    layoutClippingPlanes->addWidget( new QLabel( "Distance" ), 3, 0, 1, 1 );
+    layoutClippingPlanes->addWidget( _spinBoxClippingDist, 3, 1, 1, 1  );
+    layoutClippingPlanes->addWidget( new QLabel( "Width" ), 3, 2, 1, 1 );
+    layoutClippingPlanes->addWidget( _spinBoxClippingWidth, 3, 3, 1, 1  );
+
+    QWidget* containerSelectionTools = new QWidget( );
+    QVBoxLayout* layoutContainerSelection = new QVBoxLayout( );
+    containerSelectionTools->setLayout( layoutContainerSelection );
+
+    layoutContainerSelection->addWidget( selFunctionGB );
+    layoutContainerSelection->addWidget( gbClippingPlanes );
 
     QGroupBox* objectInspectoGB = new QGroupBox( "Object inspector" );
     QGridLayout* oiLayout = new QGridLayout( );
@@ -840,8 +910,13 @@ namespace visimpl
     _toolBoxOptions = new QToolBox( );
     _toolBoxOptions->addItem( tSpeedGB, tr( "Playback Configuration" ));
     _toolBoxOptions->addItem( vcContainer, tr( "Visual Configuration" ));
-    _toolBoxOptions->addItem( selFunctionGB, tr( "Selection" ));
+    _toolBoxOptions->addItem( containerSelectionTools, tr( "Selection" ));
     _toolBoxOptions->addItem( objectInspectoGB, tr( "Inspector" ));
+
+//    QScrollArea* scrollToolbox = new QScrollArea( );
+//    scrollToolbox->setWidget( _toolBoxOptions );
+//    scrollToolbox->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+//    scrollToolbox->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
 
     verticalLayout->setAlignment( Qt::AlignTop );
 //    verticalLayout->addWidget( _groupBoxTransferFunction );
@@ -897,6 +972,30 @@ namespace visimpl
 
     connect( _alphaNormalButton, SIGNAL( toggled( bool )),
              this, SLOT( AlphaBlendingToggled( void ) ));
+
+    // Clipping planes
+
+    _checkClipping->setChecked( true );
+    connect( _checkClipping, SIGNAL( stateChanged( int )),
+             this, SLOT( clippingPlanesActive( int )));
+    _checkClipping->setChecked( false );
+
+    _checkShowPlanes->setChecked( true );
+    connect( _checkShowPlanes, SIGNAL( stateChanged( int )),
+             _openGLWidget, SLOT( paintClippingPlanes( int )));
+
+    connect( _buttonResetPlanes, SIGNAL( clicked( void )),
+             this, SLOT( clippingPlanesReset( void )));
+
+    connect( _spinBoxClippingDist, SIGNAL( editingFinished( void )),
+             this, SLOT( spinBoxValueChanged( void )));
+
+
+    connect( _spinBoxClippingHeight, SIGNAL( editingFinished( void )),
+                 this, SLOT( spinBoxValueChanged( void )));
+
+    connect( _spinBoxClippingWidth, SIGNAL( editingFinished( void )),
+                 this, SLOT( spinBoxValueChanged( void )));
 
 #ifdef VISIMPL_USE_ZEROEQ
 #ifdef VISIMPL_USE_GMRVLEX
@@ -1145,6 +1244,48 @@ namespace visimpl
 
   }
 
+  void MainWindow::clippingPlanesReset( void )
+  {
+    _openGLWidget->clippingPlanesReset( );
+
+    _resetClippingParams( );
+  }
+
+  void MainWindow::_resetClippingParams( void )
+  {
+    _spinBoxClippingDist->setValue( _openGLWidget->clippingPlanesDistance( ));
+    _spinBoxClippingHeight->setValue( _openGLWidget->clippingPlanesHeight( ));
+    _spinBoxClippingWidth->setValue( _openGLWidget->clippingPlanesWidth( ));
+  }
+
+  void MainWindow::clippingPlanesActive ( int state )
+  {
+    bool active = state;
+
+    _checkShowPlanes->setEnabled( active );
+    _buttonResetPlanes->setEnabled( active );
+    _spinBoxClippingHeight->setEnabled( active );
+    _spinBoxClippingWidth->setEnabled( active );
+    _spinBoxClippingDist->setEnabled( active );
+    _frameClippingColor->setEnabled( active );
+
+    _openGLWidget->clippingPlanes( active );
+
+    _resetClippingParams( );
+  }
+
+  void MainWindow::spinBoxValueChanged( void )
+  {
+    auto spinBox = dynamic_cast< QDoubleSpinBox* >( sender( ));
+
+    if( spinBox == _spinBoxClippingDist )
+      _openGLWidget->clippingPlanesDistance( spinBox->value( ));
+    else if ( spinBox == _spinBoxClippingHeight )
+      _openGLWidget->clippingPlanesHeight( spinBox->value( ));
+    else if( spinBox == _spinBoxClippingWidth )
+      _openGLWidget->clippingPlanesWidth( spinBox->value( ));
+
+  }
 
   void MainWindow::showInactive( bool show )
   {

@@ -18,6 +18,7 @@ namespace visimpl
   : _vao( 0 )
   , _vboVertex( 0 )
   , _camera( nullptr )
+  , _color( 1.0, 1.0, 1.0, 1.0 )
   {
     _points.resize( 4, evec3::Zero( ));
     _vertices = { -1.0, -1.0, 0.0,
@@ -42,6 +43,11 @@ namespace visimpl
     glVertexAttribPointer( (GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
 
+  }
+
+  void Plane::color( evec4 color_ )
+  {
+    _color = color_;
   }
 
   void Plane::points( evec3 first, evec3 second, evec3 third, evec3 fourth )
@@ -78,7 +84,7 @@ namespace visimpl
   {
     assert( _camera );
 
-    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
     program_->use( );
 
     glBindVertexArray( _vao );
@@ -86,12 +92,19 @@ namespace visimpl
     glDisable( GL_CULL_FACE );
 
     program_->sendUniform4m( "viewProj", _camera->viewProjectionMatrix( ));
+    program_->sendUniform4v( "inColor", _color.data( ));
+
+//    unsigned int idColor = glGetUniformLocation( program_->program( ),
+//                                                 "inColor" );
+//    std::cout << "inColor " << idColor << std::endl;
+//    glUniform4f( idColor, _color.x( ), _color.y( ), _color.z( ), _color.w( ));
+
 //    program_->sendUniform4m( "rotation", _planeRotation.data( ));
 //    program_->sendUniform3v( "center", center.data( ));
 //    program_->sendUniformf( "height", planeSize.x( ));
 //    program_->sendUniformf( "width", planeSize.y( ));
 
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArrays(GL_LINE_LOOP, 0, 4);
 
     glBindVertexArray( 0 );
 

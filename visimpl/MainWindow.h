@@ -96,6 +96,8 @@ namespace visimpl
 
     void updateSelectedStatsPickingSingle( unsigned int selected );
 
+    void clippingPlanesActive ( int state );
+
     void PlayPause( bool notify = true );
     void Play( bool notify = true );
     void Pause( bool notify = true );
@@ -114,8 +116,12 @@ namespace visimpl
     void checkGroupsVisibility( void );
     void checkAttributeGroupsVisibility( void );
 
+    void spinBoxValueChanged( void );
+
     void completedStep( void );
     void playAtButtonClicked( void );
+
+    void clippingPlanesReset( void );
 
   protected:
 
@@ -124,6 +130,7 @@ namespace visimpl
     void _initSummaryWidget( void );
 
     void _configurePlayer( void );
+    void _resetClippingParams( void );
 
 
   #ifdef VISIMPL_USE_ZEROEQ
@@ -205,6 +212,15 @@ namespace visimpl
     QVBoxLayout* _layoutAttribStats;
     QGridLayout* _layoutAttribGroups;
     std::vector< QCheckBox* > _attribGroupsVisButtons;
+
+    // Clipping planes
+    QCheckBox* _checkClipping;
+    QCheckBox* _checkShowPlanes;
+    QPushButton* _buttonResetPlanes;
+    QDoubleSpinBox* _spinBoxClippingHeight;
+    QDoubleSpinBox* _spinBoxClippingWidth;
+    QDoubleSpinBox* _spinBoxClippingDist;
+    QFrame* _frameClippingColor;
 
   };
 

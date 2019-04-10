@@ -91,6 +91,8 @@ namespace visimpl
   , _generatePlanes( true )
   , _rotationPlanes( false )
   , _clipping( true )
+  , _paintClippingPlanes( true )
+  , _planesColor( 1.0, 1.0, 1.0, 1.0 )
   , _deltaTime( 0.0f )
   , _sbsTimePerStep( 5.0f )
   , _sbsBeginTime( 0 )
@@ -620,9 +622,8 @@ namespace visimpl
 
   void OpenGLWidget::_paintPlanes( void )
   {
-    if( _clipping )
+    if( _clipping && _paintClippingPlanes )
     {
-      _shaderClippingPlanes->sendUniform4m( "rotation", _planeRotation.data( ));
       _planeLeft.render( _shaderClippingPlanes );
       _planeRight.render( _shaderClippingPlanes );
     }
@@ -749,6 +750,9 @@ namespace visimpl
             } // elapsed > render period
 
           } // if player && player->isPlayint
+
+          _paintPlanes( );
+
           _paintParticles( );
 
           if( _flagPickingSingle )
@@ -756,11 +760,6 @@ namespace visimpl
             _pickSingle( );
           }
         } // if particleSystem
-
-        _paintPlanes( );
-
-        glUseProgram( 0 );
-        glFlush( );
 
       }
 
@@ -1140,7 +1139,7 @@ namespace visimpl
   {
     auto currentBoundingBox = _domainManager->boundingBox( );
 
-    _planesCenter = ( currentBoundingBox.first + currentBoundingBox.second ) * 0.5f;
+    _planesCenter = glmToEigen( currentBoundingBox.first + currentBoundingBox.second ) * 0.5f;
 
     _planeDistance = std::abs( currentBoundingBox.second.x - currentBoundingBox.first.x );
     _planeHeight = std::abs( currentBoundingBox.second.y - currentBoundingBox.first.y );
@@ -1154,7 +1153,7 @@ namespace visimpl
     glm::vec3 offset =
         glm::vec3( _planeDistance, _planeHeight, _planeWidth ) * 0.5f;
 
-    evec3 center = glmToEigen( _planesCenter );
+    evec3 center = _planesCenter;
 
     evec3 centerLeft = center;// - offset;
     evec3 centerRight = centerLeft;// + offset;
@@ -1170,14 +1169,14 @@ namespace visimpl
 //    _planePosLeft[ 1 ] = glmToEigen( glm::normalize( baseLeft - center ));
     _planePosLeft[ 0 ] += Eigen::Vector3f( 0, offset.y, -offset.z );
     _planePosLeft[ 1 ] += Eigen::Vector3f(  0, -offset.y, -offset.z );
-    _planePosLeft[ 2 ] += Eigen::Vector3f( 0, offset.y, offset.z );
-    _planePosLeft[ 3 ] += Eigen::Vector3f( 0, -offset.y, offset.z );
+    _planePosLeft[ 2 ] += Eigen::Vector3f( 0, -offset.y, offset.z );
+    _planePosLeft[ 3 ] += Eigen::Vector3f( 0, offset.y, offset.z );
 
 //    _planePosRight[ 1 ] = glmToEigen( glm::normalize( baseRight - center ));
     _planePosRight[ 0 ] += Eigen::Vector3f( 0, offset.y, -offset.z );
     _planePosRight[ 1 ] += Eigen::Vector3f( 0, -offset.y, -offset.z);
-    _planePosRight[ 2 ] += Eigen::Vector3f( 0, offset.y, offset.z );
-    _planePosRight[ 3 ] += Eigen::Vector3f( 0, -offset.y, offset.z  );
+    _planePosRight[ 2 ] += Eigen::Vector3f( 0, -offset.y, offset.z );
+    _planePosRight[ 3 ] += Eigen::Vector3f( 0, offset.y, offset.z );
 
 //    evec3 leftNormal = ( centerLeft - center ).normalized( );
 //    evec3 rightNormal = ( centerRight - center ).normalized( );
@@ -1229,7 +1228,7 @@ namespace visimpl
     evec3 center;
     evec3 centerLeft;
     evec3 centerRight;
-    center = centerLeft = centerRight = glmToEigen( _planesCenter );
+    center = centerLeft = centerRight = _planesCenter;
 
 
     unsigned int pointsNumber = 4;
@@ -1298,9 +1297,78 @@ namespace visimpl
     }
   }
 
+  void OpenGLWidget::paintClippingPlanes( int paint_ )
+  {
+    _paintClippingPlanes = paint_;
+  }
+
   void OpenGLWidget::toggleClippingPlanes( void )
   {
     clippingPlanes( !_clipping );
+  }
+
+  void OpenGLWidget::clippingPlanesReset( void )
+  {
+    _planeRotation = emat4::Identity( );
+
+    _genPlanesFromBoundingBox( );
+
+
+  }
+
+  void OpenGLWidget::clippingPlanesHeight( float height_ )
+  {
+    _planeHeight = height_;
+
+    _genPlanesFromParameters( );
+  }
+
+  float OpenGLWidget::clippingPlanesHeight( void )
+  {
+    return _planeHeight;
+  }
+
+  void OpenGLWidget::clippingPlanesWidth( float width_ )
+  {
+    _planeWidth = width_;
+
+    _genPlanesFromParameters( );
+  }
+
+  float OpenGLWidget::clippingPlanesWidth( void )
+  {
+    return _planeWidth;
+  }
+
+  void OpenGLWidget::clippingPlanesDistance( float distance_ )
+  {
+    _planeDistance = distance_;
+
+    _genPlanesFromParameters( );
+  }
+
+  float OpenGLWidget::clippingPlanesDistance( void )
+  {
+    return _planeDistance;
+  }
+
+  void OpenGLWidget::clippingPlanesColor( const QColor& color_ )
+  {
+    _planesColor = evec4( color_.red( ) * invRGBInt,
+                          color_.green( ) * invRGBInt,
+                          color_.blue( ) * invRGBInt,
+                          1.0 );
+
+    _planeLeft.color( _planesColor );
+    _planeRight.color( _planesColor );
+  }
+
+  QColor OpenGLWidget::clippingPlanesColor( void )
+  {
+    return QColor( _planesColor.x( ) * 255,
+                   _planesColor.y( ) * 255,
+                   _planesColor.z( ) * 255,
+                   _planesColor.w( ) * 255 );
   }
 
   void OpenGLWidget::_rotatePlanes( float yaw_, float pitch_ )
@@ -1348,7 +1416,7 @@ namespace visimpl
 
         _flagPickingSingle = true;
       }
-      else if( event_->modifiers( ) == Qt::SHIFT  )
+      else if( event_->modifiers( ) == Qt::SHIFT && _clipping )
       {
         _rotationPlanes = true;
         _mouseX = event_->x( );
@@ -1363,9 +1431,18 @@ namespace visimpl
     }
     else if ( event_->button( ) ==  Qt::RightButton )
     {
-      _translation = true;
-      _mouseX = event_->x( );
-      _mouseY = event_->y( );
+      if( event_->modifiers( ) == Qt::SHIFT && _clipping )
+      {
+        _translationPlanes = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
+      else
+      {
+        _translation = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
     }
 
 
@@ -1400,7 +1477,7 @@ namespace visimpl
       _mouseY = event_->y( );
     }
 
-    if( _rotationPlanes )
+    if( _rotationPlanes && _clipping )
     {
       _rotatePlanes( -( _mouseX - event_->x( )) * 0.01,
                       ( _mouseY - event_->y( )) * 0.01 );
@@ -1416,6 +1493,22 @@ namespace visimpl
       _camera->localTranslation( Eigen::Vector3f( -xDis, yDis, 0.0f ));
       _mouseX = event_->x( );
       _mouseY = event_->y( );
+    }
+
+    if( _translationPlanes )
+    {
+      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
+      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+
+      evec4 displacement ( xDis, yDis, 0, 1 );
+      displacement = _planeRotation * displacement;
+
+      _planesCenter += evec3( displacement.x(), displacement.y(), displacement.z( ) );
+
+      _mouseX = event_->x( );
+      _mouseY = event_->y( );
+
+      _genPlanesFromParameters( );
     }
 
     this->update( );

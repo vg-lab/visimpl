@@ -26,10 +26,14 @@ namespace visimpl
     void init( reto::Camera* camera );
     void render( reto::ShaderProgram* program_ );
 
+    void color( evec4 color_ );
+
     unsigned int _vao;
     unsigned int _vboVertex;
 
     reto::Camera* _camera;
+
+    evec4 _color;
 
     std::vector< evec3 > _points;
     std::vector< float > _vertices;
