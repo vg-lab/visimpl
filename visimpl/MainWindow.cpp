@@ -40,6 +40,7 @@
 #include <QGridLayout>
 #include <QShortcut>
 #include <QMessageBox>
+#include <QColorDialog>
 
 // #include "qt/CustomSlider.h"
 
@@ -612,16 +613,12 @@ namespace visimpl
     _simConfigurationDock = new QDockWidget( );
     _simConfigurationDock->setMinimumHeight( 100 );
     _simConfigurationDock->setMinimumWidth( 300 );
-  //  _simConfigurationDock->setMaximumHeight( 400 );
     _simConfigurationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
                                     QSizePolicy::MinimumExpanding );
 
-  //  _tfEditor = new TransferFunctionEditor( );
+
     _tfWidget = new TransferFunctionWidget( );
     _tfWidget->setMinimumHeight( 150 );
-
-  //  _psWidget = new ParticleSizeWidget( );
-  //  _psWidget->setMinimumHeight( 150 );
 
     _deltaTimeBox = new QDoubleSpinBox( );
     _deltaTimeBox->setMinimum( 0.00000001 );
@@ -685,7 +682,7 @@ namespace visimpl
     _spinBoxClippingDist->setMaximum( 99999 );
 
     QColor clippingColor ( 255, 255, 255, 255 );
-    _frameClippingColor = new QFrame( );
+    _frameClippingColor = new QPushButton( );
 //      auto colors = _openGLWidget->colorPalette( ).colors( );
 //colors[ currentIndex % colors.size( )].first
     _frameClippingColor->setStyleSheet( "background-color: " + clippingColor.name( ) );
@@ -695,13 +692,11 @@ namespace visimpl
 
     QWidget* topContainer = new QWidget( );
     QVBoxLayout* verticalLayout = new QVBoxLayout( );
-  //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
 
     _groupBoxTransferFunction = new QGroupBox( "Color and Size transfer function" );
     QVBoxLayout* tfLayout = new QVBoxLayout( );
     tfLayout->addWidget( _tfWidget );
     _groupBoxTransferFunction->setLayout( tfLayout );
-//    _groupBoxTransferFunction->setMaximumHeight( 250 );
 
     QGroupBox* tSpeedGB = new QGroupBox( "Simulation playback Configuration" );
     QGridLayout* sfLayout = new QGridLayout( );
@@ -713,7 +708,6 @@ namespace visimpl
     sfLayout->addWidget( new QLabel( "Step playback duration (s):"), 2, 0, 1, 1);
     sfLayout->addWidget( _stepByStepDurationBox, 2, 1, 1, 1 );
     tSpeedGB->setLayout( sfLayout );
-//    tSpeedGB->setMaximumHeight( 200 );
 
     QComboBox* comboShader = new QComboBox( );
     comboShader->addItems( { "Default", "Solid" });
@@ -731,7 +725,6 @@ namespace visimpl
     dfLayout->addWidget( new QLabel( "Decay (simulation time): " ));
     dfLayout->addWidget( _decayBox );
     dFunctionGB->setLayout( dfLayout );
-//    dFunctionGB->setMaximumHeight( 200 );
 
     QGroupBox* rFunctionGB = new QGroupBox( "Alpha blending function" );
     QHBoxLayout* rfLayout = new QHBoxLayout( );
@@ -740,7 +733,6 @@ namespace visimpl
     rfLayout->addWidget( _alphaNormalButton );
     rfLayout->addWidget( _alphaAccumulativeButton );
     rFunctionGB->setLayout( rfLayout );
-//    rFunctionGB->setMaximumHeight( 200 );
 
     // Visual Configuration Container
     QWidget* vcContainer = new QWidget( );
@@ -760,27 +752,17 @@ namespace visimpl
     selLayout->addWidget( _addGroupButton );
     selLayout->addWidget( _clearSelectionButton );
     selFunctionGB->setLayout( selLayout );
-//    selFunctionGB->setMaximumHeight( 200 );
 
     QFrame* line = new QFrame( );
     line->setFrameShape( QFrame::HLine );
     line->setFrameShadow( QFrame::Sunken );
-
-//    QGridLayout* layoutClippingParams = new QGridLayout( );
-//    QWidget* containerClippingParams = new QWidget( );
-//    containerClippingParams->setLayout( layoutClippingParams );
-
-
-
 
     QGroupBox* gbClippingPlanes = new QGroupBox( "Clipping planes" );
     QGridLayout* layoutClippingPlanes = new QGridLayout( );
     gbClippingPlanes->setLayout( layoutClippingPlanes );
     layoutClippingPlanes->addWidget( _checkClipping, 0, 0, 1, 2 );
     layoutClippingPlanes->addWidget( _checkShowPlanes, 0, 2, 1, 2 );
-//    layoutClippingPlanes->addWidget( containerClippingParams, 0, 0, 1, 4 );
     layoutClippingPlanes->addWidget( line, 1, 0, 1, 4 );
-//    layoutClippingPlanes->addWidget( new QLabel( "Color" ), 2, 0, 1, 1 );
     layoutClippingPlanes->addWidget( _frameClippingColor, 2, 0, 1, 1 );
     layoutClippingPlanes->addWidget( _buttonResetPlanes, 2, 1, 1, 1 );
     layoutClippingPlanes->addWidget( new QLabel( "Height" ), 2, 2, 1, 1 );
@@ -807,7 +789,6 @@ namespace visimpl
     objectInspectoGB->setLayout( oiLayout );
 
     _groupBoxGroups = new QGroupBox( "Current visualization groups" );
-//    _groupBoxGroups->setMaximumHeight( 200 );
     _groupLayout = new QGridLayout( );
     _groupLayout->setAlignment( Qt::AlignTop );
 
@@ -913,20 +894,9 @@ namespace visimpl
     _toolBoxOptions->addItem( containerSelectionTools, tr( "Selection" ));
     _toolBoxOptions->addItem( objectInspectoGB, tr( "Inspector" ));
 
-//    QScrollArea* scrollToolbox = new QScrollArea( );
-//    scrollToolbox->setWidget( _toolBoxOptions );
-//    scrollToolbox->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-//    scrollToolbox->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-
     verticalLayout->setAlignment( Qt::AlignTop );
-//    verticalLayout->addWidget( _groupBoxTransferFunction );
-//    verticalLayout->addWidget( _groupBoxGroups );
     verticalLayout->addWidget( _modeSelectionWidget );
     verticalLayout->addWidget( _toolBoxOptions );
-//    verticalLayout->addWidget( tSpeedGB );
-//    verticalLayout->addWidget( dFunctionGB );
-//    verticalLayout->addWidget( rFunctionGB );
-//    verticalLayout->addWidget( selFunctionGB  );
 
     topContainer->setLayout( verticalLayout );
     _simConfigurationDock->setWidget( topContainer );
@@ -934,8 +904,6 @@ namespace visimpl
     this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/RightDockWidgetArea,
                          _simConfigurationDock );
 
-  //  connect( applyColorButton, SIGNAL( clicked( void )),
-  //             this, SLOT( UpdateSimulationColorMapping( void )));
 
     connect( _modeSelectionWidget, SIGNAL( currentChanged( int )),
              _openGLWidget, SLOT( setMode( int )));
@@ -997,6 +965,10 @@ namespace visimpl
     connect( _spinBoxClippingWidth, SIGNAL( editingFinished( void )),
                  this, SLOT( spinBoxValueChanged( void )));
 
+    connect( _frameClippingColor, SIGNAL( clicked( )),
+             this, SLOT( colorSelectionClicked()));
+
+
 #ifdef VISIMPL_USE_ZEROEQ
 #ifdef VISIMPL_USE_GMRVLEX
     connect( _clearSelectionButton, SIGNAL( clicked( void )),
@@ -1006,9 +978,6 @@ namespace visimpl
 
     connect( _addGroupButton, SIGNAL( clicked( void )),
              this, SLOT( addGroupFromSelection( )));
-
-  //  connect( _alphaAccumulativeButton, SIGNAL( toggled( bool )),
-  //           this, SLOT( AlphaBlendingToggled( void ) ));
 
     _alphaNormalButton->setChecked( true );
   }
@@ -1156,26 +1125,17 @@ namespace visimpl
 
     std::cout << "Updating stats..." << std::endl;
 
-//    int attribNumber = _comboAttribSelection->currentIndex( );
-
-//    auto values = _domainManager->attributeValues( attribNumber );
-//    auto names = _domainManager->attributeNames( attribNumber );
-//    auto labels = _domainManager->attributeNames( attribNumber, true );
-
     auto stats = _domainManager->attributeStatistics( );
 
-//    for( unsigned int i = 0; i < stats.size( ); ++i )
     for( auto stat : stats )
     {
-      auto name = std::get< T_TYPE_NAME >( stat );//names[ i ];
-      auto label = std::get< T_TYPE_LABEL >( stat ); //labels[ i ];
-      auto number = std::get< T_TYPE_STATS >( stat );//stats.find( i )->second;
-
-      QString text = ( QString( name.c_str( )) //+ " - " + QString( label.c_str( ))
+      auto name = std::get< T_TYPE_NAME >( stat );
+      auto label = std::get< T_TYPE_LABEL >( stat );
+      auto number = std::get< T_TYPE_STATS >( stat );
+      QString text = ( QString( name.c_str( ))
           + ": " + QString::number( number ) );
 
       QLabel* textLabel = new QLabel( text );
-//      std::cout << "Text " << text.toStdString( ) << std::endl;
       _layoutAttribStats->addWidget( textLabel );
     }
 
@@ -1187,24 +1147,18 @@ namespace visimpl
 
     _attribGroupsVisButtons.clear( );
 
-//    auto colors = _openGLWidget->domainManager( )->paletteColors( );
     unsigned int currentIndex = 0;
     for( auto group : _openGLWidget->domainManager( )->attributeGroups( ))
     {
       QFrame* frame = new QFrame( );
-//      auto colors = _openGLWidget->colorPalette( ).colors( );
-//colors[ currentIndex % colors.size( )].first
       frame->setStyleSheet( "background-color: " + group->color( ).name( ) );
       frame->setMinimumSize( 20, 20 );
       frame->setMaximumSize( 20, 20 );
 
       group->name( std::get< T_TYPE_NAME >( stats[ currentIndex ])); //names[ currentIndex] );
 
-      //    QIcon* eye = new QIcon( ":/icons/show.png" );
       QCheckBox* buttonVisibility = new QCheckBox( group->name( ).c_str( ));
       buttonVisibility->setChecked( true );
-      //    buttonVisibility->setMinimumSize( 60, 50 );
-      //    buttonVisibility->setMaximumSize( 60, 50 );
 
       _attribGroupsVisButtons.push_back( buttonVisibility );
 
@@ -1213,8 +1167,6 @@ namespace visimpl
 
       _layoutAttribGroups->addWidget( frame, currentIndex, 0, 1, 1 );
       _layoutAttribGroups->addWidget( buttonVisibility, currentIndex, 2, 1, 1 );
-
-//      _openGLWidget->setUpdateGroups( );
 
       ++currentIndex;
     }
@@ -1235,8 +1187,6 @@ namespace visimpl
                     + ", " + QString::number( position.y )
                     + ", " + QString::number( position.z )
                     + " )";
-
-
 
     _labelPosition->setText( posText );
 
@@ -1318,6 +1268,39 @@ namespace visimpl
       PlayAt( percentage, true );
     }
   }
+
+
+  bool MainWindow::_showDialog( QColor& current, const QString& message )
+  {
+    QColor result = QColorDialog::getColor( current, this,
+                                            QString( message ),
+                                            QColorDialog::DontUseNativeDialog);
+
+    if( result.isValid( ))
+    {
+      current = result;
+      return true;
+    }
+    else
+      return false;
+
+  }
+
+  void MainWindow::colorSelectionClicked( void )
+  {
+    QPushButton* button = dynamic_cast< QPushButton* >( sender( ));
+
+    if( button == _frameClippingColor )
+    {
+      QColor current = _openGLWidget->clippingPlanesColor( );
+      if( _showDialog( current, "Select planes color" ))
+      {
+        _openGLWidget->clippingPlanesColor( current );
+        button->setStyleSheet( "background-color: " + current.name( ));
+      }
+    }
+  }
+
 
   #ifdef VISIMPL_USE_ZEROEQ
 
@@ -1469,11 +1452,8 @@ namespace visimpl
     frame->setMinimumSize( 20, 20 );
     frame->setMaximumSize( 20, 20 );
 
-//    QIcon* eye = new QIcon( ":/icons/show.png" );
     QCheckBox* buttonVisibility = new QCheckBox( "active" );
     buttonVisibility->setChecked( true );
-//    buttonVisibility->setMinimumSize( 60, 50 );
-//    buttonVisibility->setMaximumSize( 60, 50 );
 
     _groupsVisButtons.push_back( buttonVisibility );
 
@@ -1522,7 +1502,6 @@ namespace visimpl
       ++counter;
     }
 
-//    _openGLWidget->setUpdateGroups( );
     _openGLWidget->update( );
   }
 
@@ -1541,7 +1520,6 @@ namespace visimpl
 
   void MainWindow::Play( bool notify )
   {
-  //  playIcon.swap( pauseIcon );
     if( !_openGLWidget || !_openGLWidget->player( ))
       return;
 
@@ -1662,8 +1640,6 @@ namespace visimpl
 
       _simSlider->setSliderPosition( sliderPosition );
 
-  //    _openGLWidget->resetParticles( );
-
       _playButton->setIcon( _pauseIcon );
 
       _openGLWidget->PlayAt( percentage );
@@ -1693,16 +1669,11 @@ namespace visimpl
     if( _openGLWidget )
     {
 
-  //    _openGLWidget->Pause( );
-
-
       int value = _simSlider->value( );
       float percentage = float( value - _simSlider->minimum( )) /
                          float( _simSlider->maximum( ) - _simSlider->minimum( ));
 
       _simSlider->setSliderPosition( sliderPosition );
-
-  //    _openGLWidget->resetParticles( );
 
       _playButton->setIcon( _pauseIcon );
 

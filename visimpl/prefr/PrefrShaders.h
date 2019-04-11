@@ -179,13 +179,13 @@ void main( )
 const static std::string planeFragCode = R"(
 #version 430
 
-in vec4 inputColor;
+in vec4 outColor;
 out vec4 outputColor;
 
 void main( )
 {
-  //outputColor = inputColor;
-  outputColor = vec4( 1.0, 1.0, 1.0, 1.0 );
+  outputColor = outColor;
+  //outputColor = vec4( 1.0, 1.0, 1.0, 1.0 );
   
 }
 

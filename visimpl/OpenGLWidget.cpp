@@ -84,12 +84,11 @@ namespace visimpl
   , _player( nullptr )
   , _clippingPlaneLeft( nullptr )
   , _clippingPlaneRight( nullptr )
-  , _clippingSystem( nullptr )
   , _planeHeight( 1 )
   , _planeWidth( 1 )
   , _planeDistance( 20 )
-  , _generatePlanes( true )
   , _rotationPlanes( false )
+  , _translationPlanes( false )
   , _clipping( true )
   , _paintClippingPlanes( true )
   , _planesColor( 1.0, 1.0, 1.0, 1.0 )
@@ -499,6 +498,7 @@ namespace visimpl
     _shaderParticlesSolid->loadVertexShaderFromText( prefr::prefrVertexShader );
     _shaderParticlesSolid->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
     _shaderParticlesSolid->compileAndLink( );
+    _shaderParticlesSolid->autocatching( );
 
 
     _shaderPicking = new prefr::RenderProgram( );
@@ -533,8 +533,6 @@ namespace visimpl
 
     _pickRenderer->glPickProgram( _shaderPicking );
     _pickRenderer->setDefaultFBO( defaultFramebufferObject( ));
-
-    _clippingSystem = &_pickRenderer->clippingSystem( );
 
     _domainManager->mode( TMODE_SELECTION );
 
@@ -1118,16 +1116,10 @@ namespace visimpl
     _clippingPlaneLeft = new reto::ClippingPlane( );
     _clippingPlaneRight = new reto::ClippingPlane( );
 
-//    _clippingSystem->set( "left", _clippingPlaneLeft );
-//    _clippingSystem->set( "right", _clippingPlaneRight );
-
     _planePosLeft.resize( 4, Eigen::Vector3f::Zero( ));
     _planePosRight.resize( 4, Eigen::Vector3f::Zero( ));
 
     _planeRotation = Eigen::Matrix4f::Identity( );
-
-    new QShortcut( QKeySequence( Qt::Key_Tab ),
-                   this, SLOT( toggleClippingPlanes( )));
 
     _planeLeft.init( _camera );
     _planeRight.init( _camera );
@@ -1153,10 +1145,8 @@ namespace visimpl
     glm::vec3 offset =
         glm::vec3( _planeDistance, _planeHeight, _planeWidth ) * 0.5f;
 
-    evec3 center = _planesCenter;
-
-    evec3 centerLeft = center;// - offset;
-    evec3 centerRight = centerLeft;// + offset;
+    evec3 centerLeft = _planesCenter;
+    evec3 centerRight = _planesCenter;
     centerLeft.x( ) -= offset.x;
     centerRight.x( ) += offset.x;
 
@@ -1166,44 +1156,15 @@ namespace visimpl
     _planePosRight[ 0 ] = _planePosRight[ 1 ] =
         _planePosRight[ 2 ] = _planePosRight[ 3 ] = centerRight;
 
-//    _planePosLeft[ 1 ] = glmToEigen( glm::normalize( baseLeft - center ));
     _planePosLeft[ 0 ] += Eigen::Vector3f( 0, offset.y, -offset.z );
     _planePosLeft[ 1 ] += Eigen::Vector3f(  0, -offset.y, -offset.z );
     _planePosLeft[ 2 ] += Eigen::Vector3f( 0, -offset.y, offset.z );
     _planePosLeft[ 3 ] += Eigen::Vector3f( 0, offset.y, offset.z );
 
-//    _planePosRight[ 1 ] = glmToEigen( glm::normalize( baseRight - center ));
     _planePosRight[ 0 ] += Eigen::Vector3f( 0, offset.y, -offset.z );
     _planePosRight[ 1 ] += Eigen::Vector3f( 0, -offset.y, -offset.z);
     _planePosRight[ 2 ] += Eigen::Vector3f( 0, -offset.y, offset.z );
     _planePosRight[ 3 ] += Eigen::Vector3f( 0, offset.y, offset.z );
-
-//    evec3 leftNormal = ( centerLeft - center ).normalized( );
-//    evec3 rightNormal = ( centerRight - center ).normalized( );
-//
-//    _clippingPlaneLeft->setEquationByPointAndNormal( centerLeft, -leftNormal );
-//    _clippingPlaneLeft->setEquationByPointAndNormal( centerRight, -rightNormal );
-//
-//
-//    _planeLeft.points( _planePosLeft[ 0 ], _planePosLeft[ 1 ],
-//                       _planePosLeft[ 2 ], _planePosLeft[ 3 ] );
-//
-//    _planeRight.points( _planePosRight[ 0 ], _planePosRight[ 1 ],
-//                        _planePosRight[ 2 ], _planePosRight[ 3 ] );
-
-//
-//    std::cout << vecToStr( center ) << " center" << std::endl
-//              << vecToStr( baseLeft ) << " left" << std::endl
-//              << vecToStr( currentBoundingBox.first ) << " BB min" << std::endl
-//              << vecToStr( baseRight ) << " right" << std::endl
-//              << vecToStr( currentBoundingBox.second ) << " BB max" << std::endl
-//              << std::endl;
-
-//    for( unsigned int i = 0; i < 3; ++i )
-//    {
-//      _planePosLeft[ i ] = _planeRotation * _planePosLeft[ i ];
-//      _planePosRight[ i ] = _planeRotation * _planePosRight[ i ];
-//    }
 
     _updatePlanes( );
   }
@@ -1218,13 +1179,6 @@ namespace visimpl
 
   void OpenGLWidget::_updatePlanes( void )
   {
-//    std::cout << "Updating plane equations... Rotation:: " << std::endl
-//              << _planeRotation << std::endl
-////              << _camera->
-//              << std::endl;
-
-    // TODO restar centro , multiplicar y después sumar centro
-
     evec3 center;
     evec3 centerLeft;
     evec3 centerRight;
@@ -1234,18 +1188,14 @@ namespace visimpl
     unsigned int pointsNumber = 4;
 
     std::vector< Eigen::Vector3f > transformedPoints( pointsNumber * 2 );
-//    auto center = glmToEigen( _planesCenter );
+
     for( unsigned int i = 0; i < pointsNumber; ++i )
     {
       transformedPoints[ i ] =
           transform( _planePosLeft[ i ], center, _planeRotation );
-          //_planeRotation * ( _planePosLeft[ i ] - _planesCenter ) + _planesCenter;
 
       transformedPoints[ i + pointsNumber] =
           transform( _planePosRight[ i ], center, _planeRotation );
-////          _planeRotation * ( _planePosRight[ i + pointsNumber ] -
-////              _planesCenter ) + _planesCenter;
-
     }
 
     _planeLeft.points( transformedPoints[ 0 ], transformedPoints[ 1 ],
@@ -1500,10 +1450,8 @@ namespace visimpl
       float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
       float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
 
-      evec4 displacement ( xDis, yDis, 0, 1 );
-      displacement = _planeRotation * displacement;
-
-      _planesCenter += evec3( displacement.x(), displacement.y(), displacement.z( ) );
+      evec3 displacement ( xDis, -yDis, 0 );
+      _planesCenter += _camera->rotation( ).transpose( ) * displacement;
 
       _mouseX = event_->x( );
       _mouseY = event_->y( );
@@ -1523,8 +1471,6 @@ namespace visimpl
       _camera->radius( _camera->radius( ) / 1.3f );
     else
       _camera->radius( _camera->radius( ) * 1.3f );
-
-  //  std::cout << "Camera radius " << _camera->radius( ) << std::endl;
 
     update( );
 

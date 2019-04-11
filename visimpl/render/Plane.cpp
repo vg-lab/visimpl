@@ -71,9 +71,9 @@ namespace visimpl
     _vertices[ 11 ] = fourth.z( );
 
     glBindVertexArray( _vao );
+
     // Update positions buffer
     glBindBuffer( GL_ARRAY_BUFFER, _vboVertex );
-
     glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof( GLfloat ) * _vertices.size( ),
                      &_vertices.front( ));
 
@@ -93,16 +93,6 @@ namespace visimpl
 
     program_->sendUniform4m( "viewProj", _camera->viewProjectionMatrix( ));
     program_->sendUniform4v( "inColor", _color.data( ));
-
-//    unsigned int idColor = glGetUniformLocation( program_->program( ),
-//                                                 "inColor" );
-//    std::cout << "inColor " << idColor << std::endl;
-//    glUniform4f( idColor, _color.x( ), _color.y( ), _color.z( ), _color.w( ));
-
-//    program_->sendUniform4m( "rotation", _planeRotation.data( ));
-//    program_->sendUniform3v( "center", center.data( ));
-//    program_->sendUniformf( "height", planeSize.x( ));
-//    program_->sendUniformf( "width", planeSize.y( ));
 
     glDrawArrays(GL_LINE_LOOP, 0, 4);
 

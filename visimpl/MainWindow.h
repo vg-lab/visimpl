@@ -123,6 +123,8 @@ namespace visimpl
 
     void clippingPlanesReset( void );
 
+    void colorSelectionClicked( void );
+
   protected:
 
     void _initSimControlDock( void );
@@ -131,6 +133,8 @@ namespace visimpl
 
     void _configurePlayer( void );
     void _resetClippingParams( void );
+
+    bool _showDialog( QColor& current, const QString& message = "" );
 
 
   #ifdef VISIMPL_USE_ZEROEQ
@@ -220,7 +224,7 @@ namespace visimpl
     QDoubleSpinBox* _spinBoxClippingHeight;
     QDoubleSpinBox* _spinBoxClippingWidth;
     QDoubleSpinBox* _spinBoxClippingDist;
-    QFrame* _frameClippingColor;
+    QPushButton* _frameClippingColor;
 
   };
 

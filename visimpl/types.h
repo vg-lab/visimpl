@@ -132,6 +132,22 @@ namespace visimpl
     return glm::vec4( vect.x( ), vect.y( ), vect.z( ), vect.w( ) );
   }
 
+  static float invRGB = 1.0f / 255;
+
+  static inline evec3 colorQtToEigen( const QColor& color_ )
+  {
+    return evec3( std::min( 1.0f, std::max( 0.0f, color_.red( ) * invRGB )),
+                  std::min( 1.0f, std::max( 0.0f, color_.green( ) * invRGB )),
+                  std::min( 1.0f, std::max( 0.0f, color_.blue( ) * invRGB )));
+  }
+
+  static inline QColor colorEigenToQt( const evec3& color_ )
+  {
+    return QColor( std::min( 255, std::max( 0, int( color_.x( ) * 255 ))),
+                   std::min( 255, std::max( 0, int( color_.y( ) * 255 ))),
+                   std::min( 255, std::max( 0, int( color_.z( ) * 255 ))));
+  }
+
   static glm::vec3 floatPtrToVec3( float* floatPos )
   {
     return glm::vec3( floatPos[ 0 ],

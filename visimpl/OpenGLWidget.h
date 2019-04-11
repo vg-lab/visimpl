@@ -313,7 +313,6 @@ namespace visimpl
 
     reto::ClippingPlane* _clippingPlaneLeft;
     reto::ClippingPlane* _clippingPlaneRight;
-    reto::ClippingSystem* _clippingSystem;
     evec3 _planesCenter;
     std::vector< Eigen::Vector3f > _planePosLeft;
     std::vector< Eigen::Vector3f > _planePosRight;
@@ -321,7 +320,6 @@ namespace visimpl
     float _planeHeight;
     float _planeWidth;
     float _planeDistance;
-    bool _generatePlanes;
     bool _rotationPlanes;
     bool _translationPlanes;
     bool _clipping;
