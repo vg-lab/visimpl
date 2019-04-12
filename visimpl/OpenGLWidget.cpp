@@ -77,10 +77,21 @@ namespace visimpl
   , _shaderParticlesDefault( nullptr )
   , _shaderParticlesSolid( nullptr )
   , _shaderPicking( nullptr )
+  , _shaderClippingPlanes( nullptr )
   , _particleSystem( nullptr )
   , _pickRenderer( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
+  , _clippingPlaneLeft( nullptr )
+  , _clippingPlaneRight( nullptr )
+  , _planeHeight( 1 )
+  , _planeWidth( 1 )
+  , _planeDistance( 20 )
+  , _rotationPlanes( false )
+  , _translationPlanes( false )
+  , _clipping( true )
+  , _paintClippingPlanes( true )
+  , _planesColor( 1.0, 1.0, 1.0, 1.0 )
   , _deltaTime( 0.0f )
   , _sbsTimePerStep( 5.0f )
   , _sbsBeginTime( 0 )
@@ -476,8 +487,8 @@ namespace visimpl
     _shaderParticlesDefault = new reto::ShaderProgram( );
     _shaderParticlesDefault->loadVertexShaderFromText( prefr::prefrVertexShader );
     _shaderParticlesDefault->loadFragmentShaderFromText( prefr::prefrFragmentShaderDefault );
-    _shaderParticlesDefault->create( );
-    _shaderParticlesDefault->link( );
+    _shaderParticlesDefault->compileAndLink( );
+    _shaderParticlesDefault->autocatching( );
 
     _shaderParticlesCurrent = _shaderParticlesDefault;
     _currentShader = T_SHADER_DEFAULT;
@@ -486,15 +497,22 @@ namespace visimpl
     _shaderParticlesSolid = new reto::ShaderProgram( );
     _shaderParticlesSolid->loadVertexShaderFromText( prefr::prefrVertexShader );
     _shaderParticlesSolid->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
-    _shaderParticlesSolid->create( );
-    _shaderParticlesSolid->link( );
+    _shaderParticlesSolid->compileAndLink( );
+    _shaderParticlesSolid->autocatching( );
 
 
     _shaderPicking = new prefr::RenderProgram( );
     _shaderPicking->loadVertexShaderFromText( prefr::prefrVertexShaderPicking );
     _shaderPicking->loadFragmentShaderFromText( prefr::prefrFragmentShaderPicking );
-    _shaderPicking->create( );
-    _shaderPicking->link( );
+    _shaderPicking->compileAndLink( );
+
+    _shaderClippingPlanes = new reto::ShaderProgram( );
+    _shaderClippingPlanes->loadVertexShaderFromText( prefr::planeVertCode );
+    _shaderClippingPlanes->loadFragmentShaderFromText( prefr::planeFragCode );
+    _shaderClippingPlanes->compileAndLink( );
+    _shaderClippingPlanes->autocatching( );
+
+
 
     unsigned int maxParticles = _player->gids( ).size( );
 
@@ -516,73 +534,98 @@ namespace visimpl
     _pickRenderer->glPickProgram( _shaderPicking );
     _pickRenderer->setDefaultFBO( defaultFramebufferObject( ));
 
-
     _domainManager->mode( TMODE_SELECTION );
 
     updateCameraBoundingBox( true );
+
+    _initClippingPlanes( );
   }
 
 
   void OpenGLWidget::_paintParticles( void )
+  {
+    if( !_particleSystem )
+      return;
+
+    glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
+
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    if( _alphaBlendingAccumulative )
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+    else
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+    glFrontFace(GL_CCW);
+
+    _shaderParticlesCurrent->use( );
+        // unsigned int shader;
+        // shader = _particlesShader->getID();
+    unsigned int shader;
+    shader = _shaderParticlesCurrent->program( );
+
+    unsigned int uModelViewProjM;
+    unsigned int cameraUp;
+    unsigned int cameraRight;
+    unsigned int particleRadius;
+
+
+
+    uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
+    glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
+                       _camera->viewProjectionMatrix( ));
+
+    cameraUp = glGetUniformLocation( shader, "cameraUp" );
+    cameraRight = glGetUniformLocation( shader, "cameraRight" );
+
+    particleRadius = glGetUniformLocation( shader, "radiusThreshold" );
+
+    float* viewM = _camera->viewMatrix( );
+
+    glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
+    glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
+
+    glUniform1f( particleRadius, _particleRadiusThreshold );
+
+    glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
+                               _camera->position( )[ 1 ],
+                               _camera->position( )[ 2 ] );
+
+    _particleSystem->updateCameraDistances( cameraPosition );
+
+    _lastCameraPosition = cameraPosition;
+
+    if( _clipping )
     {
-      if( !_particleSystem )
-        return;
-
-      glDepthMask(GL_FALSE);
-      glEnable(GL_BLEND);
-
-      glEnable(GL_DEPTH_TEST);
-      glDisable(GL_CULL_FACE);
-
-      if( _alphaBlendingAccumulative )
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-      else
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-      glFrontFace(GL_CCW);
-
-      _shaderParticlesCurrent->use( );
-          // unsigned int shader;
-          // shader = _particlesShader->getID();
-      unsigned int shader;
-      shader = _shaderParticlesCurrent->program( );
-
-      unsigned int uModelViewProjM;
-      unsigned int cameraUp;
-      unsigned int cameraRight;
-      unsigned int particleRadius;
-
-      uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
-      glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
-                         _camera->viewProjectionMatrix( ));
-
-      cameraUp = glGetUniformLocation( shader, "cameraUp" );
-      cameraRight = glGetUniformLocation( shader, "cameraRight" );
-
-      particleRadius = glGetUniformLocation( shader, "radiusThreshold" );
-
-      float* viewM = _camera->viewMatrix( );
-
-      glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
-      glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
-
-      glUniform1f( particleRadius, _particleRadiusThreshold );
-
-      glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
-                                 _camera->position( )[ 1 ],
-                                 _camera->position( )[ 2 ] );
-
-      _particleSystem->updateCameraDistances( cameraPosition );
-
-      _lastCameraPosition = cameraPosition;
-
-      _particleSystem->updateRender( );
-      _particleSystem->render( );
-
-      _shaderParticlesCurrent->unuse( );
-
+      _clippingPlaneLeft->activate( _shaderParticlesCurrent, 0 );
+      _clippingPlaneRight->activate( _shaderParticlesCurrent, 1 );
     }
+
+
+    _particleSystem->updateRender( );
+    _particleSystem->render( );
+
+    if( _clipping )
+    {
+      _clippingPlaneLeft->deactivate( 0 );
+      _clippingPlaneRight->deactivate( 1 );
+    }
+
+    _shaderParticlesCurrent->unuse( );
+
+  }
+
+  void OpenGLWidget::_paintPlanes( void )
+  {
+    if( _clipping && _paintClippingPlanes )
+    {
+      _planeLeft.render( _shaderClippingPlanes );
+      _planeRight.render( _shaderClippingPlanes );
+    }
+  }
 
   void OpenGLWidget::_resolveFlagsOperations( void )
   {
@@ -705,6 +748,9 @@ namespace visimpl
             } // elapsed > render period
 
           } // if player && player->isPlayint
+
+          _paintPlanes( );
+
           _paintParticles( );
 
           if( _flagPickingSingle )
@@ -712,9 +758,6 @@ namespace visimpl
             _pickSingle( );
           }
         } // if particleSystem
-
-        glUseProgram( 0 );
-        glFlush( );
 
       }
 
@@ -1068,6 +1111,247 @@ namespace visimpl
     }
   }
 
+  void OpenGLWidget::_initClippingPlanes( void )
+  {
+    _clippingPlaneLeft = new reto::ClippingPlane( );
+    _clippingPlaneRight = new reto::ClippingPlane( );
+
+    _planePosLeft.resize( 4, Eigen::Vector3f::Zero( ));
+    _planePosRight.resize( 4, Eigen::Vector3f::Zero( ));
+
+    _planeRotation = Eigen::Matrix4f::Identity( );
+
+    _planeLeft.init( _camera );
+    _planeRight.init( _camera );
+
+    _genPlanesFromBoundingBox( );
+  }
+
+  void OpenGLWidget::_genPlanesFromBoundingBox( void )
+  {
+    auto currentBoundingBox = _domainManager->boundingBox( );
+
+    _planesCenter = glmToEigen( currentBoundingBox.first + currentBoundingBox.second ) * 0.5f;
+
+    _planeDistance = std::abs( currentBoundingBox.second.x - currentBoundingBox.first.x );
+    _planeHeight = std::abs( currentBoundingBox.second.y - currentBoundingBox.first.y );
+    _planeWidth = std::abs( currentBoundingBox.second.z - currentBoundingBox.first.z );
+
+    _genPlanesFromParameters( );
+  }
+
+  void OpenGLWidget::_genPlanesFromParameters( void )
+  {
+    glm::vec3 offset =
+        glm::vec3( _planeDistance, _planeHeight, _planeWidth ) * 0.5f;
+
+    evec3 centerLeft = _planesCenter;
+    evec3 centerRight = _planesCenter;
+    centerLeft.x( ) -= offset.x;
+    centerRight.x( ) += offset.x;
+
+    _planePosLeft[ 0 ] = _planePosLeft[ 1 ] =
+        _planePosLeft[ 2 ] = _planePosLeft[ 3 ] = centerLeft;
+
+    _planePosRight[ 0 ] = _planePosRight[ 1 ] =
+        _planePosRight[ 2 ] = _planePosRight[ 3 ] = centerRight;
+
+    _planePosLeft[ 0 ] += Eigen::Vector3f( 0, offset.y, -offset.z );
+    _planePosLeft[ 1 ] += Eigen::Vector3f(  0, -offset.y, -offset.z );
+    _planePosLeft[ 2 ] += Eigen::Vector3f( 0, -offset.y, offset.z );
+    _planePosLeft[ 3 ] += Eigen::Vector3f( 0, offset.y, offset.z );
+
+    _planePosRight[ 0 ] += Eigen::Vector3f( 0, offset.y, -offset.z );
+    _planePosRight[ 1 ] += Eigen::Vector3f( 0, -offset.y, -offset.z);
+    _planePosRight[ 2 ] += Eigen::Vector3f( 0, -offset.y, offset.z );
+    _planePosRight[ 3 ] += Eigen::Vector3f( 0, offset.y, offset.z );
+
+    _updatePlanes( );
+  }
+
+  static Eigen::Vector3f transform( const Eigen::Vector3f& position,
+                             const Eigen::Vector3f& displacement,
+                             const Eigen::Matrix4f& rotation )
+  {
+    auto disp = vec3ToVec4( displacement );
+    return vec4ToVec3(( rotation * ( vec3ToVec4( position ) - disp )) + disp );
+  }
+
+  void OpenGLWidget::_updatePlanes( void )
+  {
+    evec3 center;
+    evec3 centerLeft;
+    evec3 centerRight;
+    center = centerLeft = centerRight = _planesCenter;
+
+
+    unsigned int pointsNumber = 4;
+
+    std::vector< Eigen::Vector3f > transformedPoints( pointsNumber * 2 );
+
+    for( unsigned int i = 0; i < pointsNumber; ++i )
+    {
+      transformedPoints[ i ] =
+          transform( _planePosLeft[ i ], center, _planeRotation );
+
+      transformedPoints[ i + pointsNumber] =
+          transform( _planePosRight[ i ], center, _planeRotation );
+    }
+
+    _planeLeft.points( transformedPoints[ 0 ], transformedPoints[ 1 ],
+                   transformedPoints[ 2 ], transformedPoints[ 3 ]);
+
+    _planeRight.points( transformedPoints[ 4 ], transformedPoints[ 5 ],
+                       transformedPoints[ 6 ], transformedPoints[ 7 ]);
+
+
+    float offsetX = _planeDistance * 0.5;
+    centerLeft.x( ) -= offsetX;
+    centerRight.x( ) += offsetX;
+
+    center = transform( center, center, _planeRotation );
+    centerLeft = transform( centerLeft, center, _planeRotation );
+    centerRight = transform( centerRight, center, _planeRotation );
+
+    evec3 leftNormal = ( center - centerLeft ).normalized( );
+    evec3 rightNormal = ( center - centerRight ).normalized( );
+
+    _clippingPlaneLeft->setEquationByPointAndNormal( centerLeft, leftNormal );
+    _clippingPlaneRight->setEquationByPointAndNormal( centerRight, rightNormal );
+
+    std::cout << "Planes:" << std::endl
+               << " Left: "
+               << std::endl << vecToStr( transformedPoints[ 0 ])
+               << std::endl << vecToStr( transformedPoints[ 1 ])
+               << std::endl << vecToStr( transformedPoints[ 2 ])
+               << std::endl
+               << " Right: "
+               << std::endl << vecToStr( transformedPoints[ 3 ])
+               << std::endl << vecToStr( transformedPoints[ 4 ])
+               << std::endl << vecToStr( transformedPoints[ 5 ])
+               << std::endl;
+
+
+
+  }
+
+  void OpenGLWidget::clippingPlanes( bool active )
+  {
+    _clipping = active;
+
+    std::cout << "Clipping " << std::boolalpha << _clipping << std::endl;
+
+    if( _clipping )
+    {
+      _updatePlanes( );
+    }
+  }
+
+  void OpenGLWidget::paintClippingPlanes( int paint_ )
+  {
+    _paintClippingPlanes = paint_;
+  }
+
+  void OpenGLWidget::toggleClippingPlanes( void )
+  {
+    clippingPlanes( !_clipping );
+  }
+
+  void OpenGLWidget::clippingPlanesReset( void )
+  {
+    _planeRotation = emat4::Identity( );
+
+    _genPlanesFromBoundingBox( );
+
+
+  }
+
+  void OpenGLWidget::clippingPlanesHeight( float height_ )
+  {
+    _planeHeight = height_;
+
+    _genPlanesFromParameters( );
+  }
+
+  float OpenGLWidget::clippingPlanesHeight( void )
+  {
+    return _planeHeight;
+  }
+
+  void OpenGLWidget::clippingPlanesWidth( float width_ )
+  {
+    _planeWidth = width_;
+
+    _genPlanesFromParameters( );
+  }
+
+  float OpenGLWidget::clippingPlanesWidth( void )
+  {
+    return _planeWidth;
+  }
+
+  void OpenGLWidget::clippingPlanesDistance( float distance_ )
+  {
+    _planeDistance = distance_;
+
+    _genPlanesFromParameters( );
+  }
+
+  float OpenGLWidget::clippingPlanesDistance( void )
+  {
+    return _planeDistance;
+  }
+
+  void OpenGLWidget::clippingPlanesColor( const QColor& color_ )
+  {
+    _planesColor = evec4( color_.red( ) * invRGBInt,
+                          color_.green( ) * invRGBInt,
+                          color_.blue( ) * invRGBInt,
+                          1.0 );
+
+    _planeLeft.color( _planesColor );
+    _planeRight.color( _planesColor );
+  }
+
+  QColor OpenGLWidget::clippingPlanesColor( void )
+  {
+    return QColor( _planesColor.x( ) * 255,
+                   _planesColor.y( ) * 255,
+                   _planesColor.z( ) * 255,
+                   _planesColor.w( ) * 255 );
+  }
+
+  void OpenGLWidget::_rotatePlanes( float yaw_, float pitch_ )
+  {
+
+
+    Eigen::Matrix4f rot;
+    Eigen::Matrix4f rYaw;
+    Eigen::Matrix4f rPitch;
+
+    float sinYaw, cosYaw, sinPitch, cosPitch;
+
+    sinYaw = sin( yaw_ );
+    cosYaw = cos( yaw_ );
+    sinPitch = sin( pitch_ );
+    cosPitch = cos( pitch_ );
+
+    rYaw << cosYaw, 0.0f, sinYaw, 0.0f,
+            0.0f,   1.0f, 0.0f, 0.0f,
+            -sinYaw, 0.0f, cosYaw, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f;
+
+    rPitch << 1.0f, 0.0f, 0.0f, 0.0f,
+              0.0f, cosPitch, -sinPitch, 0.0f,
+              0.0f, sinPitch, cosPitch, 0.0f,
+              0.0f, 0.0f, 0.0f, 1.0f;
+
+    rot = rPitch * rYaw;
+
+    _planeRotation = rot * _planeRotation;
+
+    _updatePlanes( );
+  }
 
   void OpenGLWidget::mousePressEvent( QMouseEvent* event_ )
   {
@@ -1082,6 +1366,12 @@ namespace visimpl
 
         _flagPickingSingle = true;
       }
+      else if( event_->modifiers( ) == Qt::SHIFT && _clipping )
+      {
+        _rotationPlanes = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
       else
       {
         _rotation = true;
@@ -1091,9 +1381,18 @@ namespace visimpl
     }
     else if ( event_->button( ) ==  Qt::RightButton )
     {
-      _translation = true;
-      _mouseX = event_->x( );
-      _mouseY = event_->y( );
+      if( event_->modifiers( ) == Qt::SHIFT && _clipping )
+      {
+        _translationPlanes = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
+      else
+      {
+        _translation = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
     }
 
 
@@ -1107,6 +1406,7 @@ namespace visimpl
     if ( event_->button( ) == Qt::LeftButton)
     {
       _rotation = false;
+      _rotationPlanes = false;
     }
     if ( event_->button( ) ==  Qt::RightButton )
     {
@@ -1126,6 +1426,15 @@ namespace visimpl
       _mouseX = event_->x( );
       _mouseY = event_->y( );
     }
+
+    if( _rotationPlanes && _clipping )
+    {
+      _rotatePlanes( -( _mouseX - event_->x( )) * 0.01,
+                      ( _mouseY - event_->y( )) * 0.01 );
+      _mouseX = event_->x( );
+      _mouseY = event_->y( );
+    }
+
     if( _translation )
     {
       float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
@@ -1134,6 +1443,20 @@ namespace visimpl
       _camera->localTranslation( Eigen::Vector3f( -xDis, yDis, 0.0f ));
       _mouseX = event_->x( );
       _mouseY = event_->y( );
+    }
+
+    if( _translationPlanes )
+    {
+      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
+      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+
+      evec3 displacement ( xDis, -yDis, 0 );
+      _planesCenter += _camera->rotation( ).transpose( ) * displacement;
+
+      _mouseX = event_->x( );
+      _mouseY = event_->y( );
+
+      _genPlanesFromParameters( );
     }
 
     this->update( );
@@ -1148,8 +1471,6 @@ namespace visimpl
       _camera->radius( _camera->radius( ) / 1.3f );
     else
       _camera->radius( _camera->radius( ) * 1.3f );
-
-  //  std::cout << "Camera radius " << _camera->radius( ) << std::endl;
 
     update( );
 
