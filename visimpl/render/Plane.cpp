@@ -80,6 +80,11 @@ namespace visimpl
     glBindVertexArray( 0 );
   }
 
+  const std::vector< evec3 >& Plane::points( void ) const
+  {
+    return _points;
+  }
+
   void Plane::render( reto::ShaderProgram* program_ )
   {
     assert( _camera );

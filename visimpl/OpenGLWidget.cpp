@@ -1133,7 +1133,7 @@ namespace visimpl
 
     _planesCenter = glmToEigen( currentBoundingBox.first + currentBoundingBox.second ) * 0.5f;
 
-    _planeDistance = std::abs( currentBoundingBox.second.x - currentBoundingBox.first.x );
+    _planeDistance = std::abs( currentBoundingBox.second.x - currentBoundingBox.first.x ) + 1;
     _planeHeight = std::abs( currentBoundingBox.second.y - currentBoundingBox.first.y );
     _planeWidth = std::abs( currentBoundingBox.second.z - currentBoundingBox.first.z );
 
@@ -1213,23 +1213,23 @@ namespace visimpl
     centerLeft = transform( centerLeft, center, _planeRotation );
     centerRight = transform( centerRight, center, _planeRotation );
 
-    evec3 leftNormal = ( center - centerLeft ).normalized( );
-    evec3 rightNormal = ( center - centerRight ).normalized( );
+    _planeNormalLeft = ( center - centerLeft ).normalized( );
+    _planeNormalRight = ( center - centerRight ).normalized( );
 
-    _clippingPlaneLeft->setEquationByPointAndNormal( centerLeft, leftNormal );
-    _clippingPlaneRight->setEquationByPointAndNormal( centerRight, rightNormal );
+    _clippingPlaneLeft->setEquationByPointAndNormal( centerLeft, _planeNormalLeft );
+    _clippingPlaneRight->setEquationByPointAndNormal( centerRight, _planeNormalRight );
 
-    std::cout << "Planes:" << std::endl
-               << " Left: "
-               << std::endl << vecToStr( transformedPoints[ 0 ])
-               << std::endl << vecToStr( transformedPoints[ 1 ])
-               << std::endl << vecToStr( transformedPoints[ 2 ])
-               << std::endl
-               << " Right: "
-               << std::endl << vecToStr( transformedPoints[ 3 ])
-               << std::endl << vecToStr( transformedPoints[ 4 ])
-               << std::endl << vecToStr( transformedPoints[ 5 ])
-               << std::endl;
+//    std::cout << "Planes:" << std::endl
+//               << " Left: "
+//               << std::endl << vecToStr( transformedPoints[ 0 ])
+//               << std::endl << vecToStr( transformedPoints[ 1 ])
+//               << std::endl << vecToStr( transformedPoints[ 2 ])
+//               << std::endl
+//               << " Right: "
+//               << std::endl << vecToStr( transformedPoints[ 3 ])
+//               << std::endl << vecToStr( transformedPoints[ 4 ])
+//               << std::endl << vecToStr( transformedPoints[ 5 ])
+//               << std::endl;
 
 
 
@@ -1352,6 +1352,41 @@ namespace visimpl
 
     _updatePlanes( );
   }
+
+  GIDVec OpenGLWidget::getPlanesContainedElements( void ) const
+  {
+    GIDVec result;
+
+    // Project elements
+    evec3 normal = - _planeNormalLeft;
+    normal.normalize( );
+
+    auto positions = _domainManager->positions( );
+
+    result.reserve( positions.size( ));
+
+    float distance = 0.0f;
+
+    std::cout << "Contained elements: ";
+    for( auto neuronPos : positions )
+    {
+      distance = normal.dot( _planeLeft.points( )[ 0 ] ) -
+                 normal.dot( glmToEigen( neuronPos.second ));
+
+      if( distance > 0.0f && distance <= _planeDistance )
+      {
+        result.emplace_back( neuronPos.first );
+//        std::cout << " [" << neuronPos.first << ":" << distance << "]";
+      }
+    }
+
+    result.shrink_to_fit( );
+
+    std::cout << " " << result.size( ) << std::endl;
+
+    return result;
+  }
+
 
   void OpenGLWidget::mousePressEvent( QMouseEvent* event_ )
   {

@@ -125,6 +125,10 @@ namespace visimpl
 
     void colorSelectionClicked( void );
 
+    void setSelection( const GIDUSet& selection_ );
+    void clearSelection( void );
+    void selectionFromPlanes( void );
+
   protected:
 
     void _initSimControlDock( void );
@@ -147,7 +151,6 @@ namespace visimpl
 
   #endif
 
-    void ClearSelection( void );
 
   protected:
 
@@ -225,6 +228,7 @@ namespace visimpl
     QDoubleSpinBox* _spinBoxClippingWidth;
     QDoubleSpinBox* _spinBoxClippingDist;
     QPushButton* _frameClippingColor;
+    QPushButton* _buttonSelectionFromClippingPlanes;
 
   };
 

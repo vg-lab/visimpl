@@ -150,6 +150,11 @@ namespace visimpl
     _particleSystem->start();
   }
 
+  const tGidPosMap& DomainManager::positions( void ) const
+  {
+    return _gidPositions;
+  }
+
   void DomainManager::mode( tVisualMode newMode )
   {
     clearView( );
