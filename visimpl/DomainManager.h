@@ -88,6 +88,7 @@ namespace visimpl
     const std::vector< VisualGroup* >& attributeGroups( void ) const;
 
     const tGidPosMap& positions( void ) const;
+    const TGIDSet& gids( void ) const;
 
     tBoundingBox boundingBox( void ) const;
 

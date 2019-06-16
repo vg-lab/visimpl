@@ -123,6 +123,7 @@ namespace visimpl
   , _flagUpdateAttributes( false )
   , _flagPickingSingle( false )
   , _flagChangeShader( false )
+  , _flagUpdateRender( false )
   , _flagModeChange( false )
   , _newMode( TMODE_UNDEFINED )
   , _flagAttribChange( false )
@@ -594,9 +595,15 @@ namespace visimpl
                                _camera->position( )[ 1 ],
                                _camera->position( )[ 2 ] );
 
-    _particleSystem->updateCameraDistances( cameraPosition );
+    if( _player->isPlaying( ) || _lastCameraPosition != cameraPosition || _flagUpdateRender )
+    {
+      _particleSystem->updateCameraDistances( cameraPosition );
+      _lastCameraPosition = cameraPosition;
 
-    _lastCameraPosition = cameraPosition;
+      _particleSystem->updateRender( );
+
+      _flagUpdateRender = false;
+    }
 
     if( _clipping )
     {
@@ -604,8 +611,6 @@ namespace visimpl
       _clippingPlaneRight->activate( _shaderParticlesCurrent, 1 );
     }
 
-
-    _particleSystem->updateRender( );
     _particleSystem->render( );
 
     if( _clipping )
@@ -863,6 +868,7 @@ namespace visimpl
     _domainManager->mode( _newMode );
 
     _flagModeChange = false;
+    _flagUpdateRender = true;
 
     if( _domainManager->mode( ) == TMODE_ATTRIBUTE )
       emit attributeStatsComputed( );
@@ -886,14 +892,13 @@ namespace visimpl
     {
       _particleSystem->run( false );
 
-      _domainManager->selection( _selectedGIDs );
-
       updateCameraBoundingBox( );
 
       _particleSystem->run( true );
       _particleSystem->update( 0.0f );
 
       _flagUpdateSelection = false;
+      _flagUpdateRender = true;
     }
 
   }
@@ -972,7 +977,6 @@ namespace visimpl
 
   void OpenGLWidget::clearSelection( void )
   {
-    _domainManager->clearSelection( );
     _selectedGIDs.clear( );
     _flagUpdateSelection = true;
   }

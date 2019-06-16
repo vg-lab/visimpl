@@ -155,6 +155,11 @@ namespace visimpl
     return _gidPositions;
   }
 
+  const TGIDSet& DomainManager::gids( void ) const
+  {
+    return _gids;
+  }
+
   void DomainManager::mode( tVisualMode newMode )
   {
     clearView( );

@@ -88,8 +88,8 @@ namespace visimpl
   , _modeSelectionWidget( nullptr )
   , _toolBoxOptions( nullptr )
   , _groupBoxTransferFunction( nullptr )
-  , _tfEditor( nullptr )
   , _tfWidget( nullptr )
+  , _selectionManager( nullptr )
   , _autoNameGroups( false )
   , _groupBoxGroups( nullptr )
   , _groupLayout( nullptr )
@@ -164,7 +164,7 @@ namespace visimpl
 
     // Connect about dialog
     connect( _ui->actionAbout, SIGNAL( triggered( )),
-             this, SLOT( aboutDialog( )));
+             this, SLOT( dialogAbout( )));
 
 
     connect( _ui->actionHome, SIGNAL( triggered( )),
@@ -250,6 +250,8 @@ namespace visimpl
     QStringList attributes = { "Morphological type", "Functional type" };
 
     _comboAttribSelection->addItems( attributes );
+
+    _selectionManager->setGIDs( _domainManager->gids( ));
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -362,7 +364,7 @@ namespace visimpl
   }
 
 
-  void MainWindow::aboutDialog( void )
+  void MainWindow::dialogAbout( void )
   {
 
     QString msj = 
@@ -442,6 +444,14 @@ namespace visimpl
     "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
     
     QMessageBox::about(this, tr( "About ViSimpl" ), msj );
+  }
+
+  void MainWindow::dialogSelectionManagement( void )
+  {
+    if( !_selectionManager )
+      return;
+
+    _selectionManager->show( );
   }
 
   void MainWindow::togglePlaybackDock( void )
@@ -621,6 +631,15 @@ namespace visimpl
     _tfWidget = new TransferFunctionWidget( );
     _tfWidget->setMinimumHeight( 150 );
 
+    _selectionManager = new SelectionManagerWidget( );
+//    _selectionManager->setWindowFlags( Qt::D );
+    _selectionManager->setWindowModality( Qt::WindowModal );
+    _selectionManager->setMinimumHeight( 300 );
+    _selectionManager->setMinimumWidth( 500 );
+
+    connect( _selectionManager, SIGNAL( selectionChanged( void )),
+             this, SLOT( selectionManagerChanged( void )));
+
     _deltaTimeBox = new QDoubleSpinBox( );
     _deltaTimeBox->setMinimum( 0.00000001 );
     _deltaTimeBox->setMaximum( 50 );
@@ -748,12 +767,16 @@ namespace visimpl
     vcLayout->addWidget( rFunctionGB );
     vcContainer->setLayout( vcLayout );
 
+    QPushButton* buttonSelectionManager = new QPushButton( "..." );
+    buttonSelectionManager->setToolTip( tr( "Show the selection management dialog" ));
+    buttonSelectionManager->setMaximumWidth( 30 );
 
     QGroupBox* selFunctionGB = new QGroupBox( "Current selection");
     QHBoxLayout* selLayout = new QHBoxLayout( );
     selLayout->setAlignment( Qt::AlignTop );
     selLayout->addWidget( new QLabel( "Selection size: " ));
     selLayout->addWidget( _selectionSizeLabel );
+    selLayout->addWidget( buttonSelectionManager );
     selLayout->addWidget( _addGroupButton );
     selLayout->addWidget( _clearSelectionButton );
     selFunctionGB->setLayout( selLayout );
@@ -931,6 +954,9 @@ namespace visimpl
              this, SLOT( PreviewSimulationColorMapping( void )));
     connect( _tfWidget, SIGNAL( previewColor( void )),
              this, SLOT( PreviewSimulationSizeFunction( void )));
+
+    connect( buttonSelectionManager, SIGNAL( clicked( void )),
+             this, SLOT( dialogSelectionManagement( void )));
 
     connect( _deltaTimeBox, SIGNAL( valueChanged( double )),
                this, SLOT( updateSimDeltaTime( void )));
@@ -1317,27 +1343,48 @@ namespace visimpl
     if( selectedSet.empty( ))
       return;
 
-    setSelection( selectedSet );
+    setSelection( selectedSet, SRC_PLANES );
 
   }
 
-  void MainWindow::setSelection( const GIDUSet& selectedSet )
+  void MainWindow::selectionManagerChanged( void )
   {
-    if( selectedSet.size( ) == 0 || !_openGLWidget )
-      return;
+    setSelection( _selectionManager->selected( ), SRC_WIDGET );
+  }
 
-    _openGLWidget->setSelectedGIDs( selectedSet );
+  void MainWindow::_updateSelectionGUI( void )
+  {
+    auto selection = _domainManager->selection( );
 
     _addGroupButton->setEnabled( true );
     _clearSelectionButton->setEnabled( true );
-    _selectionSizeLabel->setText( QString::number( selectedSet.size( )));
+    _selectionSizeLabel->setText( QString::number( selection.size( )));
+    _selectionSizeLabel->update( );
+
+  }
+
+  void MainWindow::setSelection( const GIDUSet& selectedSet,
+                                 TSelectionSource source_ )
+  {
+    if( source_ == SRC_UNDEFINED )
+      return;
+
+    _domainManager->selection( selectedSet );
+    _openGLWidget->setSelectedGIDs( selectedSet );
+
+    if( source_ != SRC_WIDGET )
+      _selectionManager->setSelected( selectedSet );
+
+    _updateSelectionGUI( );
   }
 
   void MainWindow::clearSelection( void )
   {
     if( _openGLWidget )
     {
+      _domainManager->clearSelection( );
       _openGLWidget->clearSelection( );
+      _selectionManager->clearSelection( );
 
       _addGroupButton->setEnabled( false );
       _clearSelectionButton->setEnabled( false );
@@ -1438,7 +1485,7 @@ namespace visimpl
 
       visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
 
-      setSelection( selectedSet );
+      setSelection( selectedSet, SRC_EXTERNAL );
     }
 
   }

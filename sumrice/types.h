@@ -37,6 +37,8 @@ namespace visimpl
   typedef simil::Spike Spike;
   typedef simil::TSpikes TSpikes;
 
+  typedef std::unordered_map< unsigned int, unsigned int > TUIntUintMap;
+
   typedef std::set< uint32_t > TGIDSet;
   typedef std::vector< vmml::Vector3f > TPosVect;
 

@@ -380,6 +380,7 @@ namespace visimpl
     bool _flagUpdateAttributes;
     bool _flagPickingSingle;
     bool _flagChangeShader;
+    bool _flagUpdateRender;
 
     bool _flagModeChange;
     tVisualMode _newMode;
