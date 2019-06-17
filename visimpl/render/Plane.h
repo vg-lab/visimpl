@@ -23,6 +23,8 @@ namespace visimpl
 
     void points( evec3 first, evec3 second, evec3 third, evec3 fourth );
 
+    const std::vector< evec3 >& points( void ) const;
+
     void init( reto::Camera* camera );
     void render( reto::ShaderProgram* program_ );
 

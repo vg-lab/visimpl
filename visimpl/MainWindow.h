@@ -18,6 +18,7 @@
 #include <QToolBox>
 
 #include "OpenGLWidget.h"
+#include "SelectionManagerWidget.h"
 
 #include <sumrice/sumrice.h>
 
@@ -30,6 +31,14 @@ class MainWindow;
 
 namespace visimpl
 {
+
+  enum TSelectionSource
+  {
+    SRC_EXTERNAL = 0,
+    SRC_PLANES,
+    SRC_WIDGET,
+    SRC_UNDEFINED
+  };
 
   class MainWindow
     : public QMainWindow
@@ -63,7 +72,8 @@ namespace visimpl
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
 
-    void aboutDialog( void );
+    void dialogAbout( void );
+    void dialogSelectionManagement( void );
 
     void togglePlaybackDock( void );
     void toggleSimConfigDock( void );
@@ -125,6 +135,11 @@ namespace visimpl
 
     void colorSelectionClicked( void );
 
+    void selectionManagerChanged( void );
+    void setSelection( const GIDUSet& selection_, TSelectionSource source_ = SRC_UNDEFINED );
+    void clearSelection( void );
+    void selectionFromPlanes( void );
+
   protected:
 
     void _initSimControlDock( void );
@@ -133,6 +148,8 @@ namespace visimpl
 
     void _configurePlayer( void );
     void _resetClippingParams( void );
+
+    void _updateSelectionGUI( void );
 
     bool _showDialog( QColor& current, const QString& message = "" );
 
@@ -147,7 +164,6 @@ namespace visimpl
 
   #endif
 
-    void ClearSelection( void );
 
   protected:
 
@@ -188,8 +204,8 @@ namespace visimpl
     QToolBox* _toolBoxOptions;
 
     QGroupBox* _groupBoxTransferFunction;
-    TransferFunctionEditor* _tfEditor;
     TransferFunctionWidget* _tfWidget;
+    SelectionManagerWidget* _selectionManager;
 
     bool _autoNameGroups;
     QGroupBox* _groupBoxGroups;
@@ -225,6 +241,7 @@ namespace visimpl
     QDoubleSpinBox* _spinBoxClippingWidth;
     QDoubleSpinBox* _spinBoxClippingDist;
     QPushButton* _frameClippingColor;
+    QPushButton* _buttonSelectionFromClippingPlanes;
 
   };
 

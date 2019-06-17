@@ -201,6 +201,8 @@ namespace visimpl
     void changeSimulationDecayValue( float value );
     float getSimulationDecayValue( void );
 
+    GIDVec getPlanesContainedElements( void ) const;
+
   protected:
 
     void _resolveFlagsOperations( void );
@@ -314,6 +316,8 @@ namespace visimpl
     reto::ClippingPlane* _clippingPlaneLeft;
     reto::ClippingPlane* _clippingPlaneRight;
     evec3 _planesCenter;
+    evec3 _planeNormalLeft;
+    evec3 _planeNormalRight;
     std::vector< Eigen::Vector3f > _planePosLeft;
     std::vector< Eigen::Vector3f > _planePosRight;
     Eigen::Matrix4f _planeRotation;
@@ -376,6 +380,7 @@ namespace visimpl
     bool _flagUpdateAttributes;
     bool _flagPickingSingle;
     bool _flagChangeShader;
+    bool _flagUpdateRender;
 
     bool _flagModeChange;
     tVisualMode _newMode;

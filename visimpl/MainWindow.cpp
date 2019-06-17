@@ -88,8 +88,8 @@ namespace visimpl
   , _modeSelectionWidget( nullptr )
   , _toolBoxOptions( nullptr )
   , _groupBoxTransferFunction( nullptr )
-  , _tfEditor( nullptr )
   , _tfWidget( nullptr )
+  , _selectionManager( nullptr )
   , _autoNameGroups( false )
   , _groupBoxGroups( nullptr )
   , _groupLayout( nullptr )
@@ -115,6 +115,7 @@ namespace visimpl
   , _spinBoxClippingWidth( nullptr )
   , _spinBoxClippingDist( nullptr )
   , _frameClippingColor( nullptr )
+  , _buttonSelectionFromClippingPlanes( nullptr )
   {
     _ui->setupUi( this );
 
@@ -163,7 +164,7 @@ namespace visimpl
 
     // Connect about dialog
     connect( _ui->actionAbout, SIGNAL( triggered( )),
-             this, SLOT( aboutDialog( )));
+             this, SLOT( dialogAbout( )));
 
 
     connect( _ui->actionHome, SIGNAL( triggered( )),
@@ -249,6 +250,8 @@ namespace visimpl
     QStringList attributes = { "Morphological type", "Functional type" };
 
     _comboAttribSelection->addItems( attributes );
+
+    _selectionManager->setGIDs( _domainManager->gids( ));
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -361,7 +364,7 @@ namespace visimpl
   }
 
 
-  void MainWindow::aboutDialog( void )
+  void MainWindow::dialogAbout( void )
   {
 
     QString msj = 
@@ -441,6 +444,14 @@ namespace visimpl
     "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
     
     QMessageBox::about(this, tr( "About ViSimpl" ), msj );
+  }
+
+  void MainWindow::dialogSelectionManagement( void )
+  {
+    if( !_selectionManager )
+      return;
+
+    _selectionManager->show( );
   }
 
   void MainWindow::togglePlaybackDock( void )
@@ -620,6 +631,15 @@ namespace visimpl
     _tfWidget = new TransferFunctionWidget( );
     _tfWidget->setMinimumHeight( 150 );
 
+    _selectionManager = new SelectionManagerWidget( );
+//    _selectionManager->setWindowFlags( Qt::D );
+    _selectionManager->setWindowModality( Qt::WindowModal );
+    _selectionManager->setMinimumHeight( 300 );
+    _selectionManager->setMinimumWidth( 500 );
+
+    connect( _selectionManager, SIGNAL( selectionChanged( void )),
+             this, SLOT( selectionManagerChanged( void )));
+
     _deltaTimeBox = new QDoubleSpinBox( );
     _deltaTimeBox->setMinimum( 0.00000001 );
     _deltaTimeBox->setMaximum( 50 );
@@ -689,6 +709,10 @@ namespace visimpl
     _frameClippingColor->setMinimumSize( 20, 20 );
     _frameClippingColor->setMaximumSize( 20, 20 );
 
+    _buttonSelectionFromClippingPlanes = new QPushButton( "To selection");
+    _buttonSelectionFromClippingPlanes->setToolTip( tr( "Create a selection set from elements between planes" ));
+
+
 
     QWidget* topContainer = new QWidget( );
     QVBoxLayout* verticalLayout = new QVBoxLayout( );
@@ -743,12 +767,16 @@ namespace visimpl
     vcLayout->addWidget( rFunctionGB );
     vcContainer->setLayout( vcLayout );
 
+    QPushButton* buttonSelectionManager = new QPushButton( "..." );
+    buttonSelectionManager->setToolTip( tr( "Show the selection management dialog" ));
+    buttonSelectionManager->setMaximumWidth( 30 );
 
     QGroupBox* selFunctionGB = new QGroupBox( "Current selection");
     QHBoxLayout* selLayout = new QHBoxLayout( );
     selLayout->setAlignment( Qt::AlignTop );
-    selLayout->addWidget( new QLabel( "Selection size: " ));
+    selLayout->addWidget( new QLabel( "Size: " ));
     selLayout->addWidget( _selectionSizeLabel );
+    selLayout->addWidget( buttonSelectionManager );
     selLayout->addWidget( _addGroupButton );
     selLayout->addWidget( _clearSelectionButton );
     selFunctionGB->setLayout( selLayout );
@@ -760,8 +788,9 @@ namespace visimpl
     QGroupBox* gbClippingPlanes = new QGroupBox( "Clipping planes" );
     QGridLayout* layoutClippingPlanes = new QGridLayout( );
     gbClippingPlanes->setLayout( layoutClippingPlanes );
-    layoutClippingPlanes->addWidget( _checkClipping, 0, 0, 1, 2 );
-    layoutClippingPlanes->addWidget( _checkShowPlanes, 0, 2, 1, 2 );
+    layoutClippingPlanes->addWidget( _checkClipping, 0, 0, 1, 1 );
+    layoutClippingPlanes->addWidget( _checkShowPlanes, 0, 1, 1, 2 );
+    layoutClippingPlanes->addWidget( _buttonSelectionFromClippingPlanes, 0, 3, 1, 1 );
     layoutClippingPlanes->addWidget( line, 1, 0, 1, 4 );
     layoutClippingPlanes->addWidget( _frameClippingColor, 2, 0, 1, 1 );
     layoutClippingPlanes->addWidget( _buttonResetPlanes, 2, 1, 1, 1 );
@@ -926,6 +955,9 @@ namespace visimpl
     connect( _tfWidget, SIGNAL( previewColor( void )),
              this, SLOT( PreviewSimulationSizeFunction( void )));
 
+    connect( buttonSelectionManager, SIGNAL( clicked( void )),
+             this, SLOT( dialogSelectionManagement( void )));
+
     connect( _deltaTimeBox, SIGNAL( valueChanged( double )),
                this, SLOT( updateSimDeltaTime( void )));
 
@@ -952,6 +984,9 @@ namespace visimpl
     connect( _checkShowPlanes, SIGNAL( stateChanged( int )),
              _openGLWidget, SLOT( paintClippingPlanes( int )));
 
+    connect( _buttonSelectionFromClippingPlanes, SIGNAL( clicked( void )),
+             this, SLOT( selectionFromPlanes( void )));
+
     connect( _buttonResetPlanes, SIGNAL( clicked( void )),
              this, SLOT( clippingPlanesReset( void )));
 
@@ -968,13 +1003,8 @@ namespace visimpl
     connect( _frameClippingColor, SIGNAL( clicked( )),
              this, SLOT( colorSelectionClicked()));
 
-
-#ifdef VISIMPL_USE_ZEROEQ
-#ifdef VISIMPL_USE_GMRVLEX
     connect( _clearSelectionButton, SIGNAL( clicked( void )),
-             this, SLOT( ClearSelection( void )));
-#endif
-#endif
+             this, SLOT( clearSelection( void )));
 
     connect( _addGroupButton, SIGNAL( clicked( void )),
              this, SLOT( addGroupFromSelection( )));
@@ -1218,6 +1248,7 @@ namespace visimpl
     _spinBoxClippingWidth->setEnabled( active );
     _spinBoxClippingDist->setEnabled( active );
     _frameClippingColor->setEnabled( active );
+    _buttonSelectionFromClippingPlanes->setEnabled( active );
 
     _openGLWidget->clippingPlanes( active );
 
@@ -1301,6 +1332,65 @@ namespace visimpl
     }
   }
 
+  void MainWindow::selectionFromPlanes( void )
+  {
+    if( !_openGLWidget )
+      return;
+
+    auto ids = _openGLWidget->getPlanesContainedElements( );
+    visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
+
+    if( selectedSet.empty( ))
+      return;
+
+    setSelection( selectedSet, SRC_PLANES );
+
+  }
+
+  void MainWindow::selectionManagerChanged( void )
+  {
+    setSelection( _selectionManager->selected( ), SRC_WIDGET );
+  }
+
+  void MainWindow::_updateSelectionGUI( void )
+  {
+    auto selection = _domainManager->selection( );
+
+    _addGroupButton->setEnabled( true );
+    _clearSelectionButton->setEnabled( true );
+    _selectionSizeLabel->setText( QString::number( selection.size( )));
+    _selectionSizeLabel->update( );
+
+  }
+
+  void MainWindow::setSelection( const GIDUSet& selectedSet,
+                                 TSelectionSource source_ )
+  {
+    if( source_ == SRC_UNDEFINED )
+      return;
+
+    _domainManager->selection( selectedSet );
+    _openGLWidget->setSelectedGIDs( selectedSet );
+
+    if( source_ != SRC_WIDGET )
+      _selectionManager->setSelected( selectedSet );
+
+    _updateSelectionGUI( );
+  }
+
+  void MainWindow::clearSelection( void )
+  {
+    if( _openGLWidget )
+    {
+      _domainManager->clearSelection( );
+      _openGLWidget->clearSelection( );
+      _selectionManager->clearSelection( );
+
+      _addGroupButton->setEnabled( false );
+      _clearSelectionButton->setEnabled( false );
+      _selectionSizeLabel->setText( "0" );
+    }
+  }
 
   #ifdef VISIMPL_USE_ZEROEQ
 
@@ -1380,17 +1470,7 @@ namespace visimpl
   //  pthread_exit( NULL );
   //}
 
-  void MainWindow::ClearSelection( void )
-  {
-    if( _openGLWidget )
-    {
-      _openGLWidget->clearSelection( );
 
-      _addGroupButton->setEnabled( false );
-      _clearSelectionButton->setEnabled( false );
-      _selectionSizeLabel->setText( "0" );
-    }
-  }
 
   void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
   {
@@ -1403,18 +1483,9 @@ namespace visimpl
 
       std::vector< uint32_t > ids = selected->getIdsVector( );
 
-
-
       visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
 
-      if( selectedSet.size( ) == 0 )
-        return;
-
-      _openGLWidget->setSelectedGIDs( selectedSet );
-
-      _addGroupButton->setEnabled( true );
-      _clearSelectionButton->setEnabled( true );
-      _selectionSizeLabel->setText( QString::number( selectedSet.size( )));
+      setSelection( selectedSet, SRC_EXTERNAL );
     }
 
   }
