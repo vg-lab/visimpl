@@ -774,7 +774,7 @@ namespace visimpl
     QGroupBox* selFunctionGB = new QGroupBox( "Current selection");
     QHBoxLayout* selLayout = new QHBoxLayout( );
     selLayout->setAlignment( Qt::AlignTop );
-    selLayout->addWidget( new QLabel( "Selection size: " ));
+    selLayout->addWidget( new QLabel( "Size: " ));
     selLayout->addWidget( _selectionSizeLabel );
     selLayout->addWidget( buttonSelectionManager );
     selLayout->addWidget( _addGroupButton );

@@ -88,8 +88,11 @@ namespace visimpl
 
     _listViewAvailable = new QListView( );
     _listViewAvailable->setSelectionMode( QAbstractItemView::ExtendedSelection );
+    _listViewAvailable->setUniformItemSizes( true );
+
     _listViewSelected = new QListView( );
     _listViewSelected->setSelectionMode( QAbstractItemView::ExtendedSelection );
+    _listViewSelected->setUniformItemSizes( true );
 
     _modelAvailable = new QStandardItemModel( );
     _modelSelected = new QStandardItemModel( );
@@ -406,7 +409,8 @@ namespace visimpl
          tr( "Text  files (.txt);;All files (*)" ),
          nullptr, QFileDialog::DontUseNativeDialog );
 
-    _lineEditFilePath->setText( path );
+    if( !path.isEmpty( ))
+      _lineEditFilePath->setText( path );
   }
 
   void SelectionManagerWidget::_buttonSaveClicked( void )
