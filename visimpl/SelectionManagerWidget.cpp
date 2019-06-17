@@ -12,7 +12,10 @@
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
-
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QTextStream>
+#include <QShortcut>
 
 namespace visimpl
 {
@@ -41,25 +44,44 @@ namespace visimpl
 
     this->setLayout( layoutTop );
 
-    QTabWidget* tabWidget = new QTabWidget( );
+    _tabWidget = new QTabWidget( );
     QWidget* containerFoot = new QWidget( );
     QGridLayout* layoutFoot = new QGridLayout( );
     containerFoot->setLayout( layoutFoot );
 
-    layoutTop->addWidget( tabWidget );
+    layoutTop->addWidget( _tabWidget );
     layoutTop->addWidget( containerFoot );
 
-    QWidget* containerSelection = new QWidget( );
-    QWidget* containerExport = new QWidget( );
+    _initTabSelection( );
+    _initTabExport( );
+    // Foot
 
-    tabWidget->addTab( containerSelection, "Selection" );
-    tabWidget->addTab( containerExport, "Export" );
+    QPushButton* buttonCancel = new QPushButton( "Cancel" );
+    buttonCancel->setMaximumWidth( 100 );
+    QPushButton* buttonAccept = new QPushButton( "Accept" );
+    buttonAccept->setMaximumWidth( 100 );
+
+    layoutFoot->addWidget( buttonCancel, 0, 0, 1, 1 );
+    layoutFoot->addWidget( buttonAccept, 0, 2, 1, 1 );
+
+    connect( buttonCancel, SIGNAL( clicked( void )),
+             this, SLOT( _buttonCancelClicked( void )));
+    connect( buttonAccept, SIGNAL( clicked( void )),
+             this, SLOT( _buttonAcceptClicked( void )));
+
+    new QShortcut( QKeySequence( Qt::Key_Escape ), this, SLOT( _buttonCancelClicked( )));
+  }
+
+  void SelectionManagerWidget::_initTabSelection( void )
+  {
+
+    QWidget* containerSelection = new QWidget( );
 
     QGridLayout* layoutSelection = new QGridLayout( );
     containerSelection->setLayout( layoutSelection );
 
-    _labelAvailable = new QLabel( "Available GIDs: (0)" );
-    _labelSelection = new QLabel( "Selected GIDs: (0)" );
+    _labelAvailable = new QLabel( "Available GIDs: 0" );
+    _labelSelection = new QLabel( "Selected GIDs: 0" );
 
     layoutSelection->addWidget( _labelAvailable, 0, 0, 1, 1 );
     layoutSelection->addWidget( _labelSelection, 0, 2, 1, 1 );
@@ -87,25 +109,74 @@ namespace visimpl
     layoutSelection->addWidget( _listViewSelected, 1, 2, 5, 1 );
 
     connect( _buttonAddToSelection, SIGNAL( clicked( void )),
-             this, SLOT( addToSelected( void )));
+             this, SLOT( _addToSelected( void )));
 
     connect( _buttonRemoveFromSelection, SIGNAL( clicked( void )),
-             this, SLOT( removeFromSelected( void )));
+             this, SLOT( _removeFromSelected( void )));
 
-    // Foot
+    _tabWidget->addTab( containerSelection, "Selection" );
+  }
 
-    QPushButton* buttonCancel = new QPushButton( "Cancel" );
-    buttonCancel->setMaximumWidth( 100 );
-    QPushButton* buttonAccept = new QPushButton( "Accept" );
-    buttonAccept->setMaximumWidth( 100 );
+  void SelectionManagerWidget::_initTabExport( void )
+  {
+    QWidget* containerExport = new QWidget( );
+    QGridLayout* layoutExport = new QGridLayout( );
+    containerExport->setLayout( layoutExport );
 
-    layoutFoot->addWidget( buttonCancel, 0, 0, 1, 1 );
-    layoutFoot->addWidget( buttonAccept, 0, 2, 1, 1 );
+    _pathExportDefault = QString::fromStdString( std::getenv( "PWD" ));
+    _lineEditFilePath = new QLineEdit( _pathExportDefault.append( "/output.txt"));
 
-    connect( buttonCancel, SIGNAL( clicked( void )),
-             this, SLOT( cancelClicked( void )));
-    connect( buttonAccept, SIGNAL( clicked( void )),
-             this, SLOT( acceptClicked( void )));
+    _lineEditPrefix = new QLineEdit( );
+    _lineEditSuffix = new QLineEdit( );
+    _lineEditSeparator = new QLineEdit( );
+
+    _radioNewLine = new QRadioButton( "New line" );
+    _radioSpace = new QRadioButton( "Space" );
+    _radioTab = new QRadioButton( "Tab" );
+    _radioOther = new QRadioButton( "Other:" );
+
+    _buttonBrowse = new QPushButton( "Browse..." );
+    _buttonSave = new QPushButton( "Save" );
+
+    QGroupBox* groupBoxPrefix = new QGroupBox( "Prefix/Suffix" );
+    QGridLayout* layoutPrefix = new QGridLayout( );
+    groupBoxPrefix->setLayout( layoutPrefix );
+    layoutPrefix->addWidget( new QLabel( "Prefix:" ), 0, 0, 1, 1 );
+    layoutPrefix->addWidget( _lineEditPrefix, 0, 1, 1, 1 );
+    layoutPrefix->addWidget( new QLabel( "Suffix:" ), 1, 0, 1, 1 );
+    layoutPrefix->addWidget( _lineEditSuffix, 1, 1, 1, 1 );
+
+    QGroupBox* groupBoxSeparator = new QGroupBox( "Separator" );
+    QGridLayout* layoutSeparator = new QGridLayout( );
+    layoutSeparator->addWidget( _radioNewLine, 0, 0, 1, 2 );
+    layoutSeparator->addWidget( _radioSpace, 1, 0, 1, 2 );
+    layoutSeparator->addWidget( _radioTab, 2, 0, 1, 2 );
+    layoutSeparator->addWidget( _radioOther, 3, 0, 1, 1 );
+    layoutSeparator->addWidget( _lineEditSeparator, 3, 1, 1, 1 );
+
+    _radioNewLine->setChecked( true );
+
+    groupBoxSeparator->setLayout( layoutSeparator );
+
+
+
+    layoutExport->addWidget( new QLabel( "File path:"), 0, 0, 1, 1 );
+    layoutExport->addWidget( _lineEditFilePath, 0, 1, 1, 4 );
+    layoutExport->addWidget( _buttonBrowse, 0, 5, 1, 1 );
+    layoutExport->addWidget( groupBoxPrefix, 1, 0, 4, 2 );
+    layoutExport->addWidget( groupBoxSeparator, 1, 2, 4, 3 );
+    layoutExport->addWidget( _buttonSave, 4, 5, 1, 1 );
+
+
+
+    connect( _buttonBrowse, SIGNAL( clicked( void )),
+             this, SLOT( _buttonBrowseClicked( void )));
+
+    connect( _buttonSave, SIGNAL( clicked( void )),
+             this, SLOT( _buttonSaveClicked( void )));
+
+    _tabWidget->addTab( containerExport, "Export" );
+
   }
 
   void SelectionManagerWidget::setGIDs( const TGIDSet& all_,
@@ -195,9 +266,21 @@ namespace visimpl
       _listViewAvailable->setRowHidden( row, stateSelected );
       _listViewSelected->setRowHidden( row, !stateSelected );
     }
+
+    _updateListsLabelNumbers( );
+
   }
 
-  void SelectionManagerWidget::addToSelected( void )
+  void SelectionManagerWidget::_updateListsLabelNumbers( void )
+  {
+    _labelAvailable->setText( QString( "Available GIDs: ").append(
+        QString::number( _gidsAvailable.size( ))));
+
+    _labelSelection->setText( QString( "Selected GIDs: ").append(
+        QString::number( _gidsSelected.size( ))));
+  }
+
+  void SelectionManagerWidget::_addToSelected( void )
   {
 
     auto selectedIndices =
@@ -231,9 +314,10 @@ namespace visimpl
 
     _listViewAvailable->selectionModel( )->clearSelection( );
 
+    _updateListsLabelNumbers( );
   }
 
-  void SelectionManagerWidget::removeFromSelected( void )
+  void SelectionManagerWidget::_removeFromSelected( void )
   {
 
     auto selectedIndices =
@@ -260,27 +344,86 @@ namespace visimpl
 
     _listViewSelected->selectionModel( )->clearSelection( );
 
+    _updateListsLabelNumbers( );
   }
 
-  void SelectionManagerWidget::saveToFile( const std::string& ,//filePath,
-                                           const std::string& ,//separator,
-                                           const std::string& ,//prefix,
-                                           const std::string& )//suffix)
+  void SelectionManagerWidget::_saveToFile( const QString& filePath,
+                                            const QString& separator,
+                                            const QString& prefix,
+                                            const QString& suffix )
   {
+    QFile file;
+
+    if( file.exists( filePath ))
+    {
+
+      QMessageBox msgBox( this );
+      msgBox.setText( "The selected file already exists." );
+      msgBox.setInformativeText( "Do you want to overwrite?" );
+      msgBox.setStandardButtons( QMessageBox::Save | QMessageBox::Cancel );
+      msgBox.setDefaultButton( QMessageBox::Save );
+      int ret = msgBox.exec( );
+
+      if((( QMessageBox::StandardButton ) ret ) == QMessageBox::Cancel )
+        return;
+    }
+
+    file.setFileName( filePath );
+    file.open( QFile::WriteOnly | QFile::Truncate );
+    QTextStream outStream( &file );
+
+    GIDVec gids( _gidsSelected.size( ));
+    std::copy( _gidsSelected.begin( ), _gidsSelected.end( ), gids.begin( ));
+    std::sort( gids.begin( ), gids.end( ));
+
+    for( auto gid : gids )
+    {
+      outStream << prefix << gid << suffix << separator;
+    }
+
+    file.close( );
+
+    QMessageBox::information( this, QString( "Save successful" ), QString( "Selection saved to file." ));
 
   }
 
-  void SelectionManagerWidget::acceptClicked( void )
+  void SelectionManagerWidget::_buttonAcceptClicked( void )
   {
     this->close( );
 
     emit selectionChanged( );
   }
 
-  void SelectionManagerWidget::cancelClicked( void )
+  void SelectionManagerWidget::_buttonCancelClicked( void )
   {
     this->close( );
   }
 
+  void SelectionManagerWidget::_buttonBrowseClicked( void )
+  {
+    QString path = QFileDialog::getSaveFileName(
+         this, tr( "Save to file" ), _lineEditFilePath->text( ),
+         tr( "Text  files (.txt);;All files (*)" ),
+         nullptr, QFileDialog::DontUseNativeDialog );
+
+    _lineEditFilePath->setText( path );
+  }
+
+  void SelectionManagerWidget::_buttonSaveClicked( void )
+  {
+    QString separator;
+    if( _radioNewLine->isChecked( ))
+      separator = "\n";
+    else if( _radioSpace->isChecked( ))
+      separator = " ";
+    else if( _radioTab->isChecked( ))
+      separator = "\t";
+    else
+      separator = _lineEditSeparator->text( );
+
+    _saveToFile( _lineEditFilePath->text( ), separator,
+                 _lineEditPrefix->text( ), _lineEditSuffix->text( ));
+
+  }
 
 }

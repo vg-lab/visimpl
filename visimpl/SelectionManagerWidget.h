@@ -13,6 +13,8 @@
 #include <QListView>
 #include <QStandardItemModel>
 #include <QPushButton>
+#include <QLineEdit>
+#include <QRadioButton>
 
 #include <unordered_set>
 
@@ -26,6 +28,14 @@ namespace visimpl
     Q_OBJECT;
 
   public:
+
+    enum TSeparator
+    {
+      TSEP_NEWLINE = 0,
+      TSEP_SPACE,
+      TSEP_TAB,
+      TSEP_OTHER
+    };
 
     SelectionManagerWidget( QWidget* parent = 0 );
     ~SelectionManagerWidget( void );
@@ -46,22 +56,39 @@ namespace visimpl
 
   protected slots:
 
-    void addToSelected( void );
-    void removeFromSelected( void );
+    void _addToSelected( void );
+    void _removeFromSelected( void );
 
-    void saveToFile( const std::string& filePath,
-                     const std::string& separator = "\n",
-                     const std::string& prefix = "",
-                     const std::string& suffix = "" );
+    void _buttonBrowseClicked( void );
+    void _buttonSaveClicked( void );
 
-    void cancelClicked( void );
-    void acceptClicked( void );
+    void _buttonCancelClicked( void );
+    void _buttonAcceptClicked( void );
 
 
   protected:
 
+    void _initTabSelection( void );
+    void _initTabExport( void );
+
     void _fillLists( void );
     void _reloadLists( void );
+
+    void _updateListsLabelNumbers( void );
+
+    void _saveToFile( const QString& filePath,
+                      const QString& separator = "\n",
+                      const QString& prefix = "",
+                      const QString& suffix = "" );
+
+
+    TGIDUSet _gidsAll;
+    TGIDUSet _gidsSelected;
+    TGIDUSet _gidsAvailable;
+
+    QTabWidget* _tabWidget;
+
+    // Selection tab
 
     QListView* _listViewAvailable;
     QListView* _listViewSelected;
@@ -75,11 +102,24 @@ namespace visimpl
     QLabel* _labelAvailable;
     QLabel* _labelSelection;
 
-    TGIDUSet _gidsSelected;
-    TGIDUSet _gidsAvailable;
-    TGIDUSet _gidsAll;
-
     TUIntUintMap _gidIndex;
+
+    // Export tab
+
+    QLineEdit* _lineEditFilePath;
+    QLineEdit* _lineEditPrefix;
+    QLineEdit* _lineEditSuffix;
+    QLineEdit* _lineEditSeparator;
+
+    QRadioButton* _radioNewLine;
+    QRadioButton* _radioSpace;
+    QRadioButton* _radioTab;
+    QRadioButton* _radioOther;
+
+    QPushButton* _buttonBrowse;
+    QPushButton* _buttonSave;
+
+    QString _pathExportDefault;
 
   };
 
