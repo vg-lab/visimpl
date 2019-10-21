@@ -1,6 +1,6 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #   ViSimpl
-#   2015-2016 (c) ViSimpl / Universidad Rey Juan Carlos
+#   2015-2019 (c) ViSimpl / Universidad Rey Juan Carlos
 #   sergio.galindo@urjc.es
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -25,39 +25,53 @@ configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.cpp
 set(UIDIR ${PROJECT_SOURCE_DIR}/ui)
 set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
+#set(CMAKE_AUTOMOC ON)
+#set(CMAKE_AUTOUIC ON)
 
 
 set(VISIMPL_SOURCES
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
+  CMakeSetup.rc
+
+  visimpl.ui
+  resources.qrc
+
   visimpl.cpp
   MainWindow.cpp
   OpenGLWidget.cpp
-  CMakeSetup.rc
+
+  VisualGroup.cpp
+  DomainManager.cpp
+
+  SelectionManagerWidget.cpp
+
   prefr/ColorSource.cpp
   prefr/ColorOperationModel.cpp
-  prefr/CompositeColorUpdater.cpp
-  prefr/ValuedSource.cpp
-  prefr/ValuedUpdater.cpp
-  VisualGroup.cpp
-  InputMultiplexer.cpp
-  visimpl.ui
-  resources.qrc
+  prefr/SourceMultiPosition.cpp
+  prefr/UpdaterStaticPosition.cpp
+
+  render/Plane.cpp
+
 )
 
 set(VISIMPL_HEADERS
   ${PROJECT_BINARY_DIR}/include/visimpl/version.h
   OpenGLWidget.h
   MainWindow.h
+
+  VisualGroup.h
+  DomainManager.h
+
+  SelectionManagerWidget.h
+
   prefr/PrefrShaders.h
   prefr/ColorSource.h
   prefr/ColorOperationModel.h
-  prefr/CompositeColorUpdater.h
-  prefr/ValuedSource.h
-  prefr/ValuedUpdater.h
-  VisualGroup.h
-  InputMultiplexer.h
+  prefr/SourceMultiPosition.h
+  prefr/UpdaterStaticPosition.h
+
+  render/Plane.cpp
+  
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -75,10 +89,10 @@ set(VISIMPL_LINK_LIBRARIES
 
 
 if ( NOT DEFAULT_CONTEXT_OPENGL_MAJOR )
-  set( DEFAULT_CONTEXT_OPENGL_MAJOR 3 )
+  set( DEFAULT_CONTEXT_OPENGL_MAJOR 4 )
 endif( )
 if ( NOT DEFAULT_CONTEXT_OPENGL_MINOR )
-  set( DEFAULT_CONTEXT_OPENGL_MINOR 3 )
+  set( DEFAULT_CONTEXT_OPENGL_MINOR 4 )
 endif( )
 
 add_definitions( "-DDEFAULT_CONTEXT_OPENGL_MAJOR=${DEFAULT_CONTEXT_OPENGL_MAJOR}" )

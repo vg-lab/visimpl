@@ -7,6 +7,7 @@
     <file>icons/visimpl-icon-square.png</file>
     <file>icons/logoGMRV.png</file>
     <file>icons/logoURJC.png</file>
+    <file>icons/logoUPM.png</file>
     <file>icons/query.png</file>
     <file>icons/wireframe.png</file>
     <file>icons/close.png</file>
@@ -21,5 +22,6 @@
     <file>icons/hide.png</file>
     <file>icons/show.png</file>
     <file>icons/trash.png</file>
+    <file>icons/lines.png</file>
   </qresource>
 </RCC>

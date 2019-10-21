@@ -14,21 +14,57 @@ namespace visimpl
 
   static float invRGBInt = 1.0f / 255;
 
+  unsigned int VisualGroup::_counter = 0;
+
   VisualGroup::VisualGroup( )
-  : _name( "" )
+  : _idx( _counter++ )
+  , _name( "" )
+  , _cluster( nullptr )
   , _model( nullptr )
+  , _source( nullptr )
   , _active( false )
+  , _cached( false )
+  , _dirty( false )
+  , _custom( false )
   { }
 
   VisualGroup::VisualGroup( const std::string& name )
-  : _name( name )
+  : _idx( _counter++ )
+  , _name( name )
+  , _cluster( nullptr )
   , _model( nullptr )
+  , _source( nullptr )
   , _active( false )
+  , _cached( false )
+  , _dirty( false )
+  , _custom( false )
   { }
 
   VisualGroup::~VisualGroup( )
   {
+    if( _cluster )
+      delete _cluster;
 
+    if( _source )
+      delete _source;
+
+    if( _model )
+      delete _model;
+  }
+
+  unsigned int VisualGroup::id( void )
+  {
+    return _idx;
+  }
+
+  void VisualGroup::name( const std::string& name_ )
+  {
+    _name = name_;
+  }
+
+  const std::string& VisualGroup::name( void ) const
+  {
+    return _name;
   }
 
   void VisualGroup::gids( const GIDUSet& gids_ )
@@ -41,21 +77,102 @@ namespace visimpl
     return _gids;
   }
 
+  bool VisualGroup::active( void ) const
+  {
+    return _active;
+  }
+
+  void VisualGroup::active( bool state, bool updateSourceState )
+  {
+    _active = state;
+
+    if( updateSourceState )
+      _source->active( state );
+  }
+
+  void VisualGroup::cached( bool state )
+  {
+    _cached = state;
+  }
+
+  bool VisualGroup::cached( void ) const
+  {
+    return _cached;
+  }
+
+  void VisualGroup::dirty( bool state )
+  {
+    _dirty = state;
+  }
+
+  bool VisualGroup::dirty( void ) const
+  {
+    return _dirty;
+  }
+
+  void VisualGroup::custom( bool state )
+  {
+    _custom = state;
+  }
+
+  bool VisualGroup::custom( void ) const
+  {
+    return _custom;
+  }
+
+  void VisualGroup::cluster( prefr::Cluster* cluster_ )
+  {
+    assert( cluster_ );
+
+    _cluster = cluster_;
+
+//    if( _model )
+//      _cluster->setModel( _model );
+//
+//    if( _source )
+//      _cluster->setSource( _source );
+  }
+
+  prefr::Cluster* VisualGroup::cluster( void ) const
+  {
+    return _cluster;
+  }
+
   void VisualGroup::model( prefr::Model* model_ )
   {
     assert( model_ );
 
     _model = model_;
+
+//    if( _cluster )
+//      _cluster->setModel( _model );
   }
 
-  prefr::Model* VisualGroup::model( void )
+  prefr::Model* VisualGroup::model( void ) const
   {
     return _model;
   }
 
-  bool VisualGroup::active( void )
+  void VisualGroup::source( SourceMultiPosition* source_ )
   {
-    return _active;
+    assert( source_ );
+
+    _source = source_;
+//    _source->restart( );
+//    _source->active( _active );
+//
+//    if( _cluster )
+//      _cluster->setSource( _source );
+  }
+
+  SourceMultiPosition* VisualGroup::source( void ) const
+  {
+    return _source;
+  }
+
+  QColor VisualGroup::color( void ) const
+  {
+    return _color;
   }
 
   void VisualGroup::colorMapping( const TTransferFunction& colors )
@@ -73,11 +190,12 @@ namespace visimpl
        gcolors.Insert( c.first, gColor );
      }
 
+     _color = colors[ 0 ].second;
      _model->color = gcolors;
 
    }
 
-  TTransferFunction VisualGroup::colorMapping( void )
+  TTransferFunction VisualGroup::colorMapping( void ) const
    {
      TTransferFunction result;
 
@@ -108,7 +226,7 @@ namespace visimpl
 
    }
 
-   TSizeFunction VisualGroup::sizeFunction( void )
+   TSizeFunction VisualGroup::sizeFunction( void ) const
    {
      TSizeFunction result;
      auto sizeValue = _model->size.values.begin( );

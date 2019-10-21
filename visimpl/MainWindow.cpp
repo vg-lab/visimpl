@@ -7,6 +7,30 @@
  *          Do not distribute without further notice.
  */
 
+#ifdef VISIMPL_USE_GMRVLEX
+#include <gmrvlex/version.h>
+#endif
+#ifdef VISIMPL_USE_DEFLECT
+#include <deflect/version.h>
+#endif
+#ifdef VISIMPL_USE_NSOL
+#include <nsol/version.h>
+#endif
+#ifdef VISIMPL_USE_ZEROEQ
+#include <zeroeq/version.h>
+#endif
+#ifdef VISIMPL_USE_RETO
+#include <reto/version.h>
+#endif
+#ifdef VISIMPL_USE_SCOOP
+#include <scoop/version.h>
+#endif
+#ifdef VISIMPL_USE_SIMIL
+#include <simil/version.h>
+#endif
+#ifdef VISIMPL_USE_PREFR
+#include <prefr/version.h>
+#endif
 #include <visimpl/version.h>
 
 #include "MainWindow.h"
@@ -16,6 +40,8 @@
 #include <QGridLayout>
 #include <QShortcut>
 #include <QMessageBox>
+#include <QColorDialog>
+
 // #include "qt/CustomSlider.h"
 
 #ifdef VISIMPL_USE_GMRVLEX
@@ -29,6 +55,15 @@
 namespace visimpl
 {
 
+
+  enum toolIndex
+  {
+    T_TOOL_Playback = 0,
+    T_TOOL_Visual,
+    T_TOOL_Selection,
+    T_TOOL_Inpector
+  };
+
   MainWindow::MainWindow( QWidget* parent_,
                           bool updateOnIdle )
   : QMainWindow( parent_ )
@@ -40,6 +75,7 @@ namespace visimpl
   , _ui( new Ui::MainWindow )
   , _lastOpenedFileName( "" )
   , _openGLWidget( nullptr )
+  , _domainManager( nullptr )
   , _summary( nullptr )
   , _simulationDock( nullptr )
   , _simSlider( nullptr )
@@ -49,19 +85,37 @@ namespace visimpl
   , _repeatButton( nullptr )
   , _goToButton( nullptr )
   , _simConfigurationDock( nullptr )
-  , _tfGroupBox( nullptr )
-  , _tfEditor( nullptr )
+  , _modeSelectionWidget( nullptr )
+  , _toolBoxOptions( nullptr )
+  , _groupBoxTransferFunction( nullptr )
   , _tfWidget( nullptr )
+  , _selectionManager( nullptr )
   , _autoNameGroups( false )
-  , _groupsGroupBox( nullptr )
+  , _groupBoxGroups( nullptr )
   , _groupLayout( nullptr )
   , _decayBox( nullptr )
   , _deltaTimeBox( nullptr )
   , _timeStepsPSBox( nullptr )
+  , _stepByStepDurationBox( nullptr )
+  , _addGroupButton( nullptr )
   , _clearSelectionButton( nullptr )
   , _selectionSizeLabel( nullptr )
   , _alphaNormalButton( nullptr )
   , _alphaAccumulativeButton( nullptr )
+  , _labelGID( nullptr )
+  , _labelPosition( nullptr )
+  , _groupBoxAttrib( nullptr )
+  , _comboAttribSelection( nullptr )
+  , _layoutAttribStats( nullptr )
+  , _layoutAttribGroups( nullptr )
+  , _checkClipping( nullptr )
+  , _checkShowPlanes( nullptr )
+  , _buttonResetPlanes( nullptr )
+  , _spinBoxClippingHeight( nullptr )
+  , _spinBoxClippingWidth( nullptr )
+  , _spinBoxClippingDist( nullptr )
+  , _frameClippingColor( nullptr )
+  , _buttonSelectionFromClippingPlanes( nullptr )
   {
     _ui->setupUi( this );
 
@@ -99,6 +153,9 @@ namespace visimpl
     connect( _ui->actionShowEventsActivity, SIGNAL( triggered( bool )),
              _openGLWidget, SLOT( showEventsActivityLabels( bool )));
 
+    connect( _ui->actionShowCurrentTime, SIGNAL( triggered( bool )),
+             _openGLWidget, SLOT( showCurrentTimeLabel( bool )));
+
     connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
              this, SLOT( openBlueConfigThroughDialog( )));
 
@@ -107,28 +164,40 @@ namespace visimpl
 
     // Connect about dialog
     connect( _ui->actionAbout, SIGNAL( triggered( )),
-             this, SLOT( aboutDialog( )));
+             this, SLOT( dialogAbout( )));
 
 
     connect( _ui->actionHome, SIGNAL( triggered( )),
-             _openGLWidget, SLOT( updateSelection( )));
+             _openGLWidget, SLOT( home( )));
+
+    connect( _openGLWidget, SIGNAL( stepCompleted( void )),
+             this, SLOT( completedStep( void )));
+
+    connect( _openGLWidget, SIGNAL( pickedSingle( unsigned int )),
+             this, SLOT( updateSelectedStatsPickingSingle( unsigned int )));
+
+    QAction* actionTogglePause = new QAction(this);
+    actionTogglePause->setShortcut( Qt::Key_Space );
+
+    connect( actionTogglePause, SIGNAL( triggered( )), this, SLOT( PlayPause( )));
+    addAction( actionTogglePause );
+
 
   #ifdef VISIMPL_USE_ZEROEQ
-    _ui->actionShowSelection->setEnabled( true );
-    _ui->actionShowSelection->setChecked( true );
+    _ui->actionShowInactive->setEnabled( true );
+    _ui->actionShowInactive->setChecked( true );
 
-    _openGLWidget->showSelection( true );
+    _openGLWidget->showInactive( true );
 
-    connect( _ui->actionShowSelection, SIGNAL( toggled( bool )),
-             this, SLOT( showSelection( bool )));
+    connect( _ui->actionShowInactive, SIGNAL( toggled( bool )),
+             this, SLOT( showInactive( bool )));
 
   #else
     _ui->actionShowSelection->setEnabled( false );
   #endif
 
-
-    initPlaybackDock( );
-    initSimControlDock( );
+    _initPlaybackDock( );
+    _initSimControlDock( );
 
     connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool )),
                _ui->actionTogglePlaybackDock, SLOT( setChecked( bool )));
@@ -171,10 +240,18 @@ namespace visimpl
                              simil::TDataType::TBlueConfig,
                              simulationType, reportLabel );
 
+    _domainManager = _openGLWidget->domainManager( );
+
     openSubsetEventFile( subsetEventFile, true );
 
-    configurePlayer( );
+    _configurePlayer( );
 
+
+    QStringList attributes = { "Morphological type", "Functional type" };
+
+    _comboAttribSelection->addItems( attributes );
+
+    _selectionManager->setGIDs( _domainManager->gids( ));
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -189,47 +266,18 @@ namespace visimpl
     if( path != QString( "" ))
     {
 
-//      bool ok;
-//
+      bool ok;
+
       simil::TSimulationType simType = simil::TSimSpikes;
-//      QString text = QInputDialog::getText(
-//            this, tr( "Please type a target" ),
-//            tr( "Target name:" ), QLineEdit::Normal,
-//            "Mosaic", &ok );
+      QString text = QInputDialog::getText(
+            this, tr( "Please type a target" ),
+            tr( "Target name:" ), QLineEdit::Normal,
+            "Mosaic", &ok );
 
-//      bool ok1, ok2;
-//      QInputDialog simTypeDialog;
-//      simil::TSimulationType simType = simil::TSimSpikes;
-//      QStringList items = {"Spikes", "Voltages"};
-
-
-
-//      QString text = QInputDialog::getItem(
-//        this, tr( "Please select simulation type" ),
-//        tr( "Type:" ), items, 0, false, &ok1 );
-//
-//      if( !ok1 )
-//        return;
-//
-//      if( text == items[0] )
-//      {
-//        simType = simil::TSimSpikes;
-//        ok2 = true;
-//      }
-//      else
-//      {
-//        simType = simil::TSimVoltages;
-//
-//        text = QInputDialog::getText(
-//            this, tr( "Please select report" ),
-//            tr( "Report:" ), QLineEdit::Normal,
-//            "soma", &ok2 );
-//      }
-
-//      if ( ok && !text.isEmpty( ))
+      if ( ok && !text.isEmpty( ))
       {
   //      std::string targetLabel = text.toStdString( );
-        std::string reportLabel;// = text.toStdString( );
+        std::string reportLabel = text.toStdString( );
         _lastOpenedFileName = QFileInfo(path).path( );
         std::string fileName = path.toStdString( );
         openBlueConfig( fileName, simType, reportLabel );
@@ -255,7 +303,7 @@ namespace visimpl
 
     openSubsetEventFile( subsetEventFile, true );
 
-    configurePlayer( );
+    _configurePlayer( );
   }
 
   void MainWindow::openCSVFile( const std::string& networkFile,
@@ -331,27 +379,94 @@ namespace visimpl
   }
 
 
-  void MainWindow::aboutDialog( void )
+  void MainWindow::dialogAbout( void )
   {
 
+    QString msj = 
+      QString( "<h2>ViSimpl</h2>" ) +
+      tr( "A multi-view visual analyzer of brain simulation data. " ) + 
+      "<br>" + 
+      tr( "Version " ) + visimpl::Version::getString( ).c_str( ) +
+      tr( " rev (%1)<br>").arg(visimpl::Version::getRevision( )) +
+      "<a href='https://gmrv.es/visimpl/'>https://gmrv.es/visimpl</a>" + 
+      "<h4>" + tr( "Build info:" ) + "</h4>" +
+      "<ul>"
+    
+#ifdef VISIMPL_USE_DEFLECT
+    "</li><li>Deflect " + DEFLECT_REV_STRING +
+#else
+    "</li><li>Deflect " + tr ("support not built.") +
+#endif
 
-    QMessageBox::about(
-      this, tr("About ViSimpl"),
-      tr("<p><BIG><b>ViSimpl - SimPart</b></BIG><br><br>") +
-      tr( "version " ) +
-      tr( visimpl::Version::getString( ).c_str( )) +
-      tr( " (" ) +
-      tr( std::to_string( visimpl::Version::getRevision( )).c_str( )) +
-      tr( ")" ) +
-      tr ("<br><br>GMRV - Universidad Rey Juan Carlos<br><br>"
-          "<a href=www.gmrv.es>www.gmrv.es</a><br>"
-          "<a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
-          "<br>(c) 2015. Universidad Rey Juan Carlos<br><br>"
-          "<img src=':/icons/logoGMRV.png' > &nbsp; &nbsp;"
-          "<img src=':/icons/logoURJC.png' >"
-          "</p>"
-          ""));
+#ifdef VISIMPL_USE_FIRES
+    "</li><li>FiReS " + FIRES_REV_STRING +
+#else
+    "</li><li>FiReS " + tr ("support not built.") +
+#endif
 
+#ifdef VISIMPL_USE_GMRVLEX
+    "</li><li>GmrvLex " + GMRVLEX_REV_STRING +
+#else
+    "</li><li>GmrvLex " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_NSOL
+    "</li><li>Nsol " + NSOL_REV_STRING +
+#else
+    "</li><li>Nsol " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_PREFR
+    "</li><li>prefr " + PREFR_REV_STRING +     
+#else
+    "</li><li>prefr " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_RETO
+    "</li><li>ReTo " + RETO_REV_STRING +     
+#else
+    "</li><li>ReTo " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_SCOOP
+    "</li><li>Scoop " + SCOOP_REV_STRING +     
+#else
+    "</li><li>Scoop " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_SIMIL
+    "</li><li>SimIL " + SIMIL_REV_STRING +     
+#else
+    "</li><li>SimIL " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_ZEROEQ
+    "</li><li>ZeroEQ " + ZEROEQ_REV_STRING +
+#else
+    "</li><li>ZeroEQ " + tr ("support not built.") +
+#endif
+
+    "</li></ul>" +
+    "<h4>" + tr( "Developed by:" ) + "</h4>" +
+    "GMRV / URJC / UPM"
+    "<br><a href='https://gmrv.es/gmrvvis'>https://gmrv.es/gmrvvis</a>"
+    //"<br><a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
+    "<br>(C) 2015-2017<br><br>"
+    "<a href='https://gmrv.es/gmrvvis'><img src=':/icons/logoGMRV.png'/></a>"
+    "&nbsp;&nbsp;&nbsp;&nbsp;"
+    "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
+    "&nbsp;&nbsp;&nbsp;&nbsp;"
+    "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
+    
+    QMessageBox::about(this, tr( "About ViSimpl" ), msj );
+  }
+
+  void MainWindow::dialogSelectionManagement( void )
+  {
+    if( !_selectionManager )
+      return;
+
+    _selectionManager->show( );
   }
 
   void MainWindow::togglePlaybackDock( void )
@@ -374,7 +489,7 @@ namespace visimpl
     update( );
   }
 
-  void MainWindow::configurePlayer( void )
+  void MainWindow::_configurePlayer( void )
   {
     connect( _openGLWidget, SIGNAL( updateSlider( float )),
                this, SLOT( UpdateSimulationSlider( float )));
@@ -400,10 +515,11 @@ namespace visimpl
     changeEditorSimTimestepsPS( );
     changeEditorSizeFunction( );
     changeEditorDecayValue( );
-    initSummaryWidget( );
+    changeEditorStepByStepDuration( );
+    _initSummaryWidget( );
   }
 
-  void MainWindow::initPlaybackDock( void )
+  void MainWindow::_initPlaybackDock( void )
   {
     _simulationDock = new QDockWidget( );
     _simulationDock->setMinimumHeight( 100 );
@@ -422,7 +538,6 @@ namespace visimpl
     _simSlider->setSizePolicy( QSizePolicy::Preferred,
                                QSizePolicy::Preferred );
 
-  //  QPushButton* playButton = new QPushButton( );
     _playButton = new QPushButton( );
     _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
                                 QSizePolicy::MinimumExpanding );
@@ -437,8 +552,6 @@ namespace visimpl
     _goToButton = new QPushButton( );
     _goToButton->setText( QString( "Play at..." ));
 
-  //  QIcon playIcon;
-  //  QIcon pauseIcon;
     QIcon stopIcon;
     QIcon nextIcon;
     QIcon prevIcon;
@@ -490,10 +603,10 @@ namespace visimpl
                this, SLOT( Stop( )));
 
     connect( nextButton, SIGNAL( clicked( )),
-               this, SLOT( GoToEnd( )));
+               this, SLOT( NextStep( )));
 
     connect( prevButton, SIGNAL( clicked( )),
-               this, SLOT( Restart( )));
+               this, SLOT( PreviousStep( )));
 
     connect( _repeatButton, SIGNAL( clicked( )),
                this, SLOT( Repeat( )));
@@ -521,21 +634,26 @@ namespace visimpl
              this, SLOT( PlayAt( float )));
   }
 
-  void MainWindow::initSimControlDock( void )
+  void MainWindow::_initSimControlDock( void )
   {
     _simConfigurationDock = new QDockWidget( );
     _simConfigurationDock->setMinimumHeight( 100 );
     _simConfigurationDock->setMinimumWidth( 300 );
-  //  _simConfigurationDock->setMaximumHeight( 400 );
     _simConfigurationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
                                     QSizePolicy::MinimumExpanding );
 
-  //  _tfEditor = new TransferFunctionEditor( );
+
     _tfWidget = new TransferFunctionWidget( );
     _tfWidget->setMinimumHeight( 150 );
 
-  //  _psWidget = new ParticleSizeWidget( );
-  //  _psWidget->setMinimumHeight( 150 );
+    _selectionManager = new SelectionManagerWidget( );
+//    _selectionManager->setWindowFlags( Qt::D );
+    _selectionManager->setWindowModality( Qt::WindowModal );
+    _selectionManager->setMinimumHeight( 300 );
+    _selectionManager->setMinimumWidth( 500 );
+
+    connect( _selectionManager, SIGNAL( selectionChanged( void )),
+             this, SLOT( selectionManagerChanged( void )));
 
     _deltaTimeBox = new QDoubleSpinBox( );
     _deltaTimeBox->setMinimum( 0.00000001 );
@@ -550,6 +668,13 @@ namespace visimpl
     _timeStepsPSBox->setSingleStep( 1.0 );
     _timeStepsPSBox->setDecimals( 5 );
     _timeStepsPSBox->setMaximumWidth( 100 );
+
+    _stepByStepDurationBox = new QDoubleSpinBox( );
+    _stepByStepDurationBox->setMinimum( 0.5 );
+    _stepByStepDurationBox->setMaximum( 50 );
+    _stepByStepDurationBox->setSingleStep( 1.0 );
+    _stepByStepDurationBox->setDecimals( 3 );
+    _stepByStepDurationBox->setMaximumWidth( 100 );
 
     _decayBox = new QDoubleSpinBox( );
     _decayBox->setMinimum( 0.01 );
@@ -569,90 +694,272 @@ namespace visimpl
     _addGroupButton->setEnabled( false );
     _addGroupButton->setToolTip( "Click to create a group from current selection.");
 
-    QWidget* container = new QWidget( );
-    QVBoxLayout* verticalLayout = new QVBoxLayout( );
-  //  QPushButton* applyColorButton = new QPushButton( QString( "Apply" ));
+    _labelGID = new QLabel( "" );
+    _labelPosition = new QLabel( "" );
 
-    _tfGroupBox = new QGroupBox( "Color and Size transfer function" );
+
+    _checkClipping = new QCheckBox( tr( "Clipping" ));
+    _checkShowPlanes = new QCheckBox( "Show planes" );
+    _buttonResetPlanes = new QPushButton( "Reset" );
+    _spinBoxClippingHeight = new QDoubleSpinBox( );
+    _spinBoxClippingHeight->setDecimals( 2 );
+    _spinBoxClippingHeight->setMinimum( 1 );
+    _spinBoxClippingHeight->setMaximum( 99999 );
+
+    _spinBoxClippingWidth = new QDoubleSpinBox( );
+    _spinBoxClippingWidth->setDecimals( 2 );
+    _spinBoxClippingWidth->setMinimum( 1 );
+    _spinBoxClippingWidth->setMaximum( 99999 );
+
+    _spinBoxClippingDist = new QDoubleSpinBox( );
+    _spinBoxClippingDist->setDecimals( 2 );
+    _spinBoxClippingDist->setMinimum( 1 );
+    _spinBoxClippingDist->setMaximum( 99999 );
+
+    QColor clippingColor ( 255, 255, 255, 255 );
+    _frameClippingColor = new QPushButton( );
+//      auto colors = _openGLWidget->colorPalette( ).colors( );
+//colors[ currentIndex % colors.size( )].first
+    _frameClippingColor->setStyleSheet( "background-color: " + clippingColor.name( ) );
+    _frameClippingColor->setMinimumSize( 20, 20 );
+    _frameClippingColor->setMaximumSize( 20, 20 );
+
+    _buttonSelectionFromClippingPlanes = new QPushButton( "To selection");
+    _buttonSelectionFromClippingPlanes->setToolTip( tr( "Create a selection set from elements between planes" ));
+
+
+
+    QWidget* topContainer = new QWidget( );
+    QVBoxLayout* verticalLayout = new QVBoxLayout( );
+
+    _groupBoxTransferFunction = new QGroupBox( "Color and Size transfer function" );
     QVBoxLayout* tfLayout = new QVBoxLayout( );
     tfLayout->addWidget( _tfWidget );
-    _tfGroupBox->setLayout( tfLayout );
-    _tfGroupBox->setMaximumHeight( 250 );
+    _groupBoxTransferFunction->setLayout( tfLayout );
 
-    QGroupBox* tSpeedGB = new QGroupBox( "Simulation playback speed" );
+    QGroupBox* tSpeedGB = new QGroupBox( "Simulation playback Configuration" );
     QGridLayout* sfLayout = new QGridLayout( );
+    sfLayout->setAlignment( Qt::AlignTop );
     sfLayout->addWidget( new QLabel( "Simulation timestep:" ), 0, 0, 1, 1 );
     sfLayout->addWidget( _deltaTimeBox, 0, 1, 1, 1  );
     sfLayout->addWidget( new QLabel( "Timesteps per second:" ), 1, 0, 1, 1 );
     sfLayout->addWidget( _timeStepsPSBox, 1, 1, 1, 1  );
+    sfLayout->addWidget( new QLabel( "Step playback duration (s):"), 2, 0, 1, 1);
+    sfLayout->addWidget( _stepByStepDurationBox, 2, 1, 1, 1 );
     tSpeedGB->setLayout( sfLayout );
-    tSpeedGB->setMaximumHeight( 200 );
+
+    QComboBox* comboShader = new QComboBox( );
+    comboShader->addItems( { "Default", "Solid" });
+    comboShader->setCurrentIndex( 0 );
+
+    QGroupBox* shaderGB = new QGroupBox( "Shader Configuration" );
+    QHBoxLayout* shaderLayout = new QHBoxLayout( );
+    shaderLayout->addWidget( new QLabel( "Current shader: "));
+    shaderLayout->addWidget( comboShader );
+    shaderGB->setLayout( shaderLayout );
 
     QGroupBox* dFunctionGB = new QGroupBox( "Decay function" );
     QHBoxLayout* dfLayout = new QHBoxLayout( );
-    dfLayout->addWidget( new QLabel( "Decay \n(simulation time): " ));
+    dfLayout->setAlignment( Qt::AlignTop );
+    dfLayout->addWidget( new QLabel( "Decay (simulation time): " ));
     dfLayout->addWidget( _decayBox );
     dFunctionGB->setLayout( dfLayout );
-    dFunctionGB->setMaximumHeight( 200 );
 
     QGroupBox* rFunctionGB = new QGroupBox( "Alpha blending function" );
     QHBoxLayout* rfLayout = new QHBoxLayout( );
-    rfLayout->addWidget( new QLabel( "Alpha\nBlending: " ));
+    rfLayout->setAlignment( Qt::AlignTop );
+    rfLayout->addWidget( new QLabel( "Alpha Blending: " ));
     rfLayout->addWidget( _alphaNormalButton );
     rfLayout->addWidget( _alphaAccumulativeButton );
     rFunctionGB->setLayout( rfLayout );
-    rFunctionGB->setMaximumHeight( 200 );
+
+    // Visual Configuration Container
+    QWidget* vcContainer = new QWidget( );
+    QVBoxLayout* vcLayout = new QVBoxLayout( );
+    vcLayout->setAlignment( Qt::AlignTop );
+    vcLayout->addWidget( shaderGB );
+    vcLayout->addWidget( dFunctionGB );
+    vcLayout->addWidget( rFunctionGB );
+    vcContainer->setLayout( vcLayout );
+
+    QPushButton* buttonSelectionManager = new QPushButton( "..." );
+    buttonSelectionManager->setToolTip( tr( "Show the selection management dialog" ));
+    buttonSelectionManager->setMaximumWidth( 30 );
 
     QGroupBox* selFunctionGB = new QGroupBox( "Current selection");
     QHBoxLayout* selLayout = new QHBoxLayout( );
-    selLayout->addWidget( new QLabel( "Selection size: " ));
+    selLayout->setAlignment( Qt::AlignTop );
+    selLayout->addWidget( new QLabel( "Size: " ));
     selLayout->addWidget( _selectionSizeLabel );
+    selLayout->addWidget( buttonSelectionManager );
     selLayout->addWidget( _addGroupButton );
     selLayout->addWidget( _clearSelectionButton );
     selFunctionGB->setLayout( selLayout );
-    selFunctionGB->setMaximumHeight( 200 );
 
+    QFrame* line = new QFrame( );
+    line->setFrameShape( QFrame::HLine );
+    line->setFrameShadow( QFrame::Sunken );
 
-    _groupsGroupBox = new QGroupBox( "Current visualization groups" );
-    _groupsGroupBox->setMaximumHeight( 200 );
+    QGroupBox* gbClippingPlanes = new QGroupBox( "Clipping planes" );
+    QGridLayout* layoutClippingPlanes = new QGridLayout( );
+    gbClippingPlanes->setLayout( layoutClippingPlanes );
+    layoutClippingPlanes->addWidget( _checkClipping, 0, 0, 1, 1 );
+    layoutClippingPlanes->addWidget( _checkShowPlanes, 0, 1, 1, 2 );
+    layoutClippingPlanes->addWidget( _buttonSelectionFromClippingPlanes, 0, 3, 1, 1 );
+    layoutClippingPlanes->addWidget( line, 1, 0, 1, 4 );
+    layoutClippingPlanes->addWidget( _frameClippingColor, 2, 0, 1, 1 );
+    layoutClippingPlanes->addWidget( _buttonResetPlanes, 2, 1, 1, 1 );
+    layoutClippingPlanes->addWidget( new QLabel( "Height" ), 2, 2, 1, 1 );
+    layoutClippingPlanes->addWidget( _spinBoxClippingHeight, 2, 3, 1, 1  );
+    layoutClippingPlanes->addWidget( new QLabel( "Distance" ), 3, 0, 1, 1 );
+    layoutClippingPlanes->addWidget( _spinBoxClippingDist, 3, 1, 1, 1  );
+    layoutClippingPlanes->addWidget( new QLabel( "Width" ), 3, 2, 1, 1 );
+    layoutClippingPlanes->addWidget( _spinBoxClippingWidth, 3, 3, 1, 1  );
+
+    QWidget* containerSelectionTools = new QWidget( );
+    QVBoxLayout* layoutContainerSelection = new QVBoxLayout( );
+    containerSelectionTools->setLayout( layoutContainerSelection );
+
+    layoutContainerSelection->addWidget( selFunctionGB );
+    layoutContainerSelection->addWidget( gbClippingPlanes );
+
+    QGroupBox* objectInspectoGB = new QGroupBox( "Object inspector" );
+    QGridLayout* oiLayout = new QGridLayout( );
+    oiLayout->setAlignment( Qt::AlignTop );
+    oiLayout->addWidget( new QLabel( "GID:" ), 0, 0, 1, 1 );
+    oiLayout->addWidget( _labelGID, 0, 1, 1, 3 );
+    oiLayout->addWidget( new QLabel( "Position: " ), 1, 0, 1, 1 );
+    oiLayout->addWidget( _labelPosition, 1, 1, 1, 3 );
+    objectInspectoGB->setLayout( oiLayout );
+
+    _groupBoxGroups = new QGroupBox( "Current visualization groups" );
     _groupLayout = new QGridLayout( );
     _groupLayout->setAlignment( Qt::AlignTop );
 
 
-    QWidget* groupContainer = new QWidget( );
-    groupContainer->setLayout( _groupLayout );
+    {
+      QWidget* groupContainer = new QWidget( );
+      groupContainer->setLayout( _groupLayout );
 
-    QScrollArea* groupScroll = new QScrollArea( );
-    groupScroll->setWidget( groupContainer );
-    groupScroll->setWidgetResizable( true );
-    groupScroll->setFrameShape( QFrame::Shape::NoFrame );
-    groupScroll->setFrameShadow( QFrame::Shadow::Plain );
-    groupScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-    groupScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      QScrollArea* groupScroll = new QScrollArea( );
+      groupScroll->setWidget( groupContainer );
+      groupScroll->setWidgetResizable( true );
+      groupScroll->setFrameShape( QFrame::Shape::NoFrame );
+      groupScroll->setFrameShadow( QFrame::Shadow::Plain );
+      groupScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+      groupScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
 
-    QGridLayout* groupOuterLayout = new QGridLayout( );
-    groupOuterLayout->setMargin( 0 );
-    groupOuterLayout->addWidget( groupScroll );
+      QGridLayout* groupOuterLayout = new QGridLayout( );
+      groupOuterLayout->setMargin( 0 );
+      groupOuterLayout->addWidget( groupScroll );
 
-    _groupsGroupBox->setLayout( groupOuterLayout );
-    _groupsGroupBox->setVisible( false );
+      _groupBoxGroups->setLayout( groupOuterLayout );
+    }
+
+    _groupBoxAttrib = new QGroupBox( "Attribute Mapping" );
+    QGridLayout* layoutGroupAttrib = new QGridLayout( );
+    _groupBoxAttrib->setLayout( layoutGroupAttrib );
+
+    _comboAttribSelection = new QComboBox( );
+
+    QGroupBox* gbAttribSel = new QGroupBox( "Attribute selection" );
+    QHBoxLayout* lyAttribSel = new QHBoxLayout( );
+    lyAttribSel->addWidget( _comboAttribSelection );
+    gbAttribSel->setLayout( lyAttribSel );
+
+    QGroupBox* gbAttribStats = new QGroupBox( "Statistics" );
+    QScrollArea* attribScroll = new QScrollArea( );
+    QWidget* attribContainer = new QWidget( );
+    QVBoxLayout* attribContainerLayout = new QVBoxLayout( );
+    gbAttribStats->setLayout( attribContainerLayout );
+    attribContainerLayout->addWidget( attribScroll );
+
+    attribScroll->setWidget( attribContainer );
+    attribScroll->setWidgetResizable( true );
+    attribScroll->setFrameShape( QFrame::Shape::NoFrame );
+    attribScroll->setFrameShadow( QFrame::Shadow::Plain );
+    attribScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+    attribScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+
+    _layoutAttribStats = new QVBoxLayout( );
+    _layoutAttribStats->setAlignment( Qt::AlignTop );
+    attribContainer->setLayout( _layoutAttribStats );
+
+    QGroupBox* gbAttribGroups = new QGroupBox( "Groups" );
+    _layoutAttribGroups = new QGridLayout( );
+    _layoutAttribGroups->setAlignment( Qt::AlignTop );
+    {
+      QWidget* groupContainer = new QWidget( );
+      groupContainer->setLayout( _layoutAttribGroups );
+
+      QScrollArea* groupScroll = new QScrollArea( );
+      groupScroll->setWidget( groupContainer );
+      groupScroll->setWidgetResizable( true );
+      groupScroll->setFrameShape( QFrame::Shape::NoFrame );
+      groupScroll->setFrameShadow( QFrame::Shadow::Plain );
+      groupScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+      groupScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+
+      QGridLayout* groupOuterLayout = new QGridLayout( );
+      groupOuterLayout->setMargin( 0 );
+      groupOuterLayout->addWidget( groupScroll );
+
+      gbAttribGroups->setLayout( groupOuterLayout );
+    }
+
+    layoutGroupAttrib->addWidget( gbAttribSel, 0, 0, 1, 2 );
+    layoutGroupAttrib->addWidget( gbAttribGroups, 0, 2, 3, 2 );
+    layoutGroupAttrib->addWidget( gbAttribStats, 1, 0, 2, 2 );
+
+    QWidget* containerTabSelection = new QWidget( );
+    QVBoxLayout* tabSelectionLayout = new QVBoxLayout( );
+    containerTabSelection->setLayout( tabSelectionLayout );
+    tabSelectionLayout->addWidget( _groupBoxTransferFunction );
+
+    QWidget* containerTabGroups = new QWidget( );
+    QVBoxLayout* tabGroupsLayout = new QVBoxLayout( );
+    containerTabGroups->setLayout( tabGroupsLayout );
+    tabGroupsLayout->addWidget( _groupBoxGroups );
+
+    QWidget* containerTabAttrib = new QWidget( );
+    QVBoxLayout* tabAttribLayout = new QVBoxLayout( );
+    containerTabAttrib->setLayout( tabAttribLayout );
+    tabAttribLayout->addWidget( _groupBoxAttrib );
+
+//TODO
+    _modeSelectionWidget = new QTabWidget( );
+    _modeSelectionWidget->addTab( containerTabSelection, tr( "Selection" ));
+    _modeSelectionWidget->addTab( containerTabGroups, tr( "Groups" ));
+    _modeSelectionWidget->addTab( containerTabAttrib, tr( "Attribute" ));
+
+    _toolBoxOptions = new QToolBox( );
+    _toolBoxOptions->addItem( tSpeedGB, tr( "Playback Configuration" ));
+    _toolBoxOptions->addItem( vcContainer, tr( "Visual Configuration" ));
+    _toolBoxOptions->addItem( containerSelectionTools, tr( "Selection" ));
+    _toolBoxOptions->addItem( objectInspectoGB, tr( "Inspector" ));
 
     verticalLayout->setAlignment( Qt::AlignTop );
-    verticalLayout->addWidget( _tfGroupBox );
-    verticalLayout->addWidget( _groupsGroupBox );
-    verticalLayout->addWidget( tSpeedGB );
-    verticalLayout->addWidget( dFunctionGB );
-    verticalLayout->addWidget( rFunctionGB );
-    verticalLayout->addWidget( selFunctionGB  );
+    verticalLayout->addWidget( _modeSelectionWidget );
+    verticalLayout->addWidget( _toolBoxOptions );
 
-    container->setLayout( verticalLayout );
-    _simConfigurationDock->setWidget( container );
+    topContainer->setLayout( verticalLayout );
+    _simConfigurationDock->setWidget( topContainer );
 
     this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/RightDockWidgetArea,
                          _simConfigurationDock );
 
-  //  connect( applyColorButton, SIGNAL( clicked( void )),
-  //             this, SLOT( UpdateSimulationColorMapping( void )));
+
+    connect( _modeSelectionWidget, SIGNAL( currentChanged( int )),
+             _openGLWidget, SLOT( setMode( int )));
+
+    connect( _openGLWidget, SIGNAL( attributeStatsComputed( void )),
+             this, SLOT( updateAttributeStats( void )));
+
+    connect( _comboAttribSelection, SIGNAL( currentIndexChanged( int )),
+             _openGLWidget, SLOT( selectAttrib( int )));
+
+    connect( comboShader, SIGNAL( currentIndexChanged( int )),
+             _openGLWidget, SLOT( changeShader( int )));
 
     connect( _tfWidget, SIGNAL( colorChanged( void )),
              this, SLOT( UpdateSimulationColorMapping( void )));
@@ -663,6 +970,9 @@ namespace visimpl
     connect( _tfWidget, SIGNAL( previewColor( void )),
              this, SLOT( PreviewSimulationSizeFunction( void )));
 
+    connect( buttonSelectionManager, SIGNAL( clicked( void )),
+             this, SLOT( dialogSelectionManagement( void )));
+
     connect( _deltaTimeBox, SIGNAL( valueChanged( double )),
                this, SLOT( updateSimDeltaTime( void )));
 
@@ -672,22 +982,52 @@ namespace visimpl
     connect( _decayBox, SIGNAL( valueChanged( double )),
              this, SLOT( updateSimulationDecayValue( void )));
 
+    connect( _stepByStepDurationBox, SIGNAL( valueChanged( double )),
+             this, SLOT( updateSimStepByStepDuration( void )));
+
     connect( _alphaNormalButton, SIGNAL( toggled( bool )),
              this, SLOT( AlphaBlendingToggled( void ) ));
 
+    // Clipping planes
+
+    _checkClipping->setChecked( true );
+    connect( _checkClipping, SIGNAL( stateChanged( int )),
+             this, SLOT( clippingPlanesActive( int )));
+    _checkClipping->setChecked( false );
+
+    _checkShowPlanes->setChecked( true );
+    connect( _checkShowPlanes, SIGNAL( stateChanged( int )),
+             _openGLWidget, SLOT( paintClippingPlanes( int )));
+
+    connect( _buttonSelectionFromClippingPlanes, SIGNAL( clicked( void )),
+             this, SLOT( selectionFromPlanes( void )));
+
+    connect( _buttonResetPlanes, SIGNAL( clicked( void )),
+             this, SLOT( clippingPlanesReset( void )));
+
+    connect( _spinBoxClippingDist, SIGNAL( editingFinished( void )),
+             this, SLOT( spinBoxValueChanged( void )));
+
+
+    connect( _spinBoxClippingHeight, SIGNAL( editingFinished( void )),
+                 this, SLOT( spinBoxValueChanged( void )));
+
+    connect( _spinBoxClippingWidth, SIGNAL( editingFinished( void )),
+                 this, SLOT( spinBoxValueChanged( void )));
+
+    connect( _frameClippingColor, SIGNAL( clicked( )),
+             this, SLOT( colorSelectionClicked()));
+
     connect( _clearSelectionButton, SIGNAL( clicked( void )),
-             this, SLOT( ClearSelection( void )));
+             this, SLOT( clearSelection( void )));
 
     connect( _addGroupButton, SIGNAL( clicked( void )),
              this, SLOT( addGroupFromSelection( )));
 
-  //  connect( _alphaAccumulativeButton, SIGNAL( toggled( bool )),
-  //           this, SLOT( AlphaBlendingToggled( void ) ));
-
     _alphaNormalButton->setChecked( true );
   }
 
-  void MainWindow::initSummaryWidget( void )
+  void MainWindow::_initSummaryWidget( void )
   {
     simil::TSimulationType simType =
         _openGLWidget->player( )->simulationType( );
@@ -710,6 +1050,549 @@ namespace visimpl
 
   }
 
+  void MainWindow::UpdateSimulationSlider( float percentage )
+  {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
+    _startTimeLabel->setText(
+          QString::number( (double)_openGLWidget->currentTime( )));
+
+    int total = _simSlider->maximum( ) - _simSlider->minimum( );
+
+    int position = percentage * total;
+
+    _simSlider->setSliderPosition( position );
+
+    if( _summary )
+      _summary->repaintHistograms( );
+  }
+
+  void MainWindow::UpdateSimulationColorMapping( void )
+  {
+    _openGLWidget->changeSimulationColorMapping( _tfWidget->getColors( ));
+  }
+
+  void MainWindow::PreviewSimulationColorMapping( void )
+  {
+    _openGLWidget->changeSimulationColorMapping( _tfWidget->getPreviewColors( ));
+  }
+
+  void MainWindow::changeEditorColorMapping( void )
+  {
+    _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
+  }
+
+  void MainWindow::changeEditorSizeFunction( void )
+  {
+    _tfWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction( ));
+  }
+
+  void MainWindow::UpdateSimulationSizeFunction( void )
+  {
+    _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizeFunction( ));
+  }
+
+  void MainWindow::PreviewSimulationSizeFunction( void )
+  {
+    _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizePreview( ));
+  }
+
+  void MainWindow::changeEditorSimDeltaTime( void )
+  {
+    _deltaTimeBox->setValue( _openGLWidget->simulationDeltaTime( ));
+  }
+
+  void MainWindow::updateSimDeltaTime( void )
+  {
+    _openGLWidget->simulationDeltaTime( _deltaTimeBox->value( ));
+  }
+
+  void MainWindow::changeEditorSimTimestepsPS( void )
+  {
+    _timeStepsPSBox->setValue( _openGLWidget->simulationStepsPerSecond( ));
+  }
+
+  void MainWindow::updateSimTimestepsPS( void )
+  {
+    _openGLWidget->simulationStepsPerSecond( _timeStepsPSBox->value( ));
+  }
+
+  void MainWindow::changeEditorDecayValue( void )
+  {
+    _decayBox->setValue( _openGLWidget->getSimulationDecayValue( ));
+  }
+
+  void MainWindow::updateSimulationDecayValue( void )
+  {
+    _openGLWidget->changeSimulationDecayValue( _decayBox->value( ));
+  }
+
+
+  void MainWindow::changeEditorStepByStepDuration( void )
+  {
+    _stepByStepDurationBox->setValue( _openGLWidget->simulationStepByStepDuration( ));
+  }
+
+  void MainWindow::updateSimStepByStepDuration( void )
+  {
+    _openGLWidget->simulationStepByStepDuration( _stepByStepDurationBox->value( ));
+  }
+
+
+  void MainWindow::AlphaBlendingToggled( void )
+  {
+    std::cout << "Changing alpha blending... ";
+    if( _alphaNormalButton->isChecked( ))
+    {
+      std::cout << "Normal" << std::endl;
+      _openGLWidget->SetAlphaBlendingAccumulative( false );
+    }
+    else
+    {
+      std::cout << "Accumulative" << std::endl;
+      _openGLWidget->SetAlphaBlendingAccumulative( true );
+    }
+  }
+
+  void MainWindow::updateAttributeStats( void )
+  {
+
+    if( !_domainManager )
+      return;
+
+    QLayoutItem* item;
+    while(( item = _layoutAttribStats->takeAt( 0 )))
+    {
+      _layoutAttribStats->removeWidget( item->widget( ));
+      delete item->widget( );
+    }
+
+    std::cout << "Updating stats..." << std::endl;
+
+    auto stats = _domainManager->attributeStatistics( );
+
+    for( auto stat : stats )
+    {
+      auto name = std::get< T_TYPE_NAME >( stat );
+      auto label = std::get< T_TYPE_LABEL >( stat );
+      auto number = std::get< T_TYPE_STATS >( stat );
+      QString text = ( QString( name.c_str( ))
+          + ": " + QString::number( number ) );
+
+      QLabel* textLabel = new QLabel( text );
+      _layoutAttribStats->addWidget( textLabel );
+    }
+
+    while(( item = _layoutAttribGroups->takeAt( 0 )))
+    {
+      _layoutAttribGroups->removeWidget( item->widget( ));
+      delete item->widget( );
+    }
+
+    _attribGroupsVisButtons.clear( );
+
+    unsigned int currentIndex = 0;
+    for( auto group : _openGLWidget->domainManager( )->attributeGroups( ))
+    {
+      QFrame* frame = new QFrame( );
+      frame->setStyleSheet( "background-color: " + group->color( ).name( ) );
+      frame->setMinimumSize( 20, 20 );
+      frame->setMaximumSize( 20, 20 );
+
+      group->name( std::get< T_TYPE_NAME >( stats[ currentIndex ])); //names[ currentIndex] );
+
+      QCheckBox* buttonVisibility = new QCheckBox( group->name( ).c_str( ));
+      buttonVisibility->setChecked( true );
+
+      _attribGroupsVisButtons.push_back( buttonVisibility );
+
+      connect( buttonVisibility, SIGNAL( clicked( )),
+              this, SLOT( checkAttributeGroupsVisibility( )));
+
+      _layoutAttribGroups->addWidget( frame, currentIndex, 0, 1, 1 );
+      _layoutAttribGroups->addWidget( buttonVisibility, currentIndex, 2, 1, 1 );
+
+      ++currentIndex;
+    }
+
+
+    _layoutAttribGroups->update( );
+  }
+
+  void MainWindow::updateSelectedStatsPickingSingle( unsigned int selected )
+  {
+    auto pickingInfo = _domainManager->pickingInfoSimple( selected );
+
+    _labelGID->setText( QString::number( std::get< T_PART_GID >( pickingInfo )));
+
+    auto position = std::get< T_PART_POSITION >( pickingInfo );
+
+    QString posText = "( " + QString::number( position.x )
+                    + ", " + QString::number( position.y )
+                    + ", " + QString::number( position.z )
+                    + " )";
+
+    _labelPosition->setText( posText );
+
+    _toolBoxOptions->setCurrentIndex( ( unsigned int ) T_TOOL_Inpector );
+
+  }
+
+  void MainWindow::clippingPlanesReset( void )
+  {
+    _openGLWidget->clippingPlanesReset( );
+
+    _resetClippingParams( );
+  }
+
+  void MainWindow::_resetClippingParams( void )
+  {
+    _spinBoxClippingDist->setValue( _openGLWidget->clippingPlanesDistance( ));
+    _spinBoxClippingHeight->setValue( _openGLWidget->clippingPlanesHeight( ));
+    _spinBoxClippingWidth->setValue( _openGLWidget->clippingPlanesWidth( ));
+  }
+
+  void MainWindow::clippingPlanesActive ( int state )
+  {
+    bool active = state;
+
+    _checkShowPlanes->setEnabled( active );
+    _buttonResetPlanes->setEnabled( active );
+    _spinBoxClippingHeight->setEnabled( active );
+    _spinBoxClippingWidth->setEnabled( active );
+    _spinBoxClippingDist->setEnabled( active );
+    _frameClippingColor->setEnabled( active );
+    _buttonSelectionFromClippingPlanes->setEnabled( active );
+
+    _openGLWidget->clippingPlanes( active );
+
+    _resetClippingParams( );
+  }
+
+  void MainWindow::spinBoxValueChanged( void )
+  {
+    auto spinBox = dynamic_cast< QDoubleSpinBox* >( sender( ));
+
+    if( spinBox == _spinBoxClippingDist )
+      _openGLWidget->clippingPlanesDistance( spinBox->value( ));
+    else if ( spinBox == _spinBoxClippingHeight )
+      _openGLWidget->clippingPlanesHeight( spinBox->value( ));
+    else if( spinBox == _spinBoxClippingWidth )
+      _openGLWidget->clippingPlanesWidth( spinBox->value( ));
+
+  }
+
+  void MainWindow::showInactive( bool show )
+  {
+    _openGLWidget->showInactive( show );
+  }
+
+
+  void MainWindow::playAtButtonClicked( void )
+  {
+    if( !_openGLWidget || !_openGLWidget->player( ))
+      return;
+
+    bool ok;
+    double result =
+        QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
+                                 tr( "Simulation time" ),
+                                 ( double )_openGLWidget->currentTime( ),
+                                 ( double )_openGLWidget->player( )->data( )->startTime( ),
+                                 ( double )_openGLWidget->player( )->data( )->endTime( ),
+                                 3, &ok, Qt::Popup );
+
+    if( ok )
+    {
+      float percentage = ( result - _openGLWidget->player( )->startTime( )) /
+          ( _openGLWidget->player( )->endTime( ) -
+              _openGLWidget->player( )->startTime( ));
+
+      percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
+
+      PlayAt( percentage, true );
+    }
+  }
+
+
+  bool MainWindow::_showDialog( QColor& current, const QString& message )
+  {
+    QColor result = QColorDialog::getColor( current, this,
+                                            QString( message ),
+                                            QColorDialog::DontUseNativeDialog);
+
+    if( result.isValid( ))
+    {
+      current = result;
+      return true;
+    }
+    else
+      return false;
+
+  }
+
+  void MainWindow::colorSelectionClicked( void )
+  {
+    QPushButton* button = dynamic_cast< QPushButton* >( sender( ));
+
+    if( button == _frameClippingColor )
+    {
+      QColor current = _openGLWidget->clippingPlanesColor( );
+      if( _showDialog( current, "Select planes color" ))
+      {
+        _openGLWidget->clippingPlanesColor( current );
+        button->setStyleSheet( "background-color: " + current.name( ));
+      }
+    }
+  }
+
+  void MainWindow::selectionFromPlanes( void )
+  {
+    if( !_openGLWidget )
+      return;
+
+    auto ids = _openGLWidget->getPlanesContainedElements( );
+    visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
+
+    if( selectedSet.empty( ))
+      return;
+
+    setSelection( selectedSet, SRC_PLANES );
+
+  }
+
+  void MainWindow::selectionManagerChanged( void )
+  {
+    setSelection( _selectionManager->selected( ), SRC_WIDGET );
+  }
+
+  void MainWindow::_updateSelectionGUI( void )
+  {
+    auto selection = _domainManager->selection( );
+
+    _addGroupButton->setEnabled( true );
+    _clearSelectionButton->setEnabled( true );
+    _selectionSizeLabel->setText( QString::number( selection.size( )));
+    _selectionSizeLabel->update( );
+
+  }
+
+  void MainWindow::setSelection( const GIDUSet& selectedSet,
+                                 TSelectionSource source_ )
+  {
+    if( source_ == SRC_UNDEFINED )
+      return;
+
+    _domainManager->selection( selectedSet );
+    _openGLWidget->setSelectedGIDs( selectedSet );
+
+    if( source_ != SRC_WIDGET )
+      _selectionManager->setSelected( selectedSet );
+
+    _updateSelectionGUI( );
+  }
+
+  void MainWindow::clearSelection( void )
+  {
+    if( _openGLWidget )
+    {
+      _domainManager->clearSelection( );
+      _openGLWidget->clearSelection( );
+      _selectionManager->clearSelection( );
+
+      _addGroupButton->setEnabled( false );
+      _clearSelectionButton->setEnabled( false );
+      _selectionSizeLabel->setText( "0" );
+    }
+  }
+
+  #ifdef VISIMPL_USE_ZEROEQ
+
+  #ifdef VISIMPL_USE_GMRVLEX
+
+    void MainWindow::ApplyPlaybackOperation( unsigned int playbackOp )
+    {
+      zeroeq::gmrv::PlaybackOperation operation =
+          ( zeroeq::gmrv::PlaybackOperation ) playbackOp;
+
+      switch( operation )
+      {
+        case zeroeq::gmrv::PLAY:
+  //        std::cout << "Received play" << std::endl;
+          Play( false );
+          break;
+        case zeroeq::gmrv::PAUSE:
+          Pause( false );
+  //        std::cout << "Received pause" << std::endl;
+          break;
+        case zeroeq::gmrv::STOP:
+  //        std::cout << "Received stop" << std::endl;
+          Stop( false );
+          break;
+        case zeroeq::gmrv::BEGIN:
+  //        std::cout << "Received begin" << std::endl;
+          PreviousStep( false );
+          break;
+        case zeroeq::gmrv::END:
+  //        std::cout << "Received end" << std::endl;
+          NextStep( false );
+          break;
+        case zeroeq::gmrv::ENABLE_LOOP:
+  //        std::cout << "Received enable loop" << std::endl;
+          _zeqEventRepeat( true );
+          break;
+        case zeroeq::gmrv::DISABLE_LOOP:
+  //        std::cout << "Received disable loop" << std::endl;
+          _zeqEventRepeat( false );
+          break;
+        default:
+          break;
+      }
+
+    }
+
+    void MainWindow::_zeqEventRepeat( bool repeat )
+    {
+      _repeatButton->setChecked( repeat );
+      Repeat( false );
+    }
+
+  #endif
+
+  void MainWindow::_setZeqUri( const std::string& uri_ )
+  {
+    _zeqConnection = true;
+    _uri = uri_.empty( ) ? zeroeq::DEFAULT_SESSION : uri_;
+
+    _subscriber = new zeroeq::Subscriber( _uri );
+
+    _subscriber->subscribe(
+        lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
+        [&]( const void* data_, const size_t size_ )
+        { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
+
+    _thread = new std::thread( [&]() { while( true ) _subscriber->receive( 10000 );});
+  }
+
+  //void* MainWindow::_Subscriber( void* subs )
+  //{
+  //  zeroeq::Subscriber* subscriber = static_cast< zeroeq::Subscriber* >( subs );
+  //  while ( true )
+  //  {
+  //    subscriber->receive( 10000 );
+  //  }
+  //  pthread_exit( NULL );
+  //}
+
+
+
+  void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
+  {
+
+    std::cout << "Received selection" << std::endl;
+    if( _openGLWidget )
+    {
+  //    std::vector< unsigned int > selected =
+  //        zeq::hbp::deserializeSelectedIDs( selected );
+
+      std::vector< uint32_t > ids = selected->getIdsVector( );
+
+      visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
+
+      setSelection( selectedSet, SRC_EXTERNAL );
+    }
+
+  }
+
+#endif
+
+  void MainWindow::addGroupFromSelection( void )
+  {
+    DomainManager* inputMux = _openGLWidget->domainManager( );
+
+    unsigned int currentIndex = inputMux->groups( ).size( );
+
+    QString groupName( "Group " + QString::number( currentIndex ));
+
+    if( !_autoNameGroups )
+    {
+      bool ok;
+      groupName =
+          QInputDialog::getText( this, tr( "Group Name" ),
+                                 tr( "Please, introduce group name: "),
+                                 QLineEdit::Normal,
+                                 groupName,
+                                 &ok );
+
+      if( !ok )
+        return;
+    }
+
+    _openGLWidget->addGroupFromSelection( groupName.toStdString( ));
+
+    QFrame* frame = new QFrame( );
+    auto colors = _openGLWidget->colorPalette( ).colors( );
+
+    frame->setStyleSheet( "background-color: " + colors[ currentIndex ].name( ) );
+    frame->setMinimumSize( 20, 20 );
+    frame->setMaximumSize( 20, 20 );
+
+    QCheckBox* buttonVisibility = new QCheckBox( "active" );
+    buttonVisibility->setChecked( true );
+
+    _groupsVisButtons.push_back( buttonVisibility );
+
+    connect( buttonVisibility, SIGNAL( clicked( )),
+             this, SLOT( checkGroupsVisibility( )));
+
+    _groupLayout->addWidget( frame, currentIndex, 0, 1, 1 );
+    _groupLayout->addWidget( new QLabel( groupName ), currentIndex, 1, 1, 1 );
+    _groupLayout->addWidget( buttonVisibility, currentIndex, 2, 1, 1 );
+
+    _openGLWidget->setUpdateGroups( );
+    _openGLWidget->update( );
+  }
+
+  void MainWindow::checkGroupsVisibility( void )
+  {
+    unsigned int counter = 0;
+    auto group = _openGLWidget->domainManager( )->groups( ).begin( );
+    for( auto button : _groupsVisButtons )
+    {
+      if( button->isChecked( ) != ( *group)->active( ) )
+      {
+        _openGLWidget->domainManager( )->setVisualGroupState( counter, button->isChecked( ));
+
+      }
+      ++group;
+      ++counter;
+    }
+
+    _openGLWidget->setUpdateGroups( );
+    _openGLWidget->update( );
+  }
+
+  void MainWindow::checkAttributeGroupsVisibility( void )
+  {
+    unsigned int counter = 0;
+    auto group = _openGLWidget->domainManager( )->attributeGroups( ).begin( );
+    for( auto button : _attribGroupsVisButtons )
+    {
+      if( button->isChecked( ) != ( *group)->active( ) )
+      {
+        _openGLWidget->domainManager( )->setVisualGroupState( counter, button->isChecked( ), true);
+
+      }
+      ++group;
+      ++counter;
+    }
+
+    _openGLWidget->update( );
+  }
+
+
+
   void MainWindow::PlayPause( bool notify )
   {
     if( !_openGLWidget || !_openGLWidget->player( ))
@@ -723,7 +1606,6 @@ namespace visimpl
 
   void MainWindow::Play( bool notify )
   {
-  //  playIcon.swap( pauseIcon );
     if( !_openGLWidget || !_openGLWidget->player( ))
       return;
 
@@ -732,6 +1614,10 @@ namespace visimpl
       _openGLWidget->Play( );
 
       _playButton->setIcon( _pauseIcon );
+
+      if( _openGLWidget->playbackMode( ) == TPlaybackMode::STEP_BY_STEP &&
+          _openGLWidget->completedStep( ))
+        _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
 
       if( notify )
       {
@@ -772,6 +1658,8 @@ namespace visimpl
       _playButton->setIcon( _playIcon );
       _startTimeLabel->setText(
             QString::number( (double)_openGLWidget->player( )->startTime( )));
+
+      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
 
       if( notify )
       {
@@ -838,11 +1726,11 @@ namespace visimpl
 
       _simSlider->setSliderPosition( sliderPosition );
 
-  //    _openGLWidget->resetParticles( );
-
       _playButton->setIcon( _pauseIcon );
 
       _openGLWidget->PlayAt( percentage );
+
+      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
 
       if( notify )
       {
@@ -867,20 +1755,17 @@ namespace visimpl
     if( _openGLWidget )
     {
 
-  //    _openGLWidget->Pause( );
-
-
       int value = _simSlider->value( );
       float percentage = float( value - _simSlider->minimum( )) /
                          float( _simSlider->maximum( ) - _simSlider->minimum( ));
 
       _simSlider->setSliderPosition( sliderPosition );
 
-  //    _openGLWidget->resetParticles( );
-
       _playButton->setIcon( _pauseIcon );
 
       _openGLWidget->PlayAt( percentage );
+
+      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
 
       if( notify )
       {
@@ -896,378 +1781,39 @@ namespace visimpl
     }
   }
 
-  void MainWindow::Restart( bool notify )
+  void MainWindow::PreviousStep( bool /*notify*/ )
   {
     if( !_openGLWidget || !_openGLWidget->player( ))
       return;
 
     if( _openGLWidget )
     {
-      _openGLWidget->Restart( );
-
-      if( _openGLWidget->player( )->isPlaying( ))
-        _playButton->setIcon( _pauseIcon );
-      else
-        _playButton->setIcon( _playIcon );
-
-      if( notify )
-      {
-  #ifdef SIMIL_USE_ZEROEQ
-      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::BEGIN );
-  #endif
-      }
-
+      _playButton->setIcon( _pauseIcon );
+      _openGLWidget->player( )->Play( );
+      _openGLWidget->PreviousStep( );
     }
   }
 
-  void MainWindow::GoToEnd( bool notify )
+  void MainWindow::NextStep( bool /*notify*/ )
   {
     if( !_openGLWidget || !_openGLWidget->player( ))
       return;
 
     if( _openGLWidget )
     {
-      _openGLWidget->GoToEnd( );
-
-      if( notify )
-      {
-  #ifdef SIMIL_USE_ZEROEQ
-      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::END );
-  #endif
-      }
-    }
-  }
-
-  void MainWindow::UpdateSimulationSlider( float percentage )
-  {
-    if( !_openGLWidget || !_openGLWidget->player( ))
-      return;
-
-    {
-
-      _startTimeLabel->setText(
-            QString::number( (double)_openGLWidget->player( )->currentTime( )));
-
-  //    float percentage = _openGLWidget->player( )->GetRelativeTime( );
-
-      int total = _simSlider->maximum( ) - _simSlider->minimum( );
-
-      int position = percentage * total;
-  //    std::cout << "Timer: " << percentage << " * "
-  //              << total << " = " << position << std::endl;
-
-      _simSlider->setSliderPosition( position );
-
-      if( _summary )
-        _summary->repaintHistograms( );
-    }
-  }
-
-  void MainWindow::UpdateSimulationColorMapping( void )
-  {
-    _openGLWidget->changeSimulationColorMapping( _tfWidget->getColors( ));
-  }
-
-  void MainWindow::PreviewSimulationColorMapping( void )
-  {
-    _openGLWidget->changeSimulationColorMapping( _tfWidget->getPreviewColors( ));
-  }
-
-  void MainWindow::changeEditorColorMapping( void )
-  {
-    _tfWidget->setColorPoints( _openGLWidget->getSimulationColorMapping( ));
-  }
-
-  void MainWindow::changeEditorSizeFunction( void )
-  {
-    _tfWidget->setSizeFunction( _openGLWidget->getSimulationSizeFunction( ));
-  }
-
-  void MainWindow::UpdateSimulationSizeFunction( void )
-  {
-    _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizeFunction( ));
-  }
-
-  void MainWindow::PreviewSimulationSizeFunction( void )
-  {
-    _openGLWidget->changeSimulationSizeFunction( _tfWidget->getSizePreview( ));
-  }
-
-  void MainWindow::changeEditorSimDeltaTime( void )
-  {
-    _deltaTimeBox->setValue( _openGLWidget->simulationDeltaTime( ));
-  }
-
-  void MainWindow::updateSimDeltaTime( void )
-  {
-    _openGLWidget->simulationDeltaTime( _deltaTimeBox->value( ));
-  }
-
-  void MainWindow::changeEditorSimTimestepsPS( void )
-  {
-    _timeStepsPSBox->setValue( _openGLWidget->simulationStepsPerSecond( ));
-  }
-
-  void MainWindow::updateSimTimestepsPS( void )
-  {
-    _openGLWidget->simulationStepsPerSecond( _timeStepsPSBox->value( ));
-  }
-
-  void MainWindow::changeEditorDecayValue( void )
-  {
-    _decayBox->setValue( _openGLWidget->getSimulationDecayValue( ));
-  }
-
-  void MainWindow::updateSimulationDecayValue( void )
-  {
-    _openGLWidget->changeSimulationDecayValue( _decayBox->value( ));
-  }
-
-  void MainWindow::AlphaBlendingToggled( void )
-  {
-    std::cout << "Changing alpha blending... ";
-    if( _alphaNormalButton->isChecked( ))
-    {
-      std::cout << "Normal" << std::endl;
-      _openGLWidget->SetAlphaBlendingAccumulative( false );
-    }
-    else
-    {
-      std::cout << "Accumulative" << std::endl;
-      _openGLWidget->SetAlphaBlendingAccumulative( true );
-    }
-  }
-
-  void MainWindow::showSelection( bool show )
-  {
-    _tfGroupBox->setVisible( show );
-    _groupsGroupBox->setVisible( !show );
-//    _tfWidget->setEnabled( show );
-
-
-    _openGLWidget->showSelection( show );
-  }
-
-
-  #ifdef VISIMPL_USE_ZEROEQ
-
-  #ifdef VISIMPL_USE_GMRVLEX
-
-    void MainWindow::ApplyPlaybackOperation( unsigned int playbackOp )
-    {
-      zeroeq::gmrv::PlaybackOperation operation =
-          ( zeroeq::gmrv::PlaybackOperation ) playbackOp;
-
-      switch( operation )
-      {
-        case zeroeq::gmrv::PLAY:
-  //        std::cout << "Received play" << std::endl;
-          Play( false );
-          break;
-        case zeroeq::gmrv::PAUSE:
-          Pause( false );
-  //        std::cout << "Received pause" << std::endl;
-          break;
-        case zeroeq::gmrv::STOP:
-  //        std::cout << "Received stop" << std::endl;
-          Stop( false );
-          break;
-        case zeroeq::gmrv::BEGIN:
-  //        std::cout << "Received begin" << std::endl;
-          Restart( false );
-          break;
-        case zeroeq::gmrv::END:
-  //        std::cout << "Received end" << std::endl;
-          GoToEnd( false );
-          break;
-        case zeroeq::gmrv::ENABLE_LOOP:
-  //        std::cout << "Received enable loop" << std::endl;
-          _zeqEventRepeat( true );
-          break;
-        case zeroeq::gmrv::DISABLE_LOOP:
-  //        std::cout << "Received disable loop" << std::endl;
-          _zeqEventRepeat( false );
-          break;
-        default:
-          break;
-      }
+      _playButton->setIcon( _pauseIcon );
+      _openGLWidget->player( )->Play( );
+      _openGLWidget->NextStep( );
 
     }
-
-    void MainWindow::_zeqEventRepeat( bool repeat )
-    {
-      _repeatButton->setChecked( repeat );
-      Repeat( false );
-    }
-
-  #endif
-
-  void MainWindow::_setZeqUri( const std::string& uri_ )
-  {
-    _zeqConnection = true;
-    _uri = uri_.empty( ) ? zeroeq::DEFAULT_SESSION : uri_;
-
-    _subscriber = new zeroeq::Subscriber( _uri );
-
-    _subscriber->subscribe(
-        lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
-        [&]( const void* data_, const size_t size_ )
-        { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
-
-    _thread = new std::thread( [&]() { while( true ) _subscriber->receive( 10000 );});
   }
 
-  //void* MainWindow::_Subscriber( void* subs )
-  //{
-  //  zeroeq::Subscriber* subscriber = static_cast< zeroeq::Subscriber* >( subs );
-  //  while ( true )
-  //  {
-  //    subscriber->receive( 10000 );
-  //  }
-  //  pthread_exit( NULL );
-  //}
-
-  void MainWindow::ClearSelection( void )
+  void MainWindow::completedStep( void )
   {
     if( _openGLWidget )
     {
-      _openGLWidget->clearSelection( );
-
-      _addGroupButton->setEnabled( false );
-      _clearSelectionButton->setEnabled( false );
-      _selectionSizeLabel->setText( "0" );
+      _playButton->setIcon( _playIcon );
     }
   }
-
-  void MainWindow::playAtButtonClicked( void )
-  {
-    if( !_openGLWidget || !_openGLWidget->player( ))
-      return;
-
-    bool ok;
-    double result =
-        QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
-                                 tr( "Simulation time" ),
-                                 ( double )_openGLWidget->player( )->currentTime( ),
-                                 ( double )_openGLWidget->player( )->data( )->startTime( ),
-                                 ( double )_openGLWidget->player( )->data( )->endTime( ),
-                                 3, &ok, Qt::Popup );
-
-    if( ok )
-    {
-      float percentage = ( result - _openGLWidget->player( )->startTime( )) /
-          ( _openGLWidget->player( )->endTime( ) -
-              _openGLWidget->player( )->startTime( ));
-
-      percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
-
-      PlayAt( percentage, true );
-    }
-  }
-
-  void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
-  {
-
-    std::cout << "Received selection" << std::endl;
-    if( _openGLWidget )
-    {
-  //    std::vector< unsigned int > selected =
-  //        zeq::hbp::deserializeSelectedIDs( selected );
-
-      std::vector< uint32_t > ids = selected->getIdsVector( );
-
-
-
-      visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
-
-      if( selectedSet.size( ) == 0 )
-        return;
-
-      _openGLWidget->setSelectedGIDs( selectedSet );
-
-      _addGroupButton->setEnabled( true );
-      _clearSelectionButton->setEnabled( true );
-      _selectionSizeLabel->setText( QString::number( selectedSet.size( )));
-    }
-
-  }
-
-#endif
-
-  void MainWindow::addGroupFromSelection( void )
-  {
-    InputMultiplexer* inputMux = _openGLWidget->inputMultiplexer( );
-
-    unsigned int currentIndex = inputMux->groups( ).size( );
-
-    QString groupName( "Group " + QString::number( currentIndex ));
-
-    if( !_autoNameGroups )
-    {
-      bool ok;
-      groupName =
-          QInputDialog::getText( this, tr( "Group Name" ),
-                                 tr( "Please, introduce group name: "),
-                                 QLineEdit::Normal,
-                                 groupName,
-                                 &ok );
-
-      if( !ok )
-        return;
-    }
-
-    inputMux->addVisualGroup( inputMux->selection( ),
-                              groupName.toStdString( ),
-                              false );
-
-    if( inputMux->showGroups( ))
-      inputMux->showGroups( true );
-
-    QFrame* frame = new QFrame( );
-    auto colors = _openGLWidget->colorPalette( ).colors( );
-
-    frame->setStyleSheet( "background-color: " + colors[ currentIndex ].name( ) );
-    frame->setMinimumSize( 20, 20 );
-    frame->setMaximumSize( 20, 20 );
-
-//    QIcon* eye = new QIcon( ":/icons/show.png" );
-    QCheckBox* buttonVisibility = new QCheckBox( "active" );
-    buttonVisibility->setChecked( true );
-//    buttonVisibility->setMinimumSize( 60, 50 );
-//    buttonVisibility->setMaximumSize( 60, 50 );
-
-    _groupsVisButtons.push_back( buttonVisibility );
-
-    connect( buttonVisibility, SIGNAL( clicked( )),
-             this, SLOT( checkGroupsVisibility( )));
-
-    _groupLayout->addWidget( frame, currentIndex, 0, 1, 1 );
-    _groupLayout->addWidget( new QLabel( groupName ), currentIndex, 1, 1, 1 );
-    _groupLayout->addWidget( buttonVisibility, currentIndex, 2, 1, 1 );
-
-    _openGLWidget->setUpdateSelection( );
-    _openGLWidget->update( );
-  }
-
-  void MainWindow::checkGroupsVisibility( void )
-  {
-    unsigned int counter = 0;
-    auto group = _openGLWidget->inputMultiplexer( )->groups( ).begin( );
-    for( auto button : _groupsVisButtons )
-    {
-      if( button->isChecked( ) != ( *group)->active( ) )
-      {
-        _openGLWidget->inputMultiplexer( )->setVisualGroupState( counter, button->isChecked( ));
-
-      }
-      ++group;
-      ++counter;
-    }
-
-    _openGLWidget->setUpdateSelection( );
-    _openGLWidget->update( );
-  }
-
-
 
 } // namespace visimpl

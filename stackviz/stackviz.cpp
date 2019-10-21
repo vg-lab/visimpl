@@ -43,6 +43,8 @@ int main( int argc, char** argv )
   std::string target ( "" );
   std::string report ( "" );
   std::string subsetEventFile( "" );
+  std::string correlations( "" );
+
   simil::TDataType dataType = simil::TBlueConfig;
   simil::TSimulationType simType = simil::TSimSpikes;
 
@@ -110,6 +112,16 @@ int main( int argc, char** argv )
         usageMessage( argv[0] );
     }
 
+    if( std::strcmp( argv[ i ], "-correlations") == 0 )
+    {
+      if(++i < argc )
+      {
+        correlations = argv[ i ];
+      }
+      else
+        usageMessage( argv[0] );
+    }
+
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
        simType = simil::TSimSpikes;
@@ -172,6 +184,15 @@ int main( int argc, char** argv )
     case simil::TDataType::THDF5:
       mainWindow.openHDF5File( networkFile, simType, activityFile,
                                subsetEventFile );
+      if( !correlations.empty( ))
+      {
+        QString correls( correlations.c_str( ));
+        auto co = correls.split( ";" );
+        for( auto c : co )
+          mainWindow.addCorrelation( c.toStdString( ));
+      }
+      mainWindow.calculateCorrelations( );
+
       break;
     default:
       break;

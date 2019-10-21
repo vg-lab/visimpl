@@ -22,6 +22,9 @@
 #include <QTimer>
 #include <QScrollArea>
 #include <QSplitter>
+#include <QSpinBox>
+
+#include <QGroupBox>
 
 #include "EventWidget.h"
 #include "FocusFrame.h"
@@ -113,6 +116,8 @@ namespace visimpl
   public slots:
 
     void bins( int bins_ );
+    void binsChanged( void );
+    void zoomFactorChanged( void );
     void zoomFactor( double zoom );
     void fillPlots( bool fillPlots_ );
 
@@ -150,6 +155,9 @@ namespace visimpl
 
     void updateEventWidgets( void );
     void updateHistogramWidgets( void );
+
+    void _updateScaleHorizontal( void );
+    void _updateScaleVertical( void );
 
   protected:
 
@@ -208,6 +216,9 @@ namespace visimpl
 
     void Init( void );
 
+    void _initCentralGUI( void );
+    QWidget* _initFootGUI( void );
+
     void insertSubset( const Selection& selection );
     void insertSubset( const std::string& name, const GIDUSet& subset );
 
@@ -221,10 +232,29 @@ namespace visimpl
     void calculateRegionBounds( void );
     void SetFocusRegionPosition( const QPoint& localPosition );
 
+    void _updateEventRepSizes( unsigned int newSize );
+
+    void _resizeCharts( unsigned int newMinSize, Qt::Orientation orientation );
+    void _resizeEvents( unsigned int newMinSize );
+
     virtual void wheelEvent( QWheelEvent* event );
+    virtual void resizeEvent( QResizeEvent* event );
 
     unsigned int _bins;
     float _zoomFactor;
+
+    bool _flagUpdateChartSize;
+
+    unsigned int _sizeChartVerticalDefault;
+
+    unsigned int _sizeChartHorizontal;
+    unsigned int _sizeChartVertical;
+    unsigned int _sizeView;
+    unsigned int _sizeMargin;
+
+    float _scaleCurrentHorizontal;
+    float _scaleCurrentVertical;
+    float _scaleStep;
 
     unsigned int _gridLinesNumber;
 
@@ -256,27 +286,38 @@ namespace visimpl
 
     FocusFrame* _focusWidget;
 
+    QDoubleSpinBox* _spinBoxScaleHorizontal;
+    QDoubleSpinBox* _spinBoxScaleVertical;
 
-    QGridLayout* _histoLabelsLayout;
-    QScrollArea* _histoLabelsScroll;
+    QGridLayout* _layoutHistoLabels;
+    QScrollArea* _scrollHistoLabels;
 
-    QGridLayout* _eventLabelsLayout;
+    QGridLayout* _layoutEventLabels;
     QScrollArea* _eventLabelsScroll;
 
-    QGridLayout* _histogramsLayout;
-    QScrollArea* _histogramScroll;
+    QGridLayout* _layoutHistograms;
+    QScrollArea* _scrollHistogram;
 
-    QGridLayout* _eventsLayout;
-    QScrollArea* _eventScroll;
+    QGridLayout* _layoutEvents;
+    QScrollArea* _scrollEvent;
 
-    QSplitter* _eventsSplitter;
-    QSplitter* _histoSplitter;
+    QVBoxLayout* _layoutMain;
+//    QSplitter* _splitVertCentralFoot;
+    QSplitter* _splitVertEventsHisto;
+    QSplitter* _splitHorizEvents;
+    QSplitter* _splitHorizHisto;
 
     QWidget* _localColorWidget;
     QWidget* _globalColorWidget;
     QLabel* _currentValueLabel;
     QLabel* _globalMaxLabel;
     QLabel* _localMaxLabel;
+
+    QSpinBox* _spinBoxBins;
+    QDoubleSpinBox* _spinBoxZoomFactor;
+
+    QWidget* tmpFootLeft;
+    QWidget* tmpFootRight;
 
 //    simil::SubsetEventManager* _subsetEventManager;
     unsigned int _maxNumEvents;
@@ -292,7 +333,11 @@ namespace visimpl
     unsigned int _summaryColumns;
     unsigned int _heightPerRow;
     unsigned int _maxLabelWidth;
-    unsigned int _currentCentralMinWidth;
+
+    unsigned int _footHeightMax;
+    unsigned int _footHeightMin;
+    unsigned int _footWidthMax;
+//    unsigned int _currentCentralMinWidth;
 
     QPoint _lastMousePosition;
     QPoint _regionGlobalPosition;

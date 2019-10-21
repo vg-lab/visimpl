@@ -3,8 +3,8 @@
 #git_subproject( Lexis https://github.com/HBPVis/Lexis.git c24dc07 )
 #git_subproject( gmrvlex git@gitlab.gmrv.es:nsviz/gmrvlex.git c20b194 )
 #git_subproject( Brion https://github.com/BlueBrain/Brion.git 073f356 )
-git_subproject( ReTo git@gitlab.gmrv.es:nsviz/ReTo.git 6051c98 )
-git_subproject( prefr git@gitlab.gmrv.es:nsviz/prefr.git 1a3eeb9 )
-git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git 868da6b )
+git_subproject( ReTo git@gitlab.gmrv.es:nsviz/ReTo.git bdfdba7 )
+git_subproject( prefr git@gitlab.gmrv.es:nsviz/prefr.git b21325f )
+git_subproject( SimIL git@gitlab.gmrv.es:nsviz/SimIL.git 17bddce )
 git_subproject( scoop git@gitlab.gmrv.es:gmrv/scoop.git b3326cd )
 

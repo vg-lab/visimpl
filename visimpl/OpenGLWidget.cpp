@@ -26,13 +26,18 @@
 #include "prefr/PrefrShaders.h"
 #include "prefr/ColorSource.h"
 
-#include "prefr/CompositeColorUpdater.h"
-
-#include "prefr/ValuedSource.h"
-#include "prefr/ValuedUpdater.h"
+#ifdef SIMIL_USE_BRION
+#include <brain/brain.h>
+#include <brion/brion.h>
+#endif
 
 namespace visimpl
 {
+
+  static InitialConfig _initialConfigSimBlueConfig =
+      std::make_tuple( 0.5f, 20.0f, 20.0f, 1.0f );
+  static InitialConfig _initialConfigSimH5 =
+      std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
 
   static float invRGBInt = 1.0f / 255;
 
@@ -48,12 +53,16 @@ namespace visimpl
   , _zeqUri( zeqUri )
   #endif
   , _fpsLabel( nullptr )
+  , _labelCurrentTime( nullptr )
   , _showFps( false )
+  , _showCurrentTime( true )
   , _wireframe( false )
   , _camera( nullptr )
   , _lastCameraPosition( 0, 0, 0)
   , _focusOnSelection( true )
   , _pendingSelection( false )
+  , _backtrace( false )
+  , _playbackMode( TPlaybackMode::CONTINUOUS )
   , _frameCount( 0 )
   , _mouseX( 0 )
   , _mouseY( 0 )
@@ -62,18 +71,41 @@ namespace visimpl
   , _idleUpdate( true )
   , _paint( false )
   , _currentClearColor( 20, 20, 20, 0 )
-  , _particlesShader( nullptr )
+  , _particleRadiusThreshold( 0.8 )
+  , _currentShader( T_SHADER_UNDEFINED )
+  , _shaderParticlesCurrent( nullptr )
+  , _shaderParticlesDefault( nullptr )
+  , _shaderParticlesSolid( nullptr )
+  , _shaderPicking( nullptr )
+  , _shaderClippingPlanes( nullptr )
   , _particleSystem( nullptr )
+  , _pickRenderer( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
-  , _maxLife( 0.0f )
+  , _clippingPlaneLeft( nullptr )
+  , _clippingPlaneRight( nullptr )
+  , _planeHeight( 1 )
+  , _planeWidth( 1 )
+  , _planeDistance( 20 )
+  , _rotationPlanes( false )
+  , _translationPlanes( false )
+  , _clipping( true )
+  , _paintClippingPlanes( true )
+  , _planesColor( 1.0, 1.0, 1.0, 1.0 )
   , _deltaTime( 0.0f )
+  , _sbsTimePerStep( 5.0f )
+  , _sbsBeginTime( 0 )
+  , _sbsEndTime( 0 )
+  , _sbsCurrentTime( 0 )
+  , _sbsCurrentRenderDelta( 0 )
+  , _sbsPlaying( false )
+  , _sbsFirstStep( true )
+  , _sbsNextStep( false )
+  , _sbsPrevStep( false )
   , _simDeltaTime( 0.125f )
   , _timeStepsPerSecond( 2.0f )
   , _simTimePerSecond( 0.5f )
   , _firstFrame( true )
-  , _prototype( nullptr )
-  , _offPrototype( nullptr )
   , _renderSpeed( 0.0f )
   , _simPeriod( 0.0f )
   , _simPeriodMicroseconds( 0.0f )
@@ -85,20 +117,31 @@ namespace visimpl
   , _elapsedTimeSimAcc( 0.0f )
   , _alphaBlendingAccumulative( false )
   , _showSelection( false )
-  , _resetParticles( false )
-  , _updateSelection( false )
+  , _flagResetParticles( false )
+  , _flagUpdateSelection( false )
+  , _flagUpdateGroups( false )
+  , _flagUpdateAttributes( false )
+  , _flagPickingSingle( false )
+  , _flagChangeShader( false )
+  , _flagUpdateRender( false )
+  , _flagModeChange( false )
+  , _newMode( TMODE_UNDEFINED )
+  , _flagAttribChange( false )
+  , _newAttrib( T_TYPE_UNDEFINED )
+  , _currentAttrib( T_TYPE_MORPHO )
   , _showActiveEvents( true )
   , _subsetEvents( nullptr )
   , _deltaEvents( 0.125f )
-  , _inputMux( nullptr )
+  , _domainManager( nullptr )
+  , _selectedPickingSingle( 0 )
   {
   #ifdef VISIMPL_USE_ZEROEQ
     if ( zeqUri != "" )
-      _camera = new reto::Camera( zeqUri );
+      _camera = new Camera( zeqUri );
     else
   #endif
-    _camera = new reto::Camera( );
-
+    _camera = new Camera( );
+    _camera->farPlane( 100000.f );
     _camera->animDuration( 0.5f );
 
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
@@ -106,6 +149,8 @@ namespace visimpl
     _maxFPS = 60.0f;
     _renderPeriod = 1.0f / _maxFPS;
     _renderPeriodMicroseconds = _renderPeriod * 1000000;
+
+    _sbsInvTimePerStep = 1.0 / _sbsTimePerStep;
 
     _sliderUpdatePeriodMicroseconds = _sliderUpdatePeriod * 1000000;
 
@@ -121,12 +166,22 @@ namespace visimpl
     _fpsLabel->setVisible( _showFps );
     _fpsLabel->setMaximumSize( 100, 50 );
 
+    _labelCurrentTime = new QLabel( );
+    _labelCurrentTime->setStyleSheet(
+          "QLabel { background-color : #333;"
+          "color : white;"
+          "padding: 3px;"
+          "margin: 10px;"
+          " border-radius: 10px;}" );
+    _labelCurrentTime->setVisible( _showCurrentTime );
+    _labelCurrentTime->setMaximumSize( 100, 50 );
 
     _eventLabelsLayout = new QGridLayout( );
     _eventLabelsLayout->setAlignment( Qt::AlignTop );
     _eventLabelsLayout->setMargin( 0 );
     setLayout( _eventLabelsLayout );
-    _eventLabelsLayout->addWidget( _fpsLabel, 0, 0, 1, 9 );
+    _eventLabelsLayout->addWidget( _labelCurrentTime, 0, 0, 1, 9 );
+    _eventLabelsLayout->addWidget( _fpsLabel, 1, 0, 1, 9 );
 
     _colorPalette =
         scoop::ColorPalette::colorBrewerQualitative(
@@ -136,7 +191,7 @@ namespace visimpl
     this->setFocusPolicy( Qt::WheelFocus );
 
 
-
+//    new QShortcut( QKeySequence( Qt::Key_Space ), this, SLOT( pressedPlayPause( )));
 
   //  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Minus ),
   //                 this, SLOT( reducePlaybackSpeed( ) ));
@@ -150,8 +205,14 @@ namespace visimpl
   {
     delete _camera;
 
-    if( _particlesShader )
-      delete _particlesShader;
+    if( _shaderParticlesDefault )
+      delete _shaderParticlesDefault;
+
+    if( _shaderParticlesSolid )
+      delete _shaderParticlesSolid;
+
+    if( _shaderPicking )
+      delete _shaderPicking;
 
     if( _particleSystem )
       delete _particleSystem;
@@ -182,24 +243,23 @@ namespace visimpl
     simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer( );
     spPlayer->LoadData( spikeData );
     _player = spPlayer;
-    _player->deltaTime( _deltaTime );
+//    _player->deltaTime( _deltaTime );
 
 
+    InitialConfig config;
     float scale = 1.0f;
 
     switch( fileType )
     {
       case simil::TBlueConfig:
 
-        simulationDeltaTime( 0.5f );
-        simulationStepsPerSecond( 20.0f );
-        changeSimulationDecayValue( 20.0f );
-        break;
+        config = _initialConfigSimBlueConfig;
+
+      break;
       case simil::THDF5:
-        simulationDeltaTime( 0.005f );
-        simulationStepsPerSecond( 20.0f );
-        changeSimulationDecayValue( 0.1f );
-        scale = 500.f;
+
+        config = _initialConfigSimH5;
+
         break;
       case simil::TCSV:
         simulationDeltaTime( 0.2f );
@@ -211,10 +271,26 @@ namespace visimpl
         break;
     }
 
-    createParticleSystem( scale );
+    scale = std::get< T_SCALE >( config );
 
-    _inputMux = new InputMultiplexer( _particleSystem, _player->gids( ) );
-    _inputMux->models( _prototype, _offPrototype );
+    tGidPosMap gidPositions;
+    auto gids = spPlayer->gids( );
+    auto positions = spPlayer->positions( );
+
+    auto gidit = gids.begin( );
+    for( auto pos : positions )
+    {
+      vec3 position( pos.x( ), pos.y( ), pos.z( ));
+
+      gidPositions.insert( std::make_pair( *gidit, position * scale ));
+      ++gidit;
+    }
+
+    createParticleSystem( gidPositions );
+
+    simulationDeltaTime( std::get< T_DELTATIME >( config ) );
+    simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
+    changeSimulationDecayValue( std::get< T_DECAY >( config ) );
 
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
@@ -223,7 +299,6 @@ namespace visimpl
     update( );
 
   }
-
 
   void OpenGLWidget::initializeGL( void )
   {
@@ -247,7 +322,7 @@ namespace visimpl
 
   }
 
-  void OpenGLWidget::configureSimulation( void )
+  void OpenGLWidget::_configureSimulationFrame( void )
   {
     if( !_player || !_player->isPlaying( ) || !_particleSystem->run( ))
       return;
@@ -257,7 +332,7 @@ namespace visimpl
     if( _backtrace )
     {
 
-      backtraceSimulation( );
+      _backtraceSimulation( );
 
       _backtrace = false;
     }
@@ -266,268 +341,335 @@ namespace visimpl
 
     float currentTime = _player->currentTime( );
 
-    _inputMux->processInput( _player->spikesNow( ), prevTime,
+    _domainManager->processInput( _player->spikesNow( ), prevTime,
                              currentTime, false );
 
   }
 
-  void OpenGLWidget::backtraceSimulation( void )
+  void OpenGLWidget::_configurePreviousStep( void )
+  {
+    if( !_player || !_particleSystem->run( ))
+      return;
+
+    _sbsBeginTime = _sbsFirstStep ?
+                    _player->currentTime( ):
+                    _sbsPlaying ? _sbsBeginTime : _sbsEndTime;
+
+    _sbsBeginTime = std::max( ( double ) _player->startTime( ),
+                              _sbsBeginTime - _player->deltaTime( ));
+
+    _sbsEndTime = _sbsBeginTime + _player->deltaTime( );
+
+    _player->GoTo( _sbsBeginTime );
+
+    _backtraceSimulation( );
+
+    _sbsStepSpikes = _player->spikesBetween( _sbsBeginTime, _sbsEndTime );
+
+    _sbsCurrentTime = _sbsBeginTime;
+    _sbsCurrentSpike = _sbsStepSpikes.first;
+
+    _sbsFirstStep = false;
+    _sbsPlaying = true;
+  }
+
+  void OpenGLWidget::_configureStepByStep( void )
+  {
+
+    if( !_player || ! _player->isPlaying( ) || !_particleSystem->run( ))
+      return;
+
+    _sbsBeginTime = _sbsFirstStep ? _player->currentTime( ) : _sbsEndTime;
+
+    _sbsEndTime = _sbsBeginTime + _player->deltaTime( );
+
+    if( _sbsPlaying )
+    {
+      _player->GoTo( _sbsBeginTime );
+
+      _backtraceSimulation( );
+    }
+
+    _sbsStepSpikes = _player->spikesBetween( _sbsBeginTime, _sbsEndTime );
+
+    _sbsCurrentTime = _sbsBeginTime;
+    _sbsCurrentSpike = _sbsStepSpikes.first;
+
+    _sbsFirstStep = false;
+    _sbsPlaying = true;
+
+  }
+
+  void OpenGLWidget::_configureStepByStepFrame( double elapsedRenderTime )
+  {
+
+    _sbsCurrentRenderDelta = 0;
+
+    if( _sbsPlaying && _sbsCurrentTime >= _sbsEndTime )
+    {
+      _sbsPlaying = false;
+      _player->GoTo( _sbsEndTime );
+      _player->Pause( );
+      emit stepCompleted( );
+    }
+
+    if( _sbsPlaying )
+    {
+      double diff = _sbsEndTime - _sbsCurrentTime;
+      double renderDelta  = elapsedRenderTime * _sbsInvTimePerStep * _player->deltaTime( );
+      _sbsCurrentRenderDelta = std::min( diff, renderDelta );
+
+      double nextTime = _sbsCurrentTime + _sbsCurrentRenderDelta;
+
+      auto spikeIt = _sbsCurrentSpike;
+      while( spikeIt->first < nextTime  &&
+             spikeIt - _sbsStepSpikes.first < _sbsStepSpikes.second - _sbsStepSpikes.first )
+      {
+        ++spikeIt;
+      }
+
+      if( spikeIt != _sbsCurrentSpike )
+      {
+        simil::SpikesCRange frameSpikes = std::make_pair( _sbsCurrentSpike, spikeIt );
+        _domainManager->processInput( frameSpikes, _sbsCurrentTime, nextTime, false );
+      }
+
+      _sbsCurrentTime = nextTime;
+      _sbsCurrentSpike = spikeIt;
+    }
+
+  }
+
+  void OpenGLWidget::_backtraceSimulation( void )
   {
     float endTime = _player->currentTime( );
-    float startTime = std::max( 0.0f, endTime - _maxLife );
+    float startTime = std::max( 0.0f, endTime - _domainManager->decay( ));
     simil::SpikesCRange context =
         _player->spikesBetween( startTime, endTime );
 
     if( context.first != context.second )
-      _inputMux->processInput( context, startTime, endTime, true );
+      _domainManager->processInput( context, startTime, endTime, true );
   }
 
-
-  void expandBoundingBox( glm::vec3& minBounds,
-                          glm::vec3& maxBounds,
-                          const glm::vec3& position)
+  void OpenGLWidget::changeShader( int shaderIndex )
   {
-    for( unsigned int i = 0; i < 3; ++i )
+    if( shaderIndex < 0 || shaderIndex >= ( int ) T_SHADER_UNDEFINED )
+      return;
+
+    _currentShader = ( tShaderParticlesType ) shaderIndex;
+    _flagChangeShader = true;
+  }
+
+  void OpenGLWidget::_setShaderParticles( void )
+  {
+    if( _currentShader == T_SHADER_UNDEFINED )
+      return;
+
+    switch( _currentShader )
     {
-      minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
-      maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
+      case T_SHADER_DEFAULT:
+
+        _shaderParticlesCurrent = _shaderParticlesDefault;
+
+        break;
+
+      case T_SHADER_SOLID:
+
+        _shaderParticlesCurrent = _shaderParticlesSolid;
+
+        break;
+
+      default:
+
+        break;
     }
   }
 
-  void OpenGLWidget::createParticleSystem( float scale )
+  void OpenGLWidget::createParticleSystem( const tGidPosMap& gidPositions )
   {
     makeCurrent( );
     prefr::Config::init( );
 
+    // Initialize shader
+    _shaderParticlesDefault = new reto::ShaderProgram( );
+    _shaderParticlesDefault->loadVertexShaderFromText( prefr::prefrVertexShader );
+    _shaderParticlesDefault->loadFragmentShaderFromText( prefr::prefrFragmentShaderDefault );
+    _shaderParticlesDefault->compileAndLink( );
+    _shaderParticlesDefault->autocatching( );
+
+    _shaderParticlesCurrent = _shaderParticlesDefault;
+    _currentShader = T_SHADER_DEFAULT;
+
+    // Initialize shader
+    _shaderParticlesSolid = new reto::ShaderProgram( );
+    _shaderParticlesSolid->loadVertexShaderFromText( prefr::prefrVertexShader );
+    _shaderParticlesSolid->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
+    _shaderParticlesSolid->compileAndLink( );
+    _shaderParticlesSolid->autocatching( );
+
+
+    _shaderPicking = new prefr::RenderProgram( );
+    _shaderPicking->loadVertexShaderFromText( prefr::prefrVertexShaderPicking );
+    _shaderPicking->loadFragmentShaderFromText( prefr::prefrFragmentShaderPicking );
+    _shaderPicking->compileAndLink( );
+
+    _shaderClippingPlanes = new reto::ShaderProgram( );
+    _shaderClippingPlanes->loadVertexShaderFromText( prefr::planeVertCode );
+    _shaderClippingPlanes->loadFragmentShaderFromText( prefr::planeFragCode );
+    _shaderClippingPlanes->compileAndLink( );
+    _shaderClippingPlanes->autocatching( );
+
+
+
     unsigned int maxParticles = _player->gids( ).size( );
-    unsigned int maxEmitters = maxParticles;
 
-    _particleSystem = new prefr::ParticleSystem( maxParticles );
-    _particleSystem->renderDeadParticles( true );
+    _particleSystem = new prefr::ParticleSystem( maxParticles * 2, _camera );
+    _flagResetParticles = true;
 
-    //TODO
-    _particleSystem->parallel( true );
+    _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
 
-    const TPosVect& positions = _player->positions( );
+#ifdef SIMIL_USE_BRION
+    _domainManager->init( gidPositions, _player->data( )->blueConfig( ));
+#else
+    _domainManager->init( gidPositions );
+#endif
+    _domainManager->initializeParticleSystem( );
 
-    _particlesShader = new reto::ShaderProgram( );
-    _particlesShader->loadVertexShaderFromText( prefr::prefrVertexShader );
-    _particlesShader->loadFragmentShaderFromText( prefr::prefrFragmentShader );
-    _particlesShader->create( );
-    _particlesShader->link( );
+    _pickRenderer =
+        dynamic_cast< prefr::GLPickRenderer* >( _particleSystem->renderer( ));
 
-    _offPrototype = new prefr::ColorOperationModel( _maxLife, _maxLife );
+    _pickRenderer->glPickProgram( _shaderPicking );
+    _pickRenderer->setDefaultFBO( defaultFramebufferObject( ));
 
-    _offPrototype->color.Insert( 0.0f, ( glm::vec4(0.1f, 0.1f, 0.1f, 0.2f)));
+    _domainManager->mode( TMODE_SELECTION );
 
-    _offPrototype->velocity.Insert( 0.0f, 0.0f );
+    updateCameraBoundingBox( true );
 
-    _offPrototype->size.Insert( 1.0f, 10.0f );
-
-    _particleSystem->addModel( _offPrototype );
-
-
-    _prototype = new prefr::ColorOperationModel( _maxLife, _maxLife );
-
-    _particleSystem->addModel( _prototype );
-
-
-    prefr::Updater* updater;
-
-    switch( _simulationType )
-    {
-     case simil::TSimSpikes:
-
-       updater = new prefr::ValuedUpdater( );
-       std::cout << "Created Spikes Updater" << std::endl;
-
-       _prototype->color.Insert( 0.0f, ( glm::vec4(0.f, 1.f, 0.f, 0.05)));
-       _prototype->color.Insert( 0.35f, ( glm::vec4(1, 0, 0, 0.2 )));
-       _prototype->color.Insert( 0.7f, ( glm::vec4(1.f, 1.f, 0, 0.2 )));
-       _prototype->color.Insert( 1.0f, ( glm::vec4(0, 0, 1.f, 0.2 )));
-
-       _prototype->velocity.Insert( 0.0f, 0.0f );
-
-       _prototype->size.Insert( 0.0f, 20.0f );
-       _prototype->size.Insert( 1.0f, 10.0f );
-
-       break;
-     case simil::TSimVoltages:
-
-       updater = new prefr::ValuedUpdater( );
-       std::cout << "Created Voltages Updater" << std::endl;
-
-       _prototype->color.Insert( 0.0f, ( glm::vec4(0.1, 0.1, 0.3, 0.05)));
-       _prototype->color.Insert( 0.25f, ( glm::vec4(0.2, 0.2, 0.3, 0.07 )));
-       _prototype->color.Insert( 0.5f, ( glm::vec4(0, 0.5, 0, 0.10 )));
-       _prototype->color.Insert( 0.75f, ( glm::vec4(0.3, 0.3, 0.1, 0.15 )));
-       _prototype->color.Insert( 1.0f, ( glm::vec4(1, 0.1, 0.1, 0.2 )));
-
-       _prototype->velocity.Insert( 0.0f, 0.0f );
-
-       _prototype->size.Insert( 0.0f, 5.0f );
-       _prototype->size.Insert( 1.0f, 20.0f );
-
-
-       break;
-     default:
-       VISIMPL_THROW("Simulation type undefined.");
-       break;
-    }
-
-
-    prefr::Cluster* cluster;
-    prefr::Source* source;
-    prefr::PointSampler* sampler = new prefr::PointSampler( );
-
-    int partPerEmitter = 1;
-
-    std::cout << "Creating " << maxEmitters << " emitters with "
-              << partPerEmitter << std::endl;
-
-    unsigned int start;
-
-    unsigned int i = 0;
-    glm::vec3 cameraPivot;
-    TGIDSet::const_iterator gid = _player->gids( ).begin();
-
-
-    glm::vec3 boundingBoxMin( std::numeric_limits< float >::max( ),
-                              std::numeric_limits< float >::max( ),
-                              std::numeric_limits< float >::max( ));
-    glm::vec3 boundingBoxMax( std::numeric_limits< float >::min( ),
-                              std::numeric_limits< float >::min( ),
-                              std::numeric_limits< float >::min( ));
-
-    for ( auto brionPos : positions )
-    {
-      cluster = new prefr::Cluster( );
-      cluster->model( _prototype );
-      cluster->updater( updater );
-      cluster->active( true );
-
-
-      glm::vec3 position( brionPos.x( ), brionPos.y( ), brionPos.z( ));
-
-      if( scale != 1.0f )
-        position *= scale;
-
-      cameraPivot += position;
-      expandBoundingBox( boundingBoxMin, boundingBoxMax, position );
-
-      start = i * partPerEmitter;
-
-      switch( _simulationType )
-      {
-      case simil::TSimSpikes:
-        source = new prefr::ValuedSource( -1.0f, position,
-                                         glm::vec4( 0, 0, 0, 0 ),
-                                         true );
-        break;
-      case simil::TSimVoltages:
-        source = new prefr::ValuedSource( -1.0f, position,
-                                          glm::vec4( 0, 0, 0, 0 ),
-                                          true );
-        break;
-      default:
-        source = nullptr;
-        VISIMPL_THROW("Node type undefined");
-        break;
-      }
-
-      source->sampler( sampler );
-      cluster->source( source );
-
-      _particleSystem->addSource( source );
-      _particleSystem->addCluster( cluster, start, partPerEmitter );
-
-      cluster->inactiveKillParticles( false );
-//      source->maxEmissionCycles( 1 );
-
-      i++;
-      gid++;
-
-    }
-
-    cameraPivot /= i;
-
-    _camera->pivot( Eigen::Vector3f( cameraPivot.x,
-                                     cameraPivot.y,
-                                     cameraPivot.z ));
-
-    prefr::Sorter* sorter = new prefr::Sorter( );
-
-    std::cout << "Created sorter" << std::endl;
-
-    prefr::GLRenderer* renderer = new prefr::GLRenderer( );
-
-    std::cout << "Created systems" << std::endl;
-
-    _particleSystem->addUpdater( updater );
-    _particleSystem->sorter( sorter );
-    _particleSystem->renderer( renderer );
-
-    _particleSystem->start();
-
-
-    _resetParticles = true;
-
+    _initClippingPlanes( );
   }
 
 
-  void OpenGLWidget::paintParticles( void )
+  void OpenGLWidget::_paintParticles( void )
+  {
+    if( !_particleSystem )
+      return;
+
+    glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
+
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    if( _alphaBlendingAccumulative )
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+    else
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+    glFrontFace(GL_CCW);
+
+    _shaderParticlesCurrent->use( );
+        // unsigned int shader;
+        // shader = _particlesShader->getID();
+    unsigned int shader;
+    shader = _shaderParticlesCurrent->program( );
+
+    unsigned int uModelViewProjM;
+    unsigned int cameraUp;
+    unsigned int cameraRight;
+    unsigned int particleRadius;
+
+
+
+    uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
+    glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
+                       _camera->viewProjectionMatrix( ));
+
+    cameraUp = glGetUniformLocation( shader, "cameraUp" );
+    cameraRight = glGetUniformLocation( shader, "cameraRight" );
+
+    particleRadius = glGetUniformLocation( shader, "radiusThreshold" );
+
+    float* viewM = _camera->viewMatrix( );
+
+    glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
+    glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
+
+    glUniform1f( particleRadius, _particleRadiusThreshold );
+
+    glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
+                               _camera->position( )[ 1 ],
+                               _camera->position( )[ 2 ] );
+
+    if( _player->isPlaying( ) || _lastCameraPosition != cameraPosition || _flagUpdateRender )
     {
-      if( !_particleSystem )
-        return;
-
-      glDepthMask(GL_FALSE);
-      glEnable(GL_BLEND);
-
-      glEnable(GL_DEPTH_TEST);
-      glDisable(GL_CULL_FACE);
-
-      if( _alphaBlendingAccumulative )
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
-      else
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-
-      glFrontFace(GL_CCW);
-
-      _particlesShader->use( );
-          // unsigned int shader;
-          // shader = _particlesShader->getID();
-      unsigned int shader;
-      shader = _particlesShader->program( );
-
-      unsigned int uModelViewProjM, cameraUp, cameraRight;
-
-      uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
-      glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
-                         _camera->viewProjectionMatrix( ));
-
-      cameraUp = glGetUniformLocation( shader, "cameraUp" );
-      cameraRight = glGetUniformLocation( shader, "cameraRight" );
-
-      float* viewM = _camera->viewMatrix( );
-
-      glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
-      glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
-
-      glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
-                                 _camera->position( )[ 1 ],
-                                 _camera->position( )[ 2 ] );
-
       _particleSystem->updateCameraDistances( cameraPosition );
-
       _lastCameraPosition = cameraPosition;
 
       _particleSystem->updateRender( );
-      _particleSystem->render( );
 
-      _particlesShader->unuse( );
-
+      _flagUpdateRender = false;
     }
+
+    if( _clipping )
+    {
+      _clippingPlaneLeft->activate( _shaderParticlesCurrent, 0 );
+      _clippingPlaneRight->activate( _shaderParticlesCurrent, 1 );
+    }
+
+    _particleSystem->render( );
+
+    if( _clipping )
+    {
+      _clippingPlaneLeft->deactivate( 0 );
+      _clippingPlaneRight->deactivate( 1 );
+    }
+
+    _shaderParticlesCurrent->unuse( );
+
+  }
+
+  void OpenGLWidget::_paintPlanes( void )
+  {
+    if( _clipping && _paintClippingPlanes )
+    {
+      _planeLeft.render( _shaderClippingPlanes );
+      _planeRight.render( _shaderClippingPlanes );
+    }
+  }
+
+  void OpenGLWidget::_resolveFlagsOperations( void )
+  {
+    if( _flagChangeShader )
+      _setShaderParticles( );
+
+    if( _flagModeChange )
+      _modeChange( );
+
+    if( _flagUpdateSelection )
+      _updateSelection( );
+
+    if( _flagUpdateGroups )
+      _updateGroupsVisibility( );
+
+    if( _flagUpdateGroups && _domainManager->showGroups( ))
+      _updateGroups( );
+
+    if( _flagAttribChange )
+      _attributeChange( );
+
+    if( _flagUpdateAttributes )
+      _updateAttributes( );
+
+    if( _flagResetParticles )
+    {
+      _domainManager->resetParticles( );
+      _flagResetParticles = false;
+    }
+
+    if( _particleSystem )
+      _particleSystem->update( 0.0f );
+  }
 
     void OpenGLWidget::paintGL( void )
     {
@@ -555,43 +697,78 @@ namespace visimpl
       glEnable(GL_DEPTH_TEST);
       glEnable(GL_CULL_FACE);
 
-      if( _updateSelection )
-        updateSelection( );
-
-      if( _resetParticles )
-        _inputMux->resetParticles( );
-
-      _resetParticles = false;
+      _resolveFlagsOperations( );
 
       if ( _paint )
       {
         _camera->anim( );
 
-        if ( _particleSystem )
+        if( _particleSystem )
         {
           if( _player && _player->isPlaying( ))
           {
-            if( _elapsedTimeSimAcc >= _simPeriodMicroseconds )
+            switch( _playbackMode )
             {
-              configureSimulation( );
-              updateEventLabelsVisibility( );
+              // Continuous mode (Default)
+              case TPlaybackMode::CONTINUOUS:
+                if( _elapsedTimeSimAcc >= _simPeriodMicroseconds )
+                {
+                  _configureSimulationFrame( );
+                  _updateEventLabelsVisibility( );
 
-              _elapsedTimeSimAcc = 0.0f;
+                  _elapsedTimeSimAcc = 0.0f;
+                }
+                break;
+              // Step by step mode
+              case TPlaybackMode::STEP_BY_STEP:
+                if( _sbsPrevStep )
+                {
+                  _configurePreviousStep( );
+                  _sbsPrevStep = false;
+                }
+                else if( _sbsNextStep )
+                {
+                  _configureStepByStep( );
+                  _sbsNextStep = false;
+                }
+                break;
+              default:
+                break;
             }
+
 
             if( _elapsedTimeRenderAcc >= _renderPeriodMicroseconds )
             {
-              double renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;
+              double renderDelta = 0;
 
-              updateParticles( renderDelta );
+              switch( _playbackMode )
+              {
+              case TPlaybackMode::CONTINUOUS:
+                renderDelta = _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;
+                break;
+              case  TPlaybackMode::STEP_BY_STEP:
+                _configureStepByStepFrame( _elapsedTimeRenderAcc * 0.000001 );
+                renderDelta = _sbsCurrentRenderDelta;
+                break;
+              default:
+                renderDelta = 0;
+              }
+
+              _updateParticles( renderDelta );
               _elapsedTimeRenderAcc = 0.0f;
-            }
-          }
-          paintParticles( );
+            } // elapsed > render period
 
-        }
-        glUseProgram( 0 );
-        glFlush( );
+          } // if player && player->isPlayint
+
+          _paintPlanes( );
+
+          _paintParticles( );
+
+          if( _flagPickingSingle )
+          {
+            _pickSingle( );
+          }
+        } // if particleSystem
 
       }
 
@@ -605,7 +782,15 @@ namespace visimpl
     #endif
 
         emit updateSlider( _player->GetRelativeTime( ));
+
+
+        if( _showCurrentTime )
+        {
+          _labelCurrentTime->setText( tr( "t=") + QString::number( _player->currentTime( )));
+        }
       }
+
+
 
 
       #define FRAMES_PAINTED_TO_MEASURE_FPS 10
@@ -651,9 +836,8 @@ namespace visimpl
       _selectedGIDs = gids;
       _pendingSelection = true;
 
-      if( !_inputMux->showGroups( ))
-        setUpdateSelection( );
-      _inputMux->selection( gids );
+//      if( !_domainManager->showGroups( ))
+      setUpdateSelection( );
 
     }
     std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
@@ -662,73 +846,201 @@ namespace visimpl
 
   void OpenGLWidget::setUpdateSelection( void )
   {
-    _updateSelection = true;
+    _flagUpdateSelection = true;
   }
 
-  void OpenGLWidget::updateSelection( void )
+  void OpenGLWidget::setUpdateGroups( void )
+  {
+    _flagUpdateGroups = true;
+  }
+
+  void OpenGLWidget::setUpdateAttributes( void )
+  {
+    _flagAttribChange = true;
+  }
+
+  void OpenGLWidget::selectAttrib( int newAttrib )
+  {
+    if( newAttrib < 0 || newAttrib >= ( int ) T_TYPE_UNDEFINED ||
+        _domainManager->mode( ) != TMODE_ATTRIBUTE )
+      return;
+
+    _newAttrib = ( tNeuronAttributes ) newAttrib;
+    _flagAttribChange = true;
+  }
+
+  void OpenGLWidget::_modeChange( void )
+  {
+    _domainManager->mode( _newMode );
+
+    _flagModeChange = false;
+    _flagUpdateRender = true;
+
+    if( _domainManager->mode( ) == TMODE_ATTRIBUTE )
+      emit attributeStatsComputed( );
+  }
+
+  void OpenGLWidget::_attributeChange( void )
+  {
+    _domainManager->generateAttributesGroups( _newAttrib );
+
+    _currentAttrib = _newAttrib;
+
+    _flagAttribChange = false;
+//    _flagUpdateAttributes = true;
+
+    emit attributeStatsComputed( );
+  }
+
+  void OpenGLWidget::_updateSelection( void )
   {
     if( _particleSystem /*&& _pendingSelection*/ )
     {
       _particleSystem->run( false );
 
-//      bool baseOn = !_showSelection || _selectedGIDs.empty( );
-
-      _boundingBoxMin = glm::vec3( std::numeric_limits< float >::max( ),
-                                   std::numeric_limits< float >::max( ),
-                                   std::numeric_limits< float >::max( ));
-
-      _boundingBoxMax = glm::vec3( std::numeric_limits< float >::min( ),
-                                   std::numeric_limits< float >::min( ),
-                                   std::numeric_limits< float >::min( ));
-
-      std::vector< prefr::Cluster* > active =
-        _inputMux->activeClusters( );
-
-      for( auto cluster : ( !active.empty( ) ? active :_particleSystem->clusters( ) ))
-      {
-        auto particleRange = cluster->particles( );
-        for( prefr::tparticle particle = particleRange.begin( );
-            particle != particleRange.end( ); ++particle )
-        {
-          expandBoundingBox( _boundingBoxMin,
-                             _boundingBoxMax,
-                             particle.position( ));
-        }
-
-      }
-
-      glm::vec3 center = ( _boundingBoxMax + _boundingBoxMin ) * 0.5f;
-      float side = glm::length( _boundingBoxMax - center );
-      float radius = side / std::tan( _camera->fov( ));
-
-      _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),
-                                  radius );
+      updateCameraBoundingBox( );
 
       _particleSystem->run( true );
       _particleSystem->update( 0.0f );
 
-      _updateSelection = false;
+      _flagUpdateSelection = false;
+      _flagUpdateRender = true;
     }
 
   }
 
-  void OpenGLWidget::showSelection( bool showSelection_ )
+  void OpenGLWidget::setGroupVisibility( unsigned int i, bool state )
   {
+    _pendingGroupStateChanges.push( std::make_pair( i, state ));
+    _flagUpdateGroups = true;
+  }
 
-    _showSelection = showSelection_;
+  void OpenGLWidget::addGroupFromSelection( const std::string& name )
+  {
+    _domainManager->addVisualGroup( _selectedGIDs, name );
+  }
 
-    if( _inputMux )
-      _inputMux->showGroups( !_showSelection );
+  void OpenGLWidget::_updateGroupsVisibility( void )
+  {
+    while( !_pendingGroupStateChanges.empty( ))
+    {
+      auto state = _pendingGroupStateChanges.front( );
+      _domainManager->setVisualGroupState( state.first, state.second );
+      _pendingGroupStateChanges.pop( );
+    }
+  }
 
-    updateSelection( );
+  void OpenGLWidget::_updateGroups( void )
+  {
+    if( _particleSystem /*&& _pendingSelection*/ )
+    {
+      _particleSystem->run( false );
 
+      _domainManager->updateGroups( );
+
+      updateCameraBoundingBox( );
+
+      _particleSystem->run( true );
+      _particleSystem->update( 0.0f );
+
+      _flagUpdateGroups = false;
+    }
+
+  }
+
+  void OpenGLWidget::_updateAttributes( void )
+  {
+    if( _particleSystem )
+      {
+        _particleSystem->run( false );
+
+        _domainManager->updateAttributes( );
+
+        updateCameraBoundingBox( );
+
+        _particleSystem->run( true );
+        _particleSystem->update( 0.0f );
+
+        _flagUpdateAttributes = false;
+      }
+  }
+
+  void OpenGLWidget::setMode( int mode )
+  {
+    if( mode < 0 || ( mode >= ( int )TMODE_UNDEFINED ))
+      return;
+
+    _newMode = ( tVisualMode ) mode;
+    _flagModeChange = true;
+
+  }
+
+  void OpenGLWidget::showInactive( bool state )
+  {
+    if( _domainManager)
+      _domainManager->showInactive( state );
   }
 
   void OpenGLWidget::clearSelection( void )
   {
-    _inputMux->clearSelection( );
     _selectedGIDs.clear( );
-    _updateSelection = true;
+    _flagUpdateSelection = true;
+  }
+
+  void OpenGLWidget::home( void )
+  {
+    _focusOn( _boundingBoxHome );
+  }
+
+  void OpenGLWidget::updateCameraBoundingBox( bool setBoundingBox )
+  {
+    auto boundingBox = _domainManager->boundingBox( );
+
+    if( setBoundingBox )
+      _boundingBoxHome = boundingBox;
+
+    _focusOn( boundingBox );
+
+  }
+
+  void OpenGLWidget::_focusOn( const tBoundingBox& boundingBox )
+  {
+    glm::vec3 center = ( boundingBox.first + boundingBox.second ) * 0.5f;
+    float side = glm::length( boundingBox.second - center );
+    float radius = side / std::tan( _camera->fov( ));
+
+    _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),
+                                radius );
+  }
+
+  void OpenGLWidget::_pickSingle( void )
+  {
+
+    _shaderPicking->use( );
+    unsigned int shader = _shaderPicking->program( );
+
+    unsigned int particleRadius =
+        glGetUniformLocation( shader, "radiusThreshold" );
+    glUniform1f( particleRadius, _particleRadiusThreshold );
+
+    auto result =
+        _pickRenderer->pick( _pickingPosition.x( ), _pickingPosition.y( ));
+
+    _flagPickingSingle = false;
+
+    if( result == 0 )
+    {
+      _domainManager->clearHighlighting( );
+      return;
+    }
+
+    _selectedPickingSingle = result - 1;
+
+    std::unordered_set< unsigned int > selected = { _selectedPickingSingle };
+
+    _domainManager->highlightElements( selected );
+
+    emit pickedSingle( _selectedPickingSingle );
   }
 
   void OpenGLWidget::showEventsActivityLabels( bool show )
@@ -740,8 +1052,13 @@ namespace visimpl
     }
   }
 
+  void OpenGLWidget::showCurrentTimeLabel( bool show )
+  {
+    _labelCurrentTime->setVisible( show );
+    _labelCurrentTime->update( );
+  }
 
-  void OpenGLWidget::updateParticles( float renderDelta )
+  void OpenGLWidget::_updateParticles( float renderDelta )
   {
     if( _player->isPlaying( ) || _firstFrame )
     {
@@ -753,9 +1070,9 @@ namespace visimpl
 
 
 
-  void OpenGLWidget::updateEventLabelsVisibility( void )
+  void OpenGLWidget::_updateEventLabelsVisibility( void )
   {
-    std::vector< bool > visibility = activeEventsAt( _player->currentTime( ));
+    std::vector< bool > visibility = _activeEventsAt( _player->currentTime( ));
 
     unsigned int counter = 0;
     for( auto showLabel : visibility )
@@ -774,7 +1091,7 @@ namespace visimpl
   }
 
 
-  std::vector< bool > OpenGLWidget::activeEventsAt( float time )
+  std::vector< bool > OpenGLWidget::_activeEventsAt( float time )
   {
     std::vector< bool > result( _eventLabels.size( ), false);
 
@@ -798,7 +1115,286 @@ namespace visimpl
     _camera->ratio((( double ) w ) / h );
     glViewport( 0, 0, w, h );
 
+    if( _pickRenderer )
+    {
+      _pickRenderer->setWindowSize( w, h );
+    }
+  }
 
+  void OpenGLWidget::_initClippingPlanes( void )
+  {
+    _clippingPlaneLeft = new reto::ClippingPlane( );
+    _clippingPlaneRight = new reto::ClippingPlane( );
+
+    _planePosLeft.resize( 4, Eigen::Vector3f::Zero( ));
+    _planePosRight.resize( 4, Eigen::Vector3f::Zero( ));
+
+    _planeRotation = Eigen::Matrix4f::Identity( );
+
+    _planeLeft.init( _camera );
+    _planeRight.init( _camera );
+
+    _genPlanesFromBoundingBox( );
+  }
+
+  void OpenGLWidget::_genPlanesFromBoundingBox( void )
+  {
+    auto currentBoundingBox = _domainManager->boundingBox( );
+
+    _planesCenter = glmToEigen( currentBoundingBox.first + currentBoundingBox.second ) * 0.5f;
+
+    _planeDistance = std::abs( currentBoundingBox.second.x - currentBoundingBox.first.x ) + 1;
+    _planeHeight = std::abs( currentBoundingBox.second.y - currentBoundingBox.first.y );
+    _planeWidth = std::abs( currentBoundingBox.second.z - currentBoundingBox.first.z );
+
+    _genPlanesFromParameters( );
+  }
+
+  void OpenGLWidget::_genPlanesFromParameters( void )
+  {
+    glm::vec3 offset =
+        glm::vec3( _planeDistance, _planeHeight, _planeWidth ) * 0.5f;
+
+    evec3 centerLeft = _planesCenter;
+    evec3 centerRight = _planesCenter;
+    centerLeft.x( ) -= offset.x;
+    centerRight.x( ) += offset.x;
+
+    _planePosLeft[ 0 ] = _planePosLeft[ 1 ] =
+        _planePosLeft[ 2 ] = _planePosLeft[ 3 ] = centerLeft;
+
+    _planePosRight[ 0 ] = _planePosRight[ 1 ] =
+        _planePosRight[ 2 ] = _planePosRight[ 3 ] = centerRight;
+
+    _planePosLeft[ 0 ] += Eigen::Vector3f( 0, offset.y, -offset.z );
+    _planePosLeft[ 1 ] += Eigen::Vector3f(  0, -offset.y, -offset.z );
+    _planePosLeft[ 2 ] += Eigen::Vector3f( 0, -offset.y, offset.z );
+    _planePosLeft[ 3 ] += Eigen::Vector3f( 0, offset.y, offset.z );
+
+    _planePosRight[ 0 ] += Eigen::Vector3f( 0, offset.y, -offset.z );
+    _planePosRight[ 1 ] += Eigen::Vector3f( 0, -offset.y, -offset.z);
+    _planePosRight[ 2 ] += Eigen::Vector3f( 0, -offset.y, offset.z );
+    _planePosRight[ 3 ] += Eigen::Vector3f( 0, offset.y, offset.z );
+
+    _updatePlanes( );
+  }
+
+  static Eigen::Vector3f transform( const Eigen::Vector3f& position,
+                             const Eigen::Vector3f& displacement,
+                             const Eigen::Matrix4f& rotation )
+  {
+    auto disp = vec3ToVec4( displacement );
+    return vec4ToVec3(( rotation * ( vec3ToVec4( position ) - disp )) + disp );
+  }
+
+  void OpenGLWidget::_updatePlanes( void )
+  {
+    evec3 center;
+    evec3 centerLeft;
+    evec3 centerRight;
+    center = centerLeft = centerRight = _planesCenter;
+
+
+    unsigned int pointsNumber = 4;
+
+    std::vector< Eigen::Vector3f > transformedPoints( pointsNumber * 2 );
+
+    for( unsigned int i = 0; i < pointsNumber; ++i )
+    {
+      transformedPoints[ i ] =
+          transform( _planePosLeft[ i ], center, _planeRotation );
+
+      transformedPoints[ i + pointsNumber] =
+          transform( _planePosRight[ i ], center, _planeRotation );
+    }
+
+    _planeLeft.points( transformedPoints[ 0 ], transformedPoints[ 1 ],
+                   transformedPoints[ 2 ], transformedPoints[ 3 ]);
+
+    _planeRight.points( transformedPoints[ 4 ], transformedPoints[ 5 ],
+                       transformedPoints[ 6 ], transformedPoints[ 7 ]);
+
+
+    float offsetX = _planeDistance * 0.5;
+    centerLeft.x( ) -= offsetX;
+    centerRight.x( ) += offsetX;
+
+    center = transform( center, center, _planeRotation );
+    centerLeft = transform( centerLeft, center, _planeRotation );
+    centerRight = transform( centerRight, center, _planeRotation );
+
+    _planeNormalLeft = ( center - centerLeft ).normalized( );
+    _planeNormalRight = ( center - centerRight ).normalized( );
+
+    _clippingPlaneLeft->setEquationByPointAndNormal( centerLeft, _planeNormalLeft );
+    _clippingPlaneRight->setEquationByPointAndNormal( centerRight, _planeNormalRight );
+
+//    std::cout << "Planes:" << std::endl
+//               << " Left: "
+//               << std::endl << vecToStr( transformedPoints[ 0 ])
+//               << std::endl << vecToStr( transformedPoints[ 1 ])
+//               << std::endl << vecToStr( transformedPoints[ 2 ])
+//               << std::endl
+//               << " Right: "
+//               << std::endl << vecToStr( transformedPoints[ 3 ])
+//               << std::endl << vecToStr( transformedPoints[ 4 ])
+//               << std::endl << vecToStr( transformedPoints[ 5 ])
+//               << std::endl;
+
+
+
+  }
+
+  void OpenGLWidget::clippingPlanes( bool active )
+  {
+    _clipping = active;
+
+    std::cout << "Clipping " << std::boolalpha << _clipping << std::endl;
+
+    if( _clipping )
+    {
+      _updatePlanes( );
+    }
+  }
+
+  void OpenGLWidget::paintClippingPlanes( int paint_ )
+  {
+    _paintClippingPlanes = paint_;
+  }
+
+  void OpenGLWidget::toggleClippingPlanes( void )
+  {
+    clippingPlanes( !_clipping );
+  }
+
+  void OpenGLWidget::clippingPlanesReset( void )
+  {
+    _planeRotation = emat4::Identity( );
+
+    _genPlanesFromBoundingBox( );
+
+
+  }
+
+  void OpenGLWidget::clippingPlanesHeight( float height_ )
+  {
+    _planeHeight = height_;
+
+    _genPlanesFromParameters( );
+  }
+
+  float OpenGLWidget::clippingPlanesHeight( void )
+  {
+    return _planeHeight;
+  }
+
+  void OpenGLWidget::clippingPlanesWidth( float width_ )
+  {
+    _planeWidth = width_;
+
+    _genPlanesFromParameters( );
+  }
+
+  float OpenGLWidget::clippingPlanesWidth( void )
+  {
+    return _planeWidth;
+  }
+
+  void OpenGLWidget::clippingPlanesDistance( float distance_ )
+  {
+    _planeDistance = distance_;
+
+    _genPlanesFromParameters( );
+  }
+
+  float OpenGLWidget::clippingPlanesDistance( void )
+  {
+    return _planeDistance;
+  }
+
+  void OpenGLWidget::clippingPlanesColor( const QColor& color_ )
+  {
+    _planesColor = evec4( color_.red( ) * invRGBInt,
+                          color_.green( ) * invRGBInt,
+                          color_.blue( ) * invRGBInt,
+                          1.0 );
+
+    _planeLeft.color( _planesColor );
+    _planeRight.color( _planesColor );
+  }
+
+  QColor OpenGLWidget::clippingPlanesColor( void )
+  {
+    return QColor( _planesColor.x( ) * 255,
+                   _planesColor.y( ) * 255,
+                   _planesColor.z( ) * 255,
+                   _planesColor.w( ) * 255 );
+  }
+
+  void OpenGLWidget::_rotatePlanes( float yaw_, float pitch_ )
+  {
+
+
+    Eigen::Matrix4f rot;
+    Eigen::Matrix4f rYaw;
+    Eigen::Matrix4f rPitch;
+
+    float sinYaw, cosYaw, sinPitch, cosPitch;
+
+    sinYaw = sin( yaw_ );
+    cosYaw = cos( yaw_ );
+    sinPitch = sin( pitch_ );
+    cosPitch = cos( pitch_ );
+
+    rYaw << cosYaw, 0.0f, sinYaw, 0.0f,
+            0.0f,   1.0f, 0.0f, 0.0f,
+            -sinYaw, 0.0f, cosYaw, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f;
+
+    rPitch << 1.0f, 0.0f, 0.0f, 0.0f,
+              0.0f, cosPitch, -sinPitch, 0.0f,
+              0.0f, sinPitch, cosPitch, 0.0f,
+              0.0f, 0.0f, 0.0f, 1.0f;
+
+    rot = rPitch * rYaw;
+
+    _planeRotation = rot * _planeRotation;
+
+    _updatePlanes( );
+  }
+
+  GIDVec OpenGLWidget::getPlanesContainedElements( void ) const
+  {
+    GIDVec result;
+
+    // Project elements
+    evec3 normal = - _planeNormalLeft;
+    normal.normalize( );
+
+    auto positions = _domainManager->positions( );
+
+    result.reserve( positions.size( ));
+
+    float distance = 0.0f;
+
+    std::cout << "Contained elements: ";
+    for( auto neuronPos : positions )
+    {
+      distance = normal.dot( _planeLeft.points( )[ 0 ] ) -
+                 normal.dot( glmToEigen( neuronPos.second ));
+
+      if( distance > 0.0f && distance <= _planeDistance )
+      {
+        result.emplace_back( neuronPos.first );
+//        std::cout << " [" << neuronPos.first << ":" << distance << "]";
+      }
+    }
+
+    result.shrink_to_fit( );
+
+    std::cout << " " << result.size( ) << std::endl;
+
+    return result;
   }
 
 
@@ -807,17 +1403,44 @@ namespace visimpl
 
     if ( event_->button( ) == Qt::LeftButton )
     {
-      _rotation = true;
-      _mouseX = event_->x( );
-      _mouseY = event_->y( );
+      if( event_->modifiers( ) == Qt::CTRL )
+      {
+        _pickingPosition = event_->pos( );
+
+        _pickingPosition.setY( height() - _pickingPosition.y( ) );
+
+        _flagPickingSingle = true;
+      }
+      else if( event_->modifiers( ) == Qt::SHIFT && _clipping )
+      {
+        _rotationPlanes = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
+      else
+      {
+        _rotation = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
+    }
+    else if ( event_->button( ) ==  Qt::RightButton )
+    {
+      if( event_->modifiers( ) == Qt::SHIFT && _clipping )
+      {
+        _translationPlanes = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
+      else
+      {
+        _translation = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
     }
 
-    if ( event_->button( ) ==  Qt::MidButton )
-    {
-      _translation = true;
-      _mouseX = event_->x( );
-      _mouseY = event_->y( );
-    }
+
 
     update( );
 
@@ -828,9 +1451,9 @@ namespace visimpl
     if ( event_->button( ) == Qt::LeftButton)
     {
       _rotation = false;
+      _rotationPlanes = false;
     }
-
-    if ( event_->button( ) ==  Qt::MidButton )
+    if ( event_->button( ) ==  Qt::RightButton )
     {
       _translation = false;
     }
@@ -848,10 +1471,37 @@ namespace visimpl
       _mouseX = event_->x( );
       _mouseY = event_->y( );
     }
-    if( _translation )
+
+    if( _rotationPlanes && _clipping )
     {
+      _rotatePlanes( -( _mouseX - event_->x( )) * 0.01,
+                      ( _mouseY - event_->y( )) * 0.01 );
       _mouseX = event_->x( );
       _mouseY = event_->y( );
+    }
+
+    if( _translation )
+    {
+      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
+      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+
+      _camera->localTranslation( Eigen::Vector3f( -xDis, yDis, 0.0f ));
+      _mouseX = event_->x( );
+      _mouseY = event_->y( );
+    }
+
+    if( _translationPlanes )
+    {
+      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
+      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+
+      evec3 displacement ( xDis, -yDis, 0 );
+      _planesCenter += _camera->rotation( ).transpose( ) * displacement;
+
+      _mouseX = event_->x( );
+      _mouseY = event_->y( );
+
+      _genPlanesFromParameters( );
     }
 
     this->update( );
@@ -867,8 +1517,6 @@ namespace visimpl
     else
       _camera->radius( _camera->radius( ) * 1.3f );
 
-  //  std::cout << "Camera radius " << _camera->radius( ) << std::endl;
-
     update( );
 
   }
@@ -880,7 +1528,7 @@ namespace visimpl
     switch ( event_->key( ))
     {
     case Qt::Key_C:
-        _updateSelection = true;
+        _flagUpdateSelection = true;
       break;
     }
   }
@@ -945,10 +1593,9 @@ namespace visimpl
     update( );
   }
 
-  void OpenGLWidget::togglePaintNeurons( void )
+  void OpenGLWidget::toggleShowUnselected( void )
   {
-    _focusOnSelection = !_focusOnSelection;
-    update( );
+
   }
 
   void OpenGLWidget::idleUpdate( bool idleUpdate_ )
@@ -956,21 +1603,48 @@ namespace visimpl
     _idleUpdate = idleUpdate_;
   }
 
+  TPlaybackMode OpenGLWidget::playbackMode( void )
+  {
+    return _playbackMode;
+  }
+
+  void OpenGLWidget::playbackMode( TPlaybackMode mode )
+  {
+    if( mode != TPlaybackMode::AB_REPEAT )
+      _playbackMode = mode;
+  }
+
+  bool OpenGLWidget::completedStep( void )
+  {
+    return !_sbsPlaying;
+  }
+
   simil::SimulationPlayer* OpenGLWidget::player( )
   {
     return _player;
   }
 
-  InputMultiplexer* OpenGLWidget::inputMultiplexer( void )
+  float OpenGLWidget::currentTime( void )
   {
-    return _inputMux;
+    switch( _playbackMode )
+    {
+    case TPlaybackMode::STEP_BY_STEP:
+      return _sbsCurrentTime;
+    default:
+      return _player->currentTime( );
+    }
+  }
+
+  DomainManager* OpenGLWidget::domainManager( void )
+  {
+    return _domainManager;
   }
 
   void OpenGLWidget::subsetEventsManager( simil::SubsetEventManager* manager )
   {
     _subsetEvents = manager;
 
-    createEventLabels( );
+    _createEventLabels( );
 
     update( );
   }
@@ -980,7 +1654,7 @@ namespace visimpl
     return _colorPalette;
   }
 
-  void OpenGLWidget::createEventLabels( void )
+  void OpenGLWidget::_createEventLabels( void )
   {
     const auto& eventNames = _subsetEvents->eventNames( );
 
@@ -1094,7 +1768,7 @@ namespace visimpl
     if( _player )
     {
       _player->Stop( );
-      _resetParticles = true;
+      _flagResetParticles = true;
       _firstFrame = true;
     }
   }
@@ -1112,7 +1786,7 @@ namespace visimpl
     if( _player )
     {
       _particleSystem->run( false );
-      _resetParticles = true;
+      _flagResetParticles = true;
 
       _backtrace = true;
 
@@ -1131,14 +1805,33 @@ namespace visimpl
       if( playing )
         _player->Play( );
   //    resetParticles( );
-      _resetParticles = true;
+      _flagResetParticles = true;
       _firstFrame = true;
     }
   }
 
-  void OpenGLWidget::GoToEnd( void )
+  void OpenGLWidget::PreviousStep( void )
   {
+    if( _playbackMode != TPlaybackMode::STEP_BY_STEP )
+    {
+      _playbackMode = TPlaybackMode::STEP_BY_STEP;
+      _sbsFirstStep = true;
+    }
 
+    _sbsPrevStep = true;
+    _sbsNextStep = false;
+  }
+
+  void OpenGLWidget::NextStep( void )
+  {
+    if( _playbackMode != TPlaybackMode::STEP_BY_STEP )
+    {
+      _playbackMode = TPlaybackMode::STEP_BY_STEP;
+      _sbsFirstStep = true;
+    }
+
+    _sbsPrevStep = false;
+    _sbsNextStep = true;
   }
 
   void OpenGLWidget::SetAlphaBlendingAccumulative( bool accumulative )
@@ -1161,7 +1854,7 @@ namespace visimpl
       gcolors.Insert( c.first, gColor );
     }
 
-    _prototype->color = gcolors;
+    _domainManager->modelSelectionBase( )->color = gcolors;
 
   }
 
@@ -1169,10 +1862,12 @@ namespace visimpl
   {
     TTransferFunction result;
 
-    prefr::vectortvec4 colors = _prototype->color;
+    auto model = _domainManager->modelSelectionBase( );
 
-    auto timeValue = _prototype->color.times.begin( );
-    for( auto c : _prototype->color.values )
+    prefr::vectortvec4 colors = model->color;
+
+    auto timeValue = model->color.times.begin( );
+    for( auto c : model->color.values )
     {
       QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
       result.push_back( std::make_pair( *timeValue, color ));
@@ -1192,15 +1887,18 @@ namespace visimpl
     {
       newSize.Insert( s.first, s.second );
     }
-    _prototype->size = newSize;
+    _domainManager->modelSelectionBase( )->size = newSize;
 
   }
 
   TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
   {
     TSizeFunction result;
-    auto sizeValue = _prototype->size.values.begin( );
-    for( auto s : _prototype->size.times)
+
+    auto model = _domainManager->modelSelectionBase( );
+
+    auto sizeValue = model->size.values.begin( );
+    for( auto s : model->size.times)
     {
       result.push_back( std::make_pair( s, *sizeValue ));
       ++sizeValue;
@@ -1239,20 +1937,27 @@ namespace visimpl
     return _timeStepsPerSecond;
   }
 
+  void OpenGLWidget::simulationStepByStepDuration( float value )
+  {
+    _sbsTimePerStep = value;
+    _sbsInvTimePerStep = 1.0 / _sbsTimePerStep;
+  }
+
+  float OpenGLWidget::simulationStepByStepDuration( void )
+  {
+    return _sbsTimePerStep;
+  }
+
   void OpenGLWidget::changeSimulationDecayValue( float value )
   {
-    _maxLife = value;
 
-    if( _inputMux )
-      _inputMux->decay( value );
-
-    if( _prototype)
-      _prototype->setLife( value, value );
+    if( _domainManager )
+      _domainManager->decay( value );
   }
 
   float OpenGLWidget::getSimulationDecayValue( void )
   {
-    return _prototype->maxLife( );
+    return _domainManager->decay( );
   }
 
 } // namespace visimpl

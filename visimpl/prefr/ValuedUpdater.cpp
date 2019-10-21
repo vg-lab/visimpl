@@ -31,14 +31,14 @@ namespace prefr
 
     if( model && ( !current->alive( )))
     {
-     current->life( 0.0f );
-     current->alive( true );
+     current->set_life( 0.0f );
+     current->set_alive( true );
 
      SampledValues values;
      source->sample( &values );
 
-     current->position( values.position );
-     current->velocity( values.direction );
+     current->set_position( values.position );
+     current->set_velocity( values.direction );
 
     }
   }
@@ -53,7 +53,7 @@ namespace prefr
 
     ValuedSource* node = dynamic_cast< ValuedSource* >( cluster.source( ));
 
-    current->life( std::max( 0.0f, current->life( ) - deltaTime ));
+    current->set_life( std::max( 0.0f, current->life( ) - deltaTime ));
 
 //    float refLife = (current->life( ) - model->minLife( )) * model->inverseMaxLife() ;
     float refLife = 1.0f - glm::clamp( current->life( ) * model->inverseMaxLife( ),
@@ -65,18 +65,18 @@ namespace prefr
       if( !node->still( ))
       {
 
-        current->velocityModule( model->velocity.GetValue( refLife ));
+        current->set_velocityModule( model->velocity.GetValue( refLife ));
 
-        current->position( current->position( ) +
+        current->set_position( current->position( ) +
                            current->velocity( ) *
                            current->velocityModule( ) * deltaTime );
       }
 
-      current->color( glm::clamp(
+      current->set_color( glm::clamp(
           model->colorop( node->color( ),
                            model->color.GetValue( refLife )), 0.0f, 1.0f ));
 
-      current->size( model->size.GetValue( refLife ) + node->size());
+      current->set_size( model->size.GetValue( refLife ) + node->size());
     }
 
   }

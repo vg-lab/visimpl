@@ -7,6 +7,30 @@
  *          Do not distribute without further notice.
  */
 
+#ifdef VISIMPL_USE_GMRVLEX
+#include <gmrvlex/version.h>
+#endif
+#ifdef VISIMPL_USE_DEFLECT
+#include <deflect/version.h>
+#endif
+#ifdef VISIMPL_USE_NSOL
+#include <nsol/version.h>
+#endif
+#ifdef VISIMPL_USE_ZEROEQ
+#include <zeroeq/version.h>
+#endif
+#ifdef VISIMPL_USE_RETO
+#include <reto/version.h>
+#endif
+#ifdef VISIMPL_USE_SCOOP
+#include <scoop/version.h>
+#endif
+#ifdef VISIMPL_USE_SIMIL
+#include <simil/version.h>
+#endif
+#ifdef VISIMPL_USE_PREFR
+#include <prefr/version.h>
+#endif
 #include <stackviz/version.h>
 
 #include "MainWindow.h"
@@ -34,9 +58,10 @@ namespace stackviz
   , _simulationType( simil::TSimNetwork )
   , _summary( nullptr )
   , _player( nullptr )
+  , _data( nullptr )
   , _autoAddAvailableSubsets( true )
   , _autoCalculateCorrelations( false )
-  , _simulationDock( nullptr )
+  , _dockSimulation( nullptr )
   , _playButton( nullptr )
   , _simSlider( nullptr )
   , _repeatButton( nullptr )
@@ -88,7 +113,7 @@ namespace stackviz
 
     initPlaybackDock( );
 
-    connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool )),
+    connect( _dockSimulation->toggleViewAction( ), SIGNAL( toggled( bool )),
                _ui->actionTogglePlaybackDock, SLOT( setChecked( bool )));
 
     connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( )),
@@ -100,6 +125,8 @@ namespace stackviz
     #ifdef VISIMPL_USE_ZEROEQ
 
     _setZeqUri( zeqUri );
+
+    _ui->actionTogglePlaybackDock->setChecked( true );
 
     #endif
 
@@ -248,31 +275,91 @@ namespace stackviz
   void MainWindow::aboutDialog( void )
   {
 
-    QMessageBox::about(
-      this, tr("About ViSimpl"),
-      tr("<p><BIG><b>ViSimpl - StackViz</b></BIG><br><br>") +
-      tr( "version " ) +
-      tr( stackviz::Version::getString( ).c_str( )) +
-      tr( " (" ) +
-      tr( std::to_string( stackviz::Version::getRevision( )).c_str( )) +
-      tr( ")" ) +
-      tr ("<br><br>GMRV - Universidad Rey Juan Carlos<br><br>"
-          "<a href=www.gmrv.es>www.gmrv.es</a><br>"
-          "<a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
-          "<br>(c) 2015. Universidad Rey Juan Carlos<br><br>"
-          "<img src=':/icons/logoGMRV.png' > &nbsp; &nbsp;"
-          "<img src=':/icons/logoURJC.png' >"
-          "</p>"
-          ""));
+    QString msj = 
+      QString( "<h2>ViSimpl - StackViz</h2>" ) +
+      tr( "A multi-view visual analyzer of brain simulation data. " ) + 
+      "<br>" + 
+      tr( "Version " ) + stackviz::Version::getString( ).c_str( ) +
+      tr( " rev (%1)<br>").arg(stackviz::Version::getRevision( )) +
+      "<a href='https://gmrv.es/visimpl/'>https://gmrv.es/visimpl</a>" + 
+      "<h4>" + tr( "Build info:" ) + "</h4>" +
+      "<ul>"
+    
+#ifdef VISIMPL_USE_DEFLECT
+    "</li><li>Deflect " + DEFLECT_REV_STRING +
+#else
+    "</li><li>Deflect " + tr ("support not built.") +
+#endif
 
+#ifdef VISIMPL_USE_FIRES
+    "</li><li>FiReS " + FIRES_REV_STRING +
+#else
+    "</li><li>FiReS " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_GMRVLEX
+    "</li><li>GmrvLex " + GMRVLEX_REV_STRING +
+#else
+    "</li><li>GmrvLex " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_NSOL
+    "</li><li>Nsol " + NSOL_REV_STRING +
+#else
+    "</li><li>Nsol " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_PREFR
+    "</li><li>prefr " + PREFR_REV_STRING +     
+#else
+    "</li><li>prefr " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_RETO
+    "</li><li>ReTo " + RETO_REV_STRING +     
+#else
+    "</li><li>ReTo " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_SCOOP
+    "</li><li>Scoop " + SCOOP_REV_STRING +     
+#else
+    "</li><li>Scoop " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_SIMIL
+    "</li><li>SimIL " + SIMIL_REV_STRING +     
+#else
+    "</li><li>SimIL " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_ZEROEQ
+    "</li><li>ZeroEQ " + ZEROEQ_REV_STRING +
+#else
+    "</li><li>ZeroEQ " + tr ("support not built.") +
+#endif
+
+    "</li></ul>" +
+    "<h4>" + tr( "Developed by:" ) + "</h4>" +
+    "GMRV / URJC / UPM"
+    "<br><a href='https://gmrv.es/gmrvvis'>https://gmrv.es/gmrvvis</a>"
+    //"<br><a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
+    "<br>(C) 2015-2017<br><br>"
+    "<a href='https://gmrv.es/gmrvvis'><img src=':/icons/logoGMRV.png'/></a>"
+    "&nbsp;&nbsp;&nbsp;&nbsp;"
+    "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
+    "&nbsp;&nbsp;&nbsp;&nbsp;"
+    "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
+    
+    QMessageBox::about(this, tr( "About StackViz" ), msj );
   }
 
   void MainWindow::togglePlaybackDock( void )
   {
     if( _ui->actionTogglePlaybackDock->isChecked( ))
-      _simulationDock->show( );
+      _dockSimulation->show( );
     else
-      _simulationDock->close( );
+      _dockSimulation->close( );
 
 
     update( );
@@ -350,9 +437,9 @@ namespace stackviz
 
   void MainWindow::initPlaybackDock( )
   {
-    _simulationDock = new QDockWidget( );
-    _simulationDock->setMinimumHeight( 100 );
-    _simulationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
+    _dockSimulation = new QDockWidget( );
+    _dockSimulation->setMinimumHeight( 100 );
+    _dockSimulation->setSizePolicy( QSizePolicy::MinimumExpanding,
                                     QSizePolicy::MinimumExpanding );
 
     _playing = false;
@@ -450,9 +537,15 @@ namespace stackviz
     connect( _goToButton, SIGNAL( clicked( )),
              this, SLOT( playAtButtonClicked( )));
 
-    _simulationDock->setWidget( content );
+    _dockSimulation->setWidget( content );
     this->addDockWidget( Qt::BottomDockWidgetArea,
-                         _simulationDock );
+                         _dockSimulation );
+
+#ifdef VISIMPL_USE_ZEROEQ
+
+#else
+
+#endif
   }
 
 
@@ -486,8 +579,10 @@ namespace stackviz
     connect( _summary, SIGNAL( histogramClicked( float )),
              this, SLOT( PlayAt( float )));
 
+#ifdef VISIMPL_USE_ZEROEQ
     connect( _summary, SIGNAL( histogramClicked( visimpl::HistogramWidget* )),
                this, SLOT( HistogramClicked( visimpl::HistogramWidget* )));
+#endif
 
     _ui->actionFocusOnPlayhead->setVisible( true );
     connect( _ui->actionFocusOnPlayhead, SIGNAL( triggered( )),
@@ -497,46 +592,7 @@ namespace stackviz
 
     if( _autoCalculateCorrelations )
     {
-      simil::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
-//      for( auto event : _player->data( )->subsetsEvents( )->eventNames( ))
-//      {
-//        cc.compute( "grclayer", event );
-//      }
-//
-//      for( auto name : cc.correlationNames( ))
-//      {
-//        simil::Correlation* correlation = cc.correlation( name );
-//
-//        visimpl::Selection selection;
-//        selection.name = name;
-//        for( auto value : correlation->values )
-//        {
-//          if( value.second.hit > 0.7f )
-//            selection.gids.insert( value.first );
-//        }
-//
-//        _summary->AddNewHistogram( selection );
-//      }
-
-      auto eventNames = _player->data( )->subsetsEvents( )->eventNames( );
-
-      auto result = cc.correlate( "grclayer", eventNames, 0.125f );
-
-      for( auto correlation : result )
-      {
-        visimpl::Selection selection;
-        selection.name = correlation.subsetName + correlation.eventName;
-
-        for( auto neuron : correlation.values )
-        {
-          if( neuron.second.result > 0.5f )
-            selection.gids.insert( neuron.first );
-        }
-
-
-        _summary->AddNewHistogram( selection );
-      }
-
+      calculateCorrelations( );
     }
 
     QTimer::singleShot( 0, _summary, SLOT( adjustSplittersSize( )));
@@ -809,29 +865,6 @@ namespace stackviz
       _publisher->publish( lexis::data::SelectedIDs( selected ));
     }
 
-
-    void MainWindow::playAtButtonClicked( void )
-    {
-      bool ok;
-      double result =
-          QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
-                                   tr( "Simulation time" ),
-                                   ( double )_player->currentTime( ),
-                                   ( double )_player->data( )->startTime( ),
-                                   ( double )_player->data( )->endTime( ),
-                                   3, &ok, Qt::Popup );
-
-      if( ok )
-      {
-        float percentage = ( result - _player->data( )->startTime( )) /
-            ( _player->data( )->endTime( ) - _player->data( )->startTime( ));
-
-        percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
-
-        PlayAt( percentage, true );
-      }
-    }
-
   #endif
 
   void MainWindow::_setZeqUri( const std::string& uri_ )
@@ -889,6 +922,10 @@ namespace stackviz
   {
     QMainWindow::resizeEvent( event_ );
 
+    std::cout << "Window " << size( ).width( ) << "x" << size( ).height( ) << std::endl;
+    if( _summary )
+    std::cout << "Central " << _summary->size( ).width( ) << "x" << _summary->size( ).height( ) << std::endl;
+
     if( resizingEnabled )
     {
   //    unsigned int columnsWidth = width( ) / _columnsNumber;
@@ -902,6 +939,28 @@ namespace stackviz
   //    std::cout << width( ) << " -> " << currentWidth << std::endl;
   ////    _summary->setMinimumWidth( currentWidth );
   //    _summary->resize( currentWidth, currentHeight );
+    }
+  }
+
+  void MainWindow::playAtButtonClicked( void )
+  {
+    bool ok;
+    double result =
+        QInputDialog::getDouble( this, tr( "Set simulation time to play:"),
+                                 tr( "Simulation time" ),
+                                 ( double )_player->currentTime( ),
+                                 ( double )_player->data( )->startTime( ),
+                                 ( double )_player->data( )->endTime( ),
+                                 3, &ok, Qt::Popup );
+
+    if( ok )
+    {
+      float percentage = ( result - _player->data( )->startTime( )) /
+          ( _player->data( )->endTime( ) - _player->data( )->startTime( ));
+
+      percentage = std::max( 0.0f, std::min( 1.0f, percentage ));
+
+      PlayAt( percentage, true );
     }
   }
 
@@ -919,5 +978,42 @@ namespace stackviz
   //    _summary->createSelection( i );
   //  }
   //}
+
+  void MainWindow::addCorrelation( const std::string& subset )
+  {
+    _correlations.push_back( subset );
+  }
+
+  void MainWindow::calculateCorrelations( void )
+  {
+    visimpl::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
+
+    auto eventNames = _player->data( )->subsetsEvents( )->eventNames( );
+
+    double deltaTime = 0.125;
+
+    cc.configureEvents( eventNames, deltaTime );
+
+    for( auto correl : _correlations )
+    {
+      auto result = cc.correlateSubset( correl, eventNames, deltaTime, 2600, 2900 );
+    }
+
+    for( auto correlationName : cc.correlationNames( ))
+    {
+      auto correlation = cc.correlation( correlationName );
+
+      if( !correlation )
+        continue;
+
+      visimpl::Selection selection;
+      selection.name = correlation->fullName;
+      selection.gids = cc.getCorrelatedNeurons( correlation->fullName );
+
+     _summary->AddNewHistogram( selection );
+    }
+
+
+  }
 
 } // namespace stackviz

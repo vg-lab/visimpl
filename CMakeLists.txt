@@ -9,8 +9,10 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 0.1.2 )
-set( visimpl_VERSION_ABI 3 )
+project( visimpl VERSION 0.1.3 )
+set( visimpl_VERSION_ABI 4 )
+
+SET( VISIMPL_LICENSE "GPL")
 
 # Disable in source building
 if( "${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}" )
@@ -65,18 +67,20 @@ common_find_package( SimIL REQUIRED )
 common_find_package( prefr REQUIRED )
 common_find_package( scoop REQUIRED )
 common_find_package( OpenMP )
+common_find_package( Boost REQUIRED )
 
 
-list( APPEND VISIMPL_DEPENDENT_LIBRARIES 
-  OpenGL 
-  GLEW 
-  Eigen3  
+list( APPEND VISIMPL_DEPENDENT_LIBRARIES
+  OpenGL
+  GLEW
+  Eigen3
   ReTo
   SimIL
   prefr
   Qt5Core
   Qt5Widgets
   Qt5OpenGL
+  Boost
 )
 
 if( OPENMP_FOUND )

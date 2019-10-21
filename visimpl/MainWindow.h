@@ -15,8 +15,10 @@
 #include <QRadioButton>
 #include <QGroupBox>
 #include <QPushButton>
+#include <QToolBox>
 
 #include "OpenGLWidget.h"
+#include "SelectionManagerWidget.h"
 
 #include <sumrice/sumrice.h>
 
@@ -29,6 +31,14 @@ class MainWindow;
 
 namespace visimpl
 {
+
+  enum TSelectionSource
+  {
+    SRC_EXTERNAL = 0,
+    SRC_PLANES,
+    SRC_WIDGET,
+    SRC_UNDEFINED
+  };
 
   class MainWindow
     : public QMainWindow
@@ -66,24 +76,13 @@ namespace visimpl
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
 
-    void aboutDialog( void );
+    void dialogAbout( void );
+    void dialogSelectionManagement( void );
+
     void togglePlaybackDock( void );
     void toggleSimConfigDock( void );
 
-    void PlayPause( bool notify = true );
-    void Play( bool notify = true );
-    void Pause( bool notify = true );
-    void Stop( bool notify = true );
-    void Repeat( bool notify = true );
-    void PlayAt( bool notify = true );
-    void PlayAt( float, bool notify = true );
-    void PlayAt( int, bool notify = true );
-    void requestPlayAt( float );
-    void Restart( bool notify = true );
-    void GoToEnd( bool notify = true );
-
     void UpdateSimulationSlider( float percentage );
-
     void UpdateSimulationColorMapping( void );
     void PreviewSimulationColorMapping( void );
     void changeEditorColorMapping( void );
@@ -97,28 +96,78 @@ namespace visimpl
     void changeEditorSimTimestepsPS( void );
     void updateSimTimestepsPS( void );
 
-    void showSelection( bool show );
+    void showInactive( bool show );
 
     void changeEditorDecayValue( void );
     void updateSimulationDecayValue( void );
 
+    void changeEditorStepByStepDuration( void );
+    void updateSimStepByStepDuration( void );
+
     void AlphaBlendingToggled( void );
+
+    void updateAttributeStats( void );
+
+    void updateSelectedStatsPickingSingle( unsigned int selected );
+
+    void clippingPlanesActive ( int state );
+
+    void PlayPause( bool notify = true );
+    void Play( bool notify = true );
+    void Pause( bool notify = true );
+    void Stop( bool notify = true );
+    void Repeat( bool notify = true );
+    void PlayAt( bool notify = true );
+    void PlayAt( float, bool notify = true );
+    void PlayAt( int, bool notify = true );
+    void requestPlayAt( float );
+    void PreviousStep( bool notify = true );
+    void NextStep( bool notify = true );
 
   protected slots:
 
     void addGroupFromSelection( void );
     void checkGroupsVisibility( void );
+    void checkAttributeGroupsVisibility( void );
+
+    void spinBoxValueChanged( void );
+
+    void completedStep( void );
+    void playAtButtonClicked( void );
+
+    void clippingPlanesReset( void );
+
+    void colorSelectionClicked( void );
+
+    void selectionManagerChanged( void );
+    void setSelection( const GIDUSet& selection_, TSelectionSource source_ = SRC_UNDEFINED );
+    void clearSelection( void );
+    void selectionFromPlanes( void );
+
+  protected:
+
+    void _initSimControlDock( void );
+    void _initPlaybackDock( void );
+    void _initSummaryWidget( void );
+
+    void _configurePlayer( void );
+    void _resetClippingParams( void );
+
+    void _updateSelectionGUI( void );
+
+    bool _showDialog( QColor& current, const QString& message = "" );
+
 
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
+
+  protected slots:
 
     void ApplyPlaybackOperation( unsigned int playbackOp );
     void _zeqEventRepeat( bool repeat );
 
   #endif
 
-    void ClearSelection( void );
-    void playAtButtonClicked( void );
 
   protected:
 
@@ -133,22 +182,14 @@ namespace visimpl
 
   #endif // VISIMPL_USE_ZEROEQ
 
-  protected:
-    void configurePlayer( void );
-
     Ui::MainWindow* _ui;
 
     QString _lastOpenedFileName;
     QIcon _playIcon;
     QIcon _pauseIcon;
 
-  private:
-
-    void initPlaybackDock( void );
-    void initSimControlDock( void );
-    void initSummaryWidget( void );
-
     OpenGLWidget* _openGLWidget;
+    DomainManager* _domainManager;
     visimpl::Summary* _summary;
 
     scoop::ColorPalette _colorPalette;
@@ -163,18 +204,22 @@ namespace visimpl
 
     QDockWidget* _simConfigurationDock;
 
-    QGroupBox* _tfGroupBox;
-    TransferFunctionEditor* _tfEditor;
+    QTabWidget* _modeSelectionWidget;
+    QToolBox* _toolBoxOptions;
+
+    QGroupBox* _groupBoxTransferFunction;
     TransferFunctionWidget* _tfWidget;
+    SelectionManagerWidget* _selectionManager;
 
     bool _autoNameGroups;
-    QGroupBox* _groupsGroupBox;
+    QGroupBox* _groupBoxGroups;
     QGridLayout* _groupLayout;
     std::vector< QCheckBox* > _groupsVisButtons;
 
     QDoubleSpinBox* _decayBox;
     QDoubleSpinBox* _deltaTimeBox;
     QDoubleSpinBox* _timeStepsPSBox;
+    QDoubleSpinBox* _stepByStepDurationBox;
 
     QPushButton* _addGroupButton;
     QPushButton* _clearSelectionButton;
@@ -182,6 +227,26 @@ namespace visimpl
 
     QRadioButton* _alphaNormalButton;
     QRadioButton* _alphaAccumulativeButton;
+
+    QLabel* _labelGID;
+    QLabel* _labelPosition;
+
+    QGroupBox* _groupBoxAttrib;
+    QComboBox* _comboAttribSelection;
+    QVBoxLayout* _layoutAttribStats;
+    QGridLayout* _layoutAttribGroups;
+    std::vector< QCheckBox* > _attribGroupsVisButtons;
+
+    // Clipping planes
+    QCheckBox* _checkClipping;
+    QCheckBox* _checkShowPlanes;
+    QPushButton* _buttonResetPlanes;
+    QDoubleSpinBox* _spinBoxClippingHeight;
+    QDoubleSpinBox* _spinBoxClippingWidth;
+    QDoubleSpinBox* _spinBoxClippingDist;
+    QPushButton* _frameClippingColor;
+    QPushButton* _buttonSelectionFromClippingPlanes;
+
   };
 
 } // namespace visimpl
