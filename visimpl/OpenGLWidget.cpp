@@ -38,6 +38,8 @@ namespace visimpl
       std::make_tuple( 0.5f, 20.0f, 20.0f, 1.0f );
   static InitialConfig _initialConfigSimH5 =
       std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
+  static InitialConfig _initialConfigSimCSV =
+        std::make_tuple( 0.005f, 20.0f, 0.1f, 1.0f );
 
   static float invRGBInt = 1.0f / 255;
 
@@ -262,10 +264,11 @@ namespace visimpl
 
         break;
       case simil::TCSV:
-        simulationDeltaTime( 0.2f );
-        simulationStepsPerSecond( 2.0f );
-        changeSimulationDecayValue( 1.5f );
-        scale = 5.f;
+//        simulationDeltaTime( 0.2f );
+//        simulationStepsPerSecond( 2.0f );
+//        changeSimulationDecayValue( 1.5f );
+//        scale = 5.f;
+        config = _initialConfigSimCSV;
         break;
       default:
         break;

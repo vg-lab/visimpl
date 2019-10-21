@@ -318,7 +318,7 @@ namespace visimpl
 
     openSubsetEventFile( subsetEventFile, true );
 
-    configurePlayer( );
+    _configurePlayer( );
   }
 
 
