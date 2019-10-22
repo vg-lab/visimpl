@@ -71,6 +71,7 @@ namespace visimpl
   public slots:
 
     void openBlueConfigThroughDialog( void );
+    void openCSVFilesThroughDialog( void );
     void openHDF5ThroughDialog( void );
 
     void openSubsetEventFile( const std::string& fileName,

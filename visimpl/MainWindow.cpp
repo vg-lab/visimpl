@@ -159,6 +159,9 @@ namespace visimpl
     connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
              this, SLOT( openBlueConfigThroughDialog( )));
 
+    connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( )),
+             this, SLOT( openCSVFilesThroughDialog( )));
+
     connect( _ui->actionQuit, SIGNAL( triggered( )),
              QApplication::instance(), SLOT( quit( )));
 
@@ -289,6 +292,35 @@ namespace visimpl
 
   }
 
+  void MainWindow::openCSVFilesThroughDialog( void )
+  {
+    QString pathNetwork = QFileDialog::getOpenFileName(
+          this, tr( "Open CSV Network description file" ), _lastOpenedFileName,
+          tr( "CSV (*.csv);; All files (*)" ),
+          nullptr, QFileDialog::DontUseNativeDialog );
+
+    if( pathNetwork != QString( "" ))
+    {
+      simil::TSimulationType simType = simil::TSimSpikes;
+
+      QString pathActivity = QFileDialog::getOpenFileName(
+            this, tr( "Open CSV Activity file" ), _lastOpenedFileName,
+            tr( "CSV (*.csv);; All files (*)" ),
+            nullptr, QFileDialog::DontUseNativeDialog );
+
+
+      if ( !pathActivity.isEmpty( ))
+      {
+  //      std::string targetLabel = text.toStdString( );
+        _lastOpenedFileName = QFileInfo(pathNetwork).path( );
+        std::string networkFile = pathNetwork.toStdString( );
+        std::string activityFile = pathActivity.toStdString( );
+        openCSVFile( networkFile, simType, activityFile );
+      }
+
+
+    }
+  }
 
 
   void MainWindow::openHDF5File( const std::string& networkFile,
@@ -307,9 +339,9 @@ namespace visimpl
   }
 
   void MainWindow::openCSVFile( const std::string& networkFile,
-                    simil::TSimulationType simulationType,
-                    const std::string& activityFile,
-                    const std::string& subsetEventFile )
+                                simil::TSimulationType simulationType,
+                                const std::string& activityFile,
+                                const std::string& subsetEventFile )
   {
     _openGLWidget->loadData( networkFile,
                              simil::TDataType::TCSV,

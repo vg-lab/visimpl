@@ -34,6 +34,7 @@
     <addaction name="actionOpenBlueConfig"/>
     <addaction name="actionOpenXMLScene"/>
     <addaction name="actionOpenSWCFile"/>
+    <addaction name="actionOpenCSVFiles"/>
     <addaction name="actionCloseData"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -81,6 +82,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionOpenBlueConfig"/>
+   <addaction name="actionOpenCSVFiles"/>
    <addaction name="actionCloseData"/>
    <addaction name="separator"/>
    <addaction name="actionOpenSWCFile"/>
@@ -354,6 +356,18 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+T</string>
+   </property>
+  </action>
+  <action name="actionOpenCSVFiles">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/folder.png</normaloff>:/icons/folder.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open CSV Files</string>
+   </property>
+   <property name="toolTip">
+    <string>Open CSV files for network description and activity</string>
    </property>
   </action>
  </widget>

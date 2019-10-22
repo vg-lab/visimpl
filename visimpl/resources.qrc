@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="/">
+    <file>icons/folder.png</file>
     <file>icons/hide.png</file>
     <file>icons/show.png</file>
     <file>icons/menu-play.png</file>

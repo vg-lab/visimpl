@@ -930,6 +930,8 @@ namespace visimpl
       auto state = _pendingGroupStateChanges.front( );
       _domainManager->setVisualGroupState( state.first, state.second );
       _pendingGroupStateChanges.pop( );
+
+      _flagUpdateRender = true;
     }
   }
 
@@ -947,6 +949,7 @@ namespace visimpl
       _particleSystem->update( 0.0f );
 
       _flagUpdateGroups = false;
+      _flagUpdateRender = true;
     }
 
   }
@@ -965,6 +968,7 @@ namespace visimpl
         _particleSystem->update( 0.0f );
 
         _flagUpdateAttributes = false;
+        _flagUpdateRender = true;
       }
   }
 
@@ -1859,6 +1863,8 @@ namespace visimpl
 
     _domainManager->modelSelectionBase( )->color = gcolors;
 
+    _flagUpdateRender = true;
+
   }
 
   TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
@@ -1892,6 +1898,7 @@ namespace visimpl
     }
     _domainManager->modelSelectionBase( )->size = newSize;
 
+    _flagUpdateRender = true;
   }
 
   TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )

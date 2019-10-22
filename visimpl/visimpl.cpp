@@ -215,13 +215,13 @@ void usageMessage( char* progName )
   std::cerr << std::endl
             << "Usage: "
             << progName << std::endl
-            << "\t[ -bc blue_config_path | -swc swc_file_list "
-            << " | -xml scene_xml ] "
+            << "\t[ -bc <blue_config_path> [-target <target> ] | "
+            << "-csv <network_path> <activity_path>"
             << std::endl
-            << "\t[ -spikes ] "
-            << std::endl
-            << "\t[ -voltage report_label ] "
-            << std::endl
+//            << "\t[ -spikes ] "
+//            << std::endl
+//            << "\t[ -voltage report_label ] "
+//            << std::endl
             << "\t[ -zeq schema* ]"
             << std::endl
             << "\t[ -ws | --window-size ] width height ]"
@@ -249,14 +249,6 @@ void dumpVersion( void )
             << visimpl::Version::getPatch( )
             << " (" << visimpl::Version::getRevision( ) << ")"
             << std::endl << std::endl;
-
-  std::cerr << "BBPSDK support built-in: ";
-  #ifdef NSOL_USE_BBPSDK
-  std::cerr << "\tyes";
-  #else
-  std::cerr << "\tno";
-  #endif
-  std::cerr << std::endl;
 
   std::cerr << "zeq support built-in: ";
   #ifdef VISIMPL_USE_ZEROEQ
