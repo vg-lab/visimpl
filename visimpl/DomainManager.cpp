@@ -1020,7 +1020,12 @@ namespace visimpl
 
   tBoundingBox DomainManager::boundingBox( void ) const
   {
-    return _boundingBox;
+    tBoundingBox result = _boundingBox;
+
+    if( _boundingBox.first == _boundingBox.second )
+      result.second = _boundingBox.second + vec3( 0.1f, 0.1f, 0.1f );
+
+    return result;
   }
 
   prefr::ColorOperationModel* DomainManager::modelSelectionBase( void )

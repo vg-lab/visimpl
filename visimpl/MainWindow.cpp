@@ -916,6 +916,8 @@ namespace visimpl
       groupScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
       groupScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
 
+//      QPushButton* buttonImportGroups = new QPushButton( );
+
       QGridLayout* groupOuterLayout = new QGridLayout( );
       groupOuterLayout->setMargin( 0 );
       groupOuterLayout->addWidget( groupScroll );

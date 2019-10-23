@@ -70,6 +70,12 @@ namespace stackviz
                        const std::string& activityFile = "",
                        const std::string& subsetEventFile = "" );
 
+    void openCSVFile( const std::string& networkFile,
+                      simil::TSimulationType simulationType,
+                      const std::string& activityFile = "",
+                      const std::string& subsetEventFile = "" );
+
+
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
 

@@ -412,6 +412,27 @@ namespace stackviz
     initSummaryWidget( );
   }
 
+  void MainWindow::openCSVFile( const std::string& networkFile,
+                                simil::TSimulationType simulationType,
+                                const std::string& activityFile,
+                                const std::string& subsetEventFile )
+  {
+    _simulationType = simulationType;
+
+    simil::SpikesPlayer* player = new simil::SpikesPlayer( );
+    _player = player;
+
+    player->LoadData( simil::TDataType::TCSV, networkFile, activityFile );
+
+    if( !subsetEventFile.empty( ))
+    {
+      openSubsetEventFile( subsetEventFile, true );
+    }
+
+    configurePlayer( );
+    initSummaryWidget( );
+  }
+
   void MainWindow::configurePlayer( void )
   {
     _startTimeLabel->setText(
