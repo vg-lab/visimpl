@@ -1075,11 +1075,39 @@ namespace visimpl
     _labelCurrentTime->update( );
   }
 
-  void OpenGLWidget::setCircuitScaleFactor( vec3 scale_ )
+  void OpenGLWidget::circuitScaleFactor( vec3 scale_, bool update )
   {
     _scaleFactor = scale_;
 
     _scaleFactorExternal = true;
+
+    if( update && _player )
+    {
+
+      tGidPosMap gidPositions;
+      auto gids = _player->gids( );
+      auto positions = _player->positions( );
+
+      auto gidit = gids.begin( );
+      for( auto pos : positions )
+      {
+        vec3 position( pos.x( ), pos.y( ), pos.z( ));
+
+        gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
+        ++gidit;
+      }
+
+      _domainManager->positions( gidPositions );
+      _focusOn( _domainManager->boundingBox( ));
+    }
+
+    _flagUpdateRender = true;
+
+  }
+
+  vec3 OpenGLWidget::circuitScaleFactor( void ) const
+  {
+    return _scaleFactor;
   }
 
   void OpenGLWidget::_updateParticles( float renderDelta )

@@ -112,7 +112,8 @@ namespace visimpl
     void setGroupVisibility( unsigned int i, bool state );
     void addGroupFromSelection( const std::string& name );
 
-    void setCircuitScaleFactor( vec3 scale_ );
+    void circuitScaleFactor( vec3 scale_, bool update = true );
+    vec3 circuitScaleFactor( void ) const;
 
     DomainManager* domainManager( void );
 

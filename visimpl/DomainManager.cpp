@@ -14,6 +14,17 @@
 
 namespace visimpl
 {
+  void expandBoundingBox( glm::vec3& minBounds,
+                          glm::vec3& maxBounds,
+                          const glm::vec3& position)
+  {
+    for( unsigned int i = 0; i < 3; ++i )
+    {
+      minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
+      maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
+    }
+  }
+
   static float invRGBInt = 1.0f / 255;
 
   static std::unordered_map< std::string, std::string > _attributeNameLabels =
@@ -164,7 +175,21 @@ namespace visimpl
 
   void DomainManager::reloadPositions( void )
   {
-    mode( _mode );
+//    mode( _mode );
+    _resetBoundingBox( );
+
+    for( auto gidPartId : _gidToParticle )
+    {
+      auto pos = _gidPositions.find( gidPartId.first );
+
+      auto particle = _particleSystem->particles( ).at( gidPartId.second );
+      particle.set_position( pos->second );
+
+      expandBoundingBox( _boundingBox.first,
+                         _boundingBox.second,
+                         pos->second );
+    }
+
   }
 
   const TGIDSet& DomainManager::gids( void ) const
@@ -435,17 +460,6 @@ namespace visimpl
     if( !_showInactive )
       group->source( )->active( state );
 
-  }
-
-  void expandBoundingBox( glm::vec3& minBounds,
-                          glm::vec3& maxBounds,
-                          const glm::vec3& position)
-  {
-    for( unsigned int i = 0; i < 3; ++i )
-    {
-      minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
-      maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
-    }
   }
 
 
