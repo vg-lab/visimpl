@@ -82,6 +82,7 @@ namespace stackviz
   public slots:
 
     void openBlueConfigThroughDialog( void );
+    void openCSVFilesThroughDialog( void );
 
     void aboutDialog( void );
     void togglePlaybackDock( void );

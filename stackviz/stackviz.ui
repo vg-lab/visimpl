@@ -32,6 +32,7 @@
      <string>File</string>
     </property>
     <addaction name="actionOpenBlueConfig"/>
+    <addaction name="actionOpenCSVFiles"/>
     <addaction name="actionCloseData"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -75,6 +76,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionOpenBlueConfig"/>
+   <addaction name="actionOpenCSVFiles"/>
    <addaction name="separator"/>
    <addaction name="actionTogglePlaybackDock"/>
    <addaction name="actionCloseData"/>
@@ -219,6 +221,18 @@
    </property>
    <property name="toolTip">
     <string>Follow playhead</string>
+   </property>
+  </action>
+  <action name="actionOpenCSVFiles">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/folder.png</normaloff>:/icons/folder.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open CSV Files</string>
+   </property>
+   <property name="toolTip">
+    <string>Open CSV Files</string>
    </property>
   </action>
  </widget>
