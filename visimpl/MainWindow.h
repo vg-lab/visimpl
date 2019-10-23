@@ -97,6 +97,8 @@ namespace visimpl
     void changeEditorSimTimestepsPS( void );
     void updateSimTimestepsPS( void );
 
+    void setCircuitSizeScaleFactor( vec3 );
+
     void showInactive( bool show );
 
     void changeEditorDecayValue( void );

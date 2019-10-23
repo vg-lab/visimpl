@@ -333,6 +333,8 @@ namespace visimpl
                              simulationType,
                              activityFile );
 
+    _domainManager = _openGLWidget->domainManager( );
+
     openSubsetEventFile( subsetEventFile, true );
 
     _configurePlayer( );
@@ -347,6 +349,8 @@ namespace visimpl
                              simil::TDataType::TCSV,
                              simulationType,
                              activityFile );
+
+    _domainManager = _openGLWidget->domainManager( );
 
     openSubsetEventFile( subsetEventFile, true );
 
@@ -1148,6 +1152,11 @@ namespace visimpl
   void MainWindow::updateSimTimestepsPS( void )
   {
     _openGLWidget->simulationStepsPerSecond( _timeStepsPSBox->value( ));
+  }
+
+  void MainWindow::setCircuitSizeScaleFactor( vec3 scaleFactor )
+  {
+    _openGLWidget->setCircuitScaleFactor( scaleFactor );
   }
 
   void MainWindow::changeEditorDecayValue( void )

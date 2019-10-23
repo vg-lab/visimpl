@@ -12,6 +12,7 @@
 #include <QDebug>
 #include <QOpenGLWidget>
 #include <QDir>
+#include <QString>
 
 #include <visimpl/version.h>
 
@@ -43,12 +44,11 @@ int main( int argc, char** argv )
 
   std::string networkFile;
   std::string activityFile;
-  std::string swcFile;
-  std::string sceneFile;
   std::string zeqUri;
   std::string target = std::string( "" );
   std::string report = std::string( "" );
   std::string subsetEventFile( "" );
+  std::string scaleFactor("");
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
   int initWindowWidth, initWindowHeight;
@@ -134,6 +134,16 @@ int main( int argc, char** argv )
         usageMessage( argv[0] );
     }
 
+    if( std::strcmp( argv[ i ], "-scale" ) == 0 )
+    {
+      if(++i < argc )
+      {
+        scaleFactor = argv[ i ];
+      }
+      else
+        usageMessage( argv[0] );
+    }
+
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
       simType = simil::TSimSpikes;
@@ -189,6 +199,23 @@ int main( int argc, char** argv )
 
   mainWindow.show( );
   mainWindow.init( zeqUri );
+
+  if( !scaleFactor.empty( ))
+  {
+    QString qscaleFactor( scaleFactor.c_str( ));
+
+    glm::vec3 scale( 1.0f, 1.0f, 1.0f );
+
+    auto chunks = qscaleFactor.split(',');
+    if( chunks.size( ) == 3 )
+    {
+      scale.x = chunks[ 0 ].toFloat( );
+      scale.y = chunks[ 1 ].toFloat( );
+      scale.z = chunks[ 2 ].toFloat( );
+
+      mainWindow.setCircuitSizeScaleFactor( scale );
+    }
+  }
 
   if( !networkFile.empty( ))
   switch( dataType )

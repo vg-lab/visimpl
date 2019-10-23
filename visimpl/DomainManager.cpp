@@ -155,6 +155,18 @@ namespace visimpl
     return _gidPositions;
   }
 
+  void DomainManager::positions( const tGidPosMap& positions_ )
+  {
+    _gidPositions = positions_;
+
+    reloadPositions( );
+  }
+
+  void DomainManager::reloadPositions( void )
+  {
+    mode( _mode );
+  }
+
   const TGIDSet& DomainManager::gids( void ) const
   {
     return _gids;
