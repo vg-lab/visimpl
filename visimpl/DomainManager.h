@@ -51,8 +51,11 @@ namespace visimpl
 
     void initializeParticleSystem( void );
 
+    VisualGroup* addVisualGroupFromSelection( const std::string& name,
+                                              bool overrideGIDs = false );
     VisualGroup* addVisualGroup( const GIDUSet& group_, const std::string& name,
                                  bool overrideGIDs = false );
+
     void setVisualGroupState( unsigned int i, bool state, bool attrib = false );
     void removeVisualGroup( unsigned int i );
 

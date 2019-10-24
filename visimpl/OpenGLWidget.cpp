@@ -928,11 +928,6 @@ namespace visimpl
     _flagUpdateGroups = true;
   }
 
-  void OpenGLWidget::addGroupFromSelection( const std::string& name )
-  {
-    _domainManager->addVisualGroup( _selectedGIDs, name );
-  }
-
   void OpenGLWidget::_updateGroupsVisibility( void )
   {
     while( !_pendingGroupStateChanges.empty( ))

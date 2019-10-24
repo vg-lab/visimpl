@@ -19,6 +19,7 @@
 
 #include "OpenGLWidget.h"
 #include "SelectionManagerWidget.h"
+#include "SubsetImporter.h"
 
 #include <sumrice/sumrice.h>
 
@@ -79,6 +80,7 @@ namespace visimpl
 
     void dialogAbout( void );
     void dialogSelectionManagement( void );
+    void dialogSubsetImporter( void );
 
     void togglePlaybackDock( void );
     void toggleSimConfigDock( void );
@@ -132,6 +134,14 @@ namespace visimpl
     void NextStep( bool notify = true );
 
   protected slots:
+
+    void configureComponents( void );
+    void importVisualGroups( void );
+
+    void addGroupControls( const std::string& name, unsigned int index,
+                           unsigned int size );
+    void removeGroupControls( unsigned int index );
+    void clearGroups( void );
 
     void addGroupFromSelection( void );
     void checkGroupsVisibility( void );
@@ -197,6 +207,7 @@ namespace visimpl
 
     OpenGLWidget* _openGLWidget;
     DomainManager* _domainManager;
+    simil::SubsetEventManager* _subsetEvents;
     visimpl::Summary* _summary;
 
     scoop::ColorPalette _colorPalette;
@@ -217,11 +228,14 @@ namespace visimpl
     QGroupBox* _groupBoxTransferFunction;
     TransferFunctionWidget* _tfWidget;
     SelectionManagerWidget* _selectionManager;
+    SubsetImporter* _subsetImporter;
+
+    enum TGroupRow { gr_container = 0, gr_checkbox };
+    typedef std::tuple< QWidget*, QCheckBox* > tGroupRow;
 
     bool _autoNameGroups;
-    QGroupBox* _groupBoxGroups;
-    QGridLayout* _groupLayout;
-    std::vector< QCheckBox* > _groupsVisButtons;
+    QVBoxLayout* _groupLayout;
+    std::vector< tGroupRow > _groupsVisButtons;
 
     QDoubleSpinBox* _decayBox;
     QDoubleSpinBox* _deltaTimeBox;
@@ -231,6 +245,8 @@ namespace visimpl
     QDoubleSpinBox* _circuitScaleY;
     QDoubleSpinBox* _circuitScaleZ;
 
+    QPushButton* _buttonImportGroups;
+    QPushButton* _buttonClearGroups;
     QPushButton* _addGroupButton;
     QPushButton* _clearSelectionButton;
     QLabel* _selectionSizeLabel;

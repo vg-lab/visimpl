@@ -622,6 +622,11 @@ namespace visimpl
     return group;
   }
 
+  VisualGroup* DomainManager::addVisualGroupFromSelection( const std::string& name,
+                                                           bool overrideGIDs )
+  {
+    return addVisualGroup( _selection, name, overrideGIDs );
+  }
 
   VisualGroup* DomainManager::addVisualGroup( const GIDUSet& gids,
                                               const std::string& name,
@@ -675,9 +680,11 @@ namespace visimpl
       {
         auto ref = _gidToParticle.find( gid );
 
+        if( ref != _gidToParticle.end( ))
+        {
         _particleToGID.erase( ref->second );
         _gidToParticle.erase( ref );
-
+        }
         _neuronGroup.erase( gid );
       }
     }
