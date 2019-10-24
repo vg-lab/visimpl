@@ -101,6 +101,17 @@ int main( int argc, char** argv )
       else
         usageMessage( argv[0] );
     }
+    else if( std::strcmp( argv[ i ], "-csv") == 0 )
+    {
+      if( i + 2 < argc )
+      {
+        ++i;
+        networkFile = std::string( argv[ i ]);
+        ++i;
+        activityFile = std::string( argv[ i ]);
+        dataType = simil::TCSV;
+      }
+    }
 
     if( std::strcmp( argv[ i ], "-target" ) == 0 )
     {
@@ -193,6 +204,9 @@ int main( int argc, char** argv )
       }
       mainWindow.calculateCorrelations( );
 
+      break;
+    case simil::TDataType::TCSV:
+      mainWindow.openCSVFile( networkFile, simType, activityFile, subsetEventFile );
       break;
     default:
       break;

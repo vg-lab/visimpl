@@ -111,6 +111,9 @@ namespace stackviz
     connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
              this, SLOT( openBlueConfigThroughDialog( )));
 
+    connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( )),
+             this, SLOT( openCSVFilesThroughDialog( )));
+
     initPlaybackDock( );
 
     connect( _dockSimulation->toggleViewAction( ), SIGNAL( toggled( bool )),
@@ -272,6 +275,36 @@ namespace stackviz
 
   }
 
+  void MainWindow::openCSVFilesThroughDialog( void )
+  {
+    QString pathNetwork = QFileDialog::getOpenFileName(
+          this, tr( "Open CSV Network description file" ), _lastOpenedFileName,
+          tr( "CSV (*.csv);; All files (*)" ),
+          nullptr, QFileDialog::DontUseNativeDialog );
+
+    if( pathNetwork != QString( "" ))
+    {
+      simil::TSimulationType simType = simil::TSimSpikes;
+
+      QString pathActivity = QFileDialog::getOpenFileName(
+            this, tr( "Open CSV Activity file" ), _lastOpenedFileName,
+            tr( "CSV (*.csv);; All files (*)" ),
+            nullptr, QFileDialog::DontUseNativeDialog );
+
+
+      if ( !pathActivity.isEmpty( ))
+      {
+  //      std::string targetLabel = text.toStdString( );
+        _lastOpenedFileName = QFileInfo(pathNetwork).path( );
+        std::string networkFile = pathNetwork.toStdString( );
+        std::string activityFile = pathActivity.toStdString( );
+        openCSVFile( networkFile, simType, activityFile );
+      }
+
+
+    }
+  }
+
   void MainWindow::aboutDialog( void )
   {
 
@@ -402,6 +435,27 @@ namespace stackviz
     simil::SpikesPlayer* player = new simil::SpikesPlayer( );
     player->LoadData( simil::TDataType::THDF5,  networkFile, activityFile );
     _player = player;
+
+    if( !subsetEventFile.empty( ))
+    {
+      openSubsetEventFile( subsetEventFile, true );
+    }
+
+    configurePlayer( );
+    initSummaryWidget( );
+  }
+
+  void MainWindow::openCSVFile( const std::string& networkFile,
+                                simil::TSimulationType simulationType,
+                                const std::string& activityFile,
+                                const std::string& subsetEventFile )
+  {
+    _simulationType = simulationType;
+
+    simil::SpikesPlayer* player = new simil::SpikesPlayer( );
+    _player = player;
+
+    player->LoadData( simil::TDataType::TCSV, networkFile, activityFile );
 
     if( !subsetEventFile.empty( ))
     {

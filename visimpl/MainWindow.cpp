@@ -97,6 +97,9 @@ namespace visimpl
   , _deltaTimeBox( nullptr )
   , _timeStepsPSBox( nullptr )
   , _stepByStepDurationBox( nullptr )
+  , _circuitScaleX( nullptr )
+  , _circuitScaleY( nullptr )
+  , _circuitScaleZ( nullptr )
   , _addGroupButton( nullptr )
   , _clearSelectionButton( nullptr )
   , _selectionSizeLabel( nullptr )
@@ -333,6 +336,8 @@ namespace visimpl
                              simulationType,
                              activityFile );
 
+    _domainManager = _openGLWidget->domainManager( );
+
     openSubsetEventFile( subsetEventFile, true );
 
     _configurePlayer( );
@@ -347,6 +352,8 @@ namespace visimpl
                              simil::TDataType::TCSV,
                              simulationType,
                              activityFile );
+
+    _domainManager = _openGLWidget->domainManager( );
 
     openSubsetEventFile( subsetEventFile, true );
 
@@ -548,6 +555,7 @@ namespace visimpl
     changeEditorSizeFunction( );
     changeEditorDecayValue( );
     changeEditorStepByStepDuration( );
+    changeCircuitScaleValue( );
     _initSummaryWidget( );
   }
 
@@ -759,7 +767,26 @@ namespace visimpl
     _buttonSelectionFromClippingPlanes = new QPushButton( "To selection");
     _buttonSelectionFromClippingPlanes->setToolTip( tr( "Create a selection set from elements between planes" ));
 
+    _circuitScaleX = new QDoubleSpinBox( );
+    _circuitScaleX->setDecimals( 2 );
+    _circuitScaleX->setMinimum( 0.01 );
+    _circuitScaleX->setMaximum( 9999999 );
+    _circuitScaleX->setSingleStep( 0.5 );
+    _circuitScaleX->setMaximumWidth( 100 );
 
+    _circuitScaleY = new QDoubleSpinBox( );
+    _circuitScaleY->setDecimals( 2 );
+    _circuitScaleY->setMinimum( 0.01 );
+    _circuitScaleY->setMaximum( 9999999 );
+    _circuitScaleY->setSingleStep( 0.5 );
+    _circuitScaleY->setMaximumWidth( 100 );
+
+    _circuitScaleZ = new QDoubleSpinBox( );
+    _circuitScaleZ->setDecimals( 2 );
+    _circuitScaleZ->setMinimum( 0.01 );
+    _circuitScaleZ->setMaximum( 9999999 );
+    _circuitScaleZ->setSingleStep( 0.5 );
+    _circuitScaleZ->setMaximumWidth( 100 );
 
     QWidget* topContainer = new QWidget( );
     QVBoxLayout* verticalLayout = new QVBoxLayout( );
@@ -779,6 +806,13 @@ namespace visimpl
     sfLayout->addWidget( new QLabel( "Step playback duration (s):"), 2, 0, 1, 1);
     sfLayout->addWidget( _stepByStepDurationBox, 2, 1, 1, 1 );
     tSpeedGB->setLayout( sfLayout );
+
+    QGroupBox* scaleGB = new QGroupBox( "Scale factor (X,Y,Z)" );
+    QHBoxLayout* layoutScale = new QHBoxLayout( );
+    scaleGB->setLayout( layoutScale );
+    layoutScale->addWidget( _circuitScaleX );
+    layoutScale->addWidget( _circuitScaleY );
+    layoutScale->addWidget( _circuitScaleZ );
 
     QComboBox* comboShader = new QComboBox( );
     comboShader->addItems( { "Default", "Solid" });
@@ -809,6 +843,7 @@ namespace visimpl
     QWidget* vcContainer = new QWidget( );
     QVBoxLayout* vcLayout = new QVBoxLayout( );
     vcLayout->setAlignment( Qt::AlignTop );
+    vcLayout->addWidget( scaleGB );
     vcLayout->addWidget( shaderGB );
     vcLayout->addWidget( dFunctionGB );
     vcLayout->addWidget( rFunctionGB );
@@ -880,6 +915,8 @@ namespace visimpl
       groupScroll->setFrameShadow( QFrame::Shadow::Plain );
       groupScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
       groupScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+
+//      QPushButton* buttonImportGroups = new QPushButton( );
 
       QGridLayout* groupOuterLayout = new QGridLayout( );
       groupOuterLayout->setMargin( 0 );
@@ -1004,6 +1041,15 @@ namespace visimpl
 
     connect( buttonSelectionManager, SIGNAL( clicked( void )),
              this, SLOT( dialogSelectionManagement( void )));
+
+    connect( _circuitScaleX, SIGNAL( valueChanged( double )),
+             this, SLOT( updateCircuitScaleValue( void )));
+
+    connect( _circuitScaleY, SIGNAL( valueChanged( double )),
+             this, SLOT( updateCircuitScaleValue( void )));
+
+    connect( _circuitScaleZ, SIGNAL( valueChanged( double )),
+             this, SLOT( updateCircuitScaleValue( void )));
 
     connect( _deltaTimeBox, SIGNAL( valueChanged( double )),
                this, SLOT( updateSimDeltaTime( void )));
@@ -1149,6 +1195,37 @@ namespace visimpl
   {
     _openGLWidget->simulationStepsPerSecond( _timeStepsPSBox->value( ));
   }
+
+  void MainWindow::setCircuitSizeScaleFactor( vec3 scaleFactor )
+  {
+    _openGLWidget->circuitScaleFactor( scaleFactor );
+  }
+
+  vec3 MainWindow::getCircuitSizeScaleFactor( void ) const
+  {
+    return _openGLWidget->circuitScaleFactor( );
+  }
+
+  void MainWindow::changeCircuitScaleValue( void )
+  {
+    auto scale = _openGLWidget->circuitScaleFactor( );
+
+    _circuitScaleX->setValue( scale.x );
+    _circuitScaleY->setValue( scale.y );
+    _circuitScaleZ->setValue( scale.z );
+  }
+
+  void MainWindow::updateCircuitScaleValue( void )
+  {
+    auto scale = _openGLWidget->circuitScaleFactor( );
+
+    scale.x = _circuitScaleX->value( );
+    scale.y = _circuitScaleY->value( );
+    scale.z = _circuitScaleZ->value( );
+
+    _openGLWidget->circuitScaleFactor( scale );
+  }
+
 
   void MainWindow::changeEditorDecayValue( void )
   {

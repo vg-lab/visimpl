@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="/">
+    <file>icons/folder.png</file>
     <file>icons/list.png</file>
     <file>icons/autofocus.png</file>
     <file>icons/focus.png</file>

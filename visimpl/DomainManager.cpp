@@ -14,6 +14,17 @@
 
 namespace visimpl
 {
+  void expandBoundingBox( glm::vec3& minBounds,
+                          glm::vec3& maxBounds,
+                          const glm::vec3& position)
+  {
+    for( unsigned int i = 0; i < 3; ++i )
+    {
+      minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
+      maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
+    }
+  }
+
   static float invRGBInt = 1.0f / 255;
 
   static std::unordered_map< std::string, std::string > _attributeNameLabels =
@@ -153,6 +164,32 @@ namespace visimpl
   const tGidPosMap& DomainManager::positions( void ) const
   {
     return _gidPositions;
+  }
+
+  void DomainManager::positions( const tGidPosMap& positions_ )
+  {
+    _gidPositions = positions_;
+
+    reloadPositions( );
+  }
+
+  void DomainManager::reloadPositions( void )
+  {
+//    mode( _mode );
+    _resetBoundingBox( );
+
+    for( auto gidPartId : _gidToParticle )
+    {
+      auto pos = _gidPositions.find( gidPartId.first );
+
+      auto particle = _particleSystem->particles( ).at( gidPartId.second );
+      particle.set_position( pos->second );
+
+      expandBoundingBox( _boundingBox.first,
+                         _boundingBox.second,
+                         pos->second );
+    }
+
   }
 
   const TGIDSet& DomainManager::gids( void ) const
@@ -423,17 +460,6 @@ namespace visimpl
     if( !_showInactive )
       group->source( )->active( state );
 
-  }
-
-  void expandBoundingBox( glm::vec3& minBounds,
-                          glm::vec3& maxBounds,
-                          const glm::vec3& position)
-  {
-    for( unsigned int i = 0; i < 3; ++i )
-    {
-      minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
-      maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
-    }
   }
 
 
@@ -994,7 +1020,12 @@ namespace visimpl
 
   tBoundingBox DomainManager::boundingBox( void ) const
   {
-    return _boundingBox;
+    tBoundingBox result = _boundingBox;
+
+    if( _boundingBox.first == _boundingBox.second )
+      result.second = _boundingBox.second + vec3( 0.1f, 0.1f, 0.1f );
+
+    return result;
   }
 
   prefr::ColorOperationModel* DomainManager::modelSelectionBase( void )

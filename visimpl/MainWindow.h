@@ -97,7 +97,13 @@ namespace visimpl
     void changeEditorSimTimestepsPS( void );
     void updateSimTimestepsPS( void );
 
+    void setCircuitSizeScaleFactor( vec3 );
+    vec3 getCircuitSizeScaleFactor( void ) const;
+
     void showInactive( bool show );
+
+    void changeCircuitScaleValue( void );
+    void updateCircuitScaleValue( void );
 
     void changeEditorDecayValue( void );
     void updateSimulationDecayValue( void );
@@ -221,6 +227,9 @@ namespace visimpl
     QDoubleSpinBox* _deltaTimeBox;
     QDoubleSpinBox* _timeStepsPSBox;
     QDoubleSpinBox* _stepByStepDurationBox;
+    QDoubleSpinBox* _circuitScaleX;
+    QDoubleSpinBox* _circuitScaleY;
+    QDoubleSpinBox* _circuitScaleZ;
 
     QPushButton* _addGroupButton;
     QPushButton* _clearSelectionButton;

@@ -112,6 +112,9 @@ namespace visimpl
     void setGroupVisibility( unsigned int i, bool state );
     void addGroupFromSelection( const std::string& name );
 
+    void circuitScaleFactor( vec3 scale_, bool update = true );
+    vec3 circuitScaleFactor( void ) const;
+
     DomainManager* domainManager( void );
 
     void resetParticles( void );
@@ -207,6 +210,8 @@ namespace visimpl
 
     void _resolveFlagsOperations( void );
 
+
+
     void _updateParticles( float renderDelta );
     void _paintParticles( void );
     void _paintPlanes( void );
@@ -275,6 +280,9 @@ namespace visimpl
 
     Camera* _camera;
     glm::vec3 _lastCameraPosition;
+
+    vec3 _scaleFactor;
+    bool _scaleFactorExternal;
 
 //    glm::vec3 _boundingBoxMin;
 //    glm::vec3 _boundingBoxMax;

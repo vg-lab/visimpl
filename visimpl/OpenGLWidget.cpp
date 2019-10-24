@@ -39,7 +39,7 @@ namespace visimpl
   static InitialConfig _initialConfigSimH5 =
       std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
   static InitialConfig _initialConfigSimCSV =
-        std::make_tuple( 0.005f, 20.0f, 0.1f, 1.0f );
+        std::make_tuple( 0.005f, 20.0f, 0.1f, 50000.0f );
 
   static float invRGBInt = 1.0f / 255;
 
@@ -61,6 +61,8 @@ namespace visimpl
   , _wireframe( false )
   , _camera( nullptr )
   , _lastCameraPosition( 0, 0, 0)
+  , _scaleFactor( 1.0f, 1.0f, 1.0f )
+  , _scaleFactorExternal( false )
   , _focusOnSelection( true )
   , _pendingSelection( false )
   , _backtrace( false )
@@ -276,6 +278,14 @@ namespace visimpl
 
     scale = std::get< T_SCALE >( config );
 
+    if( !_scaleFactorExternal )
+      _scaleFactor = vec3( scale, scale, scale );
+
+    std::cout << "Using scale factor of " << _scaleFactor.x
+              << ", " << _scaleFactor.y
+              << ", " << _scaleFactor.z
+              << std::endl;
+
     tGidPosMap gidPositions;
     auto gids = spPlayer->gids( );
     auto positions = spPlayer->positions( );
@@ -285,7 +295,7 @@ namespace visimpl
     {
       vec3 position( pos.x( ), pos.y( ), pos.z( ));
 
-      gidPositions.insert( std::make_pair( *gidit, position * scale ));
+      gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
       ++gidit;
     }
 
@@ -1063,6 +1073,41 @@ namespace visimpl
   {
     _labelCurrentTime->setVisible( show );
     _labelCurrentTime->update( );
+  }
+
+  void OpenGLWidget::circuitScaleFactor( vec3 scale_, bool update )
+  {
+    _scaleFactor = scale_;
+
+    _scaleFactorExternal = true;
+
+    if( update && _player )
+    {
+
+      tGidPosMap gidPositions;
+      auto gids = _player->gids( );
+      auto positions = _player->positions( );
+
+      auto gidit = gids.begin( );
+      for( auto pos : positions )
+      {
+        vec3 position( pos.x( ), pos.y( ), pos.z( ));
+
+        gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
+        ++gidit;
+      }
+
+      _domainManager->positions( gidPositions );
+      _focusOn( _domainManager->boundingBox( ));
+    }
+
+    _flagUpdateRender = true;
+
+  }
+
+  vec3 OpenGLWidget::circuitScaleFactor( void ) const
+  {
+    return _scaleFactor;
   }
 
   void OpenGLWidget::_updateParticles( float renderDelta )
