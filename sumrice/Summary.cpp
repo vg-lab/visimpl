@@ -109,8 +109,6 @@ namespace visimpl
   , _regionEdgeUpper( 0.0f )
   , _autoNameSelection( false )
   , _fillPlots( true )
-  , _autoAddEvents( true )
-  , _autoAddEventSubset( true )
   , _defaultCorrelationDeltaTime( 0.125f )
   {
 
@@ -650,115 +648,114 @@ namespace visimpl
       connect( _mainHistogram, SIGNAL( mouseModifierPressed( float, Qt::KeyboardModifiers )),
                this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
 
-      if( _simData->subsetsEvents( ))
-      {
+      if( _eventLabelsScroll )
+        _eventLabelsScroll->setVisible( false );
 
-        if( _autoAddEvents && _simData->subsetsEvents( )->numEvents( ) > 0 )
-        {
-          _eventLabelsScroll->setVisible( true );
-          _scrollEvent->setVisible( true );
+      if( _scrollEvent )
+        _scrollEvent->setVisible( false );
 
-          simil::EventRange timeFrames = _simData->subsetsEvents( )->events( );
-
-          float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
-
-          float startPercentage;
-          float endPercentage;
-
-          unsigned int counter = 0;
-          for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
-          {
-            TEvent timeFrame;
-            timeFrame.name = it->first;
-            timeFrame.visible = true;
-
-    //        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
-
-            for( auto time : it->second )
-            {
-
-              startPercentage =
-                  std::max( 0.0f,
-                            ( time.first - _spikeReport->startTime( )) * invTotal);
-
-              endPercentage =
-                  std::min( 1.0f,
-                            ( time.second - _spikeReport->startTime( )) * invTotal);
-
-              timeFrame.percentages.push_back(
-                  std::make_pair( startPercentage, endPercentage ));
-
-    //          std::cout << "Region from " << startPercentage
-    //                            << " to " << endPercentage
-    //                            << std::endl;
-
-            }
-
-            timeFrame.color = _eventsPalette.colors( )[
-              counter /* %  _eventsPalette.size( ) */ ];
-
-            _events.push_back( timeFrame );
-
-            QLabel* label = new QLabel( timeFrame.name.c_str( ));
-            label->setMinimumHeight( 20 );
-            label->setMinimumWidth( _maxLabelWidth );
-            label->setMaximumWidth( _maxLabelWidth );
-            label->setMinimumHeight( _heightPerRow );
-            label->setMaximumHeight( _heightPerRow );
-            label->setToolTip( timeFrame.name.c_str( ));
-
-            EventWidget* eventWidget = new EventWidget( );
-            eventWidget->name( timeFrame.name );
-            eventWidget->setSizePolicy( QSizePolicy::Expanding,
-                                        QSizePolicy::Expanding );
-            eventWidget->timeFrames( &_events );
-            eventWidget->setMinimumWidth( _sizeChartHorizontal );
-            eventWidget->setMinimumHeight( _heightPerRow );
-            eventWidget->setMaximumHeight( _heightPerRow );
-            eventWidget->index( counter );
-
-//            QCheckBox* checkbox = new QCheckBox();
-
-            EventRow eventrow;
-            eventrow.widget = eventWidget;
-            eventrow.label = label;
-//            eventrow.checkBox = checkbox;
-
-            _eventRows.push_back( eventrow );
-            _eventWidgets.push_back( eventWidget );
-
-            _layoutEventLabels->addWidget( label, counter, 0, 1, 1 );
-            _layoutEvents->addWidget( eventWidget, counter, 1, 1, _summaryColumns );
-//            _eventsLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
-
-          }
-        }
-
-        if( _autoAddEventSubset )
-        {
-          simil::SubsetMapRange subsets =
-              _spikeReport->subsetsEvents( )->subsets( );
-
-          for( auto it = subsets.first; it != subsets.second; ++it )
-          {
-            GIDUSet subset( it->second.begin( ), it->second.end( ));
-            std::cout << " <<< inserting " << it->first << " " << subset.size( ) << std::endl;
-            insertSubset( it->first, subset );
-          }
-        }
-      }
-      else
-      {
-        if( _eventLabelsScroll )
-          _eventLabelsScroll->setVisible( false );
-
-        if( _scrollEvent )
-          _scrollEvent->setVisible( false );
-      }
     }
   //  CreateSummarySpikes( );
   //  UpdateGradientColors( );
     update( );
+  }
+
+  void Summary::generateEventsRep( void )
+  {
+    if( _simData->subsetsEvents( )->numEvents( ) > 0 )
+    {
+      _eventLabelsScroll->setVisible( true );
+      _scrollEvent->setVisible( true );
+
+      simil::EventRange timeFrames = _simData->subsetsEvents( )->events( );
+
+      float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
+
+      float startPercentage;
+      float endPercentage;
+
+      unsigned int counter = 0;
+      for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
+      {
+        TEvent timeFrame;
+        timeFrame.name = it->first;
+        timeFrame.visible = true;
+
+//        std::cout << "Parsing time frame " << timeFrame.name << std::endl;
+
+        for( auto time : it->second )
+        {
+
+          startPercentage =
+              std::max( 0.0f,
+                        ( time.first - _spikeReport->startTime( )) * invTotal);
+
+          endPercentage =
+              std::min( 1.0f,
+                        ( time.second - _spikeReport->startTime( )) * invTotal);
+
+          timeFrame.percentages.push_back(
+              std::make_pair( startPercentage, endPercentage ));
+
+//          std::cout << "Region from " << startPercentage
+//                            << " to " << endPercentage
+//                            << std::endl;
+
+        }
+
+        timeFrame.color = _eventsPalette.colors( )[
+          counter /* %  _eventsPalette.size( ) */ ];
+
+        _events.push_back( timeFrame );
+
+        QLabel* label = new QLabel( timeFrame.name.c_str( ));
+        label->setMinimumHeight( 20 );
+        label->setMinimumWidth( _maxLabelWidth );
+        label->setMaximumWidth( _maxLabelWidth );
+        label->setMinimumHeight( _heightPerRow );
+        label->setMaximumHeight( _heightPerRow );
+        label->setToolTip( timeFrame.name.c_str( ));
+
+        EventWidget* eventWidget = new EventWidget( );
+        eventWidget->name( timeFrame.name );
+        eventWidget->setSizePolicy( QSizePolicy::Expanding,
+                                    QSizePolicy::Expanding );
+        eventWidget->timeFrames( &_events );
+        eventWidget->setMinimumWidth( _sizeChartHorizontal );
+        eventWidget->setMinimumHeight( _heightPerRow );
+        eventWidget->setMaximumHeight( _heightPerRow );
+        eventWidget->index( counter );
+
+//            QCheckBox* checkbox = new QCheckBox();
+
+        EventRow eventrow;
+        eventrow.widget = eventWidget;
+        eventrow.label = label;
+//            eventrow.checkBox = checkbox;
+
+        _eventRows.push_back( eventrow );
+        _eventWidgets.push_back( eventWidget );
+
+        _layoutEventLabels->addWidget( label, counter, 0, 1, 1 );
+        _layoutEvents->addWidget( eventWidget, counter, 1, 1, _summaryColumns );
+//            _eventsLayout->addWidget( checkbox, counter, _maxColumns, 1, 1 );
+
+      }
+    }
+  }
+
+  void Summary::importSubsetsFromSubsetMngr( void )
+  {
+    simil::SubsetMapRange subsets =
+        _spikeReport->subsetsEvents( )->subsets( );
+
+    for( auto it = subsets.first; it != subsets.second; ++it )
+    {
+      GIDUSet subset( it->second.begin( ), it->second.end( ));
+      std::cout << " <<< inserting " << it->first << " " << subset.size( ) << std::endl;
+      insertSubset( it->first, subset );
+    }
+
   }
 
   void Summary::AddNewHistogram( const visimpl::Selection& selection
@@ -1421,6 +1418,30 @@ namespace visimpl
     updateHistogramWidgets( );
   }
 
+  void Summary::clearEvents( void )
+  {
+    for( auto event : _eventRows )
+    {
+      _layoutEventLabels->removeWidget( event.label );
+      _layoutEvents->removeWidget( event.widget );
+
+      delete event.label;
+      delete event.widget;
+
+    }
+
+    _events.clear( );
+    _eventWidgets.clear( );
+    _eventRows.clear( );
+
+    updateEventWidgets( );
+
+    _eventLabelsScroll->setVisible( false );
+    _scrollEvent->setVisible( false );
+
+    update( );
+  }
+
   void Summary::removeEvent( unsigned int i )
   {
     auto& timeFrameRow = _eventRows[ i ];
@@ -1430,7 +1451,7 @@ namespace visimpl
 
     delete timeFrameRow.label;
     delete timeFrameRow.widget;
-    delete timeFrameRow.checkBox;
+//    delete timeFrameRow.checkBox;
 
     _events.erase( _events.begin( ) + i );
     _eventWidgets.erase( _eventWidgets.begin( ) + i );
@@ -1764,16 +1785,16 @@ namespace visimpl
 
 //      float adjustment = ( _scaleStep * _scaleCurrent * ( sign ? 1 : ( -1 )));
 
-      std::cout << "ZOOM: view " << _sizeView
-                << " charts " << _sizeChartHorizontal
-                << " margin " << _sizeMargin
-                << " scale " << _scaleCurrentHorizontal
-                << std::endl;
-
-
-      std::cout << "Inner: " << _mainHistogram->size( ).width( ) << "x" << _mainHistogram->size( ).height( ) << " "
-                << "Outer: " << _scrollHistogram->size( ).width( ) << "x" << _scrollHistogram->size( ).height( ) << " "
-                << std::endl;
+//      std::cout << "ZOOM: view " << _sizeView
+//                << " charts " << _sizeChartHorizontal
+//                << " margin " << _sizeMargin
+//                << " scale " << _scaleCurrentHorizontal
+//                << std::endl;
+//
+//
+//      std::cout << "Inner: " << _mainHistogram->size( ).width( ) << "x" << _mainHistogram->size( ).height( ) << " "
+//                << "Outer: " << _scrollHistogram->size( ).width( ) << "x" << _scrollHistogram->size( ).height( ) << " "
+//                << std::endl;
 
 
       updateRegionBounds( );

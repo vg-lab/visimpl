@@ -115,6 +115,11 @@ namespace visimpl
 
   public slots:
 
+    void importSubsetsFromSubsetMngr( void );
+
+    void generateEventsRep( void );
+    void clearEvents( void );
+
     void bins( int bins_ );
     void binsChanged( void );
     void zoomFactorChanged( void );
@@ -360,8 +365,6 @@ namespace visimpl
 
     bool _autoNameSelection;
     bool _fillPlots;
-    bool _autoAddEvents;
-    bool _autoAddEventSubset;
     float _defaultCorrelationDeltaTime;
 
     scoop::ColorPalette _eventsPalette;
