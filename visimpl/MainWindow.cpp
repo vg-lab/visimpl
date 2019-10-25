@@ -73,9 +73,10 @@ namespace visimpl
   , _thread( nullptr )
   #endif
   , _ui( new Ui::MainWindow )
-  , _lastOpenedFileName( "" )
+  , _lastOpenedNetworkFileName( "" )
   , _openGLWidget( nullptr )
   , _domainManager( nullptr )
+  , _subsetEvents( nullptr )
   , _summary( nullptr )
   , _simulationDock( nullptr )
   , _simSlider( nullptr )
@@ -90,8 +91,8 @@ namespace visimpl
   , _groupBoxTransferFunction( nullptr )
   , _tfWidget( nullptr )
   , _selectionManager( nullptr )
+  , _subsetImporter( nullptr )
   , _autoNameGroups( false )
-  , _groupBoxGroups( nullptr )
   , _groupLayout( nullptr )
   , _decayBox( nullptr )
   , _deltaTimeBox( nullptr )
@@ -100,8 +101,10 @@ namespace visimpl
   , _circuitScaleX( nullptr )
   , _circuitScaleY( nullptr )
   , _circuitScaleZ( nullptr )
-  , _addGroupButton( nullptr )
-  , _clearSelectionButton( nullptr )
+  , _buttonImportGroups( nullptr )
+  , _buttonClearGroups( nullptr )
+  , _buttonAddGroup( nullptr )
+  , _buttonClearSelection( nullptr )
   , _selectionSizeLabel( nullptr )
   , _alphaNormalButton( nullptr )
   , _alphaAccumulativeButton( nullptr )
@@ -144,14 +147,14 @@ namespace visimpl
 
     _openGLWidget->idleUpdate( _ui->actionUpdateOnIdle->isChecked( ));
 
-    connect( _ui->actionUpdateOnIdle, SIGNAL( triggered( )),
-             _openGLWidget, SLOT( toggleUpdateOnIdle( )));
+    connect( _ui->actionUpdateOnIdle, SIGNAL( triggered( void )),
+             _openGLWidget, SLOT( toggleUpdateOnIdle( void )));
 
-    connect( _ui->actionBackgroundColor, SIGNAL( triggered( )),
-             _openGLWidget, SLOT( changeClearColor( )));
+    connect( _ui->actionBackgroundColor, SIGNAL( triggered( void )),
+             _openGLWidget, SLOT( changeClearColor( void )));
 
-    connect( _ui->actionShowFPSOnIdleUpdate, SIGNAL( triggered( )),
-             _openGLWidget, SLOT( toggleShowFPS( )));
+    connect( _ui->actionShowFPSOnIdleUpdate, SIGNAL( triggered( void )),
+             _openGLWidget, SLOT( toggleShowFPS( void )));
 
     connect( _ui->actionShowEventsActivity, SIGNAL( triggered( bool )),
              _openGLWidget, SLOT( showEventsActivityLabels( bool )));
@@ -159,22 +162,28 @@ namespace visimpl
     connect( _ui->actionShowCurrentTime, SIGNAL( triggered( bool )),
              _openGLWidget, SLOT( showCurrentTimeLabel( bool )));
 
-    connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
-             this, SLOT( openBlueConfigThroughDialog( )));
+    connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( void )),
+             this, SLOT( openBlueConfigThroughDialog( void )));
 
-    connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( )),
-             this, SLOT( openCSVFilesThroughDialog( )));
+    connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( void )),
+             this, SLOT( openCSVFilesThroughDialog( void )));
 
-    connect( _ui->actionQuit, SIGNAL( triggered( )),
-             QApplication::instance(), SLOT( quit( )));
+    connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void )),
+             this, SLOT( openSubsetEventsFileThroughDialog( void )));
+
+    connect( _ui->actionCloseData, SIGNAL( triggered( void )),
+             this, SLOT( closeData( void )));
+
+    connect( _ui->actionQuit, SIGNAL( triggered( void )),
+             QApplication::instance(), SLOT( quit( void )));
 
     // Connect about dialog
-    connect( _ui->actionAbout, SIGNAL( triggered( )),
-             this, SLOT( dialogAbout( )));
+    connect( _ui->actionAbout, SIGNAL( triggered( void )),
+             this, SLOT( dialogAbout( void )));
 
 
-    connect( _ui->actionHome, SIGNAL( triggered( )),
-             _openGLWidget, SLOT( home( )));
+    connect( _ui->actionHome, SIGNAL( triggered( void )),
+             _openGLWidget, SLOT( home( void )));
 
     connect( _openGLWidget, SIGNAL( stepCompleted( void )),
              this, SLOT( completedStep( void )));
@@ -237,6 +246,16 @@ namespace visimpl
     _ui->statusbar->showMessage( message );
   }
 
+  void MainWindow::configureComponents( void )
+  {
+    _domainManager = _openGLWidget->domainManager( );
+    _selectionManager->setGIDs( _domainManager->gids( ));
+
+    _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
+
+    _subsetImporter->reload( _subsetEvents );
+  }
+
   void MainWindow::openBlueConfig( const std::string& fileName,
                                    simil::TSimulationType simulationType,
                                    const std::string& reportLabel,
@@ -246,18 +265,15 @@ namespace visimpl
                              simil::TDataType::TBlueConfig,
                              simulationType, reportLabel );
 
-    _domainManager = _openGLWidget->domainManager( );
-
     openSubsetEventFile( subsetEventFile, true );
 
     _configurePlayer( );
-
 
     QStringList attributes = { "Morphological type", "Functional type" };
 
     _comboAttribSelection->addItems( attributes );
 
-    _selectionManager->setGIDs( _domainManager->gids( ));
+    configureComponents( );
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -265,7 +281,7 @@ namespace visimpl
   #ifdef SIMIL_USE_BRION
 
     QString path = QFileDialog::getOpenFileName(
-      this, tr( "Open BlueConfig" ), _lastOpenedFileName,
+      this, tr( "Open BlueConfig" ), _lastOpenedNetworkFileName,
       tr( "BlueConfig ( BlueConfig CircuitConfig);; All files (*)" ),
       nullptr, QFileDialog::DontUseNativeDialog );
 
@@ -284,7 +300,7 @@ namespace visimpl
       {
   //      std::string targetLabel = text.toStdString( );
         std::string reportLabel = text.toStdString( );
-        _lastOpenedFileName = QFileInfo(path).path( );
+        _lastOpenedNetworkFileName = QFileInfo(path).path( );
         std::string fileName = path.toStdString( );
         openBlueConfig( fileName, simType, reportLabel );
       }
@@ -298,7 +314,7 @@ namespace visimpl
   void MainWindow::openCSVFilesThroughDialog( void )
   {
     QString pathNetwork = QFileDialog::getOpenFileName(
-          this, tr( "Open CSV Network description file" ), _lastOpenedFileName,
+          this, tr( "Open CSV Network description file" ), _lastOpenedNetworkFileName,
           tr( "CSV (*.csv);; All files (*)" ),
           nullptr, QFileDialog::DontUseNativeDialog );
 
@@ -307,7 +323,7 @@ namespace visimpl
       simil::TSimulationType simType = simil::TSimSpikes;
 
       QString pathActivity = QFileDialog::getOpenFileName(
-            this, tr( "Open CSV Activity file" ), _lastOpenedFileName,
+            this, tr( "Open CSV Activity file" ), _lastOpenedNetworkFileName,
             tr( "CSV (*.csv);; All files (*)" ),
             nullptr, QFileDialog::DontUseNativeDialog );
 
@@ -315,7 +331,8 @@ namespace visimpl
       if ( !pathActivity.isEmpty( ))
       {
   //      std::string targetLabel = text.toStdString( );
-        _lastOpenedFileName = QFileInfo(pathNetwork).path( );
+        _lastOpenedNetworkFileName = QFileInfo( pathNetwork ).path( );
+        _lastOpenedActivityFileName = QFileInfo( pathActivity ).path( );
         std::string networkFile = pathNetwork.toStdString( );
         std::string activityFile = pathActivity.toStdString( );
         openCSVFile( networkFile, simType, activityFile );
@@ -336,11 +353,11 @@ namespace visimpl
                              simulationType,
                              activityFile );
 
-    _domainManager = _openGLWidget->domainManager( );
-
     openSubsetEventFile( subsetEventFile, true );
 
     _configurePlayer( );
+
+    configureComponents( );
   }
 
   void MainWindow::openCSVFile( const std::string& networkFile,
@@ -353,18 +370,18 @@ namespace visimpl
                              simulationType,
                              activityFile );
 
-    _domainManager = _openGLWidget->domainManager( );
-
     openSubsetEventFile( subsetEventFile, true );
 
     _configurePlayer( );
+
+    configureComponents( );
   }
 
 
   void MainWindow::openHDF5ThroughDialog( void )
   {
     QString path = QFileDialog::getOpenFileName(
-      this, tr( "Open a H5 network file" ), _lastOpenedFileName,
+      this, tr( "Open a H5 network file" ), _lastOpenedNetworkFileName,
       tr( "hdf5 ( *.h5);; All files (*)" ), nullptr,
       QFileDialog::DontUseNativeDialog );
 
@@ -394,27 +411,59 @@ namespace visimpl
   void MainWindow::openSubsetEventFile( const std::string& filePath,
                                         bool append )
   {
-    if( filePath.empty( ))
+    if( filePath.empty( ) || !_subsetEvents )
       return;
 
     if( !append )
-      _openGLWidget->player( )->data( )->subsetsEvents( )->clear( );
+      _subsetEvents->clear( );
 
 
     if( filePath.find( "json" ) != std::string::npos )
     {
       std::cout << "Loading JSON file: " << filePath << std::endl;
-      _openGLWidget->player( )->data( )->subsetsEvents( )->loadJSON( filePath );
+      _subsetEvents->loadJSON( filePath );
+
+      _subsetImporter->reload( _subsetEvents );
+
+      _openGLWidget->subsetEventsManager( _subsetEvents );
+      _openGLWidget->showEventsActivityLabels( _ui->actionShowEventsActivity->isChecked( ));
     }
     else if( filePath.find( "h5" ) != std::string::npos )
     {
       std::cout << "Loading H5 file: " << filePath << std::endl;
-      _openGLWidget->player( )->data( )->subsetsEvents( )->loadH5( filePath );
+      _subsetEvents->loadH5( filePath );
+
+      _subsetImporter->reload( _subsetEvents );
+
+      _openGLWidget->subsetEventsManager( _subsetEvents );
+      _openGLWidget->showEventsActivityLabels( _ui->actionShowEventsActivity->isChecked( ));
     }
     else
     {
       std::cout << "Subset Events file not found: " << filePath << std::endl;
     }
+  }
+
+  void MainWindow::openSubsetEventsFileThroughDialog( void )
+  {
+    QString filePath = QFileDialog::getOpenFileName(
+              this, tr( "Open file containing subsets/events data" ),
+              _lastOpenedSubsetsFileName,
+              tr( "JSON (*.json);; All files (*)" ),
+              nullptr, QFileDialog::DontUseNativeDialog );
+
+    if( !filePath.isEmpty( ))
+    {
+      _lastOpenedSubsetsFileName = QFileInfo( filePath ).path( );
+
+      openSubsetEventFile( filePath.toStdString( ), false );
+
+    }
+  }
+
+  void MainWindow::closeData( void )
+  {
+    //TODO
   }
 
 
@@ -506,6 +555,14 @@ namespace visimpl
       return;
 
     _selectionManager->show( );
+  }
+
+  void MainWindow::dialogSubsetImporter( void )
+  {
+    if( !_subsetImporter )
+      return;
+
+    _subsetImporter->show( );
   }
 
   void MainWindow::togglePlaybackDock( void )
@@ -684,7 +741,14 @@ namespace visimpl
 
 
     _tfWidget = new TransferFunctionWidget( );
-    _tfWidget->setMinimumHeight( 150 );
+    _tfWidget->setMinimumHeight( 100 );
+
+    _subsetImporter = new SubsetImporter( );
+    _subsetImporter->setMinimumHeight( 300 );
+    _subsetImporter->setMinimumWidth( 500 );
+
+    connect( _subsetImporter, SIGNAL( clickedAccept( void )),
+             this, SLOT( importVisualGroups( void )));
 
     _selectionManager = new SelectionManagerWidget( );
 //    _selectionManager->setWindowFlags( Qt::D );
@@ -726,13 +790,13 @@ namespace visimpl
     _alphaAccumulativeButton = new QRadioButton( "Accumulative" );
     _openGLWidget->SetAlphaBlendingAccumulative( false );
 
-    _clearSelectionButton = new QPushButton( "Discard" );
-    _clearSelectionButton->setEnabled( false );
+    _buttonClearSelection = new QPushButton( "Discard" );
+    _buttonClearSelection->setEnabled( false );
     _selectionSizeLabel = new QLabel( "0" );
 
-    _addGroupButton = new QPushButton( "Add group" );
-    _addGroupButton->setEnabled( false );
-    _addGroupButton->setToolTip( "Click to create a group from current selection.");
+    _buttonAddGroup = new QPushButton( "Add group" );
+    _buttonAddGroup->setEnabled( false );
+    _buttonAddGroup->setToolTip( "Click to create a group from current selection.");
 
     _labelGID = new QLabel( "" );
     _labelPosition = new QLabel( "" );
@@ -859,8 +923,8 @@ namespace visimpl
     selLayout->addWidget( new QLabel( "Size: " ));
     selLayout->addWidget( _selectionSizeLabel );
     selLayout->addWidget( buttonSelectionManager );
-    selLayout->addWidget( _addGroupButton );
-    selLayout->addWidget( _clearSelectionButton );
+    selLayout->addWidget( _buttonAddGroup );
+    selLayout->addWidget( _buttonClearSelection );
     selFunctionGB->setLayout( selLayout );
 
     QFrame* line = new QFrame( );
@@ -899,30 +963,35 @@ namespace visimpl
     oiLayout->addWidget( _labelPosition, 1, 1, 1, 3 );
     objectInspectoGB->setLayout( oiLayout );
 
-    _groupBoxGroups = new QGroupBox( "Current visualization groups" );
-    _groupLayout = new QGridLayout( );
+    QGroupBox* groupBoxGroups = new QGroupBox( "Current visualization groups" );
+    _groupLayout = new QVBoxLayout( );
     _groupLayout->setAlignment( Qt::AlignTop );
 
+    _buttonImportGroups = new QPushButton( "Import from..." );
+    _buttonClearGroups = new QPushButton( "Clear" );
+    _buttonClearGroups->setEnabled( false );
 
     {
       QWidget* groupContainer = new QWidget( );
       groupContainer->setLayout( _groupLayout );
 
-      QScrollArea* groupScroll = new QScrollArea( );
-      groupScroll->setWidget( groupContainer );
-      groupScroll->setWidgetResizable( true );
-      groupScroll->setFrameShape( QFrame::Shape::NoFrame );
-      groupScroll->setFrameShadow( QFrame::Shadow::Plain );
-      groupScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-      groupScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-
-//      QPushButton* buttonImportGroups = new QPushButton( );
+      QScrollArea* scrollGroups = new QScrollArea( );
+      scrollGroups->setWidget( groupContainer );
+      scrollGroups->setWidgetResizable( true );
+      scrollGroups->setFrameShape( QFrame::Shape::NoFrame );
+      scrollGroups->setFrameShadow( QFrame::Shadow::Plain );
+      scrollGroups->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
+      scrollGroups->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
 
       QGridLayout* groupOuterLayout = new QGridLayout( );
       groupOuterLayout->setMargin( 0 );
-      groupOuterLayout->addWidget( groupScroll );
+      groupOuterLayout->addWidget( _buttonImportGroups, 0, 0, 1, 1 );
+      groupOuterLayout->addWidget( _buttonClearGroups, 0, 1, 1, 1 );
 
-      _groupBoxGroups->setLayout( groupOuterLayout );
+
+      groupOuterLayout->addWidget( scrollGroups, 1, 0, 1, 2 );
+
+      groupBoxGroups->setLayout( groupOuterLayout );
     }
 
     _groupBoxAttrib = new QGroupBox( "Attribute Mapping" );
@@ -988,14 +1057,13 @@ namespace visimpl
     QWidget* containerTabGroups = new QWidget( );
     QVBoxLayout* tabGroupsLayout = new QVBoxLayout( );
     containerTabGroups->setLayout( tabGroupsLayout );
-    tabGroupsLayout->addWidget( _groupBoxGroups );
+    tabGroupsLayout->addWidget( groupBoxGroups );
 
     QWidget* containerTabAttrib = new QWidget( );
     QVBoxLayout* tabAttribLayout = new QVBoxLayout( );
     containerTabAttrib->setLayout( tabAttribLayout );
     tabAttribLayout->addWidget( _groupBoxAttrib );
 
-//TODO
     _modeSelectionWidget = new QTabWidget( );
     _modeSelectionWidget->addTab( containerTabSelection, tr( "Selection" ));
     _modeSelectionWidget->addTab( containerTabGroups, tr( "Groups" ));
@@ -1096,11 +1164,17 @@ namespace visimpl
     connect( _frameClippingColor, SIGNAL( clicked( )),
              this, SLOT( colorSelectionClicked()));
 
-    connect( _clearSelectionButton, SIGNAL( clicked( void )),
+    connect( _buttonClearSelection, SIGNAL( clicked( void )),
              this, SLOT( clearSelection( void )));
 
-    connect( _addGroupButton, SIGNAL( clicked( void )),
+    connect( _buttonAddGroup, SIGNAL( clicked( void )),
              this, SLOT( addGroupFromSelection( )));
+
+    connect( _buttonImportGroups, SIGNAL( clicked( void )),
+             this, SLOT( dialogSubsetImporter( void )));
+
+    connect( _buttonClearGroups, SIGNAL( clicked( void )),
+             this, SLOT( clearGroups( void )));
 
     _alphaNormalButton->setChecked( true );
   }
@@ -1120,10 +1194,6 @@ namespace visimpl
       _summary->Init( spikesPlayer->data( ));
 
       _summary->simulationPlayer( _openGLWidget->player( ));
-
-      _openGLWidget->subsetEventsManager( spikesPlayer->data( )->subsetsEvents( ));
-
-      _openGLWidget->showEventsActivityLabels( _ui->actionShowEventsActivity->isChecked( ));
     }
 
   }
@@ -1480,8 +1550,8 @@ namespace visimpl
   {
     auto selection = _domainManager->selection( );
 
-    _addGroupButton->setEnabled( true );
-    _clearSelectionButton->setEnabled( true );
+    _buttonAddGroup->setEnabled( true );
+    _buttonClearSelection->setEnabled( true );
     _selectionSizeLabel->setText( QString::number( selection.size( )));
     _selectionSizeLabel->update( );
 
@@ -1510,8 +1580,8 @@ namespace visimpl
       _openGLWidget->clearSelection( );
       _selectionManager->clearSelection( );
 
-      _addGroupButton->setEnabled( false );
-      _clearSelectionButton->setEnabled( false );
+      _buttonAddGroup->setEnabled( false );
+      _buttonClearSelection->setEnabled( false );
       _selectionSizeLabel->setText( "0" );
     }
   }
@@ -1616,11 +1686,96 @@ namespace visimpl
 
 #endif
 
+  void MainWindow::addGroupControls( const std::string& name,
+                                     unsigned int currentIndex,
+                                     unsigned int size )
+  {
+    QFrame* frame = new QFrame( );
+    auto colors = _openGLWidget->colorPalette( ).colors( );
+
+    frame->setStyleSheet( "background-color: " + colors[ currentIndex ].name( ) );
+    frame->setMinimumSize( 20, 20 );
+    frame->setMaximumSize( 20, 20 );
+
+    QCheckBox* buttonVisibility = new QCheckBox( "active" );
+    buttonVisibility->setChecked( true );
+
+    connect( buttonVisibility, SIGNAL( clicked( )),
+             this, SLOT( checkGroupsVisibility( )));
+
+    QWidget* container = new QWidget( );
+    QGridLayout* layout = new QGridLayout( );
+    container->setLayout( layout );
+
+    QString numberText = QString( "# ").append( QString::number( size ));
+
+    layout->addWidget( frame, 0, 0, 1, 1 );
+    layout->addWidget( new QLabel( name.c_str( )), 0, 1, 1, 1 );
+    layout->addWidget( buttonVisibility, 0, 2, 1, 1 );
+    layout->addWidget( new QLabel( numberText ), 0, 3, 1, 1 );
+
+    _groupsVisButtons.push_back( std::make_tuple( container, buttonVisibility ));
+
+    _groupLayout->addWidget( container );
+
+    _buttonClearGroups->setEnabled( true );
+  }
+
+  void MainWindow::removeGroupControls( unsigned int  )
+  {
+
+  }
+
+  void MainWindow::clearGroups( void )
+  {
+    for( auto row : _groupsVisButtons )
+    {
+      auto container = std::get< gr_container >( row );
+
+      _groupLayout->removeWidget( container );
+
+      delete container;
+
+      _domainManager->removeVisualGroup( 0 );
+    }
+
+    _groupsVisButtons.clear( );
+
+    _buttonImportGroups->setEnabled( true );
+    _buttonClearGroups->setEnabled( false );
+  }
+
+  void MainWindow::importVisualGroups( void )
+  {
+    const auto& groups = _subsetImporter->selectedSubsets( );
+
+    std::cout << "Importing " << groups.size( ) << " groups..." << std::endl;
+
+    const auto& allGIDs = _domainManager->gids( );
+
+    for( auto groupName : groups )
+    {
+      auto subset = _subsetEvents->getSubset( groupName );
+      TGIDUSet gids( subset.begin( ), subset.end( ));
+
+      GIDUSet filteredGIDs;
+      for( auto gid : gids )
+        if( allGIDs.find( gid ) != allGIDs.end( ))
+          filteredGIDs.insert( gid );
+
+      addGroupControls( groupName, _domainManager->groups( ).size( ),
+                        filteredGIDs.size( ));
+      _domainManager->addVisualGroup( filteredGIDs, groupName );
+    }
+
+    _openGLWidget->setUpdateGroups( );
+
+    _buttonImportGroups->setEnabled( false );
+  }
+
   void MainWindow::addGroupFromSelection( void )
   {
-    DomainManager* inputMux = _openGLWidget->domainManager( );
-
-    unsigned int currentIndex = inputMux->groups( ).size( );
+    unsigned int currentIndex = _domainManager->groups( ).size( );
 
     QString groupName( "Group " + QString::number( currentIndex ));
 
@@ -1638,26 +1793,10 @@ namespace visimpl
         return;
     }
 
-    _openGLWidget->addGroupFromSelection( groupName.toStdString( ));
+    addGroupControls( groupName.toStdString( ), _domainManager->groups( ).size( ),
+                      _domainManager->selection( ).size( ));
 
-    QFrame* frame = new QFrame( );
-    auto colors = _openGLWidget->colorPalette( ).colors( );
-
-    frame->setStyleSheet( "background-color: " + colors[ currentIndex ].name( ) );
-    frame->setMinimumSize( 20, 20 );
-    frame->setMaximumSize( 20, 20 );
-
-    QCheckBox* buttonVisibility = new QCheckBox( "active" );
-    buttonVisibility->setChecked( true );
-
-    _groupsVisButtons.push_back( buttonVisibility );
-
-    connect( buttonVisibility, SIGNAL( clicked( )),
-             this, SLOT( checkGroupsVisibility( )));
-
-    _groupLayout->addWidget( frame, currentIndex, 0, 1, 1 );
-    _groupLayout->addWidget( new QLabel( groupName ), currentIndex, 1, 1, 1 );
-    _groupLayout->addWidget( buttonVisibility, currentIndex, 2, 1, 1 );
+    _domainManager->addVisualGroupFromSelection( groupName.toStdString( ));
 
     _openGLWidget->setUpdateGroups( );
     _openGLWidget->update( );
@@ -1669,11 +1808,13 @@ namespace visimpl
     auto group = _openGLWidget->domainManager( )->groups( ).begin( );
     for( auto button : _groupsVisButtons )
     {
-      if( button->isChecked( ) != ( *group)->active( ) )
-      {
-        _openGLWidget->domainManager( )->setVisualGroupState( counter, button->isChecked( ));
+      auto checkBox = std::get< gr_checkbox >( button );
 
+      if( checkBox->isChecked( ) != ( *group)->active( ) )
+      {
+        _domainManager->setVisualGroupState( counter, checkBox->isChecked( ));
       }
+
       ++group;
       ++counter;
     }

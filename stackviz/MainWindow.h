@@ -83,6 +83,7 @@ namespace stackviz
 
     void openBlueConfigThroughDialog( void );
     void openCSVFilesThroughDialog( void );
+    void openSubsetEventsFileThroughDialog( void );
 
     void aboutDialog( void );
     void togglePlaybackDock( void );
@@ -139,6 +140,7 @@ namespace stackviz
     Ui::MainWindow* _ui;
 
     QString _lastOpenedFileName;
+    QString _lastOpenedSubsetsFileName;
 
     simil::TSimulationType _simulationType;
 
@@ -147,10 +149,12 @@ namespace stackviz
 
     simil::SimulationPlayer* _player;
     simil::SimulationData* _data;
-  //  simil::SubsetEventManager* _subsetEventManager;
+    simil::SubsetEventManager* _subsetEventManager;
 
     bool _autoAddAvailableSubsets;
     bool _autoCalculateCorrelations;
+    bool _autoAddEvents;
+    bool _autoAddEventSubset;
 
     // Playback Control
     QDockWidget* _dockSimulation;

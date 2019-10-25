@@ -299,6 +299,9 @@ namespace stackviz
       contLayout->addWidget( hideButton, row, 3, 1, 1 );
       contLayout->addWidget( deleteButton, row, 4, 1, 1 );
 
+      if( row == 0 )
+        deleteButton->setEnabled( false );
+
       _histogramsLayout->addWidget( container );
 
       if( row < _histData->size( ) - 1 )

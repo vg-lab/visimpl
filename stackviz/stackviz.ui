@@ -35,6 +35,8 @@
     <addaction name="actionOpenCSVFiles"/>
     <addaction name="actionCloseData"/>
     <addaction name="separator"/>
+    <addaction name="actionOpenSubsetEventsFile"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -78,6 +80,8 @@
    <addaction name="actionOpenBlueConfig"/>
    <addaction name="actionOpenCSVFiles"/>
    <addaction name="separator"/>
+   <addaction name="actionOpenSubsetEventsFile"/>
+   <addaction name="separator"/>
    <addaction name="actionTogglePlaybackDock"/>
    <addaction name="actionCloseData"/>
    <addaction name="actionShowDataManager"/>
@@ -106,7 +110,7 @@
      <normaloff>:/icons/open_bc.png</normaloff>:/icons/open_bc.png</iconset>
    </property>
    <property name="text">
-    <string>Open BlueConfig</string>
+    <string>Open BlueConfig...</string>
    </property>
    <property name="toolTip">
     <string>Open BlueConfig</string>
@@ -229,10 +233,22 @@
      <normaloff>:/icons/folder.png</normaloff>:/icons/folder.png</iconset>
    </property>
    <property name="text">
-    <string>Open CSV Files</string>
+    <string>Open CSV Files...</string>
    </property>
    <property name="toolTip">
     <string>Open CSV Files</string>
+   </property>
+  </action>
+  <action name="actionOpenSubsetEventsFile">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/folder-doc.png</normaloff>:/icons/folder-doc.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open Subset Events File...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open subset/events file</string>
    </property>
   </action>
  </widget>

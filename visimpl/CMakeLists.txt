@@ -44,6 +44,7 @@ set(VISIMPL_SOURCES
   DomainManager.cpp
 
   SelectionManagerWidget.cpp
+  SubsetImporter.cpp
 
   prefr/ColorSource.cpp
   prefr/ColorOperationModel.cpp
@@ -63,6 +64,7 @@ set(VISIMPL_HEADERS
   DomainManager.h
 
   SelectionManagerWidget.h
+  SubsetImporter.h
 
   prefr/PrefrShaders.h
   prefr/ColorSource.h

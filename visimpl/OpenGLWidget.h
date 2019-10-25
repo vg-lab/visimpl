@@ -110,7 +110,6 @@ namespace visimpl
     float currentTime( void );
 
     void setGroupVisibility( unsigned int i, bool state );
-    void addGroupFromSelection( const std::string& name );
 
     void circuitScaleFactor( vec3 scale_, bool update = true );
     vec3 circuitScaleFactor( void ) const;

@@ -59,8 +59,11 @@ namespace stackviz
   , _summary( nullptr )
   , _player( nullptr )
   , _data( nullptr )
+  , _subsetEventManager( nullptr )
   , _autoAddAvailableSubsets( true )
   , _autoCalculateCorrelations( false )
+  , _autoAddEvents( true )
+  , _autoAddEventSubset( true )
   , _dockSimulation( nullptr )
   , _playButton( nullptr )
   , _simSlider( nullptr )
@@ -89,12 +92,12 @@ namespace stackviz
     _ui->actionOpenBlueConfig->setEnabled( false );
   #endif
 
-    connect( _ui->actionQuit, SIGNAL( triggered( )),
-             QApplication::instance(), SLOT( quit( )));
+    connect( _ui->actionQuit, SIGNAL( triggered( void )),
+             QApplication::instance(), SLOT( quit( void )));
 
     // Connect about dialog
-    connect( _ui->actionAbout, SIGNAL( triggered( )),
-             this, SLOT( aboutDialog( )));
+    connect( _ui->actionAbout, SIGNAL( triggered( void )),
+             this, SLOT( aboutDialog( void )));
 
     _columnsNumber = 100;
     resizingEnabled = false;
@@ -108,22 +111,25 @@ namespace stackviz
     )
   {
 
-    connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( )),
-             this, SLOT( openBlueConfigThroughDialog( )));
+    connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( void )),
+             this, SLOT( openBlueConfigThroughDialog( void )));
 
-    connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( )),
-             this, SLOT( openCSVFilesThroughDialog( )));
+    connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( void )),
+             this, SLOT( openCSVFilesThroughDialog( void )));
+
+    connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void )),
+             this, SLOT( openSubsetEventsFileThroughDialog( void )));
 
     initPlaybackDock( );
 
     connect( _dockSimulation->toggleViewAction( ), SIGNAL( toggled( bool )),
                _ui->actionTogglePlaybackDock, SLOT( setChecked( bool )));
 
-    connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( )),
-             this, SLOT( togglePlaybackDock( )));
+    connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( void )),
+             this, SLOT( togglePlaybackDock( void )));
 
-    connect( _ui->actionShowDataManager, SIGNAL( triggered( )),
-             this, SLOT( showDisplayManagerWidget( )));
+    connect( _ui->actionShowDataManager, SIGNAL( triggered( void )),
+             this, SLOT( showDisplayManagerWidget( void )));
 
     #ifdef VISIMPL_USE_ZEROEQ
 
@@ -170,7 +176,8 @@ namespace stackviz
        player->LoadData( _data );
        _player = player;
 
-  //     _player->deltaTime( _deltaTime );
+       _subsetEventManager = _player->data( )->subsetsEvents( );
+
        break;
      }
      case simil::TSimVoltages:
@@ -193,26 +200,99 @@ namespace stackviz
     configurePlayer( );
     initSummaryWidget( );
 
+    if( _autoAddEvents )
+      _summary->generateEventsRep( );
+
+    if( _autoAddEventSubset )
+      _summary->importSubsetsFromSubsetMngr( );
+
+    if( _displayManager )
+      _displayManager->refresh( );
+  }
+
+  void MainWindow::openHDF5File( const std::string& networkFile,
+                                 simil::TSimulationType simulationType,
+                                 const std::string& activityFile,
+                                 const std::string& subsetEventFile )
+  {
+    _simulationType = simulationType;
+
+    simil::SpikesPlayer* player = new simil::SpikesPlayer( );
+    player->LoadData( simil::TDataType::THDF5,  networkFile, activityFile );
+    _player = player;
+
+    _subsetEventManager = _player->data( )->subsetsEvents( );
+
+    if( !subsetEventFile.empty( ))
+    {
+      openSubsetEventFile( subsetEventFile, true );
+    }
+
+    configurePlayer( );
+    initSummaryWidget( );
+
+    if( _autoAddEvents )
+      _summary->generateEventsRep( );
+
+    if( _autoAddEventSubset )
+      _summary->importSubsetsFromSubsetMngr( );
+
+    if( _displayManager )
+      _displayManager->refresh( );
+  }
+
+  void MainWindow::openCSVFile( const std::string& networkFile,
+                                simil::TSimulationType simulationType,
+                                const std::string& activityFile,
+                                const std::string& subsetEventFile )
+  {
+    _simulationType = simulationType;
+
+    simil::SpikesPlayer* player = new simil::SpikesPlayer( );
+    _player = player;
+
+    player->LoadData( simil::TDataType::TCSV, networkFile, activityFile );
+
+    _subsetEventManager = _player->data( )->subsetsEvents( );
+
+    if( !subsetEventFile.empty( ))
+    {
+      openSubsetEventFile( subsetEventFile, true );
+    }
+
+    configurePlayer( );
+    initSummaryWidget( );
+
+    if( _autoAddEvents )
+      _summary->generateEventsRep( );
+
+    if( _autoAddEventSubset )
+      _summary->importSubsetsFromSubsetMngr( );
+
+    if( _displayManager )
+      _displayManager->refresh( );
   }
 
   void MainWindow::openSubsetEventFile( const std::string& filePath,
                                         bool append )
   {
-    if( filePath.empty( ))
+    if( filePath.empty( ) || !_subsetEventManager )
       return;
 
     if( !append )
-      _player->data( )->subsetsEvents( )->clear( );
+      _subsetEventManager->clear( );
+
+    _summary->clearEvents( );
 
     if( filePath.find( "json" ) != std::string::npos )
     {
       std::cout << "Loading JSON file: " << filePath << std::endl;
-      _player->data( )->subsetsEvents( )->loadJSON( filePath );
+      _subsetEventManager->loadJSON( filePath );
     }
     else if( filePath.find( "h5" ) != std::string::npos )
     {
       std::cout << "Loading H5 file: " << filePath << std::endl;
-      _player->data( )->subsetsEvents( )->loadH5( filePath );
+      _subsetEventManager->loadH5( filePath );
       _autoCalculateCorrelations = true;
     }
     else
@@ -231,12 +311,12 @@ namespace stackviz
        tr( "BlueConfig ( BlueConfig CircuitConfig);; All files (*)" ),
        nullptr, QFileDialog::DontUseNativeDialog );
 
-     if (path != QString( "" ))
+     if( !path.isEmpty( ))
      {
        bool ok1, ok2;
        QInputDialog simTypeDialog;
        simil::TSimulationType simType;
-       QStringList items = {"Spikes", "Voltages"};
+       QStringList items = {"Spikes"};//, "Voltages"};
 
        QString text = QInputDialog::getItem(
          this, tr( "Please select simulation type" ),
@@ -282,7 +362,7 @@ namespace stackviz
           tr( "CSV (*.csv);; All files (*)" ),
           nullptr, QFileDialog::DontUseNativeDialog );
 
-    if( pathNetwork != QString( "" ))
+    if( !pathNetwork.isEmpty( ))
     {
       simil::TSimulationType simType = simil::TSimSpikes;
 
@@ -294,8 +374,7 @@ namespace stackviz
 
       if ( !pathActivity.isEmpty( ))
       {
-  //      std::string targetLabel = text.toStdString( );
-        _lastOpenedFileName = QFileInfo(pathNetwork).path( );
+        _lastOpenedFileName = QFileInfo( pathNetwork ).path( );
         std::string networkFile = pathNetwork.toStdString( );
         std::string activityFile = pathActivity.toStdString( );
         openCSVFile( networkFile, simType, activityFile );
@@ -305,86 +384,47 @@ namespace stackviz
     }
   }
 
-  void MainWindow::aboutDialog( void )
+  void MainWindow::openSubsetEventsFileThroughDialog( void )
   {
+    QString filePath = QFileDialog::getOpenFileName(
+              this, tr( "Open file containing subsets/events data" ),
+              _lastOpenedSubsetsFileName,
+              tr( "JSON (*.json);; All files (*)" ),
+              nullptr, QFileDialog::DontUseNativeDialog );
 
-    QString msj = 
-      QString( "<h2>ViSimpl - StackViz</h2>" ) +
-      tr( "A multi-view visual analyzer of brain simulation data. " ) + 
-      "<br>" + 
-      tr( "Version " ) + stackviz::Version::getString( ).c_str( ) +
-      tr( " rev (%1)<br>").arg(stackviz::Version::getRevision( )) +
-      "<a href='https://gmrv.es/visimpl/'>https://gmrv.es/visimpl</a>" + 
-      "<h4>" + tr( "Build info:" ) + "</h4>" +
-      "<ul>"
-    
-#ifdef VISIMPL_USE_DEFLECT
-    "</li><li>Deflect " + DEFLECT_REV_STRING +
-#else
-    "</li><li>Deflect " + tr ("support not built.") +
-#endif
+    if( !filePath.isEmpty( ))
+    {
+      _lastOpenedSubsetsFileName = QFileInfo( filePath ).path( );
 
-#ifdef VISIMPL_USE_FIRES
-    "</li><li>FiReS " + FIRES_REV_STRING +
-#else
-    "</li><li>FiReS " + tr ("support not built.") +
-#endif
+      openSubsetEventFile( filePath.toStdString( ), false );
 
-#ifdef VISIMPL_USE_GMRVLEX
-    "</li><li>GmrvLex " + GMRVLEX_REV_STRING +
-#else
-    "</li><li>GmrvLex " + tr ("support not built.") +
-#endif
+      _summary->generateEventsRep( );
+      _summary->importSubsetsFromSubsetMngr( );
 
-#ifdef VISIMPL_USE_NSOL
-    "</li><li>Nsol " + NSOL_REV_STRING +
-#else
-    "</li><li>Nsol " + tr ("support not built.") +
-#endif
+      if( _displayManager )
+        _displayManager->refresh( );
 
-#ifdef VISIMPL_USE_PREFR
-    "</li><li>prefr " + PREFR_REV_STRING +     
-#else
-    "</li><li>prefr " + tr ("support not built.") +
-#endif
+    }
+  }
 
-#ifdef VISIMPL_USE_RETO
-    "</li><li>ReTo " + RETO_REV_STRING +     
-#else
-    "</li><li>ReTo " + tr ("support not built.") +
-#endif
+  void MainWindow::configurePlayer( void )
+  {
+    _startTimeLabel->setText(
+        QString::number( (double)_player->startTime( )));
 
-#ifdef VISIMPL_USE_SCOOP
-    "</li><li>Scoop " + SCOOP_REV_STRING +     
-#else
-    "</li><li>Scoop " + tr ("support not built.") +
-#endif
+    _endTimeLabel->setText(
+          QString::number( (double)_player->endTime( )));
 
-#ifdef VISIMPL_USE_SIMIL
-    "</li><li>SimIL " + SIMIL_REV_STRING +     
-#else
-    "</li><li>SimIL " + tr ("support not built.") +
-#endif
+  #ifdef SIMIL_USE_ZEROEQ
+    _player->connectZeq( _zeqUri );
 
-#ifdef VISIMPL_USE_ZEROEQ
-    "</li><li>ZeroEQ " + ZEROEQ_REV_STRING +
-#else
-    "</li><li>ZeroEQ " + tr ("support not built.") +
-#endif
+    _player->zeqEvents( )->frameReceived.connect(
+        boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
 
-    "</li></ul>" +
-    "<h4>" + tr( "Developed by:" ) + "</h4>" +
-    "GMRV / URJC / UPM"
-    "<br><a href='https://gmrv.es/gmrvvis'>https://gmrv.es/gmrvvis</a>"
-    //"<br><a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
-    "<br>(C) 2015-2017<br><br>"
-    "<a href='https://gmrv.es/gmrvvis'><img src=':/icons/logoGMRV.png'/></a>"
-    "&nbsp;&nbsp;&nbsp;&nbsp;"
-    "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
-    "&nbsp;&nbsp;&nbsp;&nbsp;"
-    "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
-    
-    QMessageBox::about(this, tr( "About StackViz" ), msj );
+    _player->zeqEvents( )->playbackOpReceived.connect(
+        boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+  #endif
+
   }
 
   void MainWindow::togglePlaybackDock( void )
@@ -423,70 +463,6 @@ namespace stackviz
     _displayManager->refresh( );
 
     _displayManager->show( );
-  }
-
-  void MainWindow::openHDF5File( const std::string& networkFile,
-                                 simil::TSimulationType simulationType,
-                                 const std::string& activityFile,
-                                 const std::string& subsetEventFile )
-  {
-    _simulationType = simulationType;
-
-    simil::SpikesPlayer* player = new simil::SpikesPlayer( );
-    player->LoadData( simil::TDataType::THDF5,  networkFile, activityFile );
-    _player = player;
-
-    if( !subsetEventFile.empty( ))
-    {
-      openSubsetEventFile( subsetEventFile, true );
-    }
-
-    configurePlayer( );
-    initSummaryWidget( );
-  }
-
-  void MainWindow::openCSVFile( const std::string& networkFile,
-                                simil::TSimulationType simulationType,
-                                const std::string& activityFile,
-                                const std::string& subsetEventFile )
-  {
-    _simulationType = simulationType;
-
-    simil::SpikesPlayer* player = new simil::SpikesPlayer( );
-    _player = player;
-
-    player->LoadData( simil::TDataType::TCSV, networkFile, activityFile );
-
-    if( !subsetEventFile.empty( ))
-    {
-      openSubsetEventFile( subsetEventFile, true );
-    }
-
-    configurePlayer( );
-    initSummaryWidget( );
-  }
-
-  void MainWindow::configurePlayer( void )
-  {
-    _startTimeLabel->setText(
-        QString::number( (double)_player->startTime( )));
-
-    _endTimeLabel->setText(
-          QString::number( (double)_player->endTime( )));
-
-  #ifdef SIMIL_USE_ZEROEQ
-    _player->connectZeq( _zeqUri );
-
-    _player->zeqEvents( )->frameReceived.connect(
-        boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
-
-    _player->zeqEvents( )->playbackOpReceived.connect(
-        boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
-  #endif
-
-
-   // changeEditorColorMapping( );
-
   }
 
   void MainWindow::initPlaybackDock( )
@@ -1042,7 +1018,7 @@ namespace stackviz
   {
     visimpl::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
 
-    auto eventNames = _player->data( )->subsetsEvents( )->eventNames( );
+    auto eventNames = _subsetEventManager->eventNames( );
 
     double deltaTime = 0.125;
 
@@ -1068,6 +1044,88 @@ namespace stackviz
     }
 
 
+  }
+
+  void MainWindow::aboutDialog( void )
+  {
+
+    QString msj =
+      QString( "<h2>ViSimpl - StackViz</h2>" ) +
+      tr( "A multi-view visual analyzer of brain simulation data. " ) +
+      "<br>" +
+      tr( "Version " ) + stackviz::Version::getString( ).c_str( ) +
+      tr( " rev (%1)<br>").arg(stackviz::Version::getRevision( )) +
+      "<a href='https://gmrv.es/visimpl/'>https://gmrv.es/visimpl</a>" +
+      "<h4>" + tr( "Build info:" ) + "</h4>" +
+      "<ul>"
+
+#ifdef VISIMPL_USE_DEFLECT
+    "</li><li>Deflect " + DEFLECT_REV_STRING +
+#else
+    "</li><li>Deflect " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_FIRES
+    "</li><li>FiReS " + FIRES_REV_STRING +
+#else
+    "</li><li>FiReS " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_GMRVLEX
+    "</li><li>GmrvLex " + GMRVLEX_REV_STRING +
+#else
+    "</li><li>GmrvLex " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_NSOL
+    "</li><li>Nsol " + NSOL_REV_STRING +
+#else
+    "</li><li>Nsol " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_PREFR
+    "</li><li>prefr " + PREFR_REV_STRING +
+#else
+    "</li><li>prefr " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_RETO
+    "</li><li>ReTo " + RETO_REV_STRING +
+#else
+    "</li><li>ReTo " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_SCOOP
+    "</li><li>Scoop " + SCOOP_REV_STRING +
+#else
+    "</li><li>Scoop " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_SIMIL
+    "</li><li>SimIL " + SIMIL_REV_STRING +
+#else
+    "</li><li>SimIL " + tr ("support not built.") +
+#endif
+
+#ifdef VISIMPL_USE_ZEROEQ
+    "</li><li>ZeroEQ " + ZEROEQ_REV_STRING +
+#else
+    "</li><li>ZeroEQ " + tr ("support not built.") +
+#endif
+
+    "</li></ul>" +
+    "<h4>" + tr( "Developed by:" ) + "</h4>" +
+    "GMRV / URJC / UPM"
+    "<br><a href='https://gmrv.es/gmrvvis'>https://gmrv.es/gmrvvis</a>"
+    //"<br><a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
+    "<br>(C) 2015-2017<br><br>"
+    "<a href='https://gmrv.es/gmrvvis'><img src=':/icons/logoGMRV.png'/></a>"
+    "&nbsp;&nbsp;&nbsp;&nbsp;"
+    "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
+    "&nbsp;&nbsp;&nbsp;&nbsp;"
+    "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
+
+    QMessageBox::about(this, tr( "About StackViz" ), msj );
   }
 
 } // namespace stackviz

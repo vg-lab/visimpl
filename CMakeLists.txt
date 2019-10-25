@@ -9,8 +9,8 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 0.1.3 )
-set( visimpl_VERSION_ABI 4 )
+project( visimpl VERSION 0.1.4 )
+set( visimpl_VERSION_ABI 5 )
 
 SET( VISIMPL_LICENSE "GPL")
 
