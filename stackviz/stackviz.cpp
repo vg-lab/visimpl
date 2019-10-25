@@ -133,10 +133,10 @@ int main( int argc, char** argv )
         usageMessage( argv[0] );
     }
 
-    if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
-    {
-       simType = simil::TSimSpikes;
-    }
+//    if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
+//    {
+//       simType = simil::TSimSpikes;
+//    }
 
     if( strcmp( argv[ i ], "-se" ) == 0 )
     {
@@ -220,13 +220,14 @@ void usageMessage( char* progName )
   std::cerr << std::endl
             << "Usage: "
             << progName << std::endl
-            << "\t[ -bc blue_config_path [-target target_name]"
+            << "\t[ -bc <blue_config_path> [-target <target_name>] | "
+            << "-csv <network_path> <activity_path> ] "
             << std::endl
-            << "\t[ -spikes ] "
+            << "\t[ -se <subset_events_file> ] "
             << std::endl
-            << "\t[ -zeq schema* ]"
+            << "\t[ -zeq <session_name*> ]"
             << std::endl
-            << "\t[ -ws | --window-size ] width height ]"
+            << "\t[ -ws | --window-size ] <width> <height> ]"
             << std::endl
             << "\t[ -fs | --fullscreen ] "
             << std::endl
@@ -236,7 +237,7 @@ void usageMessage( char* progName )
             << std::endl
             << "\t[ --help | -h ]"
             << std::endl << std::endl
-            << "* schema: for example hbp://"
+            << "* session_name: for example test://"
             << std::endl << std::endl;
   exit(-1);
 }

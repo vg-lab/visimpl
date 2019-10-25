@@ -245,13 +245,15 @@ void usageMessage( char* progName )
             << "\t[ -bc <blue_config_path> [-target <target> ] | "
             << "-csv <network_path> <activity_path> ] "
             << std::endl
+            << "\t[ -se <subset_events_file> ] "
+            << std::endl
 //            << "\t[ -spikes ] "
 //            << std::endl
 //            << "\t[ -voltage report_label ] "
 //            << std::endl
             << "\t[ -scale <X,Y,Z> ]"
             << std::endl
-            << "\t[ -zeq <session_name> ]"
+            << "\t[ -zeq <session_name*> ]"
             << std::endl
             << "\t[ -ws | --window-size ] <width> <height> ]"
             << std::endl
