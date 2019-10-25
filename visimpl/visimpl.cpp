@@ -243,15 +243,17 @@ void usageMessage( char* progName )
             << "Usage: "
             << progName << std::endl
             << "\t[ -bc <blue_config_path> [-target <target> ] | "
-            << "-csv <network_path> <activity_path>"
+            << "-csv <network_path> <activity_path> ] "
             << std::endl
 //            << "\t[ -spikes ] "
 //            << std::endl
 //            << "\t[ -voltage report_label ] "
 //            << std::endl
-            << "\t[ -zeq schema* ]"
+            << "\t[ -scale <X,Y,Z> ]"
             << std::endl
-            << "\t[ -ws | --window-size ] width height ]"
+            << "\t[ -zeq <session_name> ]"
+            << std::endl
+            << "\t[ -ws | --window-size ] <width> <height> ]"
             << std::endl
             << "\t[ -fs | --fullscreen ] "
             << std::endl
@@ -261,7 +263,7 @@ void usageMessage( char* progName )
             << std::endl
             << "\t[ --help | -h ]"
             << std::endl << std::endl
-            << "* schema: for example hbp://"
+            << "* session_name: for example test://"
             << std::endl << std::endl;
   exit(-1);
 }

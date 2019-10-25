@@ -74,9 +74,12 @@ namespace visimpl
     void openBlueConfigThroughDialog( void );
     void openCSVFilesThroughDialog( void );
     void openHDF5ThroughDialog( void );
+    void openSubsetEventsFileThroughDialog( void );
 
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
+
+    void closeData( void );
 
     void dialogAbout( void );
     void dialogSelectionManagement( void );
@@ -201,7 +204,9 @@ namespace visimpl
 
     Ui::MainWindow* _ui;
 
-    QString _lastOpenedFileName;
+    QString _lastOpenedNetworkFileName;
+    QString _lastOpenedActivityFileName;
+    QString _lastOpenedSubsetsFileName;
     QIcon _playIcon;
     QIcon _pauseIcon;
 
@@ -247,8 +252,8 @@ namespace visimpl
 
     QPushButton* _buttonImportGroups;
     QPushButton* _buttonClearGroups;
-    QPushButton* _addGroupButton;
-    QPushButton* _clearSelectionButton;
+    QPushButton* _buttonAddGroup;
+    QPushButton* _buttonClearSelection;
     QLabel* _selectionSizeLabel;
 
     QRadioButton* _alphaNormalButton;
