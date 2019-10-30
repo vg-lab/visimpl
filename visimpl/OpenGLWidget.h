@@ -386,6 +386,7 @@ namespace visimpl
     bool _flagUpdateGroups;
     bool _flagUpdateAttributes;
     bool _flagPickingSingle;
+    bool _flagPickingHighlighted;
     bool _flagChangeShader;
     bool _flagUpdateRender;
 
