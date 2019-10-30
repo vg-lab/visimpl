@@ -126,6 +126,7 @@ namespace visimpl
   , _flagUpdateGroups( false )
   , _flagUpdateAttributes( false )
   , _flagPickingSingle( false )
+  , _flagPickingHighlighted( false )
   , _flagChangeShader( false )
   , _flagUpdateRender( false )
   , _flagModeChange( false )
@@ -1040,11 +1041,15 @@ namespace visimpl
 
     _flagPickingSingle = false;
 
-    if( result == 0 || ( result - 1 == _selectedPickingSingle ))
+    if( result == 0 || ( result - 1 == _selectedPickingSingle && _flagPickingHighlighted ))
     {
       _domainManager->clearHighlighting( );
+      _flagUpdateRender = true;
+      _flagPickingHighlighted = false;
       return;
     }
+
+    _flagPickingHighlighted = true;
 
     _selectedPickingSingle = result - 1;
 
@@ -1452,13 +1457,21 @@ namespace visimpl
 
     if ( event_->button( ) == Qt::LeftButton )
     {
-      if( event_->modifiers( ) == Qt::CTRL )
+      if( event_->modifiers( ) == ( Qt::SHIFT | Qt::CTRL ) && _clipping )
+      {
+        _translationPlanes = true;
+        _mouseX = event_->x( );
+        _mouseY = event_->y( );
+      }
+      else if( event_->modifiers( ) == Qt::CTRL )
       {
         _pickingPosition = event_->pos( );
 
-        _pickingPosition.setY( height() - _pickingPosition.y( ) );
-
-        _flagPickingSingle = true;
+        {
+          _translation = true;
+          _mouseX = event_->x( );
+          _mouseY = event_->y( );
+        }
       }
       else if( event_->modifiers( ) == Qt::SHIFT && _clipping )
       {
@@ -1473,22 +1486,6 @@ namespace visimpl
         _mouseY = event_->y( );
       }
     }
-    else if ( event_->button( ) ==  Qt::RightButton )
-    {
-      if( event_->modifiers( ) == Qt::SHIFT && _clipping )
-      {
-        _translationPlanes = true;
-        _mouseX = event_->x( );
-        _mouseY = event_->y( );
-      }
-      else
-      {
-        _translation = true;
-        _mouseX = event_->x( );
-        _mouseY = event_->y( );
-      }
-    }
-
 
 
     update( );
@@ -1497,14 +1494,24 @@ namespace visimpl
 
   void OpenGLWidget::mouseReleaseEvent( QMouseEvent* event_ )
   {
+
+    if( event_->modifiers( ) == Qt::CTRL )
+    {
+      if( _pickingPosition == event_->pos( ))
+      {
+        _pickingPosition.setY( height() - _pickingPosition.y( ) );
+
+        _flagPickingSingle = true;
+      }
+
+      _translation = false;
+      _translationPlanes = false;
+    }
+
     if ( event_->button( ) == Qt::LeftButton)
     {
       _rotation = false;
       _rotationPlanes = false;
-    }
-    if ( event_->button( ) ==  Qt::RightButton )
-    {
-      _translation = false;
     }
 
     update( );
