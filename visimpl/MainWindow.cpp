@@ -252,8 +252,6 @@ namespace visimpl
     _selectionManager->setGIDs( _domainManager->gids( ));
 
     _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
-
-    _subsetImporter->reload( _subsetEvents );
   }
 
   void MainWindow::openBlueConfig( const std::string& fileName,
@@ -265,15 +263,15 @@ namespace visimpl
                              simil::TDataType::TBlueConfig,
                              simulationType, reportLabel );
 
-    openSubsetEventFile( subsetEventFile, true );
+    configureComponents( );
+
+    openSubsetEventFile( subsetEventFile, false );
 
     _configurePlayer( );
 
     QStringList attributes = { "Morphological type", "Functional type" };
 
     _comboAttribSelection->addItems( attributes );
-
-    configureComponents( );
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -353,11 +351,11 @@ namespace visimpl
                              simulationType,
                              activityFile );
 
-    openSubsetEventFile( subsetEventFile, true );
+    configureComponents( );
+
+    openSubsetEventFile( subsetEventFile, false );
 
     _configurePlayer( );
-
-    configureComponents( );
   }
 
   void MainWindow::openCSVFile( const std::string& networkFile,
@@ -370,11 +368,11 @@ namespace visimpl
                              simulationType,
                              activityFile );
 
-    openSubsetEventFile( subsetEventFile, true );
+    configureComponents( );
+
+    openSubsetEventFile( subsetEventFile, false );
 
     _configurePlayer( );
-
-    configureComponents( );
   }
 
 

@@ -195,10 +195,10 @@ namespace stackviz
 
    }
 
-    openSubsetEventFile( subsetEventFile, true );
-
     configurePlayer( );
     initSummaryWidget( );
+
+    openSubsetEventFile( subsetEventFile, true );
 
     if( _autoAddEvents )
       _summary->generateEventsRep( );
@@ -223,13 +223,10 @@ namespace stackviz
 
     _subsetEventManager = _player->data( )->subsetsEvents( );
 
-    if( !subsetEventFile.empty( ))
-    {
-      openSubsetEventFile( subsetEventFile, true );
-    }
-
     configurePlayer( );
     initSummaryWidget( );
+
+    openSubsetEventFile( subsetEventFile, true );
 
     if( _autoAddEvents )
       _summary->generateEventsRep( );
@@ -255,13 +252,10 @@ namespace stackviz
 
     _subsetEventManager = _player->data( )->subsetsEvents( );
 
-    if( !subsetEventFile.empty( ))
-    {
-      openSubsetEventFile( subsetEventFile, true );
-    }
-
     configurePlayer( );
     initSummaryWidget( );
+
+    openSubsetEventFile( subsetEventFile, true );
 
     if( _autoAddEvents )
       _summary->generateEventsRep( );
