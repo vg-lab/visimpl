@@ -99,6 +99,11 @@ namespace visimpl
                    simil::TSimulationType simulationType = simil::TSimSpikes,
                    const std::string& report = std::string( "" ));
 
+    void loadRestData( const std::string& url,
+                   const simil::TDataType ,
+                   simil::TSimulationType simulationType,
+                   const std::string& port);
+
     void idleUpdate( bool idleUpdate_ = true );
 
     TPlaybackMode playbackMode( void );
@@ -135,6 +140,8 @@ namespace visimpl
     void pickedSingle( unsigned int );
 
   public slots:
+
+    void updateData( void );
 
     void home( void );
     void updateCameraBoundingBox( bool setBoundingBox = false );
@@ -318,6 +325,7 @@ namespace visimpl
     prefr::GLPickRenderer* _pickRenderer;
 
     simil::TSimulationType _simulationType;
+    simil::LoaderSimData* _importer;
     simil::SpikesPlayer* _player;
 
     reto::ClippingPlane* _clippingPlaneLeft;

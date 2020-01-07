@@ -20,6 +20,7 @@
 #include "OpenGLWidget.h"
 #include "SelectionManagerWidget.h"
 #include "SubsetImporter.h"
+#include "ui/DataInspector.h"
 
 #include <sumrice/sumrice.h>
 
@@ -67,6 +68,11 @@ namespace visimpl
     void openCSVFile( const std::string& networkFile,
                       simil::TSimulationType simulationType,
                       const std::string& activityFile = "",
+                      const std::string& subsetEventFile = "" );
+
+    void openRestListener( const std::string& url,
+                      simil::TSimulationType simulationType,
+                      const std::string& port = "",
                       const std::string& subsetEventFile = "" );
 
   public slots:
@@ -229,6 +235,8 @@ namespace visimpl
 
     QTabWidget* _modeSelectionWidget;
     QToolBox* _toolBoxOptions;
+
+    DataInspector * _objectInspectoGB;
 
     QGroupBox* _groupBoxTransferFunction;
     TransferFunctionWidget* _tfWidget;

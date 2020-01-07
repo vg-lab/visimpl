@@ -53,6 +53,8 @@ set(VISIMPL_SOURCES
 
   render/Plane.cpp
 
+
+    ui/DataInspector.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -72,7 +74,9 @@ set(VISIMPL_HEADERS
   prefr/SourceMultiPosition.h
   prefr/UpdaterStaticPosition.h
 
-  render/Plane.cpp
+  render/Plane.h
+
+  ui/DataInspector.h
   
 )
 

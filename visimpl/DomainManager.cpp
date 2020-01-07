@@ -405,6 +405,17 @@ namespace visimpl
 
   }
 
+  void DomainManager::updateData(const TGIDSet& gids,
+                                 const tGidPosMap& positions)
+  {
+      _gids = gids;
+      _gidPositions = positions;
+
+      _sourceSelected->setPositions( _gidPositions );
+      reloadPositions();
+
+  }
+
   void DomainManager::_resetBoundingBox( void )
   {
     _boundingBox.first = glm::vec3( std::numeric_limits< float >::max( ),

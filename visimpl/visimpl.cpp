@@ -113,6 +113,17 @@ int main( int argc, char** argv )
         dataType = simil::TCSV;
       }
     }
+    else if( std::strcmp( argv[ i ], "-rest") == 0 )
+    {
+      if( i + 2 < argc )
+      {
+        ++i;
+        networkFile = std::string( argv[ i ]);
+        ++i;
+        activityFile = std::string( argv[ i ]);
+        dataType = simil::TREST;
+      }
+    }
 
     if( strcmp( argv[ i ], "-se" ) == 0 )
     {
@@ -229,6 +240,9 @@ int main( int argc, char** argv )
     case simil::TDataType::TCSV:
       mainWindow.openCSVFile( networkFile, simType, activityFile, subsetEventFile );
       break;
+    case simil::TDataType::TREST:
+    mainWindow.openRestListener( networkFile, simType, activityFile, subsetEventFile );
+    break;
     default:
       break;
   }
@@ -244,6 +258,8 @@ void usageMessage( char* progName )
             << progName << std::endl
             << "\t[ -bc <blue_config_path> [-target <target> ] | "
             << "-csv <network_path> <activity_path> ] "
+            << std::endl
+            << "-rest <url> <port> ] "
             << std::endl
             << "\t[ -se <subset_events_file> ] "
             << std::endl

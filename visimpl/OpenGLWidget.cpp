@@ -291,6 +291,88 @@ namespace visimpl
     auto gids = spPlayer->gids( );
     auto positions = spPlayer->positions( );
 
+
+    auto gidit = gids.begin( );
+    for( auto pos : positions )
+    {
+      vec3 position( pos.x( ), pos.y( ), pos.z( ));
+
+      gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
+      ++gidit;
+    }
+
+    createParticleSystem( gidPositions );
+
+    simulationDeltaTime( std::get< T_DELTATIME >( config ) );
+    simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
+    changeSimulationDecayValue( std::get< T_DECAY >( config ) );
+
+  #ifdef VISIMPL_USE_ZEROEQ
+    _player->connectZeq( _zeqUri );
+  #endif
+    this->_paint = true;
+    update( );
+
+  }
+
+  void OpenGLWidget::loadRestData( const std::string& url,
+                               const simil::TDataType ,
+                               simil::TSimulationType simulationType,
+                               const std::string& port)
+  {
+
+    makeCurrent( );
+
+    _simulationType = simulationType;
+
+    _deltaTime = 0.5f;
+
+
+
+    _importer = new simil::LoaderRestData( );
+
+    std::cout << "--------------------------------------" << std::endl;
+    std::cout << "Network" << std::endl;
+    std::cout << "--------------------------------------" << std::endl;
+
+    simil::SimulationData* simData = _importer->loadSimulationData(url,port);
+
+    simil::Network* netData = _importer->loadNetwork(url,port);
+
+    std::cout << "Loaded GIDS: " << netData->gids( ).size( ) << std::endl;
+    std::cout << "Loaded positions: " << netData->positions( ).size( )
+              << std::endl;
+
+    std::cout << "--------------------------------------" << std::endl;
+    std::cout << "Spikes" << std::endl;
+    std::cout << "--------------------------------------" << std::endl;
+
+
+    simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer();
+    spPlayer->LoadData( netData, simData );
+    _player = spPlayer;
+//    _player->deltaTime( _deltaTime );
+
+
+    InitialConfig config;
+    float scale = 1.0f;
+
+    config = _initialConfigSimCSV;
+
+    scale = std::get< T_SCALE >( config );
+
+    if( !_scaleFactorExternal )
+      _scaleFactor = vec3( scale, scale, scale );
+
+    std::cout << "Using scale factor of " << _scaleFactor.x
+              << ", " << _scaleFactor.y
+              << ", " << _scaleFactor.z
+              << std::endl;
+
+    tGidPosMap gidPositions;
+    auto gids = _player->gids( );
+    auto positions = _player->positions( );
+
     auto gidit = gids.begin( );
     for( auto pos : positions )
     {
@@ -535,9 +617,9 @@ namespace visimpl
 
 
 
-    unsigned int maxParticles = _player->gids( ).size( );
+    //unsigned int maxParticles = _player->gids( ).size( );
 
-    _particleSystem = new prefr::ParticleSystem( maxParticles * 2, _camera );
+    _particleSystem = new prefr::ParticleSystem( 200000, _camera );//TODO
     _flagResetParticles = true;
 
     _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
@@ -998,6 +1080,29 @@ namespace visimpl
   {
     _selectedGIDs.clear( );
     _flagUpdateSelection = true;
+  }
+
+  void OpenGLWidget::updateData()
+  {
+
+      _flagResetParticles = true;
+
+      tGidPosMap gidPositions;
+      auto gids = _player->gids();
+      auto positions = _player->positions();
+
+      auto gidit = gids.begin( );
+      for( auto pos : positions )
+      {
+        vec3 position( pos.x( ), pos.y( ), pos.z( ));
+
+        gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
+        ++gidit;
+      }
+
+      _domainManager->updateData(gids,gidPositions);
+
+      updateCameraBoundingBox( true );
   }
 
   void OpenGLWidget::home( void )

@@ -34,6 +34,9 @@
 #include <visimpl/version.h>
 
 #include "MainWindow.h"
+
+
+
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
@@ -374,6 +377,21 @@ namespace visimpl
 
     _configurePlayer( );
   }
+  
+  void MainWindow::openRestListener( const std::string& url,
+                                simil::TSimulationType simulationType,
+                                const std::string& port,
+                                const std::string&  )
+  {
+    _openGLWidget->loadRestData( url,
+                             simil::TDataType::TREST,
+                             simulationType,
+                             port );
+
+    configureComponents( );
+
+    _configurePlayer( );
+  }
 
 
   void MainWindow::openHDF5ThroughDialog( void )
@@ -587,6 +605,8 @@ namespace visimpl
   {
     connect( _openGLWidget, SIGNAL( updateSlider( float )),
                this, SLOT( UpdateSimulationSlider( float )));
+
+    _objectInspectoGB->setSimPlayer(_openGLWidget->player( ));
 
 
     _startTimeLabel->setText(
@@ -952,14 +972,15 @@ namespace visimpl
     layoutContainerSelection->addWidget( selFunctionGB );
     layoutContainerSelection->addWidget( gbClippingPlanes );
 
-    QGroupBox* objectInspectoGB = new QGroupBox( "Object inspector" );
+    _objectInspectoGB = new DataInspector( "Object inspector" );
+    /*QGroupBox* objectInspectoGB = new QGroupBox( "Object inspector" );
     QGridLayout* oiLayout = new QGridLayout( );
-    oiLayout->setAlignment( Qt::AlignTop );
-    oiLayout->addWidget( new QLabel( "GID:" ), 0, 0, 1, 1 );
-    oiLayout->addWidget( _labelGID, 0, 1, 1, 3 );
-    oiLayout->addWidget( new QLabel( "Position: " ), 1, 0, 1, 1 );
-    oiLayout->addWidget( _labelPosition, 1, 1, 1, 3 );
-    objectInspectoGB->setLayout( oiLayout );
+    oiLayout->setAlignment( Qt::AlignTop );*/
+    _objectInspectoGB->addWidget( new QLabel( "GID:" ), 2, 0, 1, 1 );
+    _objectInspectoGB->addWidget( _labelGID, 2, 1, 1, 3 );
+    _objectInspectoGB->addWidget( new QLabel( "Position: " ), 3, 0, 1, 1 );
+    _objectInspectoGB->addWidget( _labelPosition, 3, 1, 1, 3 );
+    //objectInspectoGB->setLayout( oiLayout );*/
 
     QGroupBox* groupBoxGroups = new QGroupBox( "Current visualization groups" );
     _groupLayout = new QVBoxLayout( );
@@ -1071,7 +1092,7 @@ namespace visimpl
     _toolBoxOptions->addItem( tSpeedGB, tr( "Playback Configuration" ));
     _toolBoxOptions->addItem( vcContainer, tr( "Visual Configuration" ));
     _toolBoxOptions->addItem( containerSelectionTools, tr( "Selection" ));
-    _toolBoxOptions->addItem( objectInspectoGB, tr( "Inspector" ));
+    _toolBoxOptions->addItem( _objectInspectoGB, tr( "Inspector" ));
 
     verticalLayout->setAlignment( Qt::AlignTop );
     verticalLayout->addWidget( _modeSelectionWidget );
@@ -1083,6 +1104,8 @@ namespace visimpl
     this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/RightDockWidgetArea,
                          _simConfigurationDock );
 
+    connect( _objectInspectoGB, SIGNAL( simDataChanged( void )),
+             _openGLWidget, SLOT( updateData( void )));
 
     connect( _modeSelectionWidget, SIGNAL( currentChanged( int )),
              _openGLWidget, SLOT( setMode( int )));
@@ -1203,6 +1226,7 @@ namespace visimpl
 
     _startTimeLabel->setText(
           QString::number( (double)_openGLWidget->currentTime( )));
+    //TODO UPDATE ENDTIME
 
     int total = _simSlider->maximum( ) - _simSlider->minimum( );
 
