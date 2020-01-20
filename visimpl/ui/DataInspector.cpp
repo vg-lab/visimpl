@@ -54,9 +54,10 @@ void DataInspector::paintEvent(QPaintEvent *event)
             updated =true;
             _gidsize = _simPlayer->gidsSize();
             _labelGIDs->setText(QString::number(_gidsize));
-            _labelStartTime->setText(QString::number(_simPlayer->startTime()));
-            _labelEndTime->setText(QString::number(_simPlayer->endTime()));
+
         }
+
+
 
 
 
@@ -69,6 +70,8 @@ void DataInspector::paintEvent(QPaintEvent *event)
                 updated =true;
                 _spikesize = spkPlay->spikesSize();
                 _labelSpikes->setText(QString::number(_spikesize));
+                _labelStartTime->setText(QString::number(spkPlay->startTime()));
+                _labelEndTime->setText(QString::number(spkPlay->endTime()));
             }
 
         }

@@ -93,7 +93,7 @@ namespace visimpl
                   const std::string& zeqUri = "" );
     ~OpenGLWidget( void );
 
-    void createParticleSystem( const tGidPosMap& gidPositions );
+    void createParticleSystem(  );
     void loadData( const std::string& fileName,
                    const simil::TDataType = simil::TDataType::TBlueConfig,
                    simil::TSimulationType simulationType = simil::TSimSpikes,
@@ -250,6 +250,9 @@ namespace visimpl
     void _updateGroups( void );
     void _updateGroupsVisibility( void );
     void _updateAttributes( void );
+    void _updateNewData( void );
+
+    void _updateData( void );
 
     void _createEventLabels( void );
     void _updateEventLabelsVisibility( void );
@@ -389,6 +392,7 @@ namespace visimpl
     bool _alphaBlendingAccumulative;
     bool _showSelection;
 
+    bool _flagNewData;
     bool _flagResetParticles;
     bool _flagUpdateSelection;
     bool _flagUpdateGroups;
@@ -419,6 +423,10 @@ namespace visimpl
 
     QPoint _pickingPosition;
     unsigned int _selectedPickingSingle;
+
+    tGidPosMap _gidPositions;
+    TGIDSet _gids;
+    TPosVect _positions;
   };
 
 } // namespace visimpl

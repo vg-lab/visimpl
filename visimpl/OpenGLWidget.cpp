@@ -40,6 +40,8 @@ namespace visimpl
       std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
   static InitialConfig _initialConfigSimCSV =
         std::make_tuple( 0.005f, 20.0f, 0.1f, 50000.0f );
+  static InitialConfig _initialConfigSimREST =
+        std::make_tuple( 0.005f, 20.0f, 0.1f, 5.0f );
 
   static float invRGBInt = 1.0f / 255;
 
@@ -121,6 +123,7 @@ namespace visimpl
   , _elapsedTimeSimAcc( 0.0f )
   , _alphaBlendingAccumulative( false )
   , _showSelection( false )
+  , _flagNewData (false )
   , _flagResetParticles( false )
   , _flagUpdateSelection( false )
   , _flagUpdateGroups( false )
@@ -273,6 +276,10 @@ namespace visimpl
 //        scale = 5.f;
         config = _initialConfigSimCSV;
         break;
+    case simil::TREST:
+//
+      config = _initialConfigSimREST;
+      break;
       default:
         break;
     }
@@ -287,21 +294,9 @@ namespace visimpl
               << ", " << _scaleFactor.z
               << std::endl;
 
-    tGidPosMap gidPositions;
-    auto gids = spPlayer->gids( );
-    auto positions = spPlayer->positions( );
 
 
-    auto gidit = gids.begin( );
-    for( auto pos : positions )
-    {
-      vec3 position( pos.x( ), pos.y( ), pos.z( ));
-
-      gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
-      ++gidit;
-    }
-
-    createParticleSystem( gidPositions );
+    createParticleSystem(  );
 
     simulationDeltaTime( std::get< T_DELTATIME >( config ) );
     simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
@@ -323,13 +318,19 @@ namespace visimpl
 
     makeCurrent( );
 
+    InitialConfig config;
+    float scale = 1.0f;
+
+    config = _initialConfigSimREST;
+
     _simulationType = simulationType;
 
-    _deltaTime = 0.5f;
+    _deltaTime = std::get< T_DELTATIME >( config );
 
 
 
     _importer = new simil::LoaderRestData( );
+    static_cast<simil::LoaderRestData*>(_importer)->deltaTime(_deltaTime);
 
     std::cout << "--------------------------------------" << std::endl;
     std::cout << "Network" << std::endl;
@@ -354,10 +355,7 @@ namespace visimpl
 //    _player->deltaTime( _deltaTime );
 
 
-    InitialConfig config;
-    float scale = 1.0f;
 
-    config = _initialConfigSimCSV;
 
     scale = std::get< T_SCALE >( config );
 
@@ -369,20 +367,9 @@ namespace visimpl
               << ", " << _scaleFactor.z
               << std::endl;
 
-    tGidPosMap gidPositions;
-    auto gids = _player->gids( );
-    auto positions = _player->positions( );
 
-    auto gidit = gids.begin( );
-    for( auto pos : positions )
-    {
-      vec3 position( pos.x( ), pos.y( ), pos.z( ));
 
-      gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
-      ++gidit;
-    }
-
-    createParticleSystem( gidPositions );
+    createParticleSystem( );
 
     simulationDeltaTime( std::get< T_DELTATIME >( config ) );
     simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
@@ -581,7 +568,7 @@ namespace visimpl
     }
   }
 
-  void OpenGLWidget::createParticleSystem( const tGidPosMap& gidPositions )
+  void OpenGLWidget::createParticleSystem( )
   {
     makeCurrent( );
     prefr::Config::init( );
@@ -619,15 +606,16 @@ namespace visimpl
 
     //unsigned int maxParticles = _player->gids( ).size( );
 
+    _updateData();
     _particleSystem = new prefr::ParticleSystem( 200000, _camera );//TODO
     _flagResetParticles = true;
 
-    _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
+    _domainManager = new DomainManager( _particleSystem,  _gids);
 
 #ifdef SIMIL_USE_BRION
     _domainManager->init( gidPositions, _player->data( )->blueConfig( ));
 #else
-    _domainManager->init( gidPositions );
+    _domainManager->init( _gidPositions );
 #endif
     _domainManager->initializeParticleSystem( );
 
@@ -736,6 +724,9 @@ namespace visimpl
 
   void OpenGLWidget::_resolveFlagsOperations( void )
   {
+    if(_flagNewData)
+       _updateNewData( );
+
     if( _flagChangeShader )
       _setShaderParticles( );
 
@@ -1060,6 +1051,39 @@ namespace visimpl
       }
   }
 
+  void OpenGLWidget::updateData()
+  {
+      _flagNewData = true;
+  }
+
+  void OpenGLWidget::_updateData( void )
+  {
+      _gidPositions.clear();
+      _gids.clear();
+      _positions.clear();
+      _gids = _player->gids( );
+      _positions = _player->positions( );
+      _gidPositions.reserve(_positions.size());
+      auto gidit = _gids.begin( );
+      for( auto pos : _positions )
+      {
+        vec3 position( pos.x( ), pos.y( ), pos.z( ));
+
+        _gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
+        ++gidit;
+      }
+
+  }
+
+  void OpenGLWidget::_updateNewData( void )
+  {
+      _updateData();
+      _domainManager->updateData(_gids, _gidPositions );
+      _focusOn( _domainManager->boundingBox( ));
+      _flagNewData = false;
+      _flagUpdateRender = true;
+  }
+
   void OpenGLWidget::setMode( int mode )
   {
     if( mode < 0 || ( mode >= ( int )TMODE_UNDEFINED ))
@@ -1082,28 +1106,7 @@ namespace visimpl
     _flagUpdateSelection = true;
   }
 
-  void OpenGLWidget::updateData()
-  {
 
-      _flagResetParticles = true;
-
-      tGidPosMap gidPositions;
-      auto gids = _player->gids();
-      auto positions = _player->positions();
-
-      auto gidit = gids.begin( );
-      for( auto pos : positions )
-      {
-        vec3 position( pos.x( ), pos.y( ), pos.z( ));
-
-        gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
-        ++gidit;
-      }
-
-      _domainManager->updateData(gids,gidPositions);
-
-      updateCameraBoundingBox( true );
-  }
 
   void OpenGLWidget::home( void )
   {
@@ -1191,20 +1194,8 @@ namespace visimpl
     if( update && _player )
     {
 
-      tGidPosMap gidPositions;
-      auto gids = _player->gids( );
-      auto positions = _player->positions( );
-
-      auto gidit = gids.begin( );
-      for( auto pos : positions )
-      {
-        vec3 position( pos.x( ), pos.y( ), pos.z( ));
-
-        gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
-        ++gidit;
-      }
-
-      _domainManager->positions( gidPositions );
+     _updateData();
+      _domainManager->updateData(_gids, _gidPositions );
       _focusOn( _domainManager->boundingBox( ));
     }
 
@@ -1385,8 +1376,10 @@ namespace visimpl
     _planeNormalLeft = ( center - centerLeft ).normalized( );
     _planeNormalRight = ( center - centerRight ).normalized( );
 
-    _clippingPlaneLeft->setEquationByPointAndNormal( centerLeft, _planeNormalLeft );
-    _clippingPlaneRight->setEquationByPointAndNormal( centerRight, _planeNormalRight );
+    _clippingPlaneLeft->setEquationByPointAndNormal(
+                centerLeft, _planeNormalLeft );
+    _clippingPlaneRight->setEquationByPointAndNormal(
+                centerRight, _planeNormalRight );
 
 //    std::cout << "Planes:" << std::endl
 //               << " Left: "

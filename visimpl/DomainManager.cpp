@@ -166,17 +166,19 @@ namespace visimpl
     return _gidPositions;
   }
 
-  void DomainManager::positions( const tGidPosMap& positions_ )
+  /*void DomainManager::positions( const tGidPosMap& positions_ )
   {
     _gidPositions = positions_;
-
+    
     reloadPositions( );
-  }
+  }*/
 
   void DomainManager::reloadPositions( void )
   {
 //    mode( _mode );
     _resetBoundingBox( );
+
+
 
     for( auto gidPartId : _gidToParticle )
     {
@@ -412,7 +414,10 @@ namespace visimpl
       _gidPositions = positions;
 
       _sourceSelected->setPositions( _gidPositions );
+      _clearParticlesReference();
+      update();
       reloadPositions();
+
 
   }
 

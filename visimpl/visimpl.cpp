@@ -259,7 +259,7 @@ void usageMessage( char* progName )
             << "\t[ -bc <blue_config_path> [-target <target> ] | "
             << "-csv <network_path> <activity_path> ] "
             << std::endl
-            << "-rest <url> <port> ] "
+            << "-rest <url> <port>  "
             << std::endl
             << "\t[ -se <subset_events_file> ] "
             << std::endl
