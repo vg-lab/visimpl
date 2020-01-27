@@ -836,6 +836,19 @@ namespace visimpl
 
   #endif
 
+  void Summary::UpdateHistograms( void )
+  {
+      for( auto histogram : _histogramWidgets )
+      {
+        //histogram->paintRegion( histogram == _focusedHistogram );
+        histogram->Spikes(*_spikeReport);
+        histogram->Update( );
+
+      }
+
+
+  }
+
   void Summary::insertSubset( const Selection& selection )
   {
     insertSubset( selection.name, selection.gids );

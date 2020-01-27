@@ -577,7 +577,7 @@ namespace visimpl
   {
     if( !_subsetImporter )
       return;
-
+    _subsetImporter->reload(_subsetEvents);
     _subsetImporter->show( );
   }
 
@@ -607,6 +607,7 @@ namespace visimpl
                this, SLOT( UpdateSimulationSlider( float )));
 
     _objectInspectoGB->setSimPlayer(_openGLWidget->player( ));
+    _subsetEvents = _openGLWidget->subsetEventsManager();
 
 
     _startTimeLabel->setText(
@@ -1106,6 +1107,9 @@ namespace visimpl
 
     connect( _objectInspectoGB, SIGNAL( simDataChanged( void )),
              _openGLWidget, SLOT( updateData( void )));
+
+    connect( _objectInspectoGB, SIGNAL( simDataChanged( void )),
+             _summary, SLOT( UpdateHistograms( void )));
 
     connect( _modeSelectionWidget, SIGNAL( currentChanged( int )),
              _openGLWidget, SLOT( setMode( int )));

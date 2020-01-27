@@ -164,6 +164,8 @@ namespace visimpl
 
   void HistogramWidget::Update( THistogram histogramNumber )
   {
+    _startTime = _player->startTime( );
+    _endTime = _player->endTime( );
     BuildHistogram( histogramNumber );
     CalculateColors( histogramNumber );
   }

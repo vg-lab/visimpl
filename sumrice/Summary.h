@@ -76,6 +76,8 @@ namespace visimpl
   #endif
                          );
 
+
+
     virtual void mouseMoveEvent( QMouseEvent* event_ );
 
     unsigned int bins( void );
@@ -114,6 +116,8 @@ namespace visimpl
     void histogramClicked( visimpl::HistogramWidget* );
 
   public slots:
+
+    void UpdateHistograms( void );
 
     void importSubsetsFromSubsetMngr( void );
 

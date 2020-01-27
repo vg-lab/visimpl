@@ -127,6 +127,8 @@ namespace visimpl
 
     void subsetEventsManager( simil::SubsetEventManager* manager );
 
+    simil::SubsetEventManager* subsetEventsManager( void );
+
     const scoop::ColorPalette& colorPalette( void );
 
   signals:

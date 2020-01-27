@@ -41,7 +41,7 @@ namespace visimpl
   static InitialConfig _initialConfigSimCSV =
         std::make_tuple( 0.005f, 20.0f, 0.1f, 50000.0f );
   static InitialConfig _initialConfigSimREST =
-        std::make_tuple( 0.005f, 20.0f, 0.1f, 5.0f );
+        std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
 
   static float invRGBInt = 1.0f / 255;
 
@@ -374,6 +374,8 @@ namespace visimpl
     simulationDeltaTime( std::get< T_DELTATIME >( config ) );
     simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
     changeSimulationDecayValue( std::get< T_DECAY >( config ) );
+
+    subsetEventsManager(netData->subsetsEvents());
 
   #ifdef VISIMPL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
@@ -1801,6 +1803,11 @@ namespace visimpl
     _createEventLabels( );
 
     update( );
+  }
+
+  simil::SubsetEventManager* OpenGLWidget::subsetEventsManager( void )
+  {
+    return _subsetEvents;
   }
 
   const scoop::ColorPalette& OpenGLWidget::colorPalette( void )
