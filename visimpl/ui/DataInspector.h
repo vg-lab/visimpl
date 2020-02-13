@@ -6,7 +6,7 @@
 #include <QGroupBox>
 #include <QLabel>
 
-#include <simil/SimulationPlayer.h>
+#include <simil/simil.h>
 
 class DataInspector: public QGroupBox
 {

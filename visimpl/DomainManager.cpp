@@ -175,10 +175,7 @@ namespace visimpl
 
   void DomainManager::reloadPositions( void )
   {
-//    mode( _mode );
     _resetBoundingBox( );
-
-
 
     for( auto gidPartId : _gidToParticle )
     {
@@ -414,9 +411,11 @@ namespace visimpl
       _gidPositions = positions;
 
       _sourceSelected->setPositions( _gidPositions );
-      _clearParticlesReference();
-      update();
+      clearView();
       reloadPositions();
+
+      update();
+
 
 
   }

@@ -99,10 +99,12 @@ namespace visimpl
                    simil::TSimulationType simulationType = simil::TSimSpikes,
                    const std::string& report = std::string( "" ));
 
+#ifdef SIMIL_WITH_REST_API
     void loadRestData( const std::string& url,
                    const simil::TDataType ,
                    simil::TSimulationType simulationType,
                    const std::string& port);
+#endif
 
     void idleUpdate( bool idleUpdate_ = true );
 
@@ -328,8 +330,11 @@ namespace visimpl
     prefr::GLPickRenderer* _pickRenderer;
 
     simil::TSimulationType _simulationType;
-    simil::LoaderSimData* _importer;
     simil::SpikesPlayer* _player;
+
+#ifdef SIMIL_WITH_REST_API
+    simil::LoaderSimData* _importer;
+#endif
 
     reto::ClippingPlane* _clippingPlaneLeft;
     reto::ClippingPlane* _clippingPlaneRight;

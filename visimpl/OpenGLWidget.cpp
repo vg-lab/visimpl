@@ -88,6 +88,9 @@ namespace visimpl
   , _pickRenderer( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
+#ifdef SIMIL_WITH_REST_API
+  , _importer( nullptr )
+#endif
   , _clippingPlaneLeft( nullptr )
   , _clippingPlaneRight( nullptr )
   , _planeHeight( 1 )
@@ -310,6 +313,7 @@ namespace visimpl
 
   }
 
+#ifdef SIMIL_WITH_REST_API
   void OpenGLWidget::loadRestData( const std::string& url,
                                const simil::TDataType ,
                                simil::TSimulationType simulationType,
@@ -326,8 +330,6 @@ namespace visimpl
     _simulationType = simulationType;
 
     _deltaTime = std::get< T_DELTATIME >( config );
-
-
 
     _importer = new simil::LoaderRestData( );
     static_cast<simil::LoaderRestData*>(_importer)->deltaTime(_deltaTime);
@@ -382,6 +384,7 @@ namespace visimpl
     update( );
 
   }
+#endif
 
   void OpenGLWidget::initializeGL( void )
   {
@@ -604,16 +607,18 @@ namespace visimpl
 
 
 
-    //unsigned int maxParticles = _player->gids( ).size( );
+    unsigned int maxParticles =
+        std::max(( unsigned int ) 100000, ( unsigned int ) _player->gids( ).size( ));
 
-    _updateData();
-    _particleSystem = new prefr::ParticleSystem( 200000, _camera );//TODO
+    _updateData( );
+
+    _particleSystem = new prefr::ParticleSystem( maxParticles, _camera );
     _flagResetParticles = true;
 
-    _domainManager = new DomainManager( _particleSystem,  _gids);
+    _domainManager = new DomainManager( _particleSystem, _gids);
 
 #ifdef SIMIL_USE_BRION
-    _domainManager->init( gidPositions, _player->data( )->blueConfig( ));
+    _domainManager->init( _gidPositions, _player->data( )->blueConfig( ));
 #else
     _domainManager->init( _gidPositions );
 #endif
@@ -1058,12 +1063,12 @@ namespace visimpl
 
   void OpenGLWidget::_updateData( void )
   {
-      _gidPositions.clear();
-      _gids.clear();
-      _positions.clear();
       _gids = _player->gids( );
       _positions = _player->positions( );
-      _gidPositions.reserve(_positions.size());
+
+      _gidPositions.clear( );
+
+      _gidPositions.reserve( _positions.size( ));
       auto gidit = _gids.begin( );
       for( auto pos : _positions )
       {

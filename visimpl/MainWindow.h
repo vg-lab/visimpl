@@ -69,11 +69,12 @@ namespace visimpl
                       simil::TSimulationType simulationType,
                       const std::string& activityFile = "",
                       const std::string& subsetEventFile = "" );
-
+#ifdef SIMIL_WITH_REST_API
     void openRestListener( const std::string& url,
                       simil::TSimulationType simulationType,
                       const std::string& port = "",
                       const std::string& subsetEventFile = "" );
+#endif
 
   public slots:
 
@@ -236,7 +237,9 @@ namespace visimpl
     QTabWidget* _modeSelectionWidget;
     QToolBox* _toolBoxOptions;
 
-    DataInspector * _objectInspectoGB;
+#ifdef SIMIL_WITH_REST_API
+    DataInspector * _objectInspectorGB;
+#endif
 
     QGroupBox* _groupBoxTransferFunction;
     TransferFunctionWidget* _tfWidget;

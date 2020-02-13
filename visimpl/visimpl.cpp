@@ -74,7 +74,7 @@ int main( int argc, char** argv )
         zeqUri = std::string( argv[ i ]);
       }
 #else
-      std::cerr << "Zeq not supported " << std::endl;
+      std::cerr << "ZeroEQ not supported." << std::endl;
       return -1;
 #endif
     }
@@ -113,16 +113,24 @@ int main( int argc, char** argv )
         dataType = simil::TCSV;
       }
     }
+
     else if( std::strcmp( argv[ i ], "-rest") == 0 )
     {
+#ifdef SIMIL_WITH_REST_API
       if( i + 2 < argc )
       {
+
+
         ++i;
         networkFile = std::string( argv[ i ]);
         ++i;
         activityFile = std::string( argv[ i ]);
         dataType = simil::TREST;
       }
+#else
+        std::cerr << "REST API not supported." << std::endl;
+        return -1;
+#endif
     }
 
     if( strcmp( argv[ i ], "-se" ) == 0 )
@@ -240,9 +248,13 @@ int main( int argc, char** argv )
     case simil::TDataType::TCSV:
       mainWindow.openCSVFile( networkFile, simType, activityFile, subsetEventFile );
       break;
+
+#ifdef SIMIL_WITH_REST_API
     case simil::TDataType::TREST:
     mainWindow.openRestListener( networkFile, simType, activityFile, subsetEventFile );
     break;
+#endif
+
     default:
       break;
   }

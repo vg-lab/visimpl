@@ -378,6 +378,7 @@ namespace visimpl
     _configurePlayer( );
   }
   
+#ifdef SIMIL_WITH_REST_API
   void MainWindow::openRestListener( const std::string& url,
                                 simil::TSimulationType simulationType,
                                 const std::string& port,
@@ -392,7 +393,7 @@ namespace visimpl
 
     _configurePlayer( );
   }
-
+#endif
 
   void MainWindow::openHDF5ThroughDialog( void )
   {
@@ -606,8 +607,9 @@ namespace visimpl
     connect( _openGLWidget, SIGNAL( updateSlider( float )),
                this, SLOT( UpdateSimulationSlider( float )));
 
-    _objectInspectoGB->setSimPlayer(_openGLWidget->player( ));
-
+#ifdef SIMIL_WITH_REST_API
+    _objectInspectorGB->setSimPlayer(_openGLWidget->player( ));
+#endif
 
     _startTimeLabel->setText(
         QString::number( (double)_openGLWidget->player( )->startTime( )));
@@ -972,15 +974,17 @@ namespace visimpl
     layoutContainerSelection->addWidget( selFunctionGB );
     layoutContainerSelection->addWidget( gbClippingPlanes );
 
-    _objectInspectoGB = new DataInspector( "Object inspector" );
+#ifdef SIMIL_WITH_REST_API
+    _objectInspectorGB = new DataInspector( "Object inspector" );
     /*QGroupBox* objectInspectoGB = new QGroupBox( "Object inspector" );
     QGridLayout* oiLayout = new QGridLayout( );
     oiLayout->setAlignment( Qt::AlignTop );*/
-    _objectInspectoGB->addWidget( new QLabel( "GID:" ), 2, 0, 1, 1 );
-    _objectInspectoGB->addWidget( _labelGID, 2, 1, 1, 3 );
-    _objectInspectoGB->addWidget( new QLabel( "Position: " ), 3, 0, 1, 1 );
-    _objectInspectoGB->addWidget( _labelPosition, 3, 1, 1, 3 );
+    _objectInspectorGB->addWidget( new QLabel( "GID:" ), 2, 0, 1, 1 );
+    _objectInspectorGB->addWidget( _labelGID, 2, 1, 1, 3 );
+    _objectInspectorGB->addWidget( new QLabel( "Position: " ), 3, 0, 1, 1 );
+    _objectInspectorGB->addWidget( _labelPosition, 3, 1, 1, 3 );
     //objectInspectoGB->setLayout( oiLayout );*/
+#endif
 
     QGroupBox* groupBoxGroups = new QGroupBox( "Current visualization groups" );
     _groupLayout = new QVBoxLayout( );
@@ -1092,7 +1096,14 @@ namespace visimpl
     _toolBoxOptions->addItem( tSpeedGB, tr( "Playback Configuration" ));
     _toolBoxOptions->addItem( vcContainer, tr( "Visual Configuration" ));
     _toolBoxOptions->addItem( containerSelectionTools, tr( "Selection" ));
-    _toolBoxOptions->addItem( _objectInspectoGB, tr( "Inspector" ));
+
+
+#ifdef SIMIL_WITH_REST_API
+    _toolBoxOptions->addItem( _objectInspectorGB, tr( "Inspector" ));
+
+    connect( _objectInspectorGB, SIGNAL( simDataChanged( void )),
+             _openGLWidget, SLOT( updateData( void )));
+#endif
 
     verticalLayout->setAlignment( Qt::AlignTop );
     verticalLayout->addWidget( _modeSelectionWidget );
@@ -1103,9 +1114,6 @@ namespace visimpl
 
     this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/RightDockWidgetArea,
                          _simConfigurationDock );
-
-    connect( _objectInspectoGB, SIGNAL( simDataChanged( void )),
-             _openGLWidget, SLOT( updateData( void )));
 
     connect( _modeSelectionWidget, SIGNAL( currentChanged( int )),
              _openGLWidget, SLOT( setMode( int )));
@@ -1302,9 +1310,17 @@ namespace visimpl
   {
     auto scale = _openGLWidget->circuitScaleFactor( );
 
+    _circuitScaleX->blockSignals( true );
+    _circuitScaleY->blockSignals( true );
+    _circuitScaleZ->blockSignals( true );
+
     _circuitScaleX->setValue( scale.x );
     _circuitScaleY->setValue( scale.y );
     _circuitScaleZ->setValue( scale.z );
+
+    _circuitScaleX->blockSignals( false );
+    _circuitScaleY->blockSignals( false );
+    _circuitScaleZ->blockSignals( false );
   }
 
   void MainWindow::updateCircuitScaleValue( void )
