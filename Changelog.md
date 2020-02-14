@@ -1,6 +1,18 @@
 # ViSimpl
 
-## git master
+## 1.0.0
+
+* Added selection, groups and attributes visualization modes.
+* Improved playback, visualization and aspect parameters management.
+* Added selection manager widget and file exportation.
+* Added import of visual groups from external file.
+* Incorporated clipping planes selection mechanism.
+* Added picking for user-defined highlighting by hand.
+* Modified camera controls.
+* Added in-situ capabilities through REST for network and activity streaming data.
+
+## 0.1.4
+
 * [!38] Fixed camera's view distance and initial positioning bug. Fixed "play-at" button.
 * [!32] Added "Step by step" feature. Fixed performance issues. Improved playback precission.
 * [!24] Added focus and autofocus features to show and follow the current playhead on StackViz.
