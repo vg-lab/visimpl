@@ -1,10 +1,23 @@
 /*
- * @file  OpenGLWidget.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #include "OpenGLWidget.h"
@@ -88,6 +101,9 @@ namespace visimpl
   , _pickRenderer( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
+#ifdef SIMIL_WITH_REST_API
+  , _importer( nullptr )
+#endif
   , _clippingPlaneLeft( nullptr )
   , _clippingPlaneRight( nullptr )
   , _planeHeight( 1 )
@@ -310,6 +326,7 @@ namespace visimpl
 
   }
 
+#ifdef SIMIL_WITH_REST_API
   void OpenGLWidget::loadRestData( const std::string& url,
                                const simil::TDataType ,
                                simil::TSimulationType simulationType,
@@ -326,8 +343,6 @@ namespace visimpl
     _simulationType = simulationType;
 
     _deltaTime = std::get< T_DELTATIME >( config );
-
-
 
     _importer = new simil::LoaderRestData( );
     static_cast<simil::LoaderRestData*>(_importer)->deltaTime(_deltaTime);
@@ -352,10 +367,7 @@ namespace visimpl
     simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer();
     spPlayer->LoadData( netData, simData );
     _player = spPlayer;
-//    _player->deltaTime( _deltaTime );
-
-
-
+    //_player->deltaTime( _deltaTime );
 
     scale = std::get< T_SCALE >( config );
 
@@ -366,8 +378,6 @@ namespace visimpl
               << ", " << _scaleFactor.y
               << ", " << _scaleFactor.z
               << std::endl;
-
-
 
     createParticleSystem( );
 
@@ -384,6 +394,7 @@ namespace visimpl
     update( );
 
   }
+#endif
 
   void OpenGLWidget::initializeGL( void )
   {
@@ -606,16 +617,18 @@ namespace visimpl
 
 
 
-    //unsigned int maxParticles = _player->gids( ).size( );
+    unsigned int maxParticles =
+        std::max(( unsigned int ) 100000, ( unsigned int ) _player->gids( ).size( ));
 
-    _updateData();
-    _particleSystem = new prefr::ParticleSystem( 200000, _camera );//TODO
+    _updateData( );
+
+    _particleSystem = new prefr::ParticleSystem( maxParticles, _camera );
     _flagResetParticles = true;
 
-    _domainManager = new DomainManager( _particleSystem,  _gids);
+    _domainManager = new DomainManager( _particleSystem, _gids);
 
 #ifdef SIMIL_USE_BRION
-    _domainManager->init( gidPositions, _player->data( )->blueConfig( ));
+    _domainManager->init( _gidPositions, _player->data( )->blueConfig( ));
 #else
     _domainManager->init( _gidPositions );
 #endif
@@ -1060,12 +1073,12 @@ namespace visimpl
 
   void OpenGLWidget::_updateData( void )
   {
-      _gidPositions.clear();
-      _gids.clear();
-      _positions.clear();
       _gids = _player->gids( );
       _positions = _player->positions( );
-      _gidPositions.reserve(_positions.size());
+
+      _gidPositions.clear( );
+
+      _gidPositions.reserve( _positions.size( ));
       auto gidit = _gids.begin( );
       for( auto pos : _positions )
       {

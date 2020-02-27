@@ -1,10 +1,23 @@
 /*
- * @file  OpenGLWidget.h
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #ifndef __VISIMPL__OPENGLWIDGET__
@@ -99,10 +112,12 @@ namespace visimpl
                    simil::TSimulationType simulationType = simil::TSimSpikes,
                    const std::string& report = std::string( "" ));
 
+#ifdef SIMIL_WITH_REST_API
     void loadRestData( const std::string& url,
                    const simil::TDataType ,
                    simil::TSimulationType simulationType,
                    const std::string& port);
+#endif
 
     void idleUpdate( bool idleUpdate_ = true );
 
@@ -330,8 +345,11 @@ namespace visimpl
     prefr::GLPickRenderer* _pickRenderer;
 
     simil::TSimulationType _simulationType;
-    simil::LoaderSimData* _importer;
     simil::SpikesPlayer* _player;
+
+#ifdef SIMIL_WITH_REST_API
+    simil::LoaderSimData* _importer;
+#endif
 
     reto::ClippingPlane* _clippingPlaneLeft;
     reto::ClippingPlane* _clippingPlaneRight;
