@@ -1,10 +1,23 @@
 /*
- * @file  MainWindow.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #ifdef VISIMPL_USE_GMRVLEX
@@ -34,6 +47,9 @@
 #include <visimpl/version.h>
 
 #include "MainWindow.h"
+
+
+
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
@@ -138,10 +154,21 @@ namespace visimpl
 
   }
 
-  void MainWindow::init( const std::string& zeqUri )
+  void MainWindow::init( const std::string&
+#ifdef VISIMPL_USE_ZEROEQ
+                         zeqUri
+#endif
+                         )
   {
 
+#ifdef VISIMPL_USE_ZEROEQ
+
+    _zeqUri = zeqUri;
     _openGLWidget = new OpenGLWidget( 0, 0, zeqUri );
+#else
+    _openGLWidget = new OpenGLWidget( 0, 0 );
+#endif
+
     this->setCentralWidget( _openGLWidget );
     qDebug( ) << _openGLWidget->format( );
 
@@ -230,7 +257,8 @@ namespace visimpl
 
     #ifdef VISIMPL_USE_ZEROEQ
 
-    _setZeqUri( zeqUri );
+    if( !zeqUri.empty( ))
+      _setZeqUri( zeqUri );
 
     #endif
   }
@@ -374,7 +402,23 @@ namespace visimpl
 
     _configurePlayer( );
   }
+  
+#ifdef SIMIL_WITH_REST_API
+  void MainWindow::openRestListener( const std::string& url,
+                                simil::TSimulationType simulationType,
+                                const std::string& port,
+                                const std::string&  )
+  {
+    _openGLWidget->loadRestData( url,
+                             simil::TDataType::TREST,
+                             simulationType,
+                             port );
 
+    configureComponents( );
+
+    _configurePlayer( );
+  }
+#endif
 
   void MainWindow::openHDF5ThroughDialog( void )
   {
@@ -588,6 +632,9 @@ namespace visimpl
     connect( _openGLWidget, SIGNAL( updateSlider( float )),
                this, SLOT( UpdateSimulationSlider( float )));
 
+#ifdef SIMIL_WITH_REST_API
+    _objectInspectorGB->setSimPlayer(_openGLWidget->player( ));
+#endif
 
     _startTimeLabel->setText(
         QString::number( (double)_openGLWidget->player( )->startTime( )));
@@ -596,12 +643,15 @@ namespace visimpl
           QString::number( (double)_openGLWidget->player( )->endTime( )));
 
   #ifdef SIMIL_USE_ZEROEQ
-    _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
-        boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
 
-    _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
-        boost::bind( &MainWindow::requestPlayAt, this, _1 ));
+    if( !_zeqUri.empty( ))
+    {
+      _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
+          boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
 
+      _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
+          boost::bind( &MainWindow::requestPlayAt, this, _1 ));
+    }
   #endif
 
     changeEditorColorMapping( );
@@ -952,14 +1002,17 @@ namespace visimpl
     layoutContainerSelection->addWidget( selFunctionGB );
     layoutContainerSelection->addWidget( gbClippingPlanes );
 
-    QGroupBox* objectInspectoGB = new QGroupBox( "Object inspector" );
+#ifdef SIMIL_WITH_REST_API
+    _objectInspectorGB = new DataInspector( "Object inspector" );
+    /*QGroupBox* objectInspectoGB = new QGroupBox( "Object inspector" );
     QGridLayout* oiLayout = new QGridLayout( );
-    oiLayout->setAlignment( Qt::AlignTop );
-    oiLayout->addWidget( new QLabel( "GID:" ), 0, 0, 1, 1 );
-    oiLayout->addWidget( _labelGID, 0, 1, 1, 3 );
-    oiLayout->addWidget( new QLabel( "Position: " ), 1, 0, 1, 1 );
-    oiLayout->addWidget( _labelPosition, 1, 1, 1, 3 );
-    objectInspectoGB->setLayout( oiLayout );
+    oiLayout->setAlignment( Qt::AlignTop );*/
+    _objectInspectorGB->addWidget( new QLabel( "GID:" ), 2, 0, 1, 1 );
+    _objectInspectorGB->addWidget( _labelGID, 2, 1, 1, 3 );
+    _objectInspectorGB->addWidget( new QLabel( "Position: " ), 3, 0, 1, 1 );
+    _objectInspectorGB->addWidget( _labelPosition, 3, 1, 1, 3 );
+    //objectInspectoGB->setLayout( oiLayout );*/
+#endif
 
     QGroupBox* groupBoxGroups = new QGroupBox( "Current visualization groups" );
     _groupLayout = new QVBoxLayout( );
@@ -1071,7 +1124,14 @@ namespace visimpl
     _toolBoxOptions->addItem( tSpeedGB, tr( "Playback Configuration" ));
     _toolBoxOptions->addItem( vcContainer, tr( "Visual Configuration" ));
     _toolBoxOptions->addItem( containerSelectionTools, tr( "Selection" ));
-    _toolBoxOptions->addItem( objectInspectoGB, tr( "Inspector" ));
+
+
+#ifdef SIMIL_WITH_REST_API
+    _toolBoxOptions->addItem( _objectInspectorGB, tr( "Inspector" ));
+
+    connect( _objectInspectorGB, SIGNAL( simDataChanged( void )),
+             _openGLWidget, SLOT( updateData( void )));
+#endif
 
     verticalLayout->setAlignment( Qt::AlignTop );
     verticalLayout->addWidget( _modeSelectionWidget );
@@ -1082,7 +1142,6 @@ namespace visimpl
 
     this->addDockWidget( Qt::/*DockWidgetAreas::enum_type::*/RightDockWidgetArea,
                          _simConfigurationDock );
-
 
     connect( _modeSelectionWidget, SIGNAL( currentChanged( int )),
              _openGLWidget, SLOT( setMode( int )));
@@ -1203,6 +1262,7 @@ namespace visimpl
 
     _startTimeLabel->setText(
           QString::number( (double)_openGLWidget->currentTime( )));
+    //TODO UPDATE ENDTIME
 
     int total = _simSlider->maximum( ) - _simSlider->minimum( );
 
@@ -1278,9 +1338,17 @@ namespace visimpl
   {
     auto scale = _openGLWidget->circuitScaleFactor( );
 
+    _circuitScaleX->blockSignals( true );
+    _circuitScaleY->blockSignals( true );
+    _circuitScaleZ->blockSignals( true );
+
     _circuitScaleX->setValue( scale.x );
     _circuitScaleY->setValue( scale.y );
     _circuitScaleZ->setValue( scale.z );
+
+    _circuitScaleX->blockSignals( false );
+    _circuitScaleY->blockSignals( false );
+    _circuitScaleZ->blockSignals( false );
   }
 
   void MainWindow::updateCircuitScaleValue( void )
@@ -1640,9 +1708,9 @@ namespace visimpl
   void MainWindow::_setZeqUri( const std::string& uri_ )
   {
     _zeqConnection = true;
-    _uri = uri_.empty( ) ? zeroeq::DEFAULT_SESSION : uri_;
+    _zeqUri = uri_.empty( ) ? zeroeq::DEFAULT_SESSION : uri_;
 
-    _subscriber = new zeroeq::Subscriber( _uri );
+    _subscriber = new zeroeq::Subscriber( _zeqUri );
 
     _subscriber->subscribe(
         lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),

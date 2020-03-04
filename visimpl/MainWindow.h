@@ -1,10 +1,23 @@
 /*
- * @file  MainWindow.h
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #include <QMainWindow>
@@ -20,6 +33,7 @@
 #include "OpenGLWidget.h"
 #include "SelectionManagerWidget.h"
 #include "SubsetImporter.h"
+#include "ui/DataInspector.h"
 
 #include <sumrice/sumrice.h>
 
@@ -68,6 +82,12 @@ namespace visimpl
                       simil::TSimulationType simulationType,
                       const std::string& activityFile = "",
                       const std::string& subsetEventFile = "" );
+#ifdef SIMIL_WITH_REST_API
+    void openRestListener( const std::string& url,
+                      simil::TSimulationType simulationType,
+                      const std::string& port = "",
+                      const std::string& subsetEventFile = "" );
+#endif
 
   public slots:
 
@@ -195,7 +215,7 @@ namespace visimpl
     void _setZeqUri( const std::string& );
     bool _zeqConnection;
 
-    std::string _uri;
+    std::string _zeqUri;
     zeroeq::Subscriber* _subscriber;
 
     std::thread* _thread;
@@ -229,6 +249,10 @@ namespace visimpl
 
     QTabWidget* _modeSelectionWidget;
     QToolBox* _toolBoxOptions;
+
+#ifdef SIMIL_WITH_REST_API
+    DataInspector * _objectInspectorGB;
+#endif
 
     QGroupBox* _groupBoxTransferFunction;
     TransferFunctionWidget* _tfWidget;

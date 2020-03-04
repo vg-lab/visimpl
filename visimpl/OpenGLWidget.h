@@ -1,10 +1,23 @@
 /*
- * @file  OpenGLWidget.h
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #ifndef __VISIMPL__OPENGLWIDGET__
@@ -93,11 +106,18 @@ namespace visimpl
                   const std::string& zeqUri = "" );
     ~OpenGLWidget( void );
 
-    void createParticleSystem( const tGidPosMap& gidPositions );
+    void createParticleSystem(  );
     void loadData( const std::string& fileName,
                    const simil::TDataType = simil::TDataType::TBlueConfig,
                    simil::TSimulationType simulationType = simil::TSimSpikes,
                    const std::string& report = std::string( "" ));
+
+#ifdef SIMIL_WITH_REST_API
+    void loadRestData( const std::string& url,
+                   const simil::TDataType ,
+                   simil::TSimulationType simulationType,
+                   const std::string& port);
+#endif
 
     void idleUpdate( bool idleUpdate_ = true );
 
@@ -135,6 +155,8 @@ namespace visimpl
     void pickedSingle( unsigned int );
 
   public slots:
+
+    void updateData( void );
 
     void home( void );
     void updateCameraBoundingBox( bool setBoundingBox = false );
@@ -243,6 +265,9 @@ namespace visimpl
     void _updateGroups( void );
     void _updateGroupsVisibility( void );
     void _updateAttributes( void );
+    void _updateNewData( void );
+
+    void _updateData( void );
 
     void _createEventLabels( void );
     void _updateEventLabelsVisibility( void );
@@ -278,6 +303,7 @@ namespace visimpl
     bool _wireframe;
 
     Camera* _camera;
+    reto::OrbitalCameraController* _cameraOrbital;
     glm::vec3 _lastCameraPosition;
 
     vec3 _scaleFactor;
@@ -319,6 +345,10 @@ namespace visimpl
 
     simil::TSimulationType _simulationType;
     simil::SpikesPlayer* _player;
+
+#ifdef SIMIL_WITH_REST_API
+    simil::LoaderSimData* _importer;
+#endif
 
     reto::ClippingPlane* _clippingPlaneLeft;
     reto::ClippingPlane* _clippingPlaneRight;
@@ -381,6 +411,7 @@ namespace visimpl
     bool _alphaBlendingAccumulative;
     bool _showSelection;
 
+    bool _flagNewData;
     bool _flagResetParticles;
     bool _flagUpdateSelection;
     bool _flagUpdateGroups;
@@ -411,6 +442,10 @@ namespace visimpl
 
     QPoint _pickingPosition;
     unsigned int _selectedPickingSingle;
+
+    tGidPosMap _gidPositions;
+    TGIDSet _gids;
+    TPosVect _positions;
   };
 
 } // namespace visimpl

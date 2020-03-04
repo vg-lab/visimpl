@@ -1,10 +1,23 @@
 /*
- * @file  OpenGLWidget.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #include "OpenGLWidget.h"
@@ -40,6 +53,8 @@ namespace visimpl
       std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
   static InitialConfig _initialConfigSimCSV =
         std::make_tuple( 0.005f, 20.0f, 0.1f, 50000.0f );
+  static InitialConfig _initialConfigSimREST =
+        std::make_tuple( 0.005f, 20.0f, 0.1f, 5.0f );
 
   static float invRGBInt = 1.0f / 255;
 
@@ -60,6 +75,7 @@ namespace visimpl
   , _showCurrentTime( true )
   , _wireframe( false )
   , _camera( nullptr )
+  , _cameraOrbital( nullptr )
   , _lastCameraPosition( 0, 0, 0)
   , _scaleFactor( 1.0f, 1.0f, 1.0f )
   , _scaleFactorExternal( false )
@@ -86,6 +102,9 @@ namespace visimpl
   , _pickRenderer( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
+#ifdef SIMIL_WITH_REST_API
+  , _importer( nullptr )
+#endif
   , _clippingPlaneLeft( nullptr )
   , _clippingPlaneRight( nullptr )
   , _planeHeight( 1 )
@@ -121,6 +140,7 @@ namespace visimpl
   , _elapsedTimeSimAcc( 0.0f )
   , _alphaBlendingAccumulative( false )
   , _showSelection( false )
+  , _flagNewData (false )
   , _flagResetParticles( false )
   , _flagUpdateSelection( false )
   , _flagUpdateGroups( false )
@@ -141,13 +161,14 @@ namespace visimpl
   , _selectedPickingSingle( 0 )
   {
   #ifdef VISIMPL_USE_ZEROEQ
-    if ( zeqUri != "" )
+    if ( !zeqUri.empty( ) )
       _camera = new Camera( zeqUri );
     else
   #endif
     _camera = new Camera( );
     _camera->farPlane( 100000.f );
-    _camera->animDuration( 0.5f );
+    _cameraOrbital = new reto::OrbitalCameraController( _camera );
+//    _cameraOrbital->animDuration( 0.5f );
 
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
@@ -208,7 +229,11 @@ namespace visimpl
 
   OpenGLWidget::~OpenGLWidget( void )
   {
-    delete _camera;
+    if( _cameraOrbital )
+    {
+      delete _cameraOrbital;
+      delete _camera;
+    }
 
     if( _shaderParticlesDefault )
       delete _shaderParticlesDefault;
@@ -273,6 +298,10 @@ namespace visimpl
 //        scale = 5.f;
         config = _initialConfigSimCSV;
         break;
+    case simil::TREST:
+//
+      config = _initialConfigSimREST;
+      break;
       default:
         break;
     }
@@ -287,20 +316,82 @@ namespace visimpl
               << ", " << _scaleFactor.z
               << std::endl;
 
-    tGidPosMap gidPositions;
-    auto gids = spPlayer->gids( );
-    auto positions = spPlayer->positions( );
 
-    auto gidit = gids.begin( );
-    for( auto pos : positions )
-    {
-      vec3 position( pos.x( ), pos.y( ), pos.z( ));
 
-      gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
-      ++gidit;
-    }
+    createParticleSystem(  );
 
-    createParticleSystem( gidPositions );
+    simulationDeltaTime( std::get< T_DELTATIME >( config ) );
+    simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
+    changeSimulationDecayValue( std::get< T_DECAY >( config ) );
+
+  #ifdef VISIMPL_USE_ZEROEQ
+    if( !_zeqUri.empty( ))
+      _player->connectZeq( _zeqUri );
+  #endif
+    this->_paint = true;
+    update( );
+
+  }
+
+#ifdef SIMIL_WITH_REST_API
+  void OpenGLWidget::loadRestData( const std::string& url,
+                               const simil::TDataType ,
+                               simil::TSimulationType simulationType,
+                               const std::string& port)
+  {
+
+    makeCurrent( );
+
+    InitialConfig config;
+    float scale = 1.0f;
+
+    config = _initialConfigSimREST;
+
+    _simulationType = simulationType;
+
+    _deltaTime = std::get< T_DELTATIME >( config );
+
+    _importer = new simil::LoaderRestData( );
+    static_cast<simil::LoaderRestData*>(_importer)->deltaTime(_deltaTime);
+
+    std::cout << "--------------------------------------" << std::endl;
+    std::cout << "Network" << std::endl;
+    std::cout << "--------------------------------------" << std::endl;
+
+    simil::SimulationData* simData = _importer->loadSimulationData(url,port);
+
+    simil::Network* netData = _importer->loadNetwork(url,port);
+
+    std::cout << "Loaded GIDS: " << netData->gids( ).size( ) << std::endl;
+    std::cout << "Loaded positions: " << netData->positions( ).size( )
+              << std::endl;
+
+    std::cout << "--------------------------------------" << std::endl;
+    std::cout << "Spikes" << std::endl;
+    std::cout << "--------------------------------------" << std::endl;
+
+
+    simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer();
+    spPlayer->LoadData( netData, simData );
+    _player = spPlayer;
+//    _player->deltaTime( _deltaTime );
+
+
+
+
+    scale = std::get< T_SCALE >( config );
+
+    if( !_scaleFactorExternal )
+      _scaleFactor = vec3( scale, scale, scale );
+
+    std::cout << "Using scale factor of " << _scaleFactor.x
+              << ", " << _scaleFactor.y
+              << ", " << _scaleFactor.z
+              << std::endl;
+
+
+
+    createParticleSystem( );
 
     simulationDeltaTime( std::get< T_DELTATIME >( config ) );
     simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
@@ -313,6 +404,7 @@ namespace visimpl
     update( );
 
   }
+#endif
 
   void OpenGLWidget::initializeGL( void )
   {
@@ -499,7 +591,7 @@ namespace visimpl
     }
   }
 
-  void OpenGLWidget::createParticleSystem( const tGidPosMap& gidPositions )
+  void OpenGLWidget::createParticleSystem( )
   {
     makeCurrent( );
     prefr::Config::init( );
@@ -535,17 +627,20 @@ namespace visimpl
 
 
 
-    unsigned int maxParticles = _player->gids( ).size( );
+    unsigned int maxParticles =
+        std::max(( unsigned int ) 100000, ( unsigned int ) _player->gids( ).size( ));
 
-    _particleSystem = new prefr::ParticleSystem( maxParticles * 2, _camera );
+    _updateData( );
+
+    _particleSystem = new prefr::ParticleSystem( maxParticles, _camera );
     _flagResetParticles = true;
 
-    _domainManager = new DomainManager( _particleSystem, _player->gids( ) );
+    _domainManager = new DomainManager( _particleSystem, _gids);
 
 #ifdef SIMIL_USE_BRION
-    _domainManager->init( gidPositions, _player->data( )->blueConfig( ));
+    _domainManager->init( _gidPositions, _player->data( )->blueConfig( ));
 #else
-    _domainManager->init( gidPositions );
+    _domainManager->init( _gidPositions );
 #endif
     _domainManager->initializeParticleSystem( );
 
@@ -597,7 +692,7 @@ namespace visimpl
 
     uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
     glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
-                       _camera->viewProjectionMatrix( ));
+                       _camera->projectionViewMatrix( ));
 
     cameraUp = glGetUniformLocation( shader, "cameraUp" );
     cameraRight = glGetUniformLocation( shader, "cameraRight" );
@@ -611,9 +706,9 @@ namespace visimpl
 
     glUniform1f( particleRadius, _particleRadiusThreshold );
 
-    glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
-                               _camera->position( )[ 1 ],
-                               _camera->position( )[ 2 ] );
+    glm::vec3 cameraPosition ( _cameraOrbital->position( )[ 0 ],
+                               _cameraOrbital->position( )[ 1 ],
+                               _cameraOrbital->position( )[ 2 ] );
 
     if( _player->isPlaying( ) || _lastCameraPosition != cameraPosition || _flagUpdateRender )
     {
@@ -654,6 +749,9 @@ namespace visimpl
 
   void OpenGLWidget::_resolveFlagsOperations( void )
   {
+    if(_flagNewData)
+       _updateNewData( );
+
     if( _flagChangeShader )
       _setShaderParticles( );
 
@@ -715,7 +813,7 @@ namespace visimpl
 
       if ( _paint )
       {
-        _camera->anim( );
+        _cameraOrbital->anim( );
 
         if( _particleSystem )
         {
@@ -978,6 +1076,39 @@ namespace visimpl
       }
   }
 
+  void OpenGLWidget::updateData()
+  {
+      _flagNewData = true;
+  }
+
+  void OpenGLWidget::_updateData( void )
+  {
+      _gids = _player->gids( );
+      _positions = _player->positions( );
+
+      _gidPositions.clear( );
+
+      _gidPositions.reserve( _positions.size( ));
+      auto gidit = _gids.begin( );
+      for( auto pos : _positions )
+      {
+        vec3 position( pos.x( ), pos.y( ), pos.z( ));
+
+        _gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
+        ++gidit;
+      }
+
+  }
+
+  void OpenGLWidget::_updateNewData( void )
+  {
+      _updateData();
+      _domainManager->updateData(_gids, _gidPositions );
+      _focusOn( _domainManager->boundingBox( ));
+      _flagNewData = false;
+      _flagUpdateRender = true;
+  }
+
   void OpenGLWidget::setMode( int mode )
   {
     if( mode < 0 || ( mode >= ( int )TMODE_UNDEFINED ))
@@ -1000,6 +1131,8 @@ namespace visimpl
     _flagUpdateSelection = true;
   }
 
+
+
   void OpenGLWidget::home( void )
   {
     _focusOn( _boundingBoxHome );
@@ -1020,10 +1153,10 @@ namespace visimpl
   {
     glm::vec3 center = ( boundingBox.first + boundingBox.second ) * 0.5f;
     float side = glm::length( boundingBox.second - center );
-    float radius = side / std::tan( _camera->fov( ));
+    float radius = side / std::tan( _camera->fieldOfView( ));
 
-    _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),
-                                radius );
+    _cameraOrbital->radius( radius );
+    _cameraOrbital->position( Eigen::Vector3f( center.x, center.y, center.z ));
   }
 
   void OpenGLWidget::_pickSingle( void )
@@ -1086,20 +1219,8 @@ namespace visimpl
     if( update && _player )
     {
 
-      tGidPosMap gidPositions;
-      auto gids = _player->gids( );
-      auto positions = _player->positions( );
-
-      auto gidit = gids.begin( );
-      for( auto pos : positions )
-      {
-        vec3 position( pos.x( ), pos.y( ), pos.z( ));
-
-        gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
-        ++gidit;
-      }
-
-      _domainManager->positions( gidPositions );
+     _updateData();
+      _domainManager->updateData(_gids, _gidPositions );
       _focusOn( _domainManager->boundingBox( ));
     }
 
@@ -1166,7 +1287,7 @@ namespace visimpl
 
   void OpenGLWidget::resizeGL( int w , int h )
   {
-    _camera->ratio((( double ) w ) / h );
+    _cameraOrbital->windowSize( w,  h );
     glViewport( 0, 0, w, h );
 
     if( _pickRenderer )
@@ -1280,8 +1401,10 @@ namespace visimpl
     _planeNormalLeft = ( center - centerLeft ).normalized( );
     _planeNormalRight = ( center - centerRight ).normalized( );
 
-    _clippingPlaneLeft->setEquationByPointAndNormal( centerLeft, _planeNormalLeft );
-    _clippingPlaneRight->setEquationByPointAndNormal( centerRight, _planeNormalRight );
+    _clippingPlaneLeft->setEquationByPointAndNormal(
+                centerLeft, _planeNormalLeft );
+    _clippingPlaneRight->setEquationByPointAndNormal(
+                centerRight, _planeNormalRight );
 
 //    std::cout << "Planes:" << std::endl
 //               << " Left: "
@@ -1522,8 +1645,10 @@ namespace visimpl
   {
     if( _rotation )
     {
-      _camera->localRotation( -( _mouseX - event_->x( )) * 0.01,
-                            ( _mouseY - event_->y( )) * 0.01 );
+      _cameraOrbital->rotate(
+          Eigen::Vector3f( -( _mouseX - event_->x( )) * 0.01,
+                           ( _mouseY - event_->y( )) * 0.01,
+                           0.0f ));
       _mouseX = event_->x( );
       _mouseY = event_->y( );
     }
@@ -1538,21 +1663,21 @@ namespace visimpl
 
     if( _translation )
     {
-      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
-      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+      float xDis = ( event_->x() - _mouseX ) * 0.001f * _cameraOrbital->radius( );
+      float yDis = ( event_->y() - _mouseY ) * 0.001f * _cameraOrbital->radius( );
 
-      _camera->localTranslation( Eigen::Vector3f( -xDis, yDis, 0.0f ));
+      _cameraOrbital->translate( Eigen::Vector3f( -xDis, yDis, 0.0f ));
       _mouseX = event_->x( );
       _mouseY = event_->y( );
     }
 
     if( _translationPlanes )
     {
-      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
-      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+      float xDis = ( event_->x() - _mouseX ) * 0.001f * _cameraOrbital->radius( );
+      float yDis = ( event_->y() - _mouseY ) * 0.001f * _cameraOrbital->radius( );
 
       evec3 displacement ( xDis, -yDis, 0 );
-      _planesCenter += _camera->rotation( ).transpose( ) * displacement;
+      _planesCenter += _cameraOrbital->rotation( ).transpose( ) * displacement;
 
       _mouseX = event_->x( );
       _mouseY = event_->y( );
@@ -1569,9 +1694,9 @@ namespace visimpl
     int delta = event_->angleDelta( ).y( );
 
     if ( delta > 0 )
-      _camera->radius( _camera->radius( ) / 1.3f );
+      _cameraOrbital->radius( _cameraOrbital->radius( ) / 1.3f );
     else
-      _camera->radius( _camera->radius( ) * 1.3f );
+      _cameraOrbital->radius( _cameraOrbital->radius( ) * 1.3f );
 
     update( );
 

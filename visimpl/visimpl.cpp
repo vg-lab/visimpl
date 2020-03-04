@@ -1,10 +1,23 @@
 /*
- * @file  visimpl.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #include <QApplication>
@@ -44,7 +57,7 @@ int main( int argc, char** argv )
 
   std::string networkFile;
   std::string activityFile;
-  std::string zeqUri;
+  std::string zeqUri = std::string( "" );
   std::string target = std::string( "" );
   std::string report = std::string( "" );
   std::string subsetEventFile( "" );
@@ -74,7 +87,7 @@ int main( int argc, char** argv )
         zeqUri = std::string( argv[ i ]);
       }
 #else
-      std::cerr << "Zeq not supported " << std::endl;
+      std::cerr << "ZeroEQ not supported." << std::endl;
       return -1;
 #endif
     }
@@ -112,6 +125,25 @@ int main( int argc, char** argv )
         activityFile = std::string( argv[ i ]);
         dataType = simil::TCSV;
       }
+    }
+
+    else if( std::strcmp( argv[ i ], "-rest") == 0 )
+    {
+#ifdef SIMIL_WITH_REST_API
+      if( i + 2 < argc )
+      {
+
+
+        ++i;
+        networkFile = std::string( argv[ i ]);
+        ++i;
+        activityFile = std::string( argv[ i ]);
+        dataType = simil::TREST;
+      }
+#else
+        std::cerr << "REST API not supported." << std::endl;
+        return -1;
+#endif
     }
 
     if( strcmp( argv[ i ], "-se" ) == 0 )
@@ -229,6 +261,13 @@ int main( int argc, char** argv )
     case simil::TDataType::TCSV:
       mainWindow.openCSVFile( networkFile, simType, activityFile, subsetEventFile );
       break;
+
+#ifdef SIMIL_WITH_REST_API
+    case simil::TDataType::TREST:
+    mainWindow.openRestListener( networkFile, simType, activityFile, subsetEventFile );
+    break;
+#endif
+
     default:
       break;
   }
@@ -244,6 +283,8 @@ void usageMessage( char* progName )
             << progName << std::endl
             << "\t[ -bc <blue_config_path> [-target <target> ] | "
             << "-csv <network_path> <activity_path> ] "
+            << std::endl
+            << "-rest <url> <port>  "
             << std::endl
             << "\t[ -se <subset_events_file> ] "
             << std::endl

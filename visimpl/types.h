@@ -1,11 +1,25 @@
 /*
- * @file  types.h
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
+
 #ifndef VISIMPL_TYPES_H_
 #define VISIMPL_TYPES_H_
 
@@ -148,14 +162,14 @@ namespace visimpl
                    std::min( 255, std::max( 0, int( color_.z( ) * 255 ))));
   }
 
-  static glm::vec3 floatPtrToVec3( float* floatPos )
+  static inline glm::vec3 floatPtrToVec3( float* floatPos )
   {
     return glm::vec3( floatPos[ 0 ],
                       floatPos[ 1 ],
                       floatPos[ 2 ]);
   }
 
-  static glm::mat4x4 floatPtrToMat4( float* floatPos )
+  static inline glm::mat4x4 floatPtrToMat4( float* floatPos )
   {
     return glm::mat4x4( floatPos[ 0 ], floatPos[ 1 ],
                         floatPos[ 2 ], floatPos[ 3 ],
@@ -179,7 +193,10 @@ namespace visimpl
 
     glm::vec3 PReFrCameraPosition( void )
     {
-      return floatPtrToVec3( position( ));
+      auto viewM = viewMatrix( );
+      return glm::vec3( viewM[ 3 ],
+                        viewM[ 7 ],
+                        viewM[ 11 ]);
     }
 
     glm::mat4x4 PReFrCameraViewMatrix( void )
@@ -189,7 +206,7 @@ namespace visimpl
 
     glm::mat4x4 PReFrCameraViewProjectionMatrix( void )
     {
-      return floatPtrToMat4( viewProjectionMatrix( ));
+      return floatPtrToMat4( projectionViewMatrix( ));
     }
   };
 }
