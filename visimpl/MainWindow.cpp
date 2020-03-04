@@ -154,10 +154,21 @@ namespace visimpl
 
   }
 
-  void MainWindow::init( const std::string& zeqUri )
+  void MainWindow::init( const std::string&
+#ifdef VISIMPL_USE_ZEROEQ
+                         zeqUri
+#endif
+                         )
   {
 
+#ifdef VISIMPL_USE_ZEROEQ
+
+    _zeqUri = zeqUri;
     _openGLWidget = new OpenGLWidget( 0, 0, zeqUri );
+#else
+    _openGLWidget = new OpenGLWidget( 0, 0 );
+#endif
+
     this->setCentralWidget( _openGLWidget );
     qDebug( ) << _openGLWidget->format( );
 
@@ -246,7 +257,8 @@ namespace visimpl
 
     #ifdef VISIMPL_USE_ZEROEQ
 
-    _setZeqUri( zeqUri );
+    if( !zeqUri.empty( ))
+      _setZeqUri( zeqUri );
 
     #endif
   }
@@ -631,12 +643,15 @@ namespace visimpl
           QString::number( (double)_openGLWidget->player( )->endTime( )));
 
   #ifdef SIMIL_USE_ZEROEQ
-    _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
-        boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
 
-    _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
-        boost::bind( &MainWindow::requestPlayAt, this, _1 ));
+    if( !_zeqUri.empty( ))
+    {
+      _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
+          boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
 
+      _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
+          boost::bind( &MainWindow::requestPlayAt, this, _1 ));
+    }
   #endif
 
     changeEditorColorMapping( );
@@ -1693,9 +1708,9 @@ namespace visimpl
   void MainWindow::_setZeqUri( const std::string& uri_ )
   {
     _zeqConnection = true;
-    _uri = uri_.empty( ) ? zeroeq::DEFAULT_SESSION : uri_;
+    _zeqUri = uri_.empty( ) ? zeroeq::DEFAULT_SESSION : uri_;
 
-    _subscriber = new zeroeq::Subscriber( _uri );
+    _subscriber = new zeroeq::Subscriber( _zeqUri );
 
     _subscriber->subscribe(
         lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),

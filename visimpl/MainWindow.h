@@ -215,7 +215,7 @@ namespace visimpl
     void _setZeqUri( const std::string& );
     bool _zeqConnection;
 
-    std::string _uri;
+    std::string _zeqUri;
     zeroeq::Subscriber* _subscriber;
 
     std::thread* _thread;

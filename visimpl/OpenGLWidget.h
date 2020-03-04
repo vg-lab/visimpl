@@ -303,6 +303,7 @@ namespace visimpl
     bool _wireframe;
 
     Camera* _camera;
+    reto::OrbitalCameraController* _cameraOrbital;
     glm::vec3 _lastCameraPosition;
 
     vec3 _scaleFactor;

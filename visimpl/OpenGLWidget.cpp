@@ -75,6 +75,7 @@ namespace visimpl
   , _showCurrentTime( true )
   , _wireframe( false )
   , _camera( nullptr )
+  , _cameraOrbital( nullptr )
   , _lastCameraPosition( 0, 0, 0)
   , _scaleFactor( 1.0f, 1.0f, 1.0f )
   , _scaleFactorExternal( false )
@@ -160,13 +161,14 @@ namespace visimpl
   , _selectedPickingSingle( 0 )
   {
   #ifdef VISIMPL_USE_ZEROEQ
-    if ( zeqUri != "" )
+    if ( !zeqUri.empty( ) )
       _camera = new Camera( zeqUri );
     else
   #endif
     _camera = new Camera( );
     _camera->farPlane( 100000.f );
-    _camera->animDuration( 0.5f );
+    _cameraOrbital = new reto::OrbitalCameraController( _camera );
+//    _cameraOrbital->animDuration( 0.5f );
 
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
@@ -227,7 +229,11 @@ namespace visimpl
 
   OpenGLWidget::~OpenGLWidget( void )
   {
-    delete _camera;
+    if( _cameraOrbital )
+    {
+      delete _cameraOrbital;
+      delete _camera;
+    }
 
     if( _shaderParticlesDefault )
       delete _shaderParticlesDefault;
@@ -319,7 +325,8 @@ namespace visimpl
     changeSimulationDecayValue( std::get< T_DECAY >( config ) );
 
   #ifdef VISIMPL_USE_ZEROEQ
-    _player->connectZeq( _zeqUri );
+    if( !_zeqUri.empty( ))
+      _player->connectZeq( _zeqUri );
   #endif
     this->_paint = true;
     update( );
@@ -685,7 +692,7 @@ namespace visimpl
 
     uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
     glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
-                       _camera->viewProjectionMatrix( ));
+                       _camera->projectionViewMatrix( ));
 
     cameraUp = glGetUniformLocation( shader, "cameraUp" );
     cameraRight = glGetUniformLocation( shader, "cameraRight" );
@@ -699,9 +706,9 @@ namespace visimpl
 
     glUniform1f( particleRadius, _particleRadiusThreshold );
 
-    glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
-                               _camera->position( )[ 1 ],
-                               _camera->position( )[ 2 ] );
+    glm::vec3 cameraPosition ( _cameraOrbital->position( )[ 0 ],
+                               _cameraOrbital->position( )[ 1 ],
+                               _cameraOrbital->position( )[ 2 ] );
 
     if( _player->isPlaying( ) || _lastCameraPosition != cameraPosition || _flagUpdateRender )
     {
@@ -806,7 +813,7 @@ namespace visimpl
 
       if ( _paint )
       {
-        _camera->anim( );
+        _cameraOrbital->anim( );
 
         if( _particleSystem )
         {
@@ -1146,10 +1153,10 @@ namespace visimpl
   {
     glm::vec3 center = ( boundingBox.first + boundingBox.second ) * 0.5f;
     float side = glm::length( boundingBox.second - center );
-    float radius = side / std::tan( _camera->fov( ));
+    float radius = side / std::tan( _camera->fieldOfView( ));
 
-    _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),
-                                radius );
+    _cameraOrbital->radius( radius );
+    _cameraOrbital->position( Eigen::Vector3f( center.x, center.y, center.z ));
   }
 
   void OpenGLWidget::_pickSingle( void )
@@ -1280,7 +1287,7 @@ namespace visimpl
 
   void OpenGLWidget::resizeGL( int w , int h )
   {
-    _camera->ratio((( double ) w ) / h );
+    _cameraOrbital->windowSize( w,  h );
     glViewport( 0, 0, w, h );
 
     if( _pickRenderer )
@@ -1638,8 +1645,10 @@ namespace visimpl
   {
     if( _rotation )
     {
-      _camera->localRotation( -( _mouseX - event_->x( )) * 0.01,
-                            ( _mouseY - event_->y( )) * 0.01 );
+      _cameraOrbital->rotate(
+          Eigen::Vector3f( -( _mouseX - event_->x( )) * 0.01,
+                           ( _mouseY - event_->y( )) * 0.01,
+                           0.0f ));
       _mouseX = event_->x( );
       _mouseY = event_->y( );
     }
@@ -1654,21 +1663,21 @@ namespace visimpl
 
     if( _translation )
     {
-      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
-      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+      float xDis = ( event_->x() - _mouseX ) * 0.001f * _cameraOrbital->radius( );
+      float yDis = ( event_->y() - _mouseY ) * 0.001f * _cameraOrbital->radius( );
 
-      _camera->localTranslation( Eigen::Vector3f( -xDis, yDis, 0.0f ));
+      _cameraOrbital->translate( Eigen::Vector3f( -xDis, yDis, 0.0f ));
       _mouseX = event_->x( );
       _mouseY = event_->y( );
     }
 
     if( _translationPlanes )
     {
-      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
-      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+      float xDis = ( event_->x() - _mouseX ) * 0.001f * _cameraOrbital->radius( );
+      float yDis = ( event_->y() - _mouseY ) * 0.001f * _cameraOrbital->radius( );
 
       evec3 displacement ( xDis, -yDis, 0 );
-      _planesCenter += _camera->rotation( ).transpose( ) * displacement;
+      _planesCenter += _cameraOrbital->rotation( ).transpose( ) * displacement;
 
       _mouseX = event_->x( );
       _mouseY = event_->y( );
@@ -1685,9 +1694,9 @@ namespace visimpl
     int delta = event_->angleDelta( ).y( );
 
     if ( delta > 0 )
-      _camera->radius( _camera->radius( ) / 1.3f );
+      _cameraOrbital->radius( _cameraOrbital->radius( ) / 1.3f );
     else
-      _camera->radius( _camera->radius( ) * 1.3f );
+      _cameraOrbital->radius( _cameraOrbital->radius( ) * 1.3f );
 
     update( );
 

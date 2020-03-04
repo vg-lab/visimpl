@@ -109,7 +109,7 @@ namespace visimpl
 
     glDisable( GL_CULL_FACE );
 
-    program_->sendUniform4m( "viewProj", _camera->viewProjectionMatrix( ));
+    program_->sendUniform4m( "viewProj", _camera->projectionViewMatrix( ));
     program_->sendUniform4v( "inColor", _color.data( ));
 
     glDrawArrays(GL_LINE_LOOP, 0, 4);
