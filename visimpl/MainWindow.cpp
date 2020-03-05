@@ -1085,6 +1085,18 @@ namespace visimpl
 
     connect( _objectInspectorGB, SIGNAL( simDataChanged( void )),
              _openGLWidget, SLOT( updateData( void )));
+
+    connect( _objectInspectorGB, SIGNAL( simDataChanged( void )),
+             _openGLWidget, SLOT( updateData( void )));
+
+    QTimer* timer = new QTimer( this );
+    connect( timer, SIGNAL( timeout ( void )), _objectInspectorGB,
+             SLOT( updateInfo( void ) ) );
+
+    timer->start( 4000 );
+
+    connect( _objectInspectorGB, SIGNAL( simDataChanged( void ) ), _summary,
+             SLOT( UpdateHistograms( void ) ) );
 #endif
 
     verticalLayout->setAlignment( Qt::AlignTop );
@@ -1098,17 +1110,6 @@ namespace visimpl
       Qt::/*DockWidgetAreas::enum_type::*/ RightDockWidgetArea,
       _simConfigurationDock );
 
-    connect( _objectInspectoGB, SIGNAL( simDataChanged( void )),
-             _openGLWidget, SLOT( updateData( void )));
-
-    QTimer* timer = new QTimer( this );
-    connect( timer, SIGNAL( timeout ( void )), _objectInspectoGB,
-             SLOT( updateInfo( void ) ) );
-
-    timer->start( 4000 );
-
-    connect( _objectInspectoGB, SIGNAL( simDataChanged( void ) ), _summary,
-             SLOT( UpdateHistograms( void ) ) );
     connect( _modeSelectionWidget, SIGNAL( currentChanged( int ) ),
              _openGLWidget, SLOT( setMode( int ) ) );
 

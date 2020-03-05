@@ -26,14 +26,14 @@
 #include <QGridLayout>
 
 DataInspector::DataInspector( const QString& title, QWidget* parent )
-    : QGroupBox(title,parent)
-    , _gidsize(0)
-    , _spikesize(0)
-    , _labelGIDs(nullptr)
-    , _labelSpikes(nullptr)
-    , _labelStartTime(nullptr)
-    , _labelEndTime(nullptr)
-    , _simPlayer(nullptr)
+  : QGroupBox( title, parent )
+  , _gidsize( 0 )
+  , _spikesize( 0 )
+  , _labelGIDs( nullptr )
+  , _labelSpikes( nullptr )
+  , _labelStartTime( nullptr )
+  , _labelEndTime( nullptr )
+  , _simPlayer( nullptr )
 {
   _labelGIDs = new QLabel( QString::number( _gidsize ) );
   _labelSpikes = new QLabel( QString::number( _spikesize ) );
@@ -52,14 +52,12 @@ DataInspector::DataInspector( const QString& title, QWidget* parent )
   setLayout( oiLayout );
 }
 
-void DataInspector::addWidget(QWidget *widget, int row, int column,
+void DataInspector::addWidget( QWidget* widget, int row, int column,
                                int rowSpan, int columnSpan,
                                Qt::Alignment alignment )
 {
-    static_cast<QGridLayout*>(layout())->addWidget(widget,
-                                                   row,column,
-                                                   rowSpan,columnSpan,
-                                                   alignment);
+  static_cast< QGridLayout* >( layout( ) )
+    ->addWidget( widget, row, column, rowSpan, columnSpan, alignment );
 }
 
 void DataInspector::setSimPlayer( simil::SimulationPlayer* simPlayer_ )
@@ -75,38 +73,32 @@ void DataInspector::paintEvent( QPaintEvent* event )
 
 void DataInspector::updateInfo( )
 {
-    if (_simPlayer != nullptr)
+  if ( _simPlayer != nullptr )
   {
     bool updated = false;
-        if (_simPlayer->gidsSize() != _gidsize)
+    if ( _simPlayer->gidsSize( ) != _gidsize )
     {
       updated = true;
       _gidsize = _simPlayer->gidsSize( );
       _labelGIDs->setText( QString::number( _gidsize ) );
     }
 
-        }
+    simil::SpikesPlayer* spkPlay =
+      dynamic_cast< simil::SpikesPlayer* >( _simPlayer );
 
-
-
-
-
-        simil::SpikesPlayer* spkPlay = dynamic_cast< simil::SpikesPlayer* >( _simPlayer );
-
-        if ( spkPlay != nullptr )
+    if ( spkPlay != nullptr )
     {
-            if (spkPlay->spikesSize() != _spikesize)
+      if ( spkPlay->spikesSize( ) != _spikesize )
       {
         updated = true;
         _spikesize = spkPlay->spikesSize( );
-                _labelSpikes->setText(QString::number(_spikesize));
-                _labelStartTime->setText(QString::number(spkPlay->startTime()));
-                _labelEndTime->setText(QString::number(spkPlay->endTime()));
-            }
+        _labelSpikes->setText( QString::number( _spikesize ) );
+        _labelStartTime->setText( QString::number( spkPlay->startTime( ) ) );
+        _labelEndTime->setText( QString::number( spkPlay->endTime( ) ) );
+      }
+    }
 
-        }
-
-        if (updated)
+    if ( updated )
       emit simDataChanged( );
   }
 
