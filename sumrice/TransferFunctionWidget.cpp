@@ -1,32 +1,47 @@
 /*
- * @file  TransferFunctionWidget.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
+// Sumrice
 #include "TransferFunctionWidget.h"
+#include "EditorTF/ColorPoints.h"
+#include "EditorTF/Gradient.h"
 
+// C++
 #include <iostream>
 #include <limits>
 #include <fstream>
 
+// Qt
+#include <QPushButton>
+#include <QMouseEvent>
+#include <QDoubleSpinBox>
+#include <QLabel>
+#include <QComboBox>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QLabel>
-
-//typedef std::map<float, osg::Vec4> Colors;
-
-/*
-  TransferFunctionWidget::Impl
-*/
 
 TransferFunctionWidget::TransferFunctionWidget( QWidget* parent_ ) :
 QWidget( parent_ )
 {
-
   InitDialog( );
 
   _result = new Gradient( );
@@ -37,9 +52,6 @@ QWidget( parent_ )
 
   setSizeFunction( _sizeFunction );
 
-//  connect( this, SIGNAL( clicked( void )),
-//           this, SLOT( gradientClicked( void )));
-
   QGridLayout* mainLayout = new QGridLayout( );
   mainLayout->addWidget( _result, 0, 0, 1, 5 );
 
@@ -48,17 +60,14 @@ QWidget( parent_ )
   mainLayout->addWidget( _maxValueLabel, 1, 3, 1, 1 );
 
   this->setLayout( mainLayout );
-
-}
-
-TransferFunctionWidget::~TransferFunctionWidget()
-{
 }
 
 void TransferFunctionWidget::InitDialog( void )
 {
   _dialog = new QWidget( );
   _dialog->setWindowModality( Qt::NonModal );
+  _dialog->setWindowIcon(QIcon(":/icons/visimpl-icon-square.png"));
+  _dialog->setWindowTitle(tr("Color Transfer Functions"));
   _dialog->setMinimumSize( 800, 600 );
 
   _presetsComboBox = new QComboBox( _dialog );
@@ -218,7 +227,6 @@ void TransferFunctionWidget::InitDialog( void )
   _sizePoints = new ColorPoints( _sizeFrame );
   _sizePoints->setPoints( sPoints );
 
-
   /* Connecting slots */
   connect( _saveButton, SIGNAL( clicked( void )),
            this, SLOT( acceptClicked( void )));
@@ -322,36 +330,41 @@ void TransferFunctionWidget::InitDialog( void )
           this, SLOT(colorPointsChanged(const QPolygonF &)));
 }
 
-visimpl::TTransferFunction TransferFunctionWidget::getColors( bool includeAlpha )
+visimpl::TTransferFunction TransferFunctionWidget::getColors( bool includeAlpha ) const
 {
   visimpl::TTransferFunction result;
 
-  for( auto stop : ( includeAlpha ? _tResult : _result->getGradientStops( )) )
+  const QGradientStops &stops = includeAlpha ? _tResult : _result->getGradientStops( );
+
+  auto insertStop = [&result](const QGradientStop &stop)
   {
     result.push_back( std::make_pair( float( stop.first ), stop.second ));
-  }
+  };
+  std::for_each(stops.cbegin(), stops.cend(), insertStop);
 
   return result;
 }
 
-visimpl::TTransferFunction TransferFunctionWidget::getPreviewColors( void )
+visimpl::TTransferFunction TransferFunctionWidget::getPreviewColors( void ) const
 {
   visimpl::TTransferFunction result;
 
   QGradientStops stops = _gradientFrame->getGradientStops( );
 
-  for( auto stop : stops )
+  auto insertStop = [&result](const QGradientStop &stop)
   {
     result.push_back( std::make_pair( float( stop.first ), stop.second ));
-  }
+  };
+  std::for_each(stops.cbegin(), stops.cend(), insertStop);
 
   return result;
 }
 
-
 void TransferFunctionWidget::colorPointsChanged( const QPolygonF &points )
 {
-    QObject *pointSet = sender();
+  auto pointSet = qobject_cast<ColorPoints *>(sender());
+  if(pointSet)
+  {
     int indexToUpdate = 0;
     if (pointSet == _redPoints)
         indexToUpdate = 0;
@@ -362,11 +375,10 @@ void TransferFunctionWidget::colorPointsChanged( const QPolygonF &points )
     else if (pointSet == _alphaPoints)
         indexToUpdate = 3;
 
-    QGradientStops stops = _gradientFrame->getGradientStops();
-
+    auto stops = _gradientFrame->getGradientStops();
     stops.resize(points.size());
 
-    QGradientStops ntStops = stops;
+    auto ntStops = stops;
     for (int i = 0; i < points.size(); i++)
     {
         stops[i].first = points[i].x();
@@ -378,30 +390,29 @@ void TransferFunctionWidget::colorPointsChanged( const QPolygonF &points )
         }
         ntStops[i].second.setAlphaF(1.0);
     }
+
     _gradientFrame->setGradientStops(stops);
     _nTGradientFrame->setGradientStops( ntStops );
     _sizeFrame->setGradientStops( ntStops );
+  }
 }
 
 void TransferFunctionWidget::setColorPoints( const visimpl::TTransferFunction& colors,
                                              bool updateResult )
 {
-//  QGradientStops gradientColors;
-//  QGradientStops ntGradientColors;
   QPolygonF redPoints;
   QPolygonF greenPoints;
   QPolygonF bluePoints;
   QPolygonF alphaPoints;
 
-  for( auto c : colors )
+  auto insertColor = [&](const visimpl::TTFColor &c)
   {
-
     redPoints.append( QPointF( c.first, c.second.redF( )));
     greenPoints.append( QPointF( c.first, c.second.greenF( )));
     bluePoints.append( QPointF( c.first, c.second.blueF( )));
     alphaPoints.append( QPointF( c.first, c.second.alphaF( )));
-
-  }
+  };
+  std::for_each(colors.cbegin(), colors.cend(), insertColor);
 
   _redPoints->setPoints( redPoints, true );
   _greenPoints->setPoints( greenPoints, true );
@@ -417,77 +428,78 @@ void TransferFunctionWidget::setColorPoints( const visimpl::TTransferFunction& c
 }
 
 
-visimpl::TSizeFunction TransferFunctionWidget::getSizeFunction( void )
+visimpl::TSizeFunction TransferFunctionWidget::getSizeFunction( void ) const
 {
   return _sizeFunction;
 }
 
-visimpl::TSizeFunction TransferFunctionWidget::getSizePreview( void )
+visimpl::TSizeFunction TransferFunctionWidget::getSizePreview( void ) const
 {
   return pointsToSizeFunc( _sizePoints->points( ),
                            _minSizeBox->value( ),
                            _maxSizeBox->value( ));
 }
 
-visimpl::TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF& points )
+visimpl::TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF& points ) const
 {
   return pointsToSizeFunc( points, _minSize, _maxSize );
 }
 
 visimpl::TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF &points,
                                                     float minSize,
-                                                    float maxSize )
+                                                    float maxSize ) const
 {
-
   visimpl::TSizeFunction result;
-  float time;
-  float value;
-//  float invHeight = 1.0f / float( height( ));
-//  float invWidth = 1.0f / float( width( ));
 
-  for( auto point : points)
+  auto insertPoint = [&result, minSize, maxSize](const QPointF &p)
   {
-    time = point.x( );
-    value = point.y( ) * ( maxSize - minSize) + minSize;
+    const float time = p.x( );
+    const float value = p.y( ) * ( maxSize - minSize) + minSize;
     result.push_back( std::make_pair( time, value ));
-  }
+  };
+  std::for_each(points.cbegin(), points.cend(), insertPoint);
 
   return result;
 }
 
 void TransferFunctionWidget::setSizeFunction( const visimpl::TSizeFunction& sizeFunc )
 {
-
   _sizeFunction = sizeFunc;
   QPolygonF result;
 
   _minSize = std::numeric_limits< float >::max( );
   _maxSize = std::numeric_limits< float >::min( );
-  for( auto value : sizeFunc )
+
+  auto updateSizeLimits = [this](const visimpl::TSize &value)
   {
-    if( value.second < _minSize )
-      _minSize = value.second;
+    _minSize = std::min(_minSize, value.second);
+    _maxSize = std::max(_maxSize, value.second);
+  };
+  std::for_each(sizeFunc.cbegin(), sizeFunc.cend(), updateSizeLimits);
 
-    if( value.second > _maxSize )
-      _maxSize = value.second;
-  }
+  const float invTotal = 1.0f / ( _maxSize - _minSize ) ;
 
-  float invTotal = 1.0f / ( _maxSize - _minSize ) ;
-
-//  auto valueIt = sizeFunc.values.begin( );
-  for( auto time : sizeFunc )
+  auto insertPoint = [&result, invTotal, this](const visimpl::TSize &value)
   {
-    result.append( QPointF( time.first, ( time.second - _minSize ) * invTotal ));
-
-//    valueIt++;
-  }
+    result.append( QPointF( value.first, ( value.second - _minSize ) * invTotal ));
+  };
+  std::for_each(sizeFunc.cbegin(), sizeFunc.cend(), insertPoint);
 
   _sizePoints->setPoints( result, true );
-  _minValueLabel->setText( QString("Min size: ") +
-                           QString::number( double( _minSize ) ));
 
-  _maxValueLabel->setText( QString("Max size: ") +
-                           QString::number( double( _maxSize ) ));
+  if(sizeFunc.empty())
+  {
+    _minValueLabel->setText( QString("Min size: Unknown") );
+    _maxValueLabel->setText( QString("Max size: Unknown") );
+  }
+  else
+  {
+    _minValueLabel->setText( QString("Min size: ") +
+                             QString::number( static_cast<double>( _minSize ) ));
+
+    _maxValueLabel->setText( QString("Max size: ") +
+                             QString::number( static_cast<double>( _maxSize ) ));
+  }
 
   _minSizeBox->setValue( _minSize );
   _maxSizeBox->setValue( _maxSize );
@@ -516,23 +528,6 @@ void TransferFunctionWidget::gradientClicked( void )
   }
 }
 
-//void TransferFunctionWidget::buttonClicked( QAbstractButton* button )
-//{
-//  _dialog->close( );
-//
-//  if( button == _saveButton )
-//  {
-//    _result->setGradientStops( _nTGradientFrame->getGradientStops( ));
-//    _tResult = _gradientFrame->getGradientStops( );
-//    emit colorChanged( );
-//  }
-//  else if( button == _discardButton )
-//  {
-//    if( previewed )
-//      emit colorChanged( );
-//  }
-//}
-
 void TransferFunctionWidget::acceptClicked( void )
 {
   _dialog->close( );
@@ -541,14 +536,14 @@ void TransferFunctionWidget::acceptClicked( void )
   _tResult = _gradientFrame->getGradientStops( );
   _sizeFrame->setGradientStops( _nTGradientFrame->getGradientStops( ));
 
-  _maxSize = float( _maxSizeBox->value( ));
-  _minSize = float( _minSizeBox->value( ));
+  _maxSize = static_cast<float>( _maxSizeBox->value( ));
+  _minSize = static_cast<float>( _minSizeBox->value( ));
 
   _minValueLabel->setText( QString("Min size: ") +
-                          QString::number( double( _minSize ) ));
+                          QString::number( static_cast<double>( _minSize ) ));
 
   _maxValueLabel->setText( QString("Max size: ") +
-                          QString::number( double( _maxSize ) ));
+                          QString::number( static_cast<double>( _maxSize ) ));
 
   _sizeFunction = pointsToSizeFunc( _sizePoints->points( ));
 
@@ -586,23 +581,22 @@ void TransferFunctionWidget::mousePressEvent(QMouseEvent * event_ )
 
 void TransferFunctionWidget::presetSelected( int presetIdx )
 {
-  std::cout << "Selected "
-            << _presets[ presetIdx ].name( ).toUtf8( ).constData( )
-            << std::endl;
   const auto& stops = _presets[ presetIdx ].stops( );
-//  _gradientFrame->setGradientStops( stops );
+
   QPolygonF redPoints;
   QPolygonF greenPoints;
   QPolygonF bluePoints;
   QPolygonF alphaPoints;
-  for( const auto stop : stops )
+
+  auto insertStop = [&](const QGradientStop &stop)
   {
     redPoints.append( QPointF( stop.first, stop.second.redF( )));
     greenPoints.append( QPointF( stop.first, stop.second.greenF( )));
     bluePoints.append( QPointF( stop.first, stop.second.blueF( )));
     alphaPoints.append( QPointF( stop.first, stop.second.alphaF( )));
+  };
+  std::for_each(stops.cbegin(), stops.cend(), insertStop);
 
-  }
   _redPoints->setPoints( redPoints, true );
   _greenPoints->setPoints( greenPoints, true );
   _bluePoints->setPoints( bluePoints, true );

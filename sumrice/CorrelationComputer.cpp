@@ -1,51 +1,56 @@
 /*
- * @file  CorrelationComputer.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #include "CorrelationComputer.h"
 
 namespace visimpl
 {
-
   CorrelationComputer::CorrelationComputer( simil::SpikeData* simData )
   : _simData( simData )
   , _subsetEvents( simData->subsetsEvents( ))
+  , _startTime{0}
+  , _endTime{-1}
   { }
 
   void CorrelationComputer::configureEvents( const std::vector< std::string >& eventsNames,
                                              double deltaTime )
   {
     _startTime = _simData->startTime( );
-    _endTime =
-        std::max( _simData->subsetsEvents( )->totalTime( ), _simData->endTime( ));
-
-    std::cout << "Simulation time: [" << _startTime
-              << ", " << _endTime << "]"
-              << std::endl;
+    _endTime   = std::max( _simData->subsetsEvents( )->totalTime( ), _simData->endTime( ));
 
     _eventNames = eventsNames;
+    _eventTimeBins.clear();
 
-    for( auto eventName : eventsNames )
+    auto insertBin = [this, &deltaTime](const std::string &name)
     {
-      _eventTimeBins[ eventName ] =
-          _eventTimePerBin( eventName, _startTime, _endTime, deltaTime );
-    }
-
+      _eventTimeBins[ name ] = _eventTimePerBin( name, _startTime, _endTime, deltaTime );
+    };
+    std::for_each(_eventNames.cbegin(), _eventNames.cend(), insertBin);
   }
-
 
   double CorrelationComputer::_entropy( unsigned int active, unsigned int totalBins ) const
   {
     double result = 0.0;
-//    double invTotal = 1.0 ;
-    double probability = ( double ) active / ( double )totalBins;
-
-//    std::cout << "probability " << probability << std::endl;
+    const double probability = static_cast<double>(active) / static_cast<double>(totalBins);
 
     if( probability > 0.0 )
       result = - ( probability * std::log2( probability ) );
@@ -64,7 +69,7 @@ namespace visimpl
                                             float /*selectionThreshold*/ )
   {
 
-    GIDVec gids = _subsetEvents->getSubset( subset );
+    const GIDVec gids = _subsetEvents->getSubset( subset );
     Correlation correlation_;
 
     if( gids.empty( ))
@@ -80,24 +85,23 @@ namespace visimpl
       return correlation_;
     }
 
-    TGIDUSet giduset( gids.begin( ), gids.end( ));
+    const TGIDUSet giduset( gids.begin( ), gids.end( ));
 
     const TSpikes& spikes = _simData->spikes( );
 
     enum tSRecord { tPatternFiring = 0, tNotPatternFiring, tPatternNotFiring, tNotPatternNotFiring, tTotalFiring };
     typedef std::tuple< unsigned int, unsigned int, unsigned int, unsigned int, unsigned int >  tSpikesRecord;
     std::unordered_map< uint32_t, tSpikesRecord > neuronSpikes;
-//    std::map< uint32_t, unsigned int > totalNeuronSpikes;
 
     // Calculate delta time inverse to avoid further division operations.
-    double invDeltaTime = 1.0 / deltaTime;
+    const double invDeltaTime = 1.0 / deltaTime;
 
     // Threshold for considering an event active during bin time.
-    float threshold = deltaTime * 0.5f;
+    const float threshold = deltaTime * 0.5f;
 
     // Calculate bins number.
-    unsigned int totalBins = std::ceil( _endTime * invDeltaTime );
-    unsigned int analysisTotalBins =
+    const unsigned int totalBins = std::ceil( _endTime * invDeltaTime );
+    const unsigned int analysisTotalBins =
         std::ceil( ( endTime - initTime ) * invDeltaTime );
 
     // Initialize vector storing delta time spaced event's activity.
@@ -110,8 +114,8 @@ namespace visimpl
     double currentTime = 0.0;
     for( unsigned int i = 0; i < totalBins; ++i, currentTime += deltaTime )
     {
-      auto time = eventTime->second[ i ];
-      bool value = ( time >= threshold );
+      const auto time = eventTime->second[ i ];
+      const bool value = ( time >= threshold );
 
       if( value )
       {
@@ -124,56 +128,55 @@ namespace visimpl
 
     }
 
-
-    std::cout << "Pattern " << eventName
-              << " time [" << initTime << ", " << endTime << "]"
-              << " " << totalActiveBins << "/" << totalBins
-              << " analysis " << analysisActiveBins << "/" << analysisTotalBins
-              << std::endl;
-
-//    double invTotalBins = 1.0 / binsNumber;
-
-    double entropyPattern = _entropy( analysisActiveBins, analysisTotalBins );
-
-    std::cout << "Pattern " << eventName << " entropy " << entropyPattern << std::endl;
+    const double entropyPattern = _entropy( analysisActiveBins, analysisTotalBins );
 
     std::vector< std::set< uint32_t >> binSpikes( totalBins );
     std::unordered_map< uint32_t, std::unordered_set< unsigned int >> neuronActiveBins;
 
-    for( auto gid : gids )
+    auto insertSpikesAndActiveBins = [&neuronSpikes, &neuronActiveBins](const uint32_t id)
     {
-      neuronSpikes.insert( std::make_pair( gid, std::make_tuple( 0, 0, 0, 0, 0 )));
+      neuronSpikes.insert( std::make_pair( id, std::make_tuple( 0, 0, 0, 0, 0 )));
       neuronActiveBins.insert(
-          std::make_pair( gid, std::unordered_set< unsigned int >( )));
-    }
+          std::make_pair( id, std::unordered_set< unsigned int >( )));
+    };
+    std::for_each(gids.cbegin(), gids.cend(), insertSpikesAndActiveBins);
 
-    for( const auto& spike : spikes )
+
+    auto processSpike = [&giduset,&binSpikes,&neuronActiveBins,invDeltaTime](const Spike &s)
     {
-      if( giduset.find( spike.second ) == giduset.end( ))
-        continue;
+      const auto id = std::find(giduset.cbegin(), giduset.cend(), s.second);
+      if( id == giduset.cend( ))
+      {
+        std::cerr << "ERROR: can't find id " << __FILE__ << " " << __LINE__ << std::endl;
+        return;
+      }
 
-      unsigned int binIdx = std::floor( spike.first * invDeltaTime );
+      unsigned int binIdx = std::floor( s.first * invDeltaTime );
 
-      binSpikes[ binIdx ].insert( spike.second );
+      binSpikes[ binIdx ].insert( s.second );
 
-      auto neuronBinFired = neuronActiveBins.find( spike.second );
+      auto neuronBinFired = neuronActiveBins.find(s.second);
+      if (neuronBinFired == neuronActiveBins.end())
+      {
+        std::cerr << "ERROR: can't find active bin " << __FILE__ << " " << __LINE__ << std::endl;
+        return;
+      }
+
       neuronBinFired->second.insert( binIdx );
-    }
+    };
+    std::for_each(spikes.cbegin(), spikes.cend(), processSpike);
 
-    unsigned int startBin = std::floor( initTime / deltaTime );
-    unsigned int endBin = std::ceil( endTime / deltaTime );
+    const unsigned int startBin = std::floor( initTime / deltaTime );
+    const unsigned int endBin = std::ceil( endTime / deltaTime );
 
-    std::cout << "Bin range [" << startBin << ", " << endBin << "] "
-              << initTime << " " << endTime << std::endl;
-
-    for( auto gid : gids )
+    auto computeStatistics = [&](const uint32_t id)
     {
-      auto neuron = neuronSpikes.find( gid );
+      auto neuron = neuronSpikes.find(id);
+      if(neuron == neuronSpikes.end()) return;
 
-//      auto gid = neuron->first;
       auto& stats = neuron->second;
-
-      auto firedBins = neuronActiveBins.find( gid );
+      auto firedBins = neuronActiveBins.find(id);
+      if(firedBins == neuronActiveBins.end()) return;
 
       unsigned int totalFiringBins = 0;
       unsigned int firedPattern = 0;
@@ -183,8 +186,9 @@ namespace visimpl
 
       for( unsigned int i = startBin; i < endBin; ++i )
       {
-        bool fired = firedBins->second.find( i ) != firedBins->second.end( );
-        bool pattern = eventBins[ i ];
+        const auto hasFired = std::find(firedBins->second.cbegin(), firedBins->second.cend(), i);
+        const bool fired = hasFired != firedBins->second.cend( );
+        const bool pattern = eventBins[ i ];
 
         if( fired )
         {
@@ -209,36 +213,15 @@ namespace visimpl
       std::get< tNotPatternFiring >( stats ) = firedNotPattern;
       std::get< tNotPatternNotFiring >( stats ) = notFiredNotPattern;
       std::get< tTotalFiring >( stats ) = totalFiringBins;
-    }
-
-//    for( unsigned int i = 0; i < binSpikes.size( ); ++i )
-//    {
-//      auto neuronsPerBin = binSpikes[ i ];
-//
-//      for( auto neuron : neuronsPerBin )
-//      {
-//        auto it = neuronSpikes.find( neuron );
-//
-//        if( eventBins[ i ])
-//        {
-//            std::get< 0 >( it->second )++;
-//        }
-//        else
-//          std::get< 1 >( it->second )++;
-//
-//        std::get< 2 >( it->second )++;
-//      }
-//    }
-
+    };
+    std::for_each(gids.cbegin(), gids.cend(), computeStatistics);
 
     correlation_.subsetName = subset;
     correlation_.eventName = eventName;
     correlation_.gids = giduset;
 
     // Calculate normalization factors by the inverse of active/inactive bins.
-    double normBins = 1.0 / analysisTotalBins;
-//    double normHit = 1.0 / analysisActiveBins;
-//    double normFH = 1.0 / ( totalBins - totalActiveBins );
+    const double normBins = 1.0 / analysisTotalBins;
 
     // Initialize maximum value probes.
     double maxHitValue = 0.0;
@@ -249,36 +232,24 @@ namespace visimpl
     double avgFHValue = 0.0;
     double avgResValue = 0.0;
 
-
-    unsigned int binsFiringPattern = 0;
-    unsigned int binsFiringNotPattern = 0;
-    unsigned int binsNotFiringPattern = 0;
-    unsigned int binsNotFiringNotPattern = 0;
-    unsigned int binsTotalFiring = 0;
-
-    // For each neuron...
-    for( auto gid : gids )
+    auto computeCorrelation = [&](const uint32_t id)
     {
+      const auto neuronStats = neuronSpikes.find(id);
+      if(neuronStats == neuronSpikes.end()) return;
 
-      auto neuronStats = neuronSpikes.find( gid );
-//      auto neuronTotalSpikes = totalNeuronSpikes.find( gid );
+      const unsigned int binsFiringPattern = std::get< tPatternFiring >( neuronStats->second );
+      const unsigned int binsFiringNotPattern = std::get< tNotPatternFiring >( neuronStats->second );
+      const unsigned int binsNotFiringPattern = std::get< tPatternNotFiring >( neuronStats->second );
+      const unsigned int binsNotFiringNotPattern = std::get< tNotPatternNotFiring >( neuronStats->second );
 
-      binsFiringPattern = std::get< tPatternFiring >( neuronStats->second );
-      binsFiringNotPattern = std::get< tNotPatternFiring >( neuronStats->second );
-      binsNotFiringPattern = std::get< tPatternNotFiring >( neuronStats->second );
-      binsNotFiringNotPattern = std::get< tNotPatternNotFiring >( neuronStats->second );
-
-      binsTotalFiring = std::get< tTotalFiring >( neuronStats->second );
-
-//      unsigned int binsFiringTotal = std::get< tTotalFiring >( neuronStats->second );
-//      unsigned int binsRest =
+      const unsigned int binsTotalFiring = std::get< tTotalFiring >( neuronStats->second );
 
       // Calculate corresponding values according to current event activity.
       CorrelationValues values;
 
       // Hit value relates to spiking neurons during active event.
-      values.hit = std::max( 0.0, std::min( 1.0, binsFiringPattern * normBins ));
-      values.cr = std::max( 0.0, std::min( 1.0, binsNotFiringNotPattern * normBins ));
+      values.hit  = std::max( 0.0, std::min( 1.0, binsFiringPattern * normBins ));
+      values.cr   = std::max( 0.0, std::min( 1.0, binsNotFiringNotPattern * normBins ));
       values.miss = std::max( 0.0, std::min( 1.0, binsNotFiringPattern * normBins ));
       // False hit is related to spiking neurons when event is not active.
       values.falseAlarm = std::max( 0.0, std::min( 1.0, binsFiringNotPattern * normBins ));
@@ -304,21 +275,6 @@ namespace visimpl
       // Result responds to Hit minus False Hit.
       values.result = values.mutualInformation;
 
-//      std::cout << "Neuron " << gid
-//                << " " << binsFiringPattern
-//                << " " << binsNotFiringNotPattern
-//                << " " << binsNotFiringPattern
-//                << " " << binsFiringNotPattern
-//                << " Hit " << values.hit
-//                << " CR " << values.cr
-//                << " Miss " << values.miss
-//                << " FA " << values.falseAlarm
-//                << " ent " << values.entropy
-//                << " joint " << values.jointEntropy
-//                << " MI " << values.mutualInformation
-//                << std::endl;
-
-
       // Store maximum values.
       if( values.hit > maxHitValue )
         maxHitValue = values.hit;
@@ -333,35 +289,14 @@ namespace visimpl
       avgFHValue += values.falseAlarm;
       avgResValue += values.result;
 
-      // If result is above the given threshold...
-//      if( values.result >= selectionThreshold )
-
         // Store neuron correlation value.
-      correlation_.values.insert( std::make_pair( gid, values ));
-
-    }
+      correlation_.values.insert( std::make_pair( id, values ));
+    };
+    std::for_each(gids.cbegin(), gids.cend(), computeCorrelation);
 
     avgHitValue /= neuronSpikes.size( );
     avgFHValue /= neuronSpikes.size( );
     avgResValue /= neuronSpikes.size( );
-
-    std::cout << "Hit: Max value: " << maxHitValue << std::endl;
-    std::cout << "False hit: Max value " << maxFHValue << std::endl;
-    std::cout << "Result: Max value " << maxResValue << std::endl;
-
-    std::cout << "Hit: Avg " << avgHitValue << std::endl;
-    std::cout << "False hit: Avg " << avgFHValue << std::endl;
-    std::cout << "Result: Avg " << avgResValue << std::endl;
-
-
-    // Store the full subset correlation for filtered neurons.
-//    _correlations.insert( std::make_pair( , correlation_ ));
-
-    std::cout << "Computed correlation for event " << subset
-              << " with "<< correlation_.values.size( ) << " elements."
-              << std::endl;
-
-    std::cout << "-------------------------" << std::endl;
 
     return correlation_;
   }
@@ -374,7 +309,7 @@ namespace visimpl
                                   float endTime,
                                   float selectionThreshold )
   {
-    std::vector< uint32_t > gids =
+    const std::vector< uint32_t > gids =
         _subsetEvents->getSubset( subsetName );
 
     std::vector< Correlation > result;
@@ -386,64 +321,23 @@ namespace visimpl
       return result;
     }
 
-    std::vector< std::string > composedNames( eventNames.size( ));
-
-    for( unsigned int i = 0; i < eventNames.size( ); ++i )
+    auto computeAndInsertCorrelation = [&](const std::string &eventName)
     {
-      auto eventName = eventNames[ i ];
-      auto composedName = _composeName( subsetName, eventName );
-
-      composedNames[ i ] = composedName;
-
-      auto res = _correlations.find( composedName );
-
-      if( res == _correlations.end( ))
+      const auto composedName = _composeName(subsetName, eventName);
+      auto res = _correlations.find(composedName);
+      if( res == _correlations.end())
       {
         auto correlation =
             computeCorrelation( subsetName, eventName, initTime, endTime,
                                 deltaTime, selectionThreshold );
 
-        correlation.fullName = composedNames[ i ];
+        correlation.fullName = composedName;
 
         if( !correlation.values.empty( ))
-          res = _correlations.insert( std::make_pair( composedName, correlation )).first;
+          _correlations.insert( std::make_pair( composedName, correlation ));
       }
-    }
-
-//    unsigned int counter = 0;
-
-//    result.reserve( eventNames.size( ));
-//    for( auto& c : result )
-//    {
-//      c.subsetName = subsetName;
-//      c.eventName = eventNames[ counter ];
-//
-//      ++counter;
-//    }
-
-//    for( auto gid : gids )
-//    {
-//      CorrelationValues max;
-//      max.falseAlarm = max.hit = max.result = std::numeric_limits< float >::min( );
-//
-//      int maxNumber = -1;
-//
-//      counter = 0;
-//      for( const auto corr : impliedCorrelations )
-//      {
-//        auto res = corr->values.find( gid );
-//        if( res != corr->values.end( ) && res->second > max )
-//        {
-//          max = res->second;
-//          maxNumber = counter;
-//        }
-//
-//        ++counter;
-//      }
-//
-//      if( maxNumber > -1 )
-//        result[ maxNumber ].values.insert( std::make_pair( gid, max ));
-//    }
+    };
+    std::for_each(eventNames.cbegin(), eventNames.cend(), computeAndInsertCorrelation);
 
     return result;
   }
@@ -455,7 +349,7 @@ namespace visimpl
   {
 
     std::vector< float > eventTime;
-    EventVec events = _subsetEvents->getEvent( eventName );
+    const EventVec events = _subsetEvents->getEvent( eventName );
 
     if( events.empty( ))
     {
@@ -463,40 +357,22 @@ namespace visimpl
       return eventTime;
     }
 
+    const double totalTime = ( endTime - startTime );
+    const double invTotalTime = 1.0 / totalTime;
+    const double invDeltaTime = 1.0 / deltaTime ;
 
-    double totalTime = ( endTime - startTime );
-    double invTotalTime = 1.0 / totalTime;
-
-    double invDeltaTime = 1.0 / deltaTime ;
-
-
-    unsigned int binsNumber = std::ceil( totalTime * invDeltaTime );
+    const unsigned int binsNumber = std::ceil( totalTime * invDeltaTime );
 
     eventTime.resize( binsNumber, 0.0f );
 
     for( auto eventRange : events )
     {
-      double currentTime = 0.0f;
-      double nextTime = 0.0f;
-      unsigned int counter = 0;
+      const double lowerEvent = ( eventRange.first - startTime ) * invTotalTime;
+      const double upperEvent = (eventRange.second - startTime ) * invTotalTime;
 
-      double lowerBound;
-      double upperBound;
-
-      double lowerEvent = ( eventRange.first - startTime ) * invTotalTime;
-      double upperEvent = (eventRange.second - startTime ) * invTotalTime;
-
-      unsigned int binStart =
-          std::max( ( int ) 0,
-                    ( int ) std::floor( lowerEvent * binsNumber ) - 1 );
-      unsigned int binEnd =
-          std::min( binsNumber, ( unsigned int ) std::ceil( upperEvent * binsNumber ));
-
-//      if( binEnd > binsNumber )
-//        binEnd = binsNumber;
-
-//      std::cout << "Calculated bin range: [" << binStart
-//                << ", " << binEnd << ")"<< std::endl;
+      unsigned int binStart = std::max(0, static_cast<int>(std::floor( lowerEvent * binsNumber ) - 1 ));
+      const unsigned int binEnd =
+          std::min( binsNumber, static_cast<unsigned int>(std::ceil( upperEvent * binsNumber )));
 
       if( binStart > binEnd )
       {
@@ -504,76 +380,61 @@ namespace visimpl
         continue;
       }
 
-      currentTime = binStart * deltaTime;
+      double currentTime = binStart * deltaTime;
       while( currentTime > eventRange.first )
       {
         --binStart;
         currentTime = binStart * deltaTime;
       }
 
-      nextTime = currentTime + deltaTime;
+      double nextTime = currentTime + deltaTime;
 
       double eventAcc = 0.0;
       double currentAcc = 0.0;
 
       for( unsigned int i = binStart; i < binEnd;
           ++i, nextTime += deltaTime, currentTime += deltaTime )
-//      for( auto binIt = eventTime.begin( ) + binStart;
-//           binIt != eventTime.begin( ) + binEnd; ++binIt )
       {
 
-//        if( nextTime < eventRange.first || currentTime > eventRange.second )
-//          continue;
-
-        lowerBound = std::max( currentTime, ( double ) eventRange.first );
-        upperBound = std::min( nextTime, ( double ) eventRange.second );
+        const double lowerBound = std::max( currentTime, ( double ) eventRange.first );
+        const double upperBound = std::min( nextTime, ( double ) eventRange.second );
 
         if( lowerBound > upperBound )
           continue;
 
         currentAcc = std::abs( upperBound - lowerBound );
-//        *binIt += ( upperBound - lowerBound );
 
         if( lowerBound < nextTime && upperBound > currentTime )
         {
           eventTime[ i ] += currentAcc;
           eventAcc += currentAcc;
-
-
-//          std::cout << i << " e [" << eventRange.first << ", " << eventRange.second
-//                    << "] t [" << currentTime << ", " << nextTime
-//                    << "] -> [" << lowerBound << ", " << upperBound << ")"
-//                    << " -> " << currentAcc << " " << eventAcc << "/" << eventRange.second - eventRange.first
-//                    << " - " << ( int ) ( lowerBound == eventRange.first )
-//                    << " " << ( int ) ( upperBound == ( eventRange.second ))
-//                    << std::endl;
         }
-
-        counter++;
       }
-
     }
 
     return eventTime;
   }
 
-  Correlation*
-  CorrelationComputer::correlation( const std::string& subsetName )
+  const Correlation*
+  CorrelationComputer::correlation( const std::string& subsetName ) const
   {
-    auto it = _correlations.find( subsetName );
+    auto correlation = _correlations.find(subsetName);
 
-    if( it == _correlations.end( ))
+    if( correlation == _correlations.end( ))
       return nullptr;
 
-    return &it->second;
+    return &correlation->second;
   }
 
-  std::vector< std::string > CorrelationComputer::correlationNames( void )
+  std::vector< std::string > CorrelationComputer::correlationNames( void ) const
   {
     std::vector< std::string > result;
 
-    for( auto c : _correlations )
-      result.push_back( c.first );
+    auto insertName = [&result](const std::pair<std::string, Correlation> &c)
+    {
+      result.emplace_back(c.first);
+    };
+    std::for_each(_correlations.cbegin(), _correlations.cend(), insertName);
 
     return result;
   }
@@ -588,43 +449,34 @@ namespace visimpl
   {
     GIDUSet result;
 
-    auto correl = _correlations.find( correlationName );
-
-    if( correl == _correlations.end( ))
+    auto correlIt = _correlations.find(correlationName);
+    if( correlIt == _correlations.end( ))
     {
       std::cout << "No correlated neurons for " << correlationName << std::endl;
       return result;
     }
 
-    const auto& correlation = correl->second;
-
-    unsigned int eventsNumber = _eventNames.size( );
-
-    unsigned int selectionNumber = correlation.gids.size( ) / eventsNumber;
+    const auto& correlation = correlIt->second;
 
     typedef std::pair< unsigned int, double > TvalueTuple;
     std::vector< TvalueTuple > sortedValues;
     sortedValues.reserve( correlation.values.size( ));
 
-    for( auto neuron : correlation.values )
+    auto insertCorrelationValues = [&sortedValues](const std::pair< uint32_t, CorrelationValues > &neuron)
     {
       sortedValues.emplace_back( std::make_pair( neuron.first, neuron.second.result ));
-    }
-    std::sort( sortedValues.begin( ), sortedValues.end( ),
-               [ ]( const TvalueTuple& a, const TvalueTuple& b )
-               { return a.second > b.second; });
+    };
+    const auto &values = correlation.values;
+    std::for_each(values.cbegin(), values.cend(), insertCorrelationValues);
 
-    std::cout << "Correlated neurons: (" << selectionNumber
-              << "/" << sortedValues.size( ) << ")" << std::endl;;
+    auto lessThanTuple = []( const TvalueTuple& a, const TvalueTuple& b ) { return a.second > b.second; };
+    std::sort( sortedValues.begin( ), sortedValues.end( ), lessThanTuple );
 
-    for( unsigned int i = 0; i < selectionNumber; ++i )
+    auto insertValues = [&result](const TvalueTuple &v)
     {
-      auto value = sortedValues[ i ];
-      std::cout << " " << value.first; //<< ":" << value.second;
-      result.insert( value.first );
-    }
-
-    std::cout << std::endl;
+      result.insert(v.first);
+    };
+    std::for_each(sortedValues.cbegin(), sortedValues.cend(), insertValues);
 
     return result;
   }
