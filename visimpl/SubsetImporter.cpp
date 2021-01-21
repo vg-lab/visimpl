@@ -20,8 +20,10 @@
  *
  */
 
+// ViSimpl
 #include "SubsetImporter.h"
 
+// Qt
 #include <QGroupBox>
 #include <QScrollArea>
 #include <QCheckBox>
@@ -29,20 +31,21 @@
 
 namespace visimpl
 {
-
-  SubsetImporter::SubsetImporter( QWidget* parent_ )
-  : QWidget( parent_ )
+  SubsetImporter::SubsetImporter( QWidget* parent_, Qt::WindowFlags f_ )
+  : QDialog( parent_, f_ )
   , _subsetEventManager( nullptr )
   , _buttonAccept( nullptr )
   , _buttonCancel( nullptr )
   , _layoutSubsets( nullptr )
   {
     init( );
+
+    setWindowIcon(QIcon(tr(":/icons/visimpl-icon-square.png")));
+    setWindowTitle(tr("Import Subsets"));
   }
 
   void SubsetImporter::init( void )
   {
-
     QVBoxLayout* layoutUpper = new QVBoxLayout( );
     this->setLayout( layoutUpper );
 
@@ -82,28 +85,12 @@ namespace visimpl
     layoutBottom->addWidget( _buttonCancel, 1, 1, 1, 1 );
     layoutBottom->addWidget( _buttonAccept, 1, 3, 1, 1 );
 
-
     layoutUpper->addWidget( gbSubsets );
     layoutUpper->addWidget( foot );
 
-    connect( _buttonCancel, SIGNAL( clicked( void )),
-             this, SLOT( closeDialog( void )));
-
-    connect( _buttonAccept, SIGNAL( clicked( void )),
-             this, SLOT( closeDialog( void )));
+    connect( _buttonCancel, SIGNAL( clicked( void )), this, SLOT( reject()));
+    connect( _buttonAccept, SIGNAL( clicked( void )), this, SLOT( accept( )));
   }
-
-  SubsetImporter::~SubsetImporter( )
-  { }
-
-  void SubsetImporter::closeDialog( void )
-  {
-    this->close( );
-
-    if( sender( ) == _buttonAccept )
-      emit clickedAccept( );
-  }
-
 
   void SubsetImporter::reload( const simil::SubsetEventManager* subsetEventMngr )
   {
@@ -112,11 +99,13 @@ namespace visimpl
     if( !_subsetEventManager )
       return;
 
-    clear( );
+    clear();
 
-    for( auto subsetName : _subsetEventManager->subsetNames( ))
+    const auto names = _subsetEventManager->subsetNames( );
+
+    auto createSubsetWidgets = [this](const std::string &subsetName)
     {
-      auto subset = _subsetEventManager->getSubset( subsetName );
+      const auto subset = _subsetEventManager->getSubset( subsetName );
 
       QWidget* container = new QWidget( );
       QGridLayout* layout = new QGridLayout( );
@@ -133,37 +122,37 @@ namespace visimpl
       layout->addWidget( label, 0, 2, 1, 1 );
 
       _layoutSubsets->addWidget( container );
-    }
+    };
+    std::for_each(names.cbegin(), names.cend(), createSubsetWidgets);
   }
 
-  void SubsetImporter::clear( void )
+  void SubsetImporter::clear( )
   {
-    for( auto row : _subsets )
+    auto removeSubsetWidgets = [this](std::pair<const std::string, tSubsetLine> &row)
     {
       auto container = std::get< sl_container >( row.second );
       _layoutSubsets->removeWidget( container );
 
       delete container;
-    }
+    };
+    std::for_each(_subsets.begin(), _subsets.end(), removeSubsetWidgets);
 
     _subsets.clear( );
   }
 
-  const std::vector< std::string > SubsetImporter::selectedSubsets( void ) const
+  const std::vector< std::string > SubsetImporter::selectedSubsets( ) const
   {
     std::vector< std::string > result;
 
-    for( auto subset : _subsets )
+    auto selectSubsetIfChecked = [&result, this](const std::pair<const std::string, tSubsetLine> &row)
     {
-      if( std::get< sl_checkbox >( subset.second )->isChecked( ))
-        result.push_back( subset.first );
-    }
+      if( std::get< sl_checkbox >( row.second )->isChecked( ))
+        result.push_back( row.first );
+    };
+    std::for_each(_subsets.cbegin(), _subsets.cend(), selectSubsetIfChecked);
 
     return result;
   }
-
-
-
 }
 
 

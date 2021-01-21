@@ -23,26 +23,26 @@
 #ifndef SUBSETIMPORTER_H_
 #define SUBSETIMPORTER_H_
 
+// Qt
+#include <QDialog>
 #include <QWidget>
 #include <QCheckBox>
 #include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
 
+// SimIL
 #include <simil/simil.h>
 
 namespace visimpl
 {
-
-  class SubsetImporter : public QWidget
+  class SubsetImporter : public QDialog
   {
-
     Q_OBJECT
 
   public:
-
-    SubsetImporter( QWidget* parent_ = nullptr );
-    ~SubsetImporter( );
+    SubsetImporter(QWidget* parent_ = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
+    virtual ~SubsetImporter( ) {};
 
     void init( void );
 
@@ -51,17 +51,7 @@ namespace visimpl
 
     const std::vector< std::string > selectedSubsets( void ) const;
 
-  signals:
-
-    void clickedAccept( void );
-    void clickedClose( void );
-
-  protected slots:
-
-    void closeDialog( void );
-
   protected:
-
     const simil::SubsetEventManager* _subsetEventManager;
 
     enum TSubsetLine { sl_container = 0, sl_layout, sl_checkbox, sl_label };
@@ -73,12 +63,7 @@ namespace visimpl
     QVBoxLayout* _layoutSubsets;
 
     std::map< std::string, tSubsetLine > _subsets;
-
   };
-
-
 }
-
-
 
 #endif /* SUBSETIMPORTER_H_ */

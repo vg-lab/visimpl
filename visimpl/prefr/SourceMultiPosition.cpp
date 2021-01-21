@@ -30,9 +30,6 @@ namespace visimpl
   , _idxTranslate( nullptr )
   { }
 
-  SourceMultiPosition::~SourceMultiPosition( void )
-  { }
-
   void SourceMultiPosition::setIdxTranslation( const tUintUMap& idxTranslation )
   {
     _idxTranslate = &idxTranslation;

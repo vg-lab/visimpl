@@ -35,13 +35,9 @@ namespace prefr
   , _still( still_ )
   {}
 
-  ColorSource::~ColorSource()
-  {}
-
   void ColorSource::color( const glm::vec4& color_ )
   {
     _color = color_;
-//    color_.a = 0.0f;
   }
 
   const glm::vec4& ColorSource::color( void )
@@ -59,7 +55,6 @@ namespace prefr
     return _still;
   }
 
-
   void ColorSource::size( float size_ )
   {
     _size = size_;
@@ -74,7 +69,4 @@ namespace prefr
   {
     return true;
   }
-
 }
-
-

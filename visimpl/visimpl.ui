@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -35,6 +35,7 @@
     <addaction name="actionOpenXMLScene"/>
     <addaction name="actionOpenSWCFile"/>
     <addaction name="actionOpenCSVFiles"/>
+    <addaction name="actionOpenH5Files"/>
     <addaction name="separator"/>
     <addaction name="actionOpenSubsetEventsFile"/>
     <addaction name="separator"/>
@@ -57,10 +58,6 @@
     <addaction name="separator"/>
     <addaction name="actionTogglePlaybackDock"/>
     <addaction name="actionToggleSimConfigDock"/>
-    <addaction name="separator"/>
-    <addaction name="actionShowSelection"/>
-    <addaction name="actionactionShowGroups"/>
-    <addaction name="actionShowAttributeMapping"/>
     <addaction name="separator"/>
     <addaction name="actionShowInactive"/>
     <addaction name="actionShowCurrentTime"/>
@@ -86,6 +83,7 @@
    </attribute>
    <addaction name="actionOpenBlueConfig"/>
    <addaction name="actionOpenCSVFiles"/>
+   <addaction name="actionOpenH5Files"/>
    <addaction name="separator"/>
    <addaction name="actionOpenSubsetEventsFile"/>
    <addaction name="separator"/>
@@ -386,6 +384,21 @@
    </property>
    <property name="toolTip">
     <string>Open Subset/Events File</string>
+   </property>
+  </action>
+  <action name="actionOpenH5Files">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/folder.png</normaloff>:/icons/folder.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open H5 Network and Activity Files...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open H5 Network and Activity files...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+H</string>
    </property>
   </action>
  </widget>

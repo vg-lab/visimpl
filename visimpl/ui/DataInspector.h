@@ -23,18 +23,19 @@
 #ifndef DATAINSPECTOR_H
 #define DATAINSPECTOR_H
 
-#include <QWidget>
+// Qt
 #include <QGroupBox>
-#include <QLabel>
 
+// Simil
 #include <simil/simil.h>
+
+class QWidget;
+class QLabel;
 
 class DataInspector : public QGroupBox
 {
   Q_OBJECT
-
 public:
-
     DataInspector(const QString &title, QWidget *parent = nullptr);
 
     void addWidget(QWidget *widget, int row, int column,
@@ -44,17 +45,13 @@ public:
     void setSimPlayer(simil::SimulationPlayer * simPlayer_);
 
 public slots:
-
   void updateInfo( void );
 
 signals:
-
   void simDataChanged( void );
 
 protected:
-
     virtual void paintEvent(QPaintEvent *event);
-
 
     unsigned int _gidsize;
     unsigned int _spikesize;

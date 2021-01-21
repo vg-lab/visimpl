@@ -55,8 +55,16 @@
 #include <QShortcut>
 #include <QMessageBox>
 #include <QColorDialog>
-
-// #include "qt/CustomSlider.h"
+#include <QDateTime>
+#include <QComboBox>
+#include <QDockWidget>
+#include <QPushButton>
+#include <QSlider>
+#include <QTimer>
+#include <QRadioButton>
+#include <QGroupBox>
+#include <QPushButton>
+#include <QToolBox>
 
 #ifdef VISIMPL_USE_GMRVLEX
 #include <gmrvlex/gmrvlex.h>
@@ -177,14 +185,17 @@ namespace visimpl
     connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( void ) ), this,
              SLOT( openCSVFilesThroughDialog( void ) ) );
 
+    connect( _ui->actionOpenH5Files, SIGNAL( triggered( void ) ), this,
+             SLOT( openHDF5ThroughDialog( void ) ) );
+
     connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void ) ), this,
              SLOT( openSubsetEventsFileThroughDialog( void ) ) );
 
     connect( _ui->actionCloseData, SIGNAL( triggered( void ) ), this,
              SLOT( closeData( void ) ) );
 
-    connect( _ui->actionQuit, SIGNAL( triggered( void ) ),
-             QApplication::instance( ), SLOT( quit( void ) ) );
+    connect( _ui->actionQuit, SIGNAL( triggered( void ) ), this,
+             SLOT( close( ) ) );
 
     // Connect about dialog
     connect( _ui->actionAbout, SIGNAL( triggered( void ) ), this,
@@ -214,9 +225,6 @@ namespace visimpl
 
     connect( _ui->actionShowInactive, SIGNAL( toggled( bool ) ), this,
              SLOT( showInactive( bool ) ) );
-
-#else
-    _ui->actionShowSelection->setEnabled( false );
 #endif
 
     _initPlaybackDock( );
@@ -235,6 +243,9 @@ namespace visimpl
     connect( _ui->actionToggleSimConfigDock, SIGNAL( triggered( ) ), this,
              SLOT( toggleSimConfigDock( ) ) );
 
+    _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
+    _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
+
 #ifdef VISIMPL_USE_ZEROEQ
 
     _setZeqUri( zeqUri );
@@ -244,6 +255,25 @@ namespace visimpl
 
   MainWindow::~MainWindow( void )
   {
+#ifdef VISIMPL_USE_ZEROEQ
+
+    if( _zeqConnection )
+    {
+      _zeqConnection = false;
+      _thread->join();
+
+      delete _thread;
+
+      if(_subscriber)
+      {
+        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
+        delete _subscriber;
+        _subscriber = nullptr;
+      }
+    }
+
+#endif
+
     delete _ui;
   }
 
@@ -299,11 +329,13 @@ namespace visimpl
 
       if ( ok && !text.isEmpty( ) )
       {
-        //      std::string targetLabel = text.toStdString( );
         std::string reportLabel = text.toStdString( );
         _lastOpenedNetworkFileName = QFileInfo( path ).path( );
         std::string fileName = path.toStdString( );
+
+        QApplication::setOverrideCursor(Qt::WaitCursor);
         openBlueConfig( fileName, simType, reportLabel );
+        QApplication::restoreOverrideCursor();
       }
     }
 #endif
@@ -327,12 +359,14 @@ namespace visimpl
 
       if ( !pathActivity.isEmpty( ) )
       {
-        //      std::string targetLabel = text.toStdString( );
         _lastOpenedNetworkFileName = QFileInfo( pathNetwork ).path( );
         _lastOpenedActivityFileName = QFileInfo( pathActivity ).path( );
         std::string networkFile = pathNetwork.toStdString( );
         std::string activityFile = pathActivity.toStdString( );
+
+        QApplication::setOverrideCursor(Qt::WaitCursor);
         openCSVFile( networkFile, simType, activityFile );
+        QApplication::restoreOverrideCursor();
       }
     }
   }
@@ -381,6 +415,7 @@ namespace visimpl
     _configurePlayer( );
   }
 #endif
+
   void MainWindow::openHDF5ThroughDialog( void )
   {
     QString path = QFileDialog::getOpenFileName(
@@ -408,7 +443,9 @@ namespace visimpl
 
     activityFile = path.toStdString( );
 
+    QApplication::setOverrideCursor(Qt::WaitCursor);
     openHDF5File( networkFile, simil::TSimSpikes, activityFile );
+    QApplication::restoreOverrideCursor();
   }
 
   void MainWindow::openSubsetEventFile( const std::string& filePath,
@@ -420,46 +457,46 @@ namespace visimpl
     if ( !append )
       _subsetEvents->clear( );
 
-    if ( filePath.find( "json" ) != std::string::npos )
+    QFileInfo eventsFile{QString::fromStdString(filePath)};
+    if(!eventsFile.exists())
+      return;
+
+    if(eventsFile.suffix().toLower().compare("json") == 0)
     {
-      std::cout << "Loading JSON file: " << filePath << std::endl;
       _subsetEvents->loadJSON( filePath );
-
-      _subsetImporter->reload( _subsetEvents );
-
-      _openGLWidget->subsetEventsManager( _subsetEvents );
-      _openGLWidget->showEventsActivityLabels(
-        _ui->actionShowEventsActivity->isChecked( ) );
     }
-    else if ( filePath.find( "h5" ) != std::string::npos )
+    else if(eventsFile.suffix().toLower().compare("h5") == 0)
     {
-      std::cout << "Loading H5 file: " << filePath << std::endl;
       _subsetEvents->loadH5( filePath );
-
-      _subsetImporter->reload( _subsetEvents );
-
-      _openGLWidget->subsetEventsManager( _subsetEvents );
-      _openGLWidget->showEventsActivityLabels(
-        _ui->actionShowEventsActivity->isChecked( ) );
     }
     else
     {
       std::cout << "Subset Events file not found: " << filePath << std::endl;
+      return;
     }
+
+    _subsetImporter->reload(_subsetEvents);
+
+    _openGLWidget->subsetEventsManager(_subsetEvents);
+    _openGLWidget->showEventsActivityLabels(_ui->actionShowEventsActivity->isChecked());
   }
 
   void MainWindow::openSubsetEventsFileThroughDialog( void )
   {
     QString filePath = QFileDialog::getOpenFileName(
       this, tr( "Open file containing subsets/events data" ),
-      _lastOpenedSubsetsFileName, tr( "JSON (*.json);; All files (*)" ),
+      _lastOpenedSubsetsFileName, tr( "JSON (*.json);; hdf5 ( *.h5);; All files (*)" ),
       nullptr, QFileDialog::DontUseNativeDialog );
 
     if ( !filePath.isEmpty( ) )
     {
-      _lastOpenedSubsetsFileName = QFileInfo( filePath ).path( );
+      QFileInfo eventsFile{ filePath };
+      if(eventsFile.exists())
+      {
+        _lastOpenedSubsetsFileName = eventsFile.path();
 
-      openSubsetEventFile( filePath.toStdString( ), false );
+        openSubsetEventFile( filePath.toStdString( ), false );
+      }
     }
   }
 
@@ -475,7 +512,7 @@ namespace visimpl
       tr( "A multi-view visual analyzer of brain simulation data. " ) + "<br>" +
       tr( "Version " ) + visimpl::Version::getString( ).c_str( ) +
       tr( " rev (%1)<br>" ).arg( visimpl::Version::getRevision( ) ) +
-      "<a href='https://gmrv.es/visimpl/'>https://gmrv.es/visimpl</a>" +
+      "<a href='https://vg-lab.es/visimpl/'>https://vg-lab.es/visimpl</a>" +
       "<h4>" + tr( "Build info:" ) + "</h4>" +
       "<ul>"
 
@@ -537,10 +574,10 @@ namespace visimpl
 
       "</li></ul>" + "<h4>" + tr( "Developed by:" ) + "</h4>" +
       "GMRV / URJC / UPM"
-      "<br><a href='https://gmrv.es/gmrvvis'>https://gmrv.es/gmrvvis</a>"
+      "<br><a href='https://vg-lab.es/'>https://vg-lab.es/</a>"
       //"<br><a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
-      "<br>(C) 2015-2017<br><br>"
-      "<a href='https://gmrv.es/gmrvvis'><img src=':/icons/logoGMRV.png'/></a>"
+      "<br>(C) 2015-" + QString::number(QDateTime::currentDateTime().date().year()) + "<br><br>"
+      "<a href='https://vg-lab.es/'><img src=':/icons/logoGMRV.png'/></a>"
       "&nbsp;&nbsp;&nbsp;&nbsp;"
       "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
       "&nbsp;&nbsp;&nbsp;&nbsp;"
@@ -561,8 +598,12 @@ namespace visimpl
   {
     if ( !_subsetImporter )
       return;
+
     _subsetImporter->reload( _subsetEvents );
-    _subsetImporter->show( );
+    if(QDialog::Accepted == _subsetImporter->exec())
+    {
+      importVisualGroups();
+    }
   }
 
   void MainWindow::togglePlaybackDock( void )
@@ -600,6 +641,8 @@ namespace visimpl
     _endTimeLabel->setText(
       QString::number( ( double )_openGLWidget->player( )->endTime( ) ) );
 
+    _simSlider->setEnabled(true);
+
 #ifdef SIMIL_USE_ZEROEQ
     _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
       boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ) );
@@ -636,6 +679,7 @@ namespace visimpl
     _simSlider->setMinimum( 0 );
     _simSlider->setMaximum( 1000 );
     _simSlider->setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred );
+    _simSlider->setEnabled(false);
 
     _playButton = new QPushButton( );
     _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
@@ -643,7 +687,7 @@ namespace visimpl
     QPushButton* stopButton = new QPushButton( );
     QPushButton* nextButton = new QPushButton( );
     QPushButton* prevButton = new QPushButton( );
-    //  QPushButton* repeatButton = new QPushButton( );
+
     _repeatButton = new QPushButton( );
     _repeatButton->setCheckable( true );
     _repeatButton->setChecked( false );
@@ -708,22 +752,15 @@ namespace visimpl
 
     connect( _simSlider, SIGNAL( sliderPressed( ) ), this, SLOT( PlayAt( ) ) );
 
-    connect( _goToButton, SIGNAL( clicked( ) ), this,
-             SLOT( playAtButtonClicked( ) ) );
-
-    //  connect( _simSlider, SIGNAL( sliderMoved( )),
-    //             this, SLOT( PlayAt( )));
+    connect( _goToButton, SIGNAL( clicked( ) ), this, SLOT( playAtButtonClicked( ) ) );
 
     _summary = new visimpl::Summary( nullptr, visimpl::T_STACK_FIXED );
-    //  _summary->setVisible( false );
     _summary->setMinimumHeight( 50 );
 
     dockLayout->addWidget( _summary, 0, 1, 2, totalHSpan - 3 );
 
     _simulationDock->setWidget( content );
-    this->addDockWidget(
-      Qt::/*DockWidgetAreas::enum_type::*/ BottomDockWidgetArea,
-      _simulationDock );
+    this->addDockWidget(Qt::BottomDockWidgetArea, _simulationDock );
 
     connect( _summary, SIGNAL( histogramClicked( float ) ), this,
              SLOT( PlayAt( float ) ) );
@@ -740,15 +777,12 @@ namespace visimpl
     _tfWidget = new TransferFunctionWidget( );
     _tfWidget->setMinimumHeight( 100 );
 
-    _subsetImporter = new SubsetImporter( );
+    _subsetImporter = new SubsetImporter( this );
+    _subsetImporter->setWindowModality( Qt::WindowModal );
     _subsetImporter->setMinimumHeight( 300 );
     _subsetImporter->setMinimumWidth( 500 );
 
-    connect( _subsetImporter, SIGNAL( clickedAccept( void ) ), this,
-             SLOT( importVisualGroups( void ) ) );
-
     _selectionManager = new SelectionManagerWidget( );
-    //    _selectionManager->setWindowFlags( Qt::D );
     _selectionManager->setWindowModality( Qt::WindowModal );
     _selectionManager->setMinimumHeight( 300 );
     _selectionManager->setMinimumWidth( 500 );
@@ -819,8 +853,6 @@ namespace visimpl
 
     QColor clippingColor( 255, 255, 255, 255 );
     _frameClippingColor = new QPushButton( );
-    //      auto colors = _openGLWidget->colorPalette( ).colors( );
-    // colors[ currentIndex % colors.size( )].first
     _frameClippingColor->setStyleSheet( "background-color: " +
                                         clippingColor.name( ) );
     _frameClippingColor->setMinimumSize( 20, 20 );
@@ -959,14 +991,10 @@ namespace visimpl
 
 #ifdef SIMIL_WITH_REST_API
     _objectInspectorGB = new DataInspector( "Object inspector" );
-    /*QGroupBox* objectInspectoGB = new QGroupBox( "Object inspector" );
-    QGridLayout* oiLayout = new QGridLayout( );
-    oiLayout->setAlignment( Qt::AlignTop );*/
     _objectInspectorGB->addWidget( new QLabel( "GID:" ), 2, 0, 1, 1 );
     _objectInspectorGB->addWidget( _labelGID, 2, 1, 1, 3 );
     _objectInspectorGB->addWidget( new QLabel( "Position: " ), 3, 0, 1, 1 );
     _objectInspectorGB->addWidget( _labelPosition, 3, 1, 1, 3 );
-    // objectInspectoGB->setLayout( oiLayout );*/
 #endif
 
     QGroupBox* groupBoxGroups = new QGroupBox( "Current visualization groups" );
@@ -1106,9 +1134,7 @@ namespace visimpl
     topContainer->setLayout( verticalLayout );
     _simConfigurationDock->setWidget( topContainer );
 
-    this->addDockWidget(
-      Qt::/*DockWidgetAreas::enum_type::*/ RightDockWidgetArea,
-      _simConfigurationDock );
+    this->addDockWidget(Qt::RightDockWidgetArea, _simConfigurationDock );
 
     connect( _modeSelectionWidget, SIGNAL( currentChanged( int ) ),
              _openGLWidget, SLOT( setMode( int ) ) );
@@ -1204,15 +1230,12 @@ namespace visimpl
 
   void MainWindow::_initSummaryWidget( void )
   {
-    simil::TSimulationType simType =
-      _openGLWidget->player( )->simulationType( );
+    const auto simType = _openGLWidget->player( )->simulationType( );
 
     if ( simType == simil::TSimSpikes )
     {
       simil::SpikesPlayer* spikesPlayer =
         dynamic_cast< simil::SpikesPlayer* >( _openGLWidget->player( ) );
-
-      std::cout << "Creating summary..." << std::endl;
 
       _summary->Init( spikesPlayer->data( ) );
 
@@ -1226,7 +1249,7 @@ namespace visimpl
       return;
 
     _startTimeLabel->setText(
-      QString::number( ( double )_openGLWidget->currentTime( ) ) );
+      QString::number( static_cast<double>(_openGLWidget->currentTime( ) ) ) );
     // TODO UPDATE ENDTIME
 
     int total = _simSlider->maximum( ) - _simSlider->minimum( );
@@ -1353,15 +1376,12 @@ namespace visimpl
 
   void MainWindow::AlphaBlendingToggled( void )
   {
-    std::cout << "Changing alpha blending... ";
     if ( _alphaNormalButton->isChecked( ) )
     {
-      std::cout << "Normal" << std::endl;
       _openGLWidget->SetAlphaBlendingAccumulative( false );
     }
     else
     {
-      std::cout << "Accumulative" << std::endl;
       _openGLWidget->SetAlphaBlendingAccumulative( true );
     }
   }
@@ -1378,21 +1398,18 @@ namespace visimpl
       delete item->widget( );
     }
 
-    std::cout << "Updating stats..." << std::endl;
+    const auto stats = _domainManager->attributeStatistics( );
 
-    auto stats = _domainManager->attributeStatistics( );
-
-    for ( auto stat : stats )
+    auto insertAttribStats = [this](const tStatsGroup &stat)
     {
-      auto name = std::get< T_TYPE_NAME >( stat );
-      auto label = std::get< T_TYPE_LABEL >( stat );
-      auto number = std::get< T_TYPE_STATS >( stat );
-      QString text =
-        ( QString( name.c_str( ) ) + ": " + QString::number( number ) );
+      const auto name = std::get< T_TYPE_NAME >( stat );
+      const auto number = std::get< T_TYPE_STATS >( stat );
+      const auto text = ( QString( name.c_str( ) ) + ": " + QString::number( number ) );
 
       QLabel* textLabel = new QLabel( text );
       _layoutAttribStats->addWidget( textLabel );
-    }
+    };
+    std::for_each(stats.cbegin(), stats.cend(), insertAttribStats);
 
     while ( ( item = _layoutAttribGroups->takeAt( 0 ) ) )
     {
@@ -1620,31 +1637,24 @@ namespace visimpl
     switch ( operation )
     {
       case zeroeq::gmrv::PLAY:
-        //        std::cout << "Received play" << std::endl;
         Play( false );
         break;
       case zeroeq::gmrv::PAUSE:
         Pause( false );
-        //        std::cout << "Received pause" << std::endl;
         break;
       case zeroeq::gmrv::STOP:
-        //        std::cout << "Received stop" << std::endl;
         Stop( false );
         break;
       case zeroeq::gmrv::BEGIN:
-        //        std::cout << "Received begin" << std::endl;
         PreviousStep( false );
         break;
       case zeroeq::gmrv::END:
-        //        std::cout << "Received end" << std::endl;
         NextStep( false );
         break;
       case zeroeq::gmrv::ENABLE_LOOP:
-        //        std::cout << "Received enable loop" << std::endl;
         _zeqEventRepeat( true );
         break;
       case zeroeq::gmrv::DISABLE_LOOP:
-        //        std::cout << "Received disable loop" << std::endl;
         _zeqEventRepeat( false );
         break;
       default:
@@ -1669,35 +1679,20 @@ namespace visimpl
 
     _subscriber->subscribe(
       lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
-      [&]( const void* data_, const size_t size_ ) {
+      [&]( const void* data_, unsigned long long size_ ) {
         _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ) );
       } );
 
-    _thread = new std::thread( [&]( ) {
-      while ( true )
+    _thread = new std::thread( [this]( ) {
+      while ( _zeqConnection )
         _subscriber->receive( 10000 );
     } );
   }
 
-  // void* MainWindow::_Subscriber( void* subs )
-  //{
-  //  zeroeq::Subscriber* subscriber = static_cast< zeroeq::Subscriber* >( subs
-  //  ); while ( true )
-  //  {
-  //    subscriber->receive( 10000 );
-  //  }
-  //  pthread_exit( NULL );
-  //}
-
-  void
-    MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
+  void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
   {
-    std::cout << "Received selection" << std::endl;
     if ( _openGLWidget )
     {
-      //    std::vector< unsigned int > selected =
-      //        zeq::hbp::deserializeSelectedIDs( selected );
-
       std::vector< uint32_t > ids = selected->getIdsVector( );
 
       visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ) );
@@ -1712,13 +1707,11 @@ namespace visimpl
                                      unsigned int currentIndex,
                                      unsigned int size )
   {
-    QFrame* frame = new QFrame( );
-    auto colors = _openGLWidget->colorPalette( ).colors( );
-
-    frame->setStyleSheet( "background-color: " +
-                          colors[ currentIndex ].name( ) );
-    frame->setMinimumSize( 20, 20 );
-    frame->setMaximumSize( 20, 20 );
+    auto icon = new QLabel;
+    const auto colors = _openGLWidget->colorPalette( ).colors( );
+    QPixmap pixmap{20,20};
+    pixmap.fill(colors[ currentIndex ].toRgb());
+    icon->setPixmap(pixmap);
 
     QCheckBox* buttonVisibility = new QCheckBox( "active" );
     buttonVisibility->setChecked( true );
@@ -1732,7 +1725,7 @@ namespace visimpl
 
     QString numberText = QString( "# " ).append( QString::number( size ) );
 
-    layout->addWidget( frame, 0, 0, 1, 1 );
+    layout->addWidget( icon, 0, 0, 1, 1 );
     layout->addWidget( new QLabel( name.c_str( ) ), 0, 1, 1, 1 );
     layout->addWidget( buttonVisibility, 0, 2, 1, 1 );
     layout->addWidget( new QLabel( numberText ), 0, 3, 1, 1 );
@@ -1743,10 +1736,6 @@ namespace visimpl
     _groupLayout->addWidget( container );
 
     _buttonClearGroups->setEnabled( true );
-  }
-
-  void MainWindow::removeGroupControls( unsigned int )
-  {
   }
 
   void MainWindow::clearGroups( void )
@@ -1772,28 +1761,33 @@ namespace visimpl
   {
     const auto& groups = _subsetImporter->selectedSubsets( );
 
-    std::cout << "Importing " << groups.size( ) << " groups..." << std::endl;
-
     const auto& allGIDs = _domainManager->gids( );
 
-    for ( auto groupName : groups )
+    auto addGroup = [this, &allGIDs](const std::string &groupName)
     {
-      auto subset = _subsetEvents->getSubset( groupName );
-      TGIDUSet gids( subset.begin( ), subset.end( ) );
+      const auto subset = _subsetEvents->getSubset( groupName );
 
       GIDUSet filteredGIDs;
-      for ( auto gid : gids )
+      auto filterGIDs = [&filteredGIDs, &allGIDs](const uint32_t gid)
+      {
         if ( allGIDs.find( gid ) != allGIDs.end( ) )
           filteredGIDs.insert( gid );
+      };
+      std::for_each(subset.cbegin(), subset.cend(), filterGIDs);
 
       addGroupControls( groupName, _domainManager->groups( ).size( ),
                         filteredGIDs.size( ) );
+
       _domainManager->addVisualGroup( filteredGIDs, groupName );
-    }
+    };
+    std::for_each(groups.cbegin(), groups.cend(), addGroup);
 
     _openGLWidget->setUpdateGroups( );
+    _openGLWidget->subsetEventsManager(_subsetEvents);
+    _openGLWidget->showEventsActivityLabels(_ui->actionShowEventsActivity->isChecked());
 
-    _buttonImportGroups->setEnabled( false );
+    _buttonImportGroups->setEnabled( groups.empty() );
+    _buttonClearGroups->setEnabled( !groups.empty() );
   }
 
   void MainWindow::addGroupFromSelection( void )
@@ -1950,7 +1944,6 @@ namespace visimpl
     if ( _openGLWidget )
     {
       bool repeat = _repeatButton->isChecked( );
-      //    std::cout << "Repeat " << boolalpha << repeat << std::endl;
       _openGLWidget->Repeat( repeat );
 
       if ( notify )
@@ -1976,10 +1969,7 @@ namespace visimpl
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    if ( _openGLWidget )
-    {
-      PlayAt( _simSlider->sliderPosition( ), notify );
-    }
+    PlayAt( _simSlider->sliderPosition( ), notify );
   }
 
   void MainWindow::PlayAt( float percentage, bool notify )
@@ -1987,31 +1977,28 @@ namespace visimpl
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    if ( _openGLWidget )
-    {
-      int sliderPosition =
+    int sliderPosition =
         percentage * ( _simSlider->maximum( ) - _simSlider->minimum( ) ) +
         _simSlider->minimum( );
 
-      _simSlider->setSliderPosition( sliderPosition );
+    _simSlider->setSliderPosition( sliderPosition );
 
-      _playButton->setIcon( _pauseIcon );
+    _playButton->setIcon( _pauseIcon );
 
-      _openGLWidget->PlayAt( percentage );
+    _openGLWidget->PlayAt( percentage );
 
-      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
+    _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
 
-      if ( notify )
-      {
+    if ( notify )
+    {
 #ifdef SIMIL_USE_ZEROEQ
-        // Send event
-        _openGLWidget->player( )->zeqEvents( )->sendFrame(
-          _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+      // Send event
+      _openGLWidget->player( )->zeqEvents( )->sendFrame(
+        _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
 
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          zeroeq::gmrv::PLAY );
+      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
+        zeroeq::gmrv::PLAY );
 #endif
-      }
     }
   }
 
@@ -2020,32 +2007,29 @@ namespace visimpl
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    if ( _openGLWidget )
+    int value = _simSlider->value( );
+    float percentage =
+      float( value - _simSlider->minimum( ) ) /
+      float( _simSlider->maximum( ) - _simSlider->minimum( ) );
+
+    _simSlider->setSliderPosition( sliderPosition );
+
+    _playButton->setIcon( _pauseIcon );
+
+    _openGLWidget->PlayAt( percentage );
+
+    _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
+
+    if ( notify )
     {
-      int value = _simSlider->value( );
-      float percentage =
-        float( value - _simSlider->minimum( ) ) /
-        float( _simSlider->maximum( ) - _simSlider->minimum( ) );
-
-      _simSlider->setSliderPosition( sliderPosition );
-
-      _playButton->setIcon( _pauseIcon );
-
-      _openGLWidget->PlayAt( percentage );
-
-      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
-
-      if ( notify )
-      {
 #ifdef SIMIL_USE_ZEROEQ
         // Send event
-        _openGLWidget->player( )->zeqEvents( )->sendFrame(
-          _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+      _openGLWidget->player( )->zeqEvents( )->sendFrame(
+        _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
 
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          zeroeq::gmrv::PLAY );
+      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
+        zeroeq::gmrv::PLAY );
 #endif
-      }
     }
   }
 
@@ -2054,12 +2038,9 @@ namespace visimpl
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    if ( _openGLWidget )
-    {
-      _playButton->setIcon( _pauseIcon );
-      _openGLWidget->player( )->Play( );
-      _openGLWidget->PreviousStep( );
-    }
+    _playButton->setIcon( _pauseIcon );
+    _openGLWidget->player( )->Play( );
+    _openGLWidget->PreviousStep( );
   }
 
   void MainWindow::NextStep( bool /*notify*/ )
@@ -2067,12 +2048,9 @@ namespace visimpl
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    if ( _openGLWidget )
-    {
-      _playButton->setIcon( _pauseIcon );
-      _openGLWidget->player( )->Play( );
-      _openGLWidget->NextStep( );
-    }
+    _playButton->setIcon( _pauseIcon );
+    _openGLWidget->player( )->Play( );
+    _openGLWidget->NextStep( );
   }
 
   void MainWindow::completedStep( void )

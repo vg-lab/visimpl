@@ -20,6 +20,7 @@
  *
  */
 
+// Visimpl
 #include "ColorOperationModel.h"
 
 namespace prefr
@@ -44,7 +45,6 @@ namespace prefr
     setColorOperation(colorOp);
   }
 
-
   void ColorOperationModel::setColorOperation(ColorOperation colorOp)
   {
     _colorOperation = colorOp;
@@ -62,6 +62,9 @@ namespace prefr
         break;
       case ColorOperation::DIVISION:
         colorop = div<glm::vec4>;
+        break;
+      default:
+        assert(false);
         break;
     }
   }

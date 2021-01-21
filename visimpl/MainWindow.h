@@ -19,25 +19,33 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+ 
+#ifdef WIN32
+#include <winsock2.h>
+#endif
 
-#include <QMainWindow>
-#include <QDockWidget>
-#include <QPushButton>
-#include <QSlider>
-#include <QTimer>
-#include <QRadioButton>
-#include <QGroupBox>
-#include <QPushButton>
-#include <QToolBox>
-
+// ViSimpl
+#include <ui_visimpl.h>
 #include "OpenGLWidget.h"
+#include "VisualGroup.h"
 #include "SelectionManagerWidget.h"
 #include "SubsetImporter.h"
 #include "ui/DataInspector.h"
 
+// Qt
+#include <QMainWindow>
+
+// Sumrice
 #include <sumrice/sumrice.h>
 
-#include <ui_visimpl.h>
+class QDockWidget;
+class QPushButton;
+class QSlider;
+class QTimer;
+class QRadioButton;
+class QGroupBox;
+class QPushButton;
+class QToolBox;
 
 namespace Ui
 {
@@ -46,7 +54,6 @@ class MainWindow;
 
 namespace visimpl
 {
-
   enum TSelectionSource
   {
     SRC_EXTERNAL = 0,
@@ -56,14 +63,14 @@ namespace visimpl
   };
 
   class MainWindow
-    : public QMainWindow
+  : public QMainWindow
   {
     Q_OBJECT
 
   public:
     explicit MainWindow( QWidget* parent = 0,
                          bool updateOnIdle = true );
-    ~MainWindow( void );
+    virtual ~MainWindow( void );
 
     void init( const std::string& zeqUri = "" );
     void showStatusBarMessage ( const QString& message );
@@ -157,13 +164,11 @@ namespace visimpl
     void NextStep( bool notify = true );
 
   protected slots:
-
     void configureComponents( void );
     void importVisualGroups( void );
 
     void addGroupControls( const std::string& name, unsigned int index,
                            unsigned int size );
-    void removeGroupControls( unsigned int index );
     void clearGroups( void );
 
     void addGroupFromSelection( void );
@@ -185,7 +190,6 @@ namespace visimpl
     void selectionFromPlanes( void );
 
   protected:
-
     void _initSimControlDock( void );
     void _initPlaybackDock( void );
     void _initSummaryWidget( void );
@@ -197,20 +201,16 @@ namespace visimpl
 
     bool _showDialog( QColor& current, const QString& message = "" );
 
-
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
 
   protected slots:
-
     void ApplyPlaybackOperation( unsigned int playbackOp );
     void _zeqEventRepeat( bool repeat );
 
   #endif
 
-
   protected:
-
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
     void _setZeqUri( const std::string& );
     bool _zeqConnection;
@@ -301,7 +301,5 @@ namespace visimpl
     QDoubleSpinBox* _spinBoxClippingDist;
     QPushButton* _frameClippingColor;
     QPushButton* _buttonSelectionFromClippingPlanes;
-
   };
-
 } // namespace visimpl

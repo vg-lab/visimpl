@@ -20,10 +20,15 @@
  *
  */
 
+// ViSimpl
 #include "DataInspector.h"
 
+// Simil
 #include <simil/SpikesPlayer.h>
+
+// Qt
 #include <QGridLayout>
+#include <QLabel>
 
 DataInspector::DataInspector( const QString& title, QWidget* parent )
   : QGroupBox( title, parent )
@@ -101,5 +106,4 @@ void DataInspector::updateInfo( )
     if ( updated )
       emit simDataChanged( );
   }
-
 }

@@ -23,9 +23,13 @@
 #ifndef __VISIMPL_VISUALGROUP__
 #define __VISIMPL_VISUALGROUP__
 
+// Sumrice
 #include <sumrice/sumrice.h>
+
+// Prefr
 #include <prefr/prefr.h>
 
+// Visimpl
 #include "prefr/SourceMultiPosition.h"
 
 namespace visimpl
@@ -35,7 +39,6 @@ namespace visimpl
     friend class DomainManager;
 
   public:
-
     VisualGroup( );
     VisualGroup( const std::string& name );
     ~VisualGroup( );
@@ -78,7 +81,6 @@ namespace visimpl
     bool custom( void ) const;
 
   protected:
-
     unsigned int _idx;
     static unsigned int _counter;
 
@@ -98,8 +100,6 @@ namespace visimpl
 
     bool _custom;
   };
-
-
 }
 
 #endif /* __VISIMPL_VISUALGROUP__ */

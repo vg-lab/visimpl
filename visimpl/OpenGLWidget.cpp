@@ -20,22 +20,29 @@
  *
  */
 
+// ViSimpl
 #include "OpenGLWidget.h"
+#include "MainWindow.h"
+#include "DomainManager.h"
+
+// Qt
 #include <QOpenGLContext>
 #include <QMouseEvent>
 #include <QColorDialog>
 #include <QShortcut>
 #include <QGraphicsOpacityEffect>
+#include <QLabel>
 
+// C++
 #include <sstream>
 #include <string>
 #include <iostream>
-#include <glm/glm.hpp>
-
 #include <map>
 
-#include "MainWindow.h"
+// GLM
+#include <glm/glm.hpp>
 
+// Prefr
 #include "prefr/PrefrShaders.h"
 #include "prefr/ColorSource.h"
 
@@ -44,19 +51,24 @@
 #include <brion/brion.h>
 #endif
 
+constexpr float ZOOM_FACTOR = 1.3f;
+constexpr float TRANSLATION_FACTOR = 0.001f;
+constexpr float ROTATION_FACTOR = 0.01f;
+
 namespace visimpl
 {
-
-  static InitialConfig _initialConfigSimBlueConfig =
+  constexpr InitialConfig _initialConfigSimBlueConfig =
       std::make_tuple( 0.5f, 20.0f, 20.0f, 1.0f );
-  static InitialConfig _initialConfigSimH5 =
+  constexpr InitialConfig _initialConfigSimH5 =
       std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
-  static InitialConfig _initialConfigSimCSV =
-        std::make_tuple( 0.005f, 20.0f, 0.1f, 50000.0f );
-  static InitialConfig _initialConfigSimREST =
+  constexpr InitialConfig _initialConfigSimCSV =
+        //std::make_tuple( 0.005f, 20.0f, 0.1f, 50000.0f );
+      std::make_tuple( 0.2f, 2.0f, 1.5f, 5.0f );
+
+  constexpr InitialConfig _initialConfigSimREST =
         std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
 
-  static float invRGBInt = 1.0f / 255;
+  constexpr float invRGBInt = 1.0f / 255;
 
   OpenGLWidget::OpenGLWidget( QWidget* parent_,
                               Qt::WindowFlags windowsFlags_,
@@ -165,8 +177,7 @@ namespace visimpl
     else
   #endif
     _camera = new Camera( );
-    _camera->farPlane( 100000.f );
-    _camera->animDuration( 0.5f );
+    _camera->camera()->farPlane( 100000.f );
 
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
@@ -213,17 +224,7 @@ namespace visimpl
 
     // This is needed to get key events
     this->setFocusPolicy( Qt::WheelFocus );
-
-
-//    new QShortcut( QKeySequence( Qt::Key_Space ), this, SLOT( pressedPlayPause( )));
-
-  //  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Minus ),
-  //                 this, SLOT( reducePlaybackSpeed( ) ));
-  //
-  //  new QShortcut( QKeySequence( Qt::CTRL + Qt::Key_Plus ),
-  //                   this, SLOT( increasePlaybackSpeed( ) ));
   }
-
 
   OpenGLWidget::~OpenGLWidget( void )
   {
@@ -243,18 +244,13 @@ namespace visimpl
 
     if( _player )
       delete _player;
-
   }
-
-
-
 
   void OpenGLWidget::loadData( const std::string& fileName,
                                const simil::TDataType fileType,
                                simil::TSimulationType simulationType,
                                const std::string& report)
   {
-
     makeCurrent( );
 
     _simulationType = simulationType;
@@ -264,38 +260,26 @@ namespace visimpl
     simil::SpikeData* spikeData = new simil::SpikeData( fileName, fileType, report );
     spikeData->reduceDataToGIDS( );
 
-    simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer( );
-    spPlayer->LoadData( spikeData );
-    _player = spPlayer;
-//    _player->deltaTime( _deltaTime );
-
+    _player = new simil::SpikesPlayer( );
+    _player->LoadData( spikeData );
 
     InitialConfig config;
     float scale = 1.0f;
 
-    switch( fileType )
+    switch (fileType)
     {
       case simil::TBlueConfig:
-
         config = _initialConfigSimBlueConfig;
-
-      break;
+        break;
       case simil::THDF5:
-
         config = _initialConfigSimH5;
-
         break;
       case simil::TCSV:
-//        simulationDeltaTime( 0.2f );
-//        simulationStepsPerSecond( 2.0f );
-//        changeSimulationDecayValue( 1.5f );
-//        scale = 5.f;
         config = _initialConfigSimCSV;
         break;
-    case simil::TREST:
-//
-      config = _initialConfigSimREST;
-      break;
+      case simil::TREST:
+        config = _initialConfigSimREST;
+        break;
       default:
         break;
     }
@@ -310,8 +294,6 @@ namespace visimpl
               << ", " << _scaleFactor.z
               << std::endl;
 
-
-
     createParticleSystem(  );
 
     simulationDeltaTime( std::get< T_DELTATIME >( config ) );
@@ -323,7 +305,6 @@ namespace visimpl
   #endif
     this->_paint = true;
     update( );
-
   }
 
 #ifdef SIMIL_WITH_REST_API
@@ -413,9 +394,7 @@ namespace visimpl
     _then = std::chrono::system_clock::now( );
     _lastFrame = std::chrono::system_clock::now( );
 
-
     QOpenGLWidget::initializeGL( );
-
   }
 
   void OpenGLWidget::_configureSimulationFrame( void )
@@ -423,23 +402,20 @@ namespace visimpl
     if( !_player || !_player->isPlaying( ) || !_particleSystem->run( ))
       return;
 
-    float prevTime = _player->currentTime( );
+    const float prevTime = _player->currentTime( );
 
     if( _backtrace )
     {
-
       _backtraceSimulation( );
-
       _backtrace = false;
     }
 
     _player->Frame( );
 
-    float currentTime = _player->currentTime( );
+    const float currentTime = _player->currentTime( );
 
     _domainManager->processInput( _player->spikesNow( ), prevTime,
                              currentTime, false );
-
   }
 
   void OpenGLWidget::_configurePreviousStep( void )
@@ -471,7 +447,6 @@ namespace visimpl
 
   void OpenGLWidget::_configureStepByStep( void )
   {
-
     if( !_player || ! _player->isPlaying( ) || !_particleSystem->run( ))
       return;
 
@@ -493,12 +468,10 @@ namespace visimpl
 
     _sbsFirstStep = false;
     _sbsPlaying = true;
-
   }
 
   void OpenGLWidget::_configureStepByStepFrame( double elapsedRenderTime )
   {
-
     _sbsCurrentRenderDelta = 0;
 
     if( _sbsPlaying && _sbsCurrentTime >= _sbsEndTime )
@@ -533,7 +506,6 @@ namespace visimpl
       _sbsCurrentTime = nextTime;
       _sbsCurrentSpike = spikeIt;
     }
-
   }
 
   void OpenGLWidget::_backtraceSimulation( void )
@@ -564,19 +536,12 @@ namespace visimpl
     switch( _currentShader )
     {
       case T_SHADER_DEFAULT:
-
         _shaderParticlesCurrent = _shaderParticlesDefault;
-
         break;
-
       case T_SHADER_SOLID:
-
         _shaderParticlesCurrent = _shaderParticlesSolid;
-
         break;
-
       default:
-
         break;
     }
   }
@@ -615,8 +580,6 @@ namespace visimpl
     _shaderClippingPlanes->compileAndLink( );
     _shaderClippingPlanes->autocatching( );
 
-
-
     unsigned int maxParticles =
         std::max(( unsigned int ) 100000, ( unsigned int ) _player->gids( ).size( ));
 
@@ -626,11 +589,10 @@ namespace visimpl
     _flagResetParticles = true;
 
     _domainManager = new DomainManager( _particleSystem, _gids);
-
 #ifdef SIMIL_USE_BRION
-    _domainManager->init( _gidPositions, _player->data( )->blueConfig( ));
+      _domainManager->init( _gidPositions, _player->data( )->blueConfig( ));
 #else
-    _domainManager->init( _gidPositions );
+      _domainManager->init( _gidPositions );
 #endif
     _domainManager->initializeParticleSystem( );
 
@@ -646,7 +608,6 @@ namespace visimpl
 
     _initClippingPlanes( );
   }
-
 
   void OpenGLWidget::_paintParticles( void )
   {
@@ -678,18 +639,16 @@ namespace visimpl
     unsigned int cameraRight;
     unsigned int particleRadius;
 
-
-
     uModelViewProjM = glGetUniformLocation( shader, "modelViewProjM" );
     glUniformMatrix4fv( uModelViewProjM, 1, GL_FALSE,
-                       _camera->viewProjectionMatrix( ));
+                       _camera->camera()->projectionViewMatrix() );
 
     cameraUp = glGetUniformLocation( shader, "cameraUp" );
     cameraRight = glGetUniformLocation( shader, "cameraRight" );
 
     particleRadius = glGetUniformLocation( shader, "radiusThreshold" );
 
-    float* viewM = _camera->viewMatrix( );
+    float* viewM = _camera->camera()->viewMatrix( );
 
     glUniform3f( cameraUp, viewM[1], viewM[5], viewM[9] );
     glUniform3f( cameraRight, viewM[0], viewM[4], viewM[8] );
@@ -725,7 +684,6 @@ namespace visimpl
     }
 
     _shaderParticlesCurrent->unuse( );
-
   }
 
   void OpenGLWidget::_paintPlanes( void )
@@ -754,7 +712,7 @@ namespace visimpl
     if( _flagUpdateGroups )
       _updateGroupsVisibility( );
 
-    if( _flagUpdateGroups && _domainManager->showGroups( ))
+    if( _flagUpdateGroups && _domainManager && _domainManager->showGroups( ))
       _updateGroups( );
 
     if( _flagAttribChange )
@@ -765,7 +723,7 @@ namespace visimpl
 
     if( _flagResetParticles )
     {
-      _domainManager->resetParticles( );
+      if(_domainManager) _domainManager->resetParticles( );
       _flagResetParticles = false;
     }
 
@@ -856,11 +814,13 @@ namespace visimpl
                 renderDelta = 0;
               }
 
+              if(std::isnan(renderDelta)) renderDelta = 0;
+
               _updateParticles( renderDelta );
               _elapsedTimeRenderAcc = 0.0f;
             } // elapsed > render period
 
-          } // if player && player->isPlayint
+          } // if player && player->isPlaying
 
           _paintPlanes( );
 
@@ -892,44 +852,34 @@ namespace visimpl
         }
       }
 
-
-
-
       #define FRAMES_PAINTED_TO_MEASURE_FPS 10
       if( _showFps && _frameCount >= FRAMES_PAINTED_TO_MEASURE_FPS )
       {
-        auto duration =
-          std::chrono::duration_cast<std::chrono::milliseconds>( now - _then );
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( now - _then );
         _then = now;
 
         MainWindow* mainWindow = dynamic_cast< MainWindow* >( parent( ));
         if( mainWindow )
         {
-
-          unsigned int ellapsedMiliseconds = duration.count( );
-
-          unsigned int fps = roundf( 1000.0f *
-                                     float( _frameCount ) /
-                                     float( ellapsedMiliseconds ));
-
-          if( _showFps )
+          const unsigned int ellapsedMiliseconds = duration.count();
+          const auto ratioMS = static_cast<float>(_frameCount) / ellapsedMiliseconds;
+          if(!std::isnan(ratioMS))
           {
-            _fpsLabel->setText( QString::number( fps ) + QString( " FPS" ));
-            _fpsLabel->adjustSize( );
-          }
+            const unsigned int fps = roundf(1000.0f * ratioMS);
 
+            if( _showFps)
+            {
+              _fpsLabel->setText(QString::number(fps) + QString(" FPS"));
+            }
+          }
         }
 
         _frameCount = 0;
       }
 
-      if( _idleUpdate )
-      {
+      if( _idleUpdate && _player)
         update( );
-      }
-
     }
-
 
   void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
   {
@@ -938,12 +888,8 @@ namespace visimpl
       _selectedGIDs = gids;
       _pendingSelection = true;
 
-//      if( !_domainManager->showGroups( ))
       setUpdateSelection( );
-
     }
-    std::cout << "Received " << _selectedGIDs.size( ) << " ids" << std::endl;
-
   }
 
   void OpenGLWidget::setUpdateSelection( void )
@@ -963,8 +909,8 @@ namespace visimpl
 
   void OpenGLWidget::selectAttrib( int newAttrib )
   {
-    if( newAttrib < 0 || newAttrib >= ( int ) T_TYPE_UNDEFINED ||
-        _domainManager->mode( ) != TMODE_ATTRIBUTE )
+    if( _domainManager && ( newAttrib < 0 || newAttrib >= ( int ) T_TYPE_UNDEFINED ||
+        _domainManager->mode( ) != TMODE_ATTRIBUTE ) )
       return;
 
     _newAttrib = ( tNeuronAttributes ) newAttrib;
@@ -973,23 +919,24 @@ namespace visimpl
 
   void OpenGLWidget::_modeChange( void )
   {
-    _domainManager->mode( _newMode );
+    if( _domainManager )
+      _domainManager->mode( _newMode );
 
     _flagModeChange = false;
     _flagUpdateRender = true;
 
-    if( _domainManager->mode( ) == TMODE_ATTRIBUTE )
+    if( _domainManager && ( _domainManager->mode( ) == TMODE_ATTRIBUTE ) )
       emit attributeStatsComputed( );
   }
 
   void OpenGLWidget::_attributeChange( void )
   {
-    _domainManager->generateAttributesGroups( _newAttrib );
+    if( _domainManager )
+      _domainManager->generateAttributesGroups( _newAttrib );
 
     _currentAttrib = _newAttrib;
 
     _flagAttribChange = false;
-//    _flagUpdateAttributes = true;
 
     emit attributeStatsComputed( );
   }
@@ -1008,7 +955,6 @@ namespace visimpl
       _flagUpdateSelection = false;
       _flagUpdateRender = true;
     }
-
   }
 
   void OpenGLWidget::setGroupVisibility( unsigned int i, bool state )
@@ -1022,7 +968,9 @@ namespace visimpl
     while( !_pendingGroupStateChanges.empty( ))
     {
       auto state = _pendingGroupStateChanges.front( );
-      _domainManager->setVisualGroupState( state.first, state.second );
+      if(_domainManager)
+        _domainManager->setVisualGroupState( state.first, state.second );
+
       _pendingGroupStateChanges.pop( );
 
       _flagUpdateRender = true;
@@ -1045,58 +993,56 @@ namespace visimpl
       _flagUpdateGroups = false;
       _flagUpdateRender = true;
     }
-
   }
 
   void OpenGLWidget::_updateAttributes( void )
   {
     if( _particleSystem )
-      {
-        _particleSystem->run( false );
+    {
+      _particleSystem->run(false);
 
-        _domainManager->updateAttributes( );
+      _domainManager->updateAttributes();
 
-        updateCameraBoundingBox( );
+      updateCameraBoundingBox();
 
-        _particleSystem->run( true );
-        _particleSystem->update( 0.0f );
+      _particleSystem->run(true);
+      _particleSystem->update(0.0f);
 
-        _flagUpdateAttributes = false;
-        _flagUpdateRender = true;
-      }
+      _flagUpdateAttributes = false;
+      _flagUpdateRender = true;
+    }
   }
 
   void OpenGLWidget::updateData()
   {
-      _flagNewData = true;
+    _flagNewData = true;
   }
 
   void OpenGLWidget::_updateData( void )
   {
-      _gids = _player->gids( );
-      _positions = _player->positions( );
+    _gids = _player->gids();
+    _positions = _player->positions();
 
-      _gidPositions.clear( );
+    _gidPositions.clear();
 
-      _gidPositions.reserve( _positions.size( ));
-      auto gidit = _gids.begin( );
-      for( auto pos : _positions )
-      {
-        vec3 position( pos.x( ), pos.y( ), pos.z( ));
+    _gidPositions.reserve(_positions.size());
+    auto gidit = _gids.begin();
+    for (auto pos : _positions)
+    {
+      vec3 position(pos.x(), pos.y(), pos.z());
 
-        _gidPositions.insert( std::make_pair( *gidit, position * _scaleFactor ));
-        ++gidit;
-      }
-
+      _gidPositions.insert(std::make_pair(*gidit, position * _scaleFactor));
+      ++gidit;
+    }
   }
 
   void OpenGLWidget::_updateNewData( void )
   {
-      _updateData();
-      _domainManager->updateData(_gids, _gidPositions );
-      _focusOn( _domainManager->boundingBox( ));
-      _flagNewData = false;
-      _flagUpdateRender = true;
+    _updateData();
+    _domainManager->updateData(_gids, _gidPositions );
+    _focusOn( _domainManager->boundingBox( ));
+    _flagNewData = false;
+    _flagUpdateRender = true;
   }
 
   void OpenGLWidget::setMode( int mode )
@@ -1104,9 +1050,8 @@ namespace visimpl
     if( mode < 0 || ( mode >= ( int )TMODE_UNDEFINED ))
       return;
 
-    _newMode = ( tVisualMode ) mode;
+    _newMode = static_cast<tVisualMode>(mode);
     _flagModeChange = true;
-
   }
 
   void OpenGLWidget::showInactive( bool state )
@@ -1121,8 +1066,6 @@ namespace visimpl
     _flagUpdateSelection = true;
   }
 
-
-
   void OpenGLWidget::home( void )
   {
     _focusOn( _boundingBoxHome );
@@ -1136,22 +1079,20 @@ namespace visimpl
       _boundingBoxHome = boundingBox;
 
     _focusOn( boundingBox );
-
   }
 
   void OpenGLWidget::_focusOn( const tBoundingBox& boundingBox )
   {
-    glm::vec3 center = ( boundingBox.first + boundingBox.second ) * 0.5f;
-    float side = glm::length( boundingBox.second - center );
-    float radius = side / std::tan( _camera->fov( ));
+    const glm::vec3 center = ( boundingBox.first + boundingBox.second ) * 0.5f;
+    const float side = glm::length( boundingBox.second - center );
+    const float radius = side / std::tan( _camera->camera()->fieldOfView( ));
 
-    _camera->targetPivotRadius( Eigen::Vector3f( center.x, center.y, center.z ),
-                                radius );
+    _camera->position(Eigen::Vector3f( center.x, center.y, center.z));
+    _camera->radius( radius );
   }
 
   void OpenGLWidget::_pickSingle( void )
   {
-
     _shaderPicking->use( );
     unsigned int shader = _shaderPicking->program( );
 
@@ -1187,11 +1128,12 @@ namespace visimpl
 
   void OpenGLWidget::showEventsActivityLabels( bool show )
   {
-    for( auto container : _eventLabels )
+    auto updateWidget = [show](visimpl::OpenGLWidget::EventLabel &container)
     {
       container.upperWidget->setVisible( show );
       container.upperWidget->update( );
-    }
+    };
+    std::for_each(_eventLabels.begin(), _eventLabels.end(), updateWidget);
   }
 
   void OpenGLWidget::showCurrentTimeLabel( bool show )
@@ -1208,14 +1150,12 @@ namespace visimpl
 
     if( update && _player )
     {
-
-     _updateData();
+      _updateData();
       _domainManager->updateData(_gids, _gidPositions );
       _focusOn( _domainManager->boundingBox( ));
     }
 
     _flagUpdateRender = true;
-
   }
 
   vec3 OpenGLWidget::circuitScaleFactor( void ) const
@@ -1233,8 +1173,6 @@ namespace visimpl
     }
   }
 
-
-
   void OpenGLWidget::_updateEventLabelsVisibility( void )
   {
     std::vector< bool > visibility = _activeEventsAt( _player->currentTime( ));
@@ -1243,26 +1181,22 @@ namespace visimpl
     for( auto showLabel : visibility )
     {
       EventLabel& labelObjects = _eventLabels[ counter ];
-//      QString style( "border: 1px solid " + showLabel ? "white;" : "black;" );
-      QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect( );
+
+      auto effect = new QGraphicsOpacityEffect( );
       effect->setOpacity( showLabel ? 1.0 : 0.5 );
       labelObjects.upperWidget->setGraphicsEffect( effect );
       labelObjects.upperWidget->update( );
       ++counter;
     }
-
-
-
   }
-
 
   std::vector< bool > OpenGLWidget::_activeEventsAt( float time )
   {
     std::vector< bool > result( _eventLabels.size( ), false);
 
-    float totalTime = _player->endTime( ) - _player->startTime( );
+    const float totalTime = _player->endTime( ) - _player->startTime( );
+    const double perc = time / totalTime;
 
-    double perc = time / totalTime;
     unsigned int counter = 0;
     for( auto event : _eventsActivation )
     {
@@ -1277,7 +1211,7 @@ namespace visimpl
 
   void OpenGLWidget::resizeGL( int w , int h )
   {
-    _camera->ratio((( double ) w ) / h );
+    _camera->windowSize(w, h);
     glViewport( 0, 0, w, h );
 
     if( _pickRenderer )
@@ -1296,8 +1230,8 @@ namespace visimpl
 
     _planeRotation = Eigen::Matrix4f::Identity( );
 
-    _planeLeft.init( _camera );
-    _planeRight.init( _camera );
+    _planeLeft.init( _camera->camera() );
+    _planeRight.init( _camera->camera() );
 
     _genPlanesFromBoundingBox( );
   }
@@ -1359,7 +1293,6 @@ namespace visimpl
     evec3 centerRight;
     center = centerLeft = centerRight = _planesCenter;
 
-
     unsigned int pointsNumber = 4;
 
     std::vector< Eigen::Vector3f > transformedPoints( pointsNumber * 2 );
@@ -1395,28 +1328,11 @@ namespace visimpl
                 centerLeft, _planeNormalLeft );
     _clippingPlaneRight->setEquationByPointAndNormal(
                 centerRight, _planeNormalRight );
-
-//    std::cout << "Planes:" << std::endl
-//               << " Left: "
-//               << std::endl << vecToStr( transformedPoints[ 0 ])
-//               << std::endl << vecToStr( transformedPoints[ 1 ])
-//               << std::endl << vecToStr( transformedPoints[ 2 ])
-//               << std::endl
-//               << " Right: "
-//               << std::endl << vecToStr( transformedPoints[ 3 ])
-//               << std::endl << vecToStr( transformedPoints[ 4 ])
-//               << std::endl << vecToStr( transformedPoints[ 5 ])
-//               << std::endl;
-
-
-
   }
 
   void OpenGLWidget::clippingPlanes( bool active )
   {
     _clipping = active;
-
-    std::cout << "Clipping " << std::boolalpha << _clipping << std::endl;
 
     if( _clipping )
     {
@@ -1439,8 +1355,6 @@ namespace visimpl
     _planeRotation = emat4::Identity( );
 
     _genPlanesFromBoundingBox( );
-
-
   }
 
   void OpenGLWidget::clippingPlanesHeight( float height_ )
@@ -1500,8 +1414,6 @@ namespace visimpl
 
   void OpenGLWidget::_rotatePlanes( float yaw_, float pitch_ )
   {
-
-
     Eigen::Matrix4f rot;
     Eigen::Matrix4f rYaw;
     Eigen::Matrix4f rPitch;
@@ -1544,7 +1456,6 @@ namespace visimpl
 
     float distance = 0.0f;
 
-    std::cout << "Contained elements: ";
     for( auto neuronPos : positions )
     {
       distance = normal.dot( _planeLeft.points( )[ 0 ] ) -
@@ -1553,21 +1464,16 @@ namespace visimpl
       if( distance > 0.0f && distance <= _planeDistance )
       {
         result.emplace_back( neuronPos.first );
-//        std::cout << " [" << neuronPos.first << ":" << distance << "]";
       }
     }
 
     result.shrink_to_fit( );
 
-    std::cout << " " << result.size( ) << std::endl;
-
     return result;
   }
 
-
   void OpenGLWidget::mousePressEvent( QMouseEvent* event_ )
   {
-
     if ( event_->button( ) == Qt::LeftButton )
     {
       if( event_->modifiers( ) == ( Qt::SHIFT | Qt::CTRL ) && _clipping )
@@ -1600,14 +1506,11 @@ namespace visimpl
       }
     }
 
-
     update( );
-
   }
 
   void OpenGLWidget::mouseReleaseEvent( QMouseEvent* event_ )
   {
-
     if( event_->modifiers( ) == Qt::CTRL )
     {
       if( _pickingPosition == event_->pos( ))
@@ -1628,80 +1531,78 @@ namespace visimpl
     }
 
     update( );
-
   }
 
   void OpenGLWidget::mouseMoveEvent( QMouseEvent* event_ )
   {
+    const float diffX = event_->x() - _mouseX;
+    const float diffY = event_->y() - _mouseY;
+
+    auto updateLastEventCoords = [this]( const QMouseEvent *e )
+    {
+      _mouseX = e->x( );
+      _mouseY = e->y( );
+    };
+
     if( _rotation )
     {
-      _camera->localRotation( -( _mouseX - event_->x( )) * 0.01,
-                            ( _mouseY - event_->y( )) * 0.01 );
-      _mouseX = event_->x( );
-      _mouseY = event_->y( );
+      _camera->rotate( Eigen::Vector3f ( diffX * ROTATION_FACTOR, diffY * ROTATION_FACTOR, 0.0f));
+      updateLastEventCoords(event_);
     }
 
     if( _rotationPlanes && _clipping )
     {
-      _rotatePlanes( -( _mouseX - event_->x( )) * 0.01,
-                      ( _mouseY - event_->y( )) * 0.01 );
-      _mouseX = event_->x( );
-      _mouseY = event_->y( );
+      _rotatePlanes( diffX * ROTATION_FACTOR, diffY * ROTATION_FACTOR );
+      updateLastEventCoords(event_);
     }
 
     if( _translation )
     {
-      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
-      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+      const float xDis = diffX * TRANSLATION_FACTOR * _camera->radius( );
+      const float yDis = diffY * TRANSLATION_FACTOR * _camera->radius( );
 
-      _camera->localTranslation( Eigen::Vector3f( -xDis, yDis, 0.0f ));
-      _mouseX = event_->x( );
-      _mouseY = event_->y( );
+      _camera->localTranslate( Eigen::Vector3f( -xDis, yDis, 0.0f ));
+      updateLastEventCoords(event_);
     }
 
     if( _translationPlanes )
     {
-      float xDis = ( event_->x() - _mouseX ) * 0.001f * _camera->radius( );
-      float yDis = ( event_->y() - _mouseY ) * 0.001f * _camera->radius( );
+      const float xDis = diffX * TRANSLATION_FACTOR * _camera->radius( );
+      const float yDis = diffY * TRANSLATION_FACTOR * _camera->radius( );
+      const evec3 displacement ( xDis, -yDis, 0 );
 
-      evec3 displacement ( xDis, -yDis, 0 );
       _planesCenter += _camera->rotation( ).transpose( ) * displacement;
 
-      _mouseX = event_->x( );
-      _mouseY = event_->y( );
-
+      updateLastEventCoords(event_);
       _genPlanesFromParameters( );
     }
 
-    this->update( );
+    update( );
   }
-
 
   void OpenGLWidget::wheelEvent( QWheelEvent* event_ )
   {
     int delta = event_->angleDelta( ).y( );
 
     if ( delta > 0 )
-      _camera->radius( _camera->radius( ) / 1.3f );
+      _camera->radius( _camera->radius( ) / ZOOM_FACTOR );
     else
-      _camera->radius( _camera->radius( ) * 1.3f );
+      _camera->radius( _camera->radius( ) * ZOOM_FACTOR );
 
     update( );
-
   }
-
-
 
   void OpenGLWidget::keyPressEvent( QKeyEvent* event_ )
   {
     switch ( event_->key( ))
     {
-    case Qt::Key_C:
-        _flagUpdateSelection = true;
-      break;
+      case Qt::Key_C:
+          _flagUpdateSelection = true;
+        break;
+      default:
+        break;
     }
   }
-
 
   void OpenGLWidget::changeClearColor( void )
   {
@@ -1723,11 +1624,11 @@ namespace visimpl
     }
   }
 
-
   void OpenGLWidget::toggleUpdateOnIdle( void )
   {
     _idleUpdate = !_idleUpdate;
-    if ( _idleUpdate )
+
+    if ( _idleUpdate && _player )
       update( );
   }
 
@@ -1737,7 +1638,7 @@ namespace visimpl
 
     _fpsLabel->setVisible( _showFps );
 
-    if ( _idleUpdate )
+    if ( _idleUpdate && _player )
       update( );
   }
 
@@ -1760,11 +1661,6 @@ namespace visimpl
     }
 
     update( );
-  }
-
-  void OpenGLWidget::toggleShowUnselected( void )
-  {
-
   }
 
   void OpenGLWidget::idleUpdate( bool idleUpdate_ )
@@ -1832,46 +1728,33 @@ namespace visimpl
   {
     const auto& eventNames = _subsetEvents->eventNames( );
 
-    if( eventNames.empty( ))
+    if( eventNames.empty( ) )
       return;
-
 
     for( auto& label : _eventLabels )
     {
       _eventLabelsLayout->removeWidget( label.upperWidget );
 
-      delete( label.frame );
+      delete( label.colorLabel );
       delete( label.label );
       delete( label.upperWidget );
-
     }
 
     _eventLabels.clear( );
     _eventsActivation.clear( );
 
+    const float totalTime = _player->endTime( ) - _player->startTime( );
+    auto &colors = _colorPalette.colors( );
 
     unsigned int row = 0;
-
-    float totalTime = _player->endTime( ) - _player->startTime( );
-
-    unsigned int activitySize =
-        std::ceil( totalTime / _deltaEvents );
-
-    scoop::ColorPalette::Colors colors = _colorPalette.colors( );
-
-    for( auto name : eventNames )
+    auto insertEvents = [&row, &totalTime, &colors, this](const std::string &eventName)
     {
-
-      EventLabel labelObjects;
-
-      QFrame* frame = new QFrame( );
-//      std::cout << "Creating color: " << .toStdString( ) << std::endl;
-      frame->setStyleSheet( "background-color: " + colors[ row ].name( ) );
-      frame->setMinimumSize( 20, 20 );
-      frame->setMaximumSize( 20, 20 );
+      QPixmap pixmap{20,20};
+      pixmap.fill(colors[ row ].name( ));
+      auto colorLabel = new QLabel();
+      colorLabel->setPixmap(pixmap);
 
       QLabel* label = new QLabel( );
-//      label->setVisible( false );
       label->setMaximumSize( 100, 50 );
       label->setTextFormat( Qt::RichText );
       label->setStyleSheet(
@@ -1881,32 +1764,30 @@ namespace visimpl
         "margin: 10px;"
         " border-radius: 10px;}" );
 
-      label->setText( "" + QString( name.c_str( )));
+      label->setText(QString::fromStdString(eventName));
 
-      QWidget* container = new QWidget( );
-      QHBoxLayout* labelLayout = new QHBoxLayout( );
+      auto container = new QWidget( );
+      auto labelLayout = new QHBoxLayout( );
 
-      labelLayout->addWidget( frame );
+      labelLayout->addWidget( colorLabel );
       labelLayout->addWidget( label );
       container->setLayout( labelLayout );
 
-      labelObjects.frame = frame;
-      labelObjects.label = label;
-      labelObjects.upperWidget = container;
+      EventLabel eventObj;
+      eventObj.colorLabel = colorLabel;
+      eventObj.label = label;
+      eventObj.upperWidget = container;
 
-      _eventLabels.push_back( labelObjects );
-
-//      _eventLabels.push_back( label );
+      _eventLabels.push_back( eventObj );
 
       _eventLabelsLayout->addWidget( container, row, 10, 2, 1 );
 
-      std::vector< bool > activity( activitySize );
-
-      _eventsActivation.push_back(
-          _subsetEvents->eventActivity( name, _deltaEvents, totalTime ));
+      auto activity = _subsetEvents->eventActivity( eventName, _deltaEvents, totalTime );
+      _eventsActivation.push_back(activity);
 
       ++row;
-    }
+    };
+    std::for_each(eventNames.cbegin(), eventNames.cend(), insertEvents);
   }
 
   void OpenGLWidget::Play( void )
@@ -1978,7 +1859,7 @@ namespace visimpl
       _player->Stop( );
       if( playing )
         _player->Play( );
-  //    resetParticles( );
+
       _flagResetParticles = true;
       _firstFrame = true;
     }
@@ -2028,66 +1909,73 @@ namespace visimpl
       gcolors.Insert( c.first, gColor );
     }
 
-    _domainManager->modelSelectionBase( )->color = gcolors;
+    if( _domainManager )
+    {
+      _domainManager->modelSelectionBase( )->color = gcolors;
 
-    _flagUpdateRender = true;
-
+      _flagUpdateRender = true;
+    }
   }
 
   TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
   {
     TTransferFunction result;
 
-    auto model = _domainManager->modelSelectionBase( );
-
-    prefr::vectortvec4 colors = model->color;
+    const auto model = _domainManager->modelSelectionBase( );
+    const auto colors = model->color.values;
 
     auto timeValue = model->color.times.begin( );
-    for( auto c : model->color.values )
+
+    auto insertColor = [&timeValue, &result](const vec4 col)
     {
-      QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
+      const QColor color( col.r * 255, col.g * 255, col.b * 255, col.a * 255 );
       result.push_back( std::make_pair( *timeValue, color ));
 
       ++timeValue;
-    }
-
+    };
+    std::for_each(colors.cbegin(), colors.cend(), insertColor);
 
     return result;
   }
 
   void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
   {
-
     utils::InterpolationSet< float > newSize;
-    for( auto s : sizes )
-    {
-      newSize.Insert( s.first, s.second );
-    }
-    _domainManager->modelSelectionBase( )->size = newSize;
 
-    _flagUpdateRender = true;
+    auto insertSize = [&newSize](const Event &e){ newSize.Insert(e.first, e.second); };
+    std::for_each(sizes.cbegin(), sizes.cend(), insertSize);
+
+    if( _domainManager )
+    {
+      _domainManager->modelSelectionBase( )->size = newSize;
+
+      _flagUpdateRender = true;
+    }
   }
 
   TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
   {
     TSizeFunction result;
 
-    auto model = _domainManager->modelSelectionBase( );
-
-    auto sizeValue = model->size.values.begin( );
-    for( auto s : model->size.times)
+    if( _domainManager )
     {
-      result.push_back( std::make_pair( s, *sizeValue ));
-      ++sizeValue;
+      const auto model = _domainManager->modelSelectionBase( );
+      const auto &sizes = model->size.times;
+
+      auto sizeValue = model->size.values.begin( );
+      auto insertSize = [&result, &sizeValue](const float &f)
+      {
+        result.emplace_back(f, *sizeValue);
+        ++sizeValue;
+      };
+      std::for_each(sizes.cbegin(), sizes.cend(), insertSize);
     }
 
     return result;
   }
 
-
   void OpenGLWidget::simulationDeltaTime( float value )
   {
-    std::cout << "Delta time: " << value << std::endl;
     _player->deltaTime( value );
 
     _simDeltaTime = value;
@@ -2102,6 +1990,8 @@ namespace visimpl
 
   void OpenGLWidget::simulationStepsPerSecond( float value )
   {
+    if(value == 0) return;
+
     _timeStepsPerSecond = value;
 
     _simPeriod = 1.0f / ( _timeStepsPerSecond );
@@ -2127,7 +2017,6 @@ namespace visimpl
 
   void OpenGLWidget::changeSimulationDecayValue( float value )
   {
-
     if( _domainManager )
       _domainManager->decay( value );
   }
@@ -2136,5 +2025,4 @@ namespace visimpl
   {
     return _domainManager->decay( );
   }
-
 } // namespace visimpl
