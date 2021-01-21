@@ -1,21 +1,40 @@
 /*
- * @file	DisplayManager.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es> 
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *					Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
-#include <QGroupBox>
+// ViSimpl
 #include "DisplayManagerWidget.h"
+
+// Qt
+#include <QWidget>
+#include <QTableWidget>
+#include <QLabel>
+#include <QPushButton>
+#include <QGroupBox>
+#include <QGridLayout>
 
 namespace stackviz
 {
 
   DisplayManagerWidget::DisplayManagerWidget( )
-//  : _eventTable( nullptr )
-//  , _histoTable( nullptr )
   : _eventData( nullptr )
   , _histData( nullptr )
   , _eventsLayout( nullptr )
@@ -29,30 +48,18 @@ namespace stackviz
   void DisplayManagerWidget::init(  const std::vector< visimpl::EventWidget* >* eventData,
                                     const std::vector< visimpl::HistogramWidget* >* histData )
   {
-
     setMinimumWidth( 500 );
 
     setWindowTitle( "Visibility manager" );
+    setWindowIcon(QIcon(":/icons/visimpl-icon-square.png"));
 
     _eventData = eventData;
     _histData = histData;
 
-//    unsigned int eventNumber = _eventData->size( );
-//    unsigned int histNumber = _histData->size( );
-
-//    _eventTable = new QTableWidget( eventNumber, TDM_E_MAXCOLUMN );
-//    _histoTable = new QTableWidget( histNumber, TDM_H_MAXCOLUMN );
-//
-//    _eventTable->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-//    _histoTable->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-
     QStringList eventHeaders = { "Name", "Show", "Delete" };
     QStringList histoHeaders = { "Name", "Size", "Show", "Delete" };
-//    _eventTable->setHorizontalHeaderLabels( eventHeaders );
-//    _histoTable->setHorizontalHeaderLabels( histoHeaders );
 
     QGridLayout* globalLayout = new QGridLayout( );
-
 
     // Events
     _eventsLayout = new QGridLayout( );
@@ -121,17 +128,10 @@ namespace stackviz
     globalLayout->addWidget( closeButton, 10, 2, 1, 1 );
 
     this->setLayout( globalLayout );
-
-//    connect( _eventTable, SIGNAL( cellClicked( int, int )),
-//             this, SLOT( eventCellClicked( int, int )));
-//
-//    connect( _histoTable, SIGNAL( cellClicked( int, int )),
-//             this, SLOT( histoCellClicked( int, int )));
   }
 
   void DisplayManagerWidget::close( void )
   {
-//    setVisible( false );
     hide( );
   }
 
@@ -154,14 +154,14 @@ namespace stackviz
 
   void DisplayManagerWidget::clearEventWidgets( void )
   {
-    for( auto e : _events )
+    auto removeEventWidget = [this](TDisplayEventTuple &e)
     {
       auto container = std::get< TDM_E_CONTAINER >( e );
       _eventsLayout->removeWidget( container );
 
       delete container;
-
-    }
+    };
+    std::for_each(_events.begin(), _events.end(), removeEventWidget);
 
     QLayoutItem* item;
     while(( item = _eventsLayout->takeAt( 0 )) != nullptr )
@@ -171,18 +171,18 @@ namespace stackviz
     }
 
     _events.clear( );
-
-  } // clearEventWidgets
+  }
 
   void DisplayManagerWidget::clearHistogramWidgets( void )
   {
-    for( auto e : _histograms)
+    auto removeHistogramWidget = [this](TDisplayHistogramTuple &e)
     {
       auto container = std::get< TDM_H_CONTAINER >( e );
       _histogramsLayout->removeWidget( container );
 
       delete container;
-    }
+    };
+    std::for_each(_histograms.begin(), _histograms.end(), removeHistogramWidget);
 
     QLayoutItem* item;
     while(( item = _histogramsLayout->takeAt( 0 )) != nullptr )
@@ -193,7 +193,7 @@ namespace stackviz
 
     _histograms.clear( );
 
-  } // clearHistogramWidgets
+  }
 
   void DisplayManagerWidget::refresh( )
   {
@@ -203,17 +203,15 @@ namespace stackviz
     if( _dirtyFlagHistograms )
       refreshHistograms( );
 
-  } // refresh
+  }
 
   void DisplayManagerWidget::refreshEvents( void )
   {
-
     clearEventWidgets( );
 
     unsigned int row = 0;
     for( const auto& ev : *_eventData )
     {
-
       TDisplayEventTuple pointers;
 
       QWidget* container = new QWidget( );
@@ -260,8 +258,7 @@ namespace stackviz
     }
 
     _dirtyFlagEvents = false;
-
-  } // refreshEvents
+  }
 
   void DisplayManagerWidget::refreshHistograms( void )
   {
@@ -270,7 +267,6 @@ namespace stackviz
     unsigned int row = 0;
     for( const auto& hist : *_histData )
     {
-
       TDisplayEventTuple pointers;
 
       QWidget* container = new QWidget( );
@@ -325,13 +321,12 @@ namespace stackviz
    }
 
     _dirtyFlagHistograms = false;
-
-  } // refreshHistograms
-
+  }
 
   void DisplayManagerWidget::hideEventClicked( )
   {
-    auto author = dynamic_cast< QWidget* >( sender( ));
+    auto author = qobject_cast<QWidget *>( sender( ));
+    if(!author) return;
 
     unsigned int counter = 0;
     for( auto t : _events )
@@ -354,11 +349,12 @@ namespace stackviz
       ++counter;
     }
 
-  } // hideEventClicked
+  }
 
   void DisplayManagerWidget::deleteEventClicked( )
   {
-    auto author = dynamic_cast< QWidget* >( sender( ));
+    auto author = qobject_cast<QWidget *>( sender( ));
+    if(!author) return;
 
     unsigned int counter = 0;
     for( auto t : _events )
@@ -379,11 +375,12 @@ namespace stackviz
      ++counter;
     }
 
-  } // deleteEventClicked
+  }
 
   void DisplayManagerWidget::hideHistoClicked( )
   {
-    auto author = dynamic_cast< QWidget* >( sender( ));
+    auto author = qobject_cast<QWidget *>( sender( ));
+    if(!author) return;
 
     unsigned int counter = 0;
     for( auto t : _histograms )
@@ -405,11 +402,12 @@ namespace stackviz
 
       ++counter;
     }
-  } // hideHistoClicked
+  }
 
   void DisplayManagerWidget::deleteHistoClicked( )
   {
-    auto author = dynamic_cast< QWidget* >( sender( ));
+    auto author = qobject_cast<QWidget *>( sender( ));
+    if(!author) return;
 
     unsigned int counter = 0;
     for( auto t : _histograms )
@@ -429,9 +427,7 @@ namespace stackviz
 
      ++counter;
     }
-
-  } // deleteHistoClicked
-
+  }
 }
 
 

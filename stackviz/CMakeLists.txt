@@ -53,6 +53,15 @@ set(STACKVIZ_LINK_LIBRARIES
   scoop
 )
 
+if(WIN32)
+  if(MINGW)
+  	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mwindows")
+  endif(MINGW)
+  configure_file("${PROJECT_SOURCE_DIR}/stackviz/stackvizWinProps.rc.in" "${PROJECT_BINARY_DIR}/stackvizWinProps.rc")
+  set( STACKVIZ_SOURCES ${STACKVIZ_SOURCES} "${PROJECT_BINARY_DIR}/stackvizWinProps.rc")  
+  add_definitions("-DSTACKVIZ_STATIC")
+endif(WIN32)
+
 if ( NOT DEFAULT_CONTEXT_OPENGL_MAJOR )
   set( DEFAULT_CONTEXT_OPENGL_MAJOR 3 )
 endif( )

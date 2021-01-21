@@ -1,10 +1,23 @@
 /*
- * @file  MainWindow.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #ifdef VISIMPL_USE_GMRVLEX
@@ -54,7 +67,6 @@ namespace stackviz
   MainWindow::MainWindow( QWidget* parent_ )
   : QMainWindow( parent_ )
   , _ui( new Ui::MainWindow )
-  , _lastOpenedFileName( "" )
   , _simulationType( simil::TSimNetwork )
   , _summary( nullptr )
   , _player( nullptr )
@@ -117,6 +129,9 @@ namespace stackviz
     connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( void )),
              this, SLOT( openCSVFilesThroughDialog( void )));
 
+    connect( _ui->actionOpenH5Files, SIGNAL( triggered( void )),
+             this, SLOT( openH5FilesThroughDialog( void )));
+
     connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void )),
              this, SLOT( openSubsetEventsFileThroughDialog( void )));
 
@@ -139,11 +154,39 @@ namespace stackviz
 
     #endif
 
+    _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
+    _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
   }
 
   MainWindow::~MainWindow( void )
   {
     delete _ui;
+
+#ifdef VISIMPL_USE_ZEROEQ
+
+    if( _zeqConnection )
+    {
+      _zeqConnection = false;
+      _thread->join();
+
+      delete _thread;
+
+      if(_subscriber)
+      {
+        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
+        delete _subscriber;
+        _subscriber = nullptr;
+      }
+
+      if(_publisher)
+      {
+        delete _publisher;
+        _publisher = nullptr;
+      }
+    }
+
+#endif
+
   }
 
 
@@ -280,12 +323,10 @@ namespace stackviz
 
     if( filePath.find( "json" ) != std::string::npos )
     {
-      std::cout << "Loading JSON file: " << filePath << std::endl;
       _subsetEventManager->loadJSON( filePath );
     }
     else if( filePath.find( "h5" ) != std::string::npos )
     {
-      std::cout << "Loading H5 file: " << filePath << std::endl;
       _subsetEventManager->loadH5( filePath );
       _autoCalculateCorrelations = true;
     }
@@ -295,17 +336,16 @@ namespace stackviz
     }
   }
 
-
   void MainWindow::openBlueConfigThroughDialog( void )
   {
   #ifdef VISIMPL_USE_SIMIL
 
-     QString path = QFileDialog::getOpenFileName(
-       this, tr( "Open BlueConfig" ), _lastOpenedFileName,
+     QString filename = QFileDialog::getOpenFileName(
+       this, tr( "Open BlueConfig" ), _lastOpenedFileNamePath,
        tr( "BlueConfig ( BlueConfig CircuitConfig);; All files (*)" ),
        nullptr, QFileDialog::DontUseNativeDialog );
 
-     if( !path.isEmpty( ))
+     if( !filename.isEmpty( ))
      {
        bool ok1, ok2;
        QInputDialog simTypeDialog;
@@ -336,14 +376,11 @@ namespace stackviz
 
        if ( ok1 && ok2 && !text.isEmpty( ))
        {
-   //      std::string targetLabel = text.toStdString( );
-         std::string reportLabel = text.toStdString( );
-         _lastOpenedFileName = QFileInfo(path).path( );
-         std::string fileName = path.toStdString( );
-         openBlueConfig( fileName, simType, reportLabel );
+         _lastOpenedFileNamePath = QFileInfo(filename).path( );
+         QApplication::setOverrideCursor(Qt::WaitCursor);
+         openBlueConfig( filename.toStdString(), simType, text.toStdString() );
+         QApplication::restoreOverrideCursor();
        }
-
-
      }
   #endif
 
@@ -351,46 +388,45 @@ namespace stackviz
 
   void MainWindow::openCSVFilesThroughDialog( void )
   {
-    QString pathNetwork = QFileDialog::getOpenFileName(
-          this, tr( "Open CSV Network description file" ), _lastOpenedFileName,
+    QString networkFilename = QFileDialog::getOpenFileName(
+          this, tr( "Open CSV Network description file" ), _lastOpenedFileNamePath,
           tr( "CSV (*.csv);; All files (*)" ),
           nullptr, QFileDialog::DontUseNativeDialog );
 
-    if( !pathNetwork.isEmpty( ))
+    if( !networkFilename.isEmpty( ))
     {
       simil::TSimulationType simType = simil::TSimSpikes;
 
-      QString pathActivity = QFileDialog::getOpenFileName(
-            this, tr( "Open CSV Activity file" ), _lastOpenedFileName,
+      QString activityFilename = QFileDialog::getOpenFileName(
+            this, tr( "Open CSV Activity file" ), _lastOpenedFileNamePath,
             tr( "CSV (*.csv);; All files (*)" ),
             nullptr, QFileDialog::DontUseNativeDialog );
 
-
-      if ( !pathActivity.isEmpty( ))
+      if ( !activityFilename.isEmpty( ))
       {
-        _lastOpenedFileName = QFileInfo( pathNetwork ).path( );
-        std::string networkFile = pathNetwork.toStdString( );
-        std::string activityFile = pathActivity.toStdString( );
-        openCSVFile( networkFile, simType, activityFile );
+        _lastOpenedFileNamePath = QFileInfo( networkFilename ).path( );
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        openCSVFile( networkFilename.toStdString( ), simType, activityFilename.toStdString( ) );
+        QApplication::restoreOverrideCursor();
       }
-
-
     }
   }
 
   void MainWindow::openSubsetEventsFileThroughDialog( void )
   {
-    QString filePath = QFileDialog::getOpenFileName(
+    QString eventsFilename = QFileDialog::getOpenFileName(
               this, tr( "Open file containing subsets/events data" ),
               _lastOpenedSubsetsFileName,
-              tr( "JSON (*.json);; All files (*)" ),
+              tr( "JSON (*.json);; hdf5 (*.h5);; All files (*)" ),
               nullptr, QFileDialog::DontUseNativeDialog );
 
-    if( !filePath.isEmpty( ))
+    if( !eventsFilename.isEmpty( ))
     {
-      _lastOpenedSubsetsFileName = QFileInfo( filePath ).path( );
+      _lastOpenedSubsetsFileName = QFileInfo( eventsFilename ).path( );
 
-      openSubsetEventFile( filePath.toStdString( ), false );
+      QApplication::setOverrideCursor(Qt::WaitCursor);
+      openSubsetEventFile( eventsFilename.toStdString( ), false );
+      QApplication::restoreOverrideCursor();
 
       _summary->generateEventsRep( );
       _summary->importSubsetsFromSubsetMngr( );
@@ -404,10 +440,10 @@ namespace stackviz
   void MainWindow::configurePlayer( void )
   {
     _startTimeLabel->setText(
-        QString::number( (double)_player->startTime( )));
+        QString::number( static_cast<double>(_player->startTime( ))));
 
     _endTimeLabel->setText(
-          QString::number( (double)_player->endTime( )));
+          QString::number( static_cast<double>(_player->endTime( ))));
 
   #ifdef SIMIL_USE_ZEROEQ
     _player->connectZeq( _zeqUri );
@@ -479,14 +515,13 @@ namespace stackviz
     _simSlider->setSizePolicy( QSizePolicy::Preferred,
                                QSizePolicy::Preferred );
 
-  //  QPushButton* playButton = new QPushButton( );
     _playButton = new QPushButton( );
     _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
                                QSizePolicy::MinimumExpanding );
     QPushButton* stopButton = new QPushButton( );
     QPushButton* nextButton = new QPushButton( );
     QPushButton* prevButton = new QPushButton( );
-  //  QPushButton* repeatButton = new QPushButton( );
+
     _repeatButton = new QPushButton( );
     _repeatButton->setCheckable( true );
     _repeatButton->setChecked( false );
@@ -494,8 +529,6 @@ namespace stackviz
     _goToButton = new QPushButton( );
     _goToButton->setText( QString( "Play at..." ));
 
-  //  QIcon playIcon;
-  //  QIcon pauseIcon;
     QIcon stopIcon;
     QIcon nextIcon;
     QIcon prevIcon;
@@ -572,21 +605,16 @@ namespace stackviz
 #endif
   }
 
-
-
   void MainWindow::initSummaryWidget( )
   {
-
     _summary = new visimpl::Summary( this, visimpl::T_STACK_EXPANDABLE );
 
     if( _simulationType == simil::TSimSpikes )
     {
-      simil::SpikesPlayer* spikesPlayer =
-          dynamic_cast< simil::SpikesPlayer* >( _player);
+      auto spikesPlayer = dynamic_cast< simil::SpikesPlayer* >( _player);
 
       _summary->Init( spikesPlayer->data( ));
       _summary->simulationPlayer( _player );
-
     }
 
     _stackLayout = new QGridLayout( );
@@ -612,8 +640,6 @@ namespace stackviz
     connect( _ui->actionFocusOnPlayhead, SIGNAL( triggered( )),
              _summary, SLOT( focusPlayback( )));
 
-
-
     if( _autoCalculateCorrelations )
     {
       calculateCorrelations( );
@@ -632,7 +658,6 @@ namespace stackviz
 
   void MainWindow::Play( bool notify )
   {
-
     if( _player )
     {
         _player->Play( );
@@ -646,7 +671,6 @@ namespace stackviz
   #endif
         }
     }
-
   }
 
   void MainWindow::Pause( bool notify )
@@ -681,7 +705,6 @@ namespace stackviz
         _player ->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::STOP );
   #endif
       }
-
     }
   }
 
@@ -689,7 +712,7 @@ namespace stackviz
   {
     if( _player )
     {
-      bool repeat = _repeatButton->isChecked( );
+      const bool repeat = _repeatButton->isChecked( );
       _player->loop( repeat );
 
       if( notify )
@@ -728,10 +751,9 @@ namespace stackviz
   {
     if( _player )
     {
-
-      int value = _simSlider->value( );
-      float percentage = float( value - _simSlider->minimum( )) /
-                         float( _simSlider->maximum( ) - _simSlider->minimum( ));
+      const int value = _simSlider->value( );
+      const float percentage = static_cast<float>( value - _simSlider->minimum( )) /
+                               ( _simSlider->maximum( ) - _simSlider->minimum( ));
       _simSlider->setSliderPosition( sliderPosition );
 
       _playButton->setIcon( _pauseIcon );
@@ -776,7 +798,6 @@ namespace stackviz
       _player->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::BEGIN );
   #endif
       }
-
     }
   }
 
@@ -829,37 +850,29 @@ namespace stackviz
       switch( operation )
       {
         case zeroeq::gmrv::PLAY:
-  //        std::cout << "Received play" << std::endl;
           Play( false );
           break;
         case zeroeq::gmrv::PAUSE:
           Pause( false );
-  //        std::cout << "Received pause" << std::endl;
           break;
         case zeroeq::gmrv::STOP:
-  //        std::cout << "Received stop" << std::endl;
           Stop( false );
           break;
         case zeroeq::gmrv::BEGIN:
-  //        std::cout << "Received begin" << std::endl;
           Restart( false );
           break;
         case zeroeq::gmrv::END:
-  //        std::cout << "Received end" << std::endl;
           GoToEnd( false );
           break;
         case zeroeq::gmrv::ENABLE_LOOP:
-  //        std::cout << "Received enable loop" << std::endl;
           _zeqEventRepeat( true );
           break;
         case zeroeq::gmrv::DISABLE_LOOP:
-  //        std::cout << "Received disable loop" << std::endl;
           _zeqEventRepeat( false );
           break;
         default:
           break;
       }
-
     }
 
     void MainWindow::_zeqEventRepeat( bool repeat )
@@ -879,13 +892,6 @@ namespace stackviz
       std::vector< uint32_t > selected ( selection->begin( ),
                                      selection->end( ));
 
-      std::cout << "Publishing selection of " << selected.size( ) << std::endl;
-  //    std::vector< uint32_t > se( {1, 2, 3} );
-
-  //     selectedIds( selected );
-  //    selectedIds.setIds( selected );
-
-  //    std::cout << "Sending selection of size " << selected.size( ) << std::endl;
       _publisher->publish( lexis::data::SelectedIDs( selected ));
     }
 
@@ -904,28 +910,12 @@ namespace stackviz
         [&]( const void* data_, const size_t size_ )
         { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
 
-  //  pthread_create( &_subscriberThread, NULL, _Subscriber, _subscriber );
-    _thread = new std::thread( [&]() { while( true ) _subscriber->receive( 10000 );});
-
+    _thread = new std::thread( [&]() { while( _zeqConnection ) _subscriber->receive( 10000 );});
   }
-
-  //void* MainWindow::_Subscriber( void* subs )
-  //{
-  //  zeroeq::Subscriber* subscriber = static_cast< zeroeq::Subscriber* >( subs );
-  //  while ( true )
-  //  {
-  //    subscriber->receive( 10000 );
-  //  }
-  //  pthread_exit( NULL );
-  //}
 
   void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
   {
-
-  //  std::vector< unsigned int > selected =
-  //      zeroeq::hbp::deserializeSelectedIDs( event_ );
     std::vector< uint32_t > ids = selected->getIdsVector( );
-    std::cout << "Received selection with " << ids.size( ) << " elements" << std::endl;
 
     visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ));
 
@@ -937,34 +927,9 @@ namespace stackviz
 
       _summary->AddNewHistogram( selection, true );
     }
-
   }
 
   #endif
-
-  void MainWindow::resizeEvent( QResizeEvent * event_ )
-  {
-    QMainWindow::resizeEvent( event_ );
-
-    std::cout << "Window " << size( ).width( ) << "x" << size( ).height( ) << std::endl;
-    if( _summary )
-    std::cout << "Central " << _summary->size( ).width( ) << "x" << _summary->size( ).height( ) << std::endl;
-
-    if( resizingEnabled )
-    {
-  //    unsigned int columnsWidth = width( ) / _columnsNumber;
-  //    unsigned int currentWidth = width( ) - columnsWidth;
-  //    unsigned int currentHeight =  _summary->heightPerRow( ) *
-  //                                  _summary->histogramsNumber( );
-  //
-  //    _contentWidget->setMinimumWidth( width( ) );
-  //    _contentWidget->setMinimumHeight( currentHeight + 2 );
-  //
-  //    std::cout << width( ) << " -> " << currentWidth << std::endl;
-  ////    _summary->setMinimumWidth( currentWidth );
-  //    _summary->resize( currentWidth, currentHeight );
-    }
-  }
 
   void MainWindow::playAtButtonClicked( void )
   {
@@ -994,15 +959,6 @@ namespace stackviz
     _summary->showMarker( false );
   }
 
-
-  //void MainWindow::updateStackView( void )
-  //{
-  //  for( unsigned int i = 0 ; i < _summary->histogramsNumber( ); i++)
-  //  {
-  //    _summary->createSelection( i );
-  //  }
-  //}
-
   void MainWindow::addCorrelation( const std::string& subset )
   {
     _correlations.push_back( subset );
@@ -1012,37 +968,37 @@ namespace stackviz
   {
     visimpl::CorrelationComputer cc ( dynamic_cast< simil::SpikeData* >( _player->data( )));
 
-    auto eventNames = _subsetEventManager->eventNames( );
+    const auto eventNames = _subsetEventManager->eventNames( );
 
-    double deltaTime = 0.125;
+    constexpr double deltaTime = 0.125;
 
     cc.configureEvents( eventNames, deltaTime );
 
-    for( auto correl : _correlations )
+    auto correlateSubsets = [&eventNames, deltaTime, &cc](const std::string &event)
     {
-      auto result = cc.correlateSubset( correl, eventNames, deltaTime, 2600, 2900 );
-    }
+      cc.correlateSubset( event, eventNames, deltaTime, 2600, 2900 );
+    };
+    std::for_each(_correlations.cbegin(), _correlations.cend(), correlateSubsets);
 
-    for( auto correlationName : cc.correlationNames( ))
+    const auto names = cc.correlationNames();
+
+    auto addHistogram = [this, &cc](const std::string &name)
     {
-      auto correlation = cc.correlation( correlationName );
+      auto correlation = cc.correlation( name );
 
-      if( !correlation )
-        continue;
+      if( !correlation ) return;
 
       visimpl::Selection selection;
       selection.name = correlation->fullName;
       selection.gids = cc.getCorrelatedNeurons( correlation->fullName );
 
-     _summary->AddNewHistogram( selection );
-    }
-
-
+      _summary->AddNewHistogram( selection );
+    };
+    std::for_each(names.cbegin(), names.cend(), addHistogram);
   }
 
   void MainWindow::aboutDialog( void )
   {
-
     QString msj =
       QString( "<h2>ViSimpl - StackViz</h2>" ) +
       tr( "A multi-view visual analyzer of brain simulation data. " ) +
@@ -1120,6 +1076,29 @@ namespace stackviz
     "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
 
     QMessageBox::about(this, tr( "About StackViz" ), msj );
+  }
+
+  void MainWindow::openH5FilesThroughDialog(void)
+  {
+    auto networkFilename = QFileDialog::getOpenFileName(
+      this, tr( "Open a H5 network file" ), _lastOpenedFileNamePath,
+      tr( "hdf5 ( *.h5);; All files (*)" ), nullptr,
+      QFileDialog::DontUseNativeDialog );
+
+    if ( networkFilename.isEmpty() )
+      return;
+
+    auto activityFilename =
+      QFileDialog::getOpenFileName( this, tr( "Open a H5 activity file" ), _lastOpenedFileNamePath,
+                                    tr( "hdf5 ( *.h5);; All files (*)" ),
+                                    nullptr, QFileDialog::DontUseNativeDialog );
+
+    if ( activityFilename.isEmpty() )
+      return;
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    openHDF5File( networkFilename.toStdString(), simil::TSimSpikes, activityFilename.toStdString() );
+    QApplication::restoreOverrideCursor();
   }
 
 } // namespace stackviz
