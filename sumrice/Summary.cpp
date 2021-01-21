@@ -121,7 +121,6 @@ namespace visimpl
   , _fillPlots( true )
   , _defaultCorrelationDeltaTime( 0.125f )
   {
-
     setMouseTracking( true );
 
     _initCentralGUI( );
@@ -496,7 +495,7 @@ namespace visimpl
     return foot;
   }
 
-  void Summary::Init( void )
+  void Summary::Init( )
   {
     if( !_spikeReport )
       return;
@@ -743,8 +742,7 @@ namespace visimpl
   {
     HistogramRow currentRow;
 
-    visimpl::HistogramWidget* histogram =
-        new visimpl::HistogramWidget( *_spikeReport );
+    auto histogram = new visimpl::HistogramWidget( *_spikeReport );
 
     histogram->filteredGIDs( subset );
     histogram->name( name );
@@ -849,7 +847,6 @@ namespace visimpl
     {
       _regionGlobalPosition = position;
       _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
-
 
        SetFocusRegionPosition( cursorLocalPoint );
 
@@ -986,7 +983,6 @@ namespace visimpl
         }
         else if ( _selectedEdgeUpper )
         {
-
           const float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointUpper ) * invWidth;
 
           _regionWidth += diffPerc;
@@ -1572,15 +1568,8 @@ namespace visimpl
 
     if( event_->modifiers( ).testFlag( Qt::ControlModifier ))
     {
-
       if( _scaleCurrentHorizontal == minScale )
         _sizeView = _mainHistogram->size( ).width( ) - _sizeMargin * 2;
-
-      bool horizontalResize = false;
-      const auto mousePosLocal = mapToGlobal( event_->pos( ) );
-
-      if( _scrollHistogram->geometry( ).contains( mousePosLocal ))
-        horizontalResize = true;
 
       _scaleCurrentHorizontal = std::max( minScale, _scaleCurrentHorizontal + adjustment );
 
@@ -1590,7 +1579,6 @@ namespace visimpl
       _resizeEvents( _sizeChartHorizontal );
 
       _spinBoxScaleHorizontal->setValue( _scaleCurrentHorizontal );
-
     }
     else if( event_->modifiers( ).testFlag( Qt::ShiftModifier ))
     {
@@ -1682,7 +1670,7 @@ namespace visimpl
     _sizeChartHorizontal =
         _mainHistogram ? _mainHistogram->size( ).width( ) : _sizeView * _scaleCurrentHorizontal;
 
-    _scaleCurrentHorizontal = ( float )_sizeChartHorizontal / ( float )_sizeView;
+    _scaleCurrentHorizontal = static_cast<float> (_sizeChartHorizontal) / _sizeView;
   }
 
   void Summary::adjustSplittersSize( )
@@ -1699,20 +1687,42 @@ namespace visimpl
 
   void Summary::focusPlayback( void )
   {
-    const auto perc = _player->GetRelativeTime( );
-
-    setFocusAt( perc );
+    setFocusAt( _player->GetRelativeTime( ) );
   }
 
   void Summary::setFocusAt( float perc )
   {
     perc = std::max(0.f, std::min(perc, 1.f));
-
     _regionPercentage = perc;
 
-    calculateRegionBounds( );
+    if(!_histogramWidgets.empty())
+    {
+      if(!_focusedHistogram)
+      {
+        _focusedHistogram = _histogramWidgets.front();
+      }
 
-    _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
-    _focusWidget->update( );
+      updateRegionBounds( );
+
+      _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+      _focusWidget->update( );
+
+      _focusedHistogram->regionWidth( _regionWidth );
+      _focusedHistogram->paintRegion(true);
+      _focusedHistogram->focusValueAt(perc);
+      _focusedHistogram->update();
+
+      auto setPaintRegion = [&](HistogramWidget *w)
+      {
+        if(w == _focusedHistogram)
+        {
+          w->regionWidth(_regionWidth);
+          w->focusValueAt(perc);
+        }
+        w->paintRegion(w == _focusedHistogram);
+        w->update();
+      };
+      std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), setPaintRegion);
+    }
   }
 }
