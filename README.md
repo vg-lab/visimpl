@@ -9,7 +9,13 @@ gmrv@gmrv.es
 ViSimpl consists of a set of analysis tools providing different views for the
 deep analysis of the brain simulation datasets. This project contains both
 SimPart and StackViz, ready to be used with BlueConfig datasets among other
-file formats such as specific HDF5 and CSV.
+file formats such as specific HDF5 and CSV. 
+ViSimpl can represent and simulate data provided by [nest](https://github.com/nest)
+connecting to a server that provides its REST API.   
+
+## Known limitations
+
+ViSimpl can only simulate data within 32 bits size and precision. 
 
 ## Dependencies
 

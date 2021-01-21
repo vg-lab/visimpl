@@ -29,10 +29,8 @@
 #include <stackviz/version.h>
 #include <sumrice/sumrice.h>
 
-void setFormat( void );
 void usageMessage(  char* progName );
 void dumpVersion( void );
-bool atLeastTwo( bool a, bool b, bool c );
 
 int main( int argc, char** argv )
 {
@@ -289,7 +287,5 @@ void dumpVersion( void )
   std::cerr << "\tno";
   #endif
   std::cerr << std::endl;
-
   std::cerr << std::endl;
-
 }
