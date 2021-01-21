@@ -1,17 +1,33 @@
 /*
- * @file  Gradient.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
+// Qt
 #include <QPainter>
 #include <QBrush>
 
+// C++
 #include <iostream>
 
+// Sumrice
 #include "Gradient.h"
 
 Gradient::Gradient(QWidget *parent_) :
@@ -80,12 +96,12 @@ void Gradient::clearPlot( void )
 
 float Gradient::xPos( float x_ )
 {
-  return x_ * width( );// + x( );
+  return x_ * width( );
 }
 
 float Gradient::yPos( float y_ )
 {
-  return (1.0f - y_) * height( );// + y( );
+  return (1.0f - y_) * height( );
 }
 
 void Gradient::paintEvent(QPaintEvent* /*e*/)

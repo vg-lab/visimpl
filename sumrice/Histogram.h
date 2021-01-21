@@ -236,8 +236,6 @@ signals:
 
     bool _builtMain;
     bool _builtFocus;
-    bool _calculatedColorsMain;
-    bool _calculatedColorsFocus;
     bool _autoBuildHistogram;
     bool _autoCalculateColors;
   };

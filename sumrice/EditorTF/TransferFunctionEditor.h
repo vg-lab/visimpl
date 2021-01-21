@@ -1,10 +1,23 @@
 /*
- * @file  TransferFunctionEditor.h
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #ifndef TRANSFERFUNCTIONEDITOR_H
@@ -27,22 +40,14 @@ Q_OBJECT
 public:
    TransferFunctionEditor( QWidget *parent_ = 0 );
 
-   ~TransferFunctionEditor( void );
+   ~TransferFunctionEditor( ) {};
 
    visimpl::TTransferFunction getColorPoints( );
    void setColorPoints( const visimpl::TTransferFunction& colors );
 
-protected:
-    void applyColorMap();
-
-/* Member slots */
 public slots:
     void colorPointsChanged(const QPolygonF &points);
 
-protected slots:
-    void buttonClicked(QAbstractButton *button);
-
-/* Member attributes */
 private:
     QWidget *_parent;
 
@@ -50,8 +55,6 @@ private:
     ColorPoints *_bluePoints;
     ColorPoints *_greenPoints;
     ColorPoints *_alphaPoints;
-
-//    osg::ref_ptr<osg::Texture1D> _texture;
 
     Gradient* gradientFrame;
     Gradient* noTransparencyGradientFrame;
