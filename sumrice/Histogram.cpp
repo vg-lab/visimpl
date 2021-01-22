@@ -33,6 +33,8 @@
 #include <omp.h>
 #endif
 
+#include <exception>
+
 namespace visimpl
 {
   HistogramWidget::HistogramWidget( )
@@ -490,7 +492,13 @@ namespace visimpl
         _scaleFuncLocal = logarithmicFunc;
         break;
       default:
-        assert(false);
+        {
+          const auto message = std::string("Invalid TColorScale value ") +
+                               std::to_string(static_cast<int>(scale)) + " " +
+                               std::string(__FILE__) + ":" +
+                               std::to_string(__LINE__);
+          throw std::out_of_range(message.c_str());
+        }
         break;
     }
   }
@@ -509,7 +517,13 @@ namespace visimpl
         _scaleFuncGlobal = logarithmicFunc;
         break;
       default:
-        assert(false);
+        {
+          const auto message = std::string("Invalid TColorScale value ") +
+                               std::to_string(static_cast<int>(scale)) + " " +
+                               std::string(__FILE__) + ":" +
+                               std::to_string(__LINE__);
+          throw std::out_of_range(message.c_str());
+        }
         break;
     }
   }

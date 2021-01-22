@@ -1,5 +1,5 @@
 # ViSimpl - Multi-view analysis tools
-(c) 2015-2020. GMRV / URJC
+(c) 2015-2021. GMRV / URJC
 
 www.gmrv.es
 gmrv@gmrv.es

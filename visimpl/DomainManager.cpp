@@ -28,6 +28,9 @@
 #include "prefr/UpdaterStaticPosition.h"
 #include "prefr/SourceMultiPosition.h"
 
+// C++
+#include <exception>
+
 namespace visimpl
 {
   void expandBoundingBox( glm::vec3& minBounds,
@@ -201,7 +204,13 @@ namespace visimpl
         _generateAttributesIndices( );
         break;
       default:
-        assert(false);
+        {
+          const auto message = std::string("Invalid tVisualMode value ") +
+                               std::to_string(static_cast<int>(newMode)) + " " +
+                               std::string(__FILE__) + ":" +
+                               std::to_string(__LINE__);
+          throw std::out_of_range(message.c_str());
+        }
         break;
     }
   }
@@ -225,7 +234,13 @@ namespace visimpl
         _clearAttribView( );
         break;
       default:
-        assert(false);
+        {
+          const auto message = std::string("Invalid tVisualMode value ") +
+                               std::to_string(static_cast<int>(_mode)) + " " +
+                               std::string(__FILE__) + ":" +
+                               std::to_string(__LINE__);
+          throw std::out_of_range(message.c_str());
+        }
         break;
     }
   }
@@ -347,7 +362,13 @@ namespace visimpl
         _generateAttributesIndices( );
         break;
       default:
-        assert(false);
+        {
+          const auto message = std::string("Invalid tVisualMode value ") +
+                               std::to_string(static_cast<int>(_mode)) + " " +
+                               std::string(__FILE__) + ":" +
+                               std::to_string(__LINE__);
+          throw std::out_of_range(message.c_str());
+        }
         break;
     }
   }
@@ -402,14 +423,16 @@ namespace visimpl
 
     if( !attrib )
     {
-      assert( i < _groups.size( ));
-      group = _groups[ i ];
+      if( i < _groups.size( ))
+        group = _groups[ i ];
     }
     else
     {
-      assert( i < _attributeGroups.size( ));
-      group = _attributeGroups[ i ];
+      if( i < _attributeGroups.size( ))
+        group = _attributeGroups[ i ];
     }
+
+    if(!group) return;
 
     group->active( state );
     group->cluster( )->setModel( state ? group->model( ) : _modelOff );
@@ -768,7 +791,13 @@ namespace visimpl
         _processFrameInputAttributes( spikes_, begin, end );
         break;
       default:
-        assert(false);
+        {
+          const auto message = std::string("Invalid tVisualMode value ") +
+                               std::to_string(static_cast<int>(_mode)) + " " +
+                               std::string(__FILE__) + ":" +
+                               std::to_string(__LINE__);
+          throw std::out_of_range(message.c_str());
+        }
         break;
     }
   }
@@ -814,15 +843,15 @@ namespace visimpl
 
       if( _selection.empty( ) || _selection.find( gid ) != _selection.end( ))
       {
-        auto source = _gidSource.find( gid );
-        assert( source != _gidSource.end( ));
+        const auto source = _gidSource.find( gid );
 
         if( source == _gidSource.end( ))
         {
           std::cout << "GID " << gid << " source not found." << std::endl;
+          return;
         }
 
-        unsigned int partIdx = _gidToParticle.find( gid )->second;
+        const unsigned int partIdx = _gidToParticle.find( gid )->second;
         auto particle = _particleSystem->particles( ).at( partIdx );
         particle.set_life( std::get< 1 >( neuron ));
       }

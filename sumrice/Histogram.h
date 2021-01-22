@@ -219,7 +219,6 @@ signals:
     GIDUSet _filteredGIDs;
 
     QPoint* _lastMousePosition;
-//    QPoint* _regionPosition;
     float* _regionPercentage;
 
     bool _paintRegion;
@@ -232,10 +231,7 @@ signals:
     unsigned int _pixelMargin;
 
     std::vector< TEvent >* _events;
-    std::vector< QPainterPath >* _cachedEventGraphs;
 
-    bool _builtMain;
-    bool _builtFocus;
     bool _autoBuildHistogram;
     bool _autoCalculateColors;
   };
