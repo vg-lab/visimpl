@@ -770,7 +770,7 @@ namespace visimpl
   {
     _simConfigurationDock = new QDockWidget( );
     _simConfigurationDock->setMinimumHeight( 100 );
-    _simConfigurationDock->setMinimumWidth( 300 );
+    _simConfigurationDock->setMinimumWidth( 400 );
     _simConfigurationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
                                           QSizePolicy::MinimumExpanding );
 

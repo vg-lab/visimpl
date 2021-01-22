@@ -31,403 +31,391 @@
 #include <QGroupBox>
 #include <QGridLayout>
 
-namespace stackviz
+using namespace stackviz;
+
+DisplayManagerWidget::DisplayManagerWidget( )
+: _eventData( nullptr )
+, _histData( nullptr )
+, _eventsLayout( nullptr )
+, _histogramsLayout( nullptr )
+, _dirtyFlagEvents( true )
+, _dirtyFlagHistograms( true )
 {
+}
 
-  DisplayManagerWidget::DisplayManagerWidget( )
-  : _eventData( nullptr )
-  , _histData( nullptr )
-  , _eventsLayout( nullptr )
-  , _histogramsLayout( nullptr )
-  , _dirtyFlagEvents( true )
-  , _dirtyFlagHistograms( true )
+void DisplayManagerWidget::init(  const std::vector< visimpl::EventWidget* >* eventData,
+                                  const std::vector< visimpl::HistogramWidget* >* histData )
+{
+  setMinimumWidth( 500 );
+
+  setWindowTitle( "Visibility manager" );
+  setWindowIcon(QIcon(":/icons/visimpl-icon-square.png"));
+
+  _eventData = eventData;
+  _histData = histData;
+
+  const QStringList eventHeaders = { "Name", "Show", "Delete" };
+  const QStringList histoHeaders = { "Name", "Size", "Show", "Delete" };
+
+  QGridLayout* globalLayout = new QGridLayout( );
+
+  // Events
+  _eventsLayout = new QGridLayout( );
+  _eventsLayout->setAlignment( Qt::AlignTop );
+
+  QWidget* eventScrollContainer = new QWidget( );
+  eventScrollContainer->setLayout( _eventsLayout );
+
+  QScrollArea* eventScroll = new QScrollArea( );
+  eventScroll->setWidget( eventScrollContainer );
+  eventScroll->setWidgetResizable( true );
+  eventScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+
+  QGroupBox* eventGroup = new QGroupBox( );
+  eventGroup->setTitle( "Events" );
+  eventGroup->setMinimumHeight( 300 );
+  eventGroup->setMaximumHeight( 300 );
+  eventGroup->setLayout( new QVBoxLayout( ));
+
+  QGridLayout* headerEventLayout = new QGridLayout( );
+  headerEventLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 2);
+  headerEventLayout->addWidget( new QLabel( "Visible" ), 0, 2, 1, 1);
+  headerEventLayout->addWidget( new QLabel( "Delete" ), 0, 3, 1, 1);
+
+  QWidget* eventHeader = new QWidget( );
+  eventHeader->setLayout( headerEventLayout );
+
+  eventGroup->layout( )->addWidget( eventHeader );
+  eventGroup->layout( )->addWidget( eventScroll );
+
+  // Histograms
+  _histogramsLayout = new QGridLayout( );
+  _histogramsLayout->setAlignment( Qt::AlignTop );
+
+  QWidget* histoScrollContainer = new QWidget( );
+  histoScrollContainer->setLayout( _histogramsLayout );
+
+  QScrollArea* histoScroll = new QScrollArea( );
+  histoScroll->setWidget( histoScrollContainer );
+  histoScroll->setWidgetResizable( true );
+  histoScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
+
+  QGroupBox* histGroup = new QGroupBox( );
+  histGroup->setTitle( "Histograms" );
+  histGroup->setMinimumHeight( 300 );
+  histGroup->setMaximumHeight( 300 );
+  histGroup->setLayout(  new QVBoxLayout( ) );
+
+  QGridLayout* headerHistoLayout = new QGridLayout( );
+  headerHistoLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 2);
+  headerHistoLayout->addWidget( new QLabel( "Size" ), 0, 2, 1, 1);
+  headerHistoLayout->addWidget( new QLabel( "Visible" ), 0, 3, 1, 1);
+  headerHistoLayout->addWidget( new QLabel( "Delete" ), 0, 4, 1, 1);
+
+  QWidget* histoHeader = new QWidget( );
+  histoHeader->setLayout( headerHistoLayout );
+
+  histGroup->layout( )->addWidget( histoHeader );
+  histGroup->layout( )->addWidget( histoScroll );
+
+  QPushButton* closeButton = new QPushButton( "Close", this );
+  connect( closeButton, SIGNAL( clicked( )), this, SLOT( close( )));
+
+  globalLayout->addWidget( eventGroup, 0, 0, 5, 5 );
+  globalLayout->addWidget( histGroup, 5, 0, 5, 5 );
+  globalLayout->addWidget( closeButton, 10, 2, 1, 1 );
+
+  this->setLayout( globalLayout );
+}
+
+void DisplayManagerWidget::close( void )
+{
+  hide( );
+}
+
+void DisplayManagerWidget::dirtyEvents(void)
+{
+  _dirtyFlagEvents = true;
+}
+
+void DisplayManagerWidget::dirtyHistograms(void)
+{
+  _dirtyFlagHistograms = true;
+}
+
+void DisplayManagerWidget::clearWidgets(void)
+{
+  clearEventWidgets();
+
+  clearHistogramWidgets();
+}
+
+void DisplayManagerWidget::clearEventWidgets(void)
+{
+  auto removeEventWidget = [this](TDisplayEventTuple &e)
   {
+    auto container = std::get< TDM_E_CONTAINER >( e );
+    _eventsLayout->removeWidget( container );
 
+    delete container;
+  };
+  std::for_each(_events.begin(), _events.end(), removeEventWidget);
+
+  QLayoutItem *item;
+  while ((item = _eventsLayout->takeAt(0)) != nullptr)
+  {
+    delete item->widget();
+    delete item;
   }
 
-  void DisplayManagerWidget::init(  const std::vector< visimpl::EventWidget* >* eventData,
-                                    const std::vector< visimpl::HistogramWidget* >* histData )
+  _events.clear();
+}
+
+void DisplayManagerWidget::clearHistogramWidgets(void)
+{
+  auto removeHistogramWidget = [this](TDisplayHistogramTuple &e)
   {
-    setMinimumWidth( 500 );
+    auto container = std::get< TDM_H_CONTAINER >( e );
+    _histogramsLayout->removeWidget( container );
 
-    setWindowTitle( "Visibility manager" );
-    setWindowIcon(QIcon(":/icons/visimpl-icon-square.png"));
+    delete container;
+  };
+  std::for_each(_histograms.begin(), _histograms.end(), removeHistogramWidget);
 
-    _eventData = eventData;
-    _histData = histData;
-
-    QStringList eventHeaders = { "Name", "Show", "Delete" };
-    QStringList histoHeaders = { "Name", "Size", "Show", "Delete" };
-
-    QGridLayout* globalLayout = new QGridLayout( );
-
-    // Events
-    _eventsLayout = new QGridLayout( );
-    _eventsLayout->setAlignment( Qt::AlignTop );
-
-    QWidget* eventScrollContainer = new QWidget( );
-    eventScrollContainer->setLayout( _eventsLayout );
-
-    QScrollArea* eventScroll = new QScrollArea( );
-    eventScroll->setWidget( eventScrollContainer );
-    eventScroll->setWidgetResizable( true );
-    eventScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-
-    QGroupBox* eventGroup = new QGroupBox( );
-    eventGroup->setTitle( "Events" );
-    eventGroup->setMinimumHeight( 300 );
-    eventGroup->setMaximumHeight( 300 );
-    eventGroup->setLayout( new QVBoxLayout( ));
-
-    QGridLayout* headerEventLayout = new QGridLayout( );
-    headerEventLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 2);
-    headerEventLayout->addWidget( new QLabel( "Visible" ), 0, 2, 1, 1);
-    headerEventLayout->addWidget( new QLabel( "Delete" ), 0, 3, 1, 1);
-
-    QWidget* eventHeader = new QWidget( );
-    eventHeader->setLayout( headerEventLayout );
-
-    eventGroup->layout( )->addWidget( eventHeader );
-    eventGroup->layout( )->addWidget( eventScroll );
-
-    // Histograms
-    _histogramsLayout = new QGridLayout( );
-    _histogramsLayout->setAlignment( Qt::AlignTop );
-
-    QWidget* histoScrollContainer = new QWidget( );
-    histoScrollContainer->setLayout( _histogramsLayout );
-
-    QScrollArea* histoScroll = new QScrollArea( );
-    histoScroll->setWidget( histoScrollContainer );
-    histoScroll->setWidgetResizable( true );
-    histoScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-
-    QGroupBox* histGroup = new QGroupBox( );
-    histGroup->setTitle( "Histograms" );
-    histGroup->setMinimumHeight( 300 );
-    histGroup->setMaximumHeight( 300 );
-    histGroup->setLayout(  new QVBoxLayout( ) );
-
-    QGridLayout* headerHistoLayout = new QGridLayout( );
-    headerHistoLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 2);
-    headerHistoLayout->addWidget( new QLabel( "Size" ), 0, 2, 1, 1);
-    headerHistoLayout->addWidget( new QLabel( "Visible" ), 0, 3, 1, 1);
-    headerHistoLayout->addWidget( new QLabel( "Delete" ), 0, 4, 1, 1);
-
-    QWidget* histoHeader = new QWidget( );
-    histoHeader->setLayout( headerHistoLayout );
-
-    histGroup->layout( )->addWidget( histoHeader );
-    histGroup->layout( )->addWidget( histoScroll );
-
-    QPushButton* closeButton = new QPushButton( "Close", this );
-    connect( closeButton, SIGNAL( clicked( )), this, SLOT( close( )));
-
-    globalLayout->addWidget( eventGroup, 0, 0, 5, 5 );
-    globalLayout->addWidget( histGroup, 5, 0, 5, 5 );
-    globalLayout->addWidget( closeButton, 10, 2, 1, 1 );
-
-    this->setLayout( globalLayout );
+  QLayoutItem *item;
+  while ((item = _histogramsLayout->takeAt(0)) != nullptr)
+  {
+    delete item->widget();
+    delete item;
   }
 
-  void DisplayManagerWidget::close( void )
-  {
-    hide( );
-  }
+  _histograms.clear();
 
-  void DisplayManagerWidget::dirtyEvents( void )
-  {
-    _dirtyFlagEvents = true;
-  }
+}
 
-  void DisplayManagerWidget::dirtyHistograms( void )
-  {
-    _dirtyFlagHistograms = true;
-  }
+void DisplayManagerWidget::refresh()
+{
+  if (_dirtyFlagEvents) refreshEvents();
 
-  void DisplayManagerWidget::clearWidgets( void )
-  {
-    clearEventWidgets( );
+  if (_dirtyFlagHistograms) refreshHistograms();
+}
 
-    clearHistogramWidgets( );
-  } // clearWidgets
+void DisplayManagerWidget::refreshEvents(void)
+{
+  clearEventWidgets();
 
-  void DisplayManagerWidget::clearEventWidgets( void )
+  unsigned int row = 0;
+  for (const auto &ev : *_eventData)
   {
-    auto removeEventWidget = [this](TDisplayEventTuple &e)
+    TDisplayEventTuple pointers;
+
+    QWidget *container = new QWidget();
+    container->setMaximumHeight(50);
+    // Fill name
+    QGridLayout *contLayout = new QGridLayout();
+    container->setLayout(contLayout);
+
+    QLabel *nameLabel = new QLabel(tr(ev->name().c_str()), container);
+    QPushButton *hideButton = new QPushButton(container);
+    hideButton->setIcon(QIcon(QPixmap(":icons/show.png")));
+    hideButton->setCheckable(true);
+    hideButton->setChecked(true);
+    hideButton->setWhatsThis("Click to show/hide the row in main view.");
+
+    QPushButton *deleteButton = new QPushButton(container);
+    deleteButton->setIcon(QIcon(QPixmap(":icons/trash.png")));
+
+    contLayout->addWidget(nameLabel, row, 0, 1, 2);
+    contLayout->addWidget(hideButton, row, 2, 1, 1);
+    contLayout->addWidget(deleteButton, row, 3, 1, 1);
+
+    _eventsLayout->addWidget(container);
+
+    if (row < _eventData->size() - 1)
     {
-      auto container = std::get< TDM_E_CONTAINER >( e );
-      _eventsLayout->removeWidget( container );
+      QFrame *line = new QFrame(container);
+      line->setFrameShape(QFrame::HLine);
+      line->setFrameShadow(QFrame::Sunken);
 
-      delete container;
-    };
-    std::for_each(_events.begin(), _events.end(), removeEventWidget);
-
-    QLayoutItem* item;
-    while(( item = _eventsLayout->takeAt( 0 )) != nullptr )
-    {
-      delete item->widget( );
-      delete item;
+      _eventsLayout->addWidget(line);
     }
 
-    _events.clear( );
+    connect(hideButton, SIGNAL(clicked( )),
+            this,       SLOT(hideEventClicked( )));
+
+    connect(deleteButton, SIGNAL(clicked( )),
+            this,         SLOT(deleteEventClicked( )));
+
+    _events.push_back(std::make_tuple(container, nameLabel, hideButton, deleteButton));
+    ++row;
   }
 
-  void DisplayManagerWidget::clearHistogramWidgets( void )
+  _dirtyFlagEvents = false;
+}
+
+void DisplayManagerWidget::refreshHistograms(void)
+{
+  clearHistogramWidgets();
+
+  unsigned int row = 0;
+  for (const auto &hist : *_histData)
   {
-    auto removeHistogramWidget = [this](TDisplayHistogramTuple &e)
-    {
-      auto container = std::get< TDM_H_CONTAINER >( e );
-      _histogramsLayout->removeWidget( container );
+    TDisplayEventTuple pointers;
 
-      delete container;
-    };
-    std::for_each(_histograms.begin(), _histograms.end(), removeHistogramWidget);
+    QWidget *container = new QWidget();
+    container->setMaximumHeight(50);
 
-    QLayoutItem* item;
-    while(( item = _histogramsLayout->takeAt( 0 )) != nullptr )
+    // Fill name
+    QGridLayout *contLayout = new QGridLayout();
+    container->setLayout(contLayout);
+
+    QLabel *nameLabel = new QLabel(tr(hist->name().c_str()), container);
+
+    QLabel *numberLabel = new QLabel(QString::number(hist->gidsSize()), container);
+
+    QPushButton *hideButton = new QPushButton(container);
+    hideButton->setIcon(QIcon(QPixmap(":icons/show.png")));
+    hideButton->setCheckable(true);
+    hideButton->setChecked(true);
+    hideButton->setWhatsThis("Click to show/hide the row in main view.");
+
+    QPushButton *deleteButton = new QPushButton(container);
+    deleteButton->setIcon(QIcon(QPixmap(":icons/trash.png")));
+
+    contLayout->addWidget(nameLabel, row, 0, 1, 2);
+    contLayout->addWidget(numberLabel, row, 2, 1, 1);
+    contLayout->addWidget(hideButton, row, 3, 1, 1);
+    contLayout->addWidget(deleteButton, row, 4, 1, 1);
+
+    if (row == 0) deleteButton->setEnabled(false);
+
+    _histogramsLayout->addWidget(container);
+
+    if (row < _histData->size() - 1)
     {
-      delete item->widget( );
-      delete item;
+      QFrame *line = new QFrame(container);
+      line->setFrameShape(QFrame::HLine);
+      line->setFrameShadow(QFrame::Sunken);
+
+      _histogramsLayout->addWidget(line);
     }
 
-    _histograms.clear( );
+    connect(hideButton, SIGNAL(clicked( )),
+            this,       SLOT(hideHistoClicked( )));
 
+    connect(deleteButton, SIGNAL(clicked( )),
+            this,         SLOT(deleteHistoClicked( )));
+
+    _histograms.push_back(std::make_tuple(container, nameLabel, numberLabel, hideButton, deleteButton));
+    ++row;
   }
 
-  void DisplayManagerWidget::refresh( )
+  _dirtyFlagHistograms = false;
+}
+
+void DisplayManagerWidget::hideEventClicked()
+{
+  auto author = qobject_cast<QWidget*>(sender());
+  if (!author) return;
+
+  unsigned int counter = 0;
+  for (auto t : _events)
   {
-    if( _dirtyFlagEvents )
-      refreshEvents( );
+    auto container = std::get<TDM_E_CONTAINER>(t);
 
-    if( _dirtyFlagHistograms )
-      refreshHistograms( );
-
-  }
-
-  void DisplayManagerWidget::refreshEvents( void )
-  {
-    clearEventWidgets( );
-
-    unsigned int row = 0;
-    for( const auto& ev : *_eventData )
+    if (author->parent() == container)
     {
-      TDisplayEventTuple pointers;
+      auto button = std::get<TDM_E_SHOW>(t);
 
-      QWidget* container = new QWidget( );
-      container->setMaximumHeight( 50 );
-      // Fill name
-      QGridLayout* contLayout = new QGridLayout( );
-      container->setLayout( contLayout );
+      bool hidden = button->isChecked();
 
-      QLabel* nameLabel = new QLabel( tr( ev->name( ).c_str( )), container);
-      QPushButton* hideButton = new QPushButton( container );
-      hideButton->setIcon( QIcon( QPixmap( ":icons/show.png" )));
-      hideButton->setCheckable( true );
-      hideButton->setChecked( true );
-      hideButton->setWhatsThis( "Click to show/hide the row in main view." );
+      button->setIcon(QIcon(hidden ? ":icons/show.png" : ":icons/hide.png"));
 
-      QPushButton* deleteButton = new QPushButton( container );
-      deleteButton->setIcon( QIcon( QPixmap( ":icons/trash.png" )));
+      emit(eventVisibilityChanged(counter, hidden));
 
-      contLayout->addWidget( nameLabel, row, 0, 1, 2 );
-      contLayout->addWidget( hideButton, row, 2, 1, 1 );
-      contLayout->addWidget( deleteButton, row, 3, 1, 1 );
-
-      _eventsLayout->addWidget( container );
-
-      if( row < _eventData->size( ) - 1 )
-      {
-        QFrame* line = new QFrame( container );
-        line->setFrameShape(QFrame::HLine);
-        line->setFrameShadow(QFrame::Sunken);
-
-        _eventsLayout->addWidget( line );
-      }
-
-      connect( hideButton, SIGNAL( clicked( )),
-               this, SLOT( hideEventClicked( )));
-
-      connect( deleteButton, SIGNAL( clicked( )),
-               this, SLOT( deleteEventClicked( )));
-
-
-      _events.push_back( std::make_tuple( container, nameLabel, hideButton,
-                                          deleteButton ));
-      ++row;
+      break;
     }
 
-    _dirtyFlagEvents = false;
-  }
-
-  void DisplayManagerWidget::refreshHistograms( void )
-  {
-    clearHistogramWidgets( );
-
-    unsigned int row = 0;
-    for( const auto& hist : *_histData )
-    {
-      TDisplayEventTuple pointers;
-
-      QWidget* container = new QWidget( );
-      container->setMaximumHeight( 50 );
-
-      // Fill name
-      QGridLayout* contLayout = new QGridLayout( );
-      container->setLayout( contLayout );
-
-      QLabel* nameLabel = new QLabel( tr( hist->name( ).c_str( )), container);
-
-      QLabel* numberLabel =
-          new QLabel( QString::number( hist->gidsSize( )), container);
-
-      QPushButton* hideButton = new QPushButton( container );
-      hideButton->setIcon( QIcon( QPixmap( ":icons/show.png" )));
-      hideButton->setCheckable( true );
-      hideButton->setChecked( true );
-      hideButton->setWhatsThis( "Click to show/hide the row in main view." );
-
-      QPushButton* deleteButton = new QPushButton( container );
-      deleteButton->setIcon( QIcon( QPixmap( ":icons/trash.png" )));
-
-      contLayout->addWidget( nameLabel, row, 0, 1, 2 );
-      contLayout->addWidget( numberLabel, row, 2, 1, 1 );
-      contLayout->addWidget( hideButton, row, 3, 1, 1 );
-      contLayout->addWidget( deleteButton, row, 4, 1, 1 );
-
-      if( row == 0 )
-        deleteButton->setEnabled( false );
-
-      _histogramsLayout->addWidget( container );
-
-      if( row < _histData->size( ) - 1 )
-      {
-        QFrame* line = new QFrame( container );
-        line->setFrameShape(QFrame::HLine);
-        line->setFrameShadow(QFrame::Sunken);
-
-        _histogramsLayout->addWidget( line );
-      }
-
-      connect( hideButton, SIGNAL( clicked( )),
-               this, SLOT( hideHistoClicked( )));
-
-      connect( deleteButton, SIGNAL( clicked( )),
-               this, SLOT( deleteHistoClicked( )));
-
-      _histograms.push_back( std::make_tuple( container, nameLabel, numberLabel,
-                                              hideButton, deleteButton ));
-      ++row;
-   }
-
-    _dirtyFlagHistograms = false;
-  }
-
-  void DisplayManagerWidget::hideEventClicked( )
-  {
-    auto author = qobject_cast<QWidget *>( sender( ));
-    if(!author) return;
-
-    unsigned int counter = 0;
-    for( auto t : _events )
-    {
-      auto container = std::get< TDM_E_CONTAINER >( t );
-
-      if( author->parent( ) == container )
-      {
-        auto button = std::get< TDM_E_SHOW >( t );
-
-        bool hidden = button->isChecked( );
-
-        button->setIcon( QIcon( hidden ? ":icons/show.png" : ":icons/hide.png" ));
-
-        emit( eventVisibilityChanged( counter, hidden ));
-
-        break;
-      }
-
-      ++counter;
-    }
-
-  }
-
-  void DisplayManagerWidget::deleteEventClicked( )
-  {
-    auto author = qobject_cast<QWidget *>( sender( ));
-    if(!author) return;
-
-    unsigned int counter = 0;
-    for( auto t : _events )
-    {
-      auto container = std::get< TDM_E_CONTAINER >( t );
-
-      if( author->parent( ) == container )
-      {
-
-        emit( removeEvent( counter ));
-        _dirtyFlagEvents = true;
-
-        refreshEvents( );
-
-        break;
-      }
-
-     ++counter;
-    }
-
-  }
-
-  void DisplayManagerWidget::hideHistoClicked( )
-  {
-    auto author = qobject_cast<QWidget *>( sender( ));
-    if(!author) return;
-
-    unsigned int counter = 0;
-    for( auto t : _histograms )
-    {
-      auto container = std::get< TDM_H_CONTAINER >( t );
-
-      if( author->parent( ) == container )
-      {
-        auto button = std::get< TDM_H_SHOW >( t );
-
-        bool hidden = button->isChecked( );
-
-        button->setIcon( QIcon( hidden ? ":icons/show.png" : ":icons/hide.png" ));
-
-        emit( subsetVisibilityChanged( counter, hidden ));
-
-        break;
-      }
-
-      ++counter;
-    }
-  }
-
-  void DisplayManagerWidget::deleteHistoClicked( )
-  {
-    auto author = qobject_cast<QWidget *>( sender( ));
-    if(!author) return;
-
-    unsigned int counter = 0;
-    for( auto t : _histograms )
-    {
-      auto container = std::get< TDM_H_CONTAINER >( t );
-
-      if( author->parent( ) == container )
-      {
-
-        emit( removeHistogram( counter ));
-        _dirtyFlagHistograms = true;
-
-        refreshHistograms( );
-
-        break;
-      }
-
-     ++counter;
-    }
+    ++counter;
   }
 }
+
+void DisplayManagerWidget::deleteEventClicked()
+{
+  auto author = qobject_cast<QWidget*>(sender());
+  if (!author) return;
+
+  unsigned int counter = 0;
+  for (auto t : _events)
+  {
+    auto container = std::get<TDM_E_CONTAINER>(t);
+
+    if (author->parent() == container)
+    {
+
+      emit(removeEvent(counter));
+      _dirtyFlagEvents = true;
+
+      refreshEvents();
+
+      break;
+    }
+
+    ++counter;
+  }
+}
+
+void DisplayManagerWidget::hideHistoClicked()
+{
+  auto author = qobject_cast<QWidget*>(sender());
+  if (!author) return;
+
+  unsigned int counter = 0;
+  for (auto t : _histograms)
+  {
+    auto container = std::get<TDM_H_CONTAINER>(t);
+
+    if (author->parent() == container)
+    {
+      auto button = std::get<TDM_H_SHOW>(t);
+
+      bool hidden = button->isChecked();
+
+      button->setIcon(QIcon(hidden ? ":icons/show.png" : ":icons/hide.png"));
+
+      emit(subsetVisibilityChanged(counter, hidden));
+
+      break;
+    }
+
+    ++counter;
+  }
+}
+
+void DisplayManagerWidget::deleteHistoClicked()
+{
+  auto author = qobject_cast<QWidget*>(sender());
+  if (!author) return;
+
+  unsigned int counter = 0;
+  for (auto t : _histograms)
+  {
+    auto container = std::get<TDM_H_CONTAINER>(t);
+
+    if (author->parent() == container)
+    {
+
+      emit(removeHistogram(counter));
+      _dirtyFlagHistograms = true;
+
+      refreshHistograms();
+
+      break;
+    }
+
+    ++counter;
+  }
+}
+
 
 
