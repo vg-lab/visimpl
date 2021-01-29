@@ -1051,12 +1051,12 @@ namespace visimpl
       _namesTypesMorpho = circuit.getMorphologyTypeNames( );
       _namesTypesFunction = circuit.getElectrophysiologyTypeNames( );
 
-      auto transform = [](std::vector<unsigned long long> vec)
+      auto transform = [](const std::vector<size_t> &vec)
       {
           std::vector<unsigned long> vec32;
           vec32.reserve(vec.size());
 
-          std::for_each(vec.cbegin(), vec.cend(), [&vec32](unsigned long long num) { vec32.emplace_back(static_cast<unsigned long>(num)); });
+          std::for_each(vec.cbegin(), vec.cend(), [&vec32](const size_t num) { vec32.emplace_back(static_cast<unsigned long>(num)); });
 
           return vec32;
       };
