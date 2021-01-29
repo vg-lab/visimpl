@@ -57,15 +57,15 @@ constexpr float ROTATION_FACTOR = 0.01f;
 
 namespace visimpl
 {
-  constexpr InitialConfig _initialConfigSimBlueConfig =
+  const InitialConfig _initialConfigSimBlueConfig =
       std::make_tuple( 0.5f, 20.0f, 20.0f, 1.0f );
-  constexpr InitialConfig _initialConfigSimH5 =
+  const InitialConfig _initialConfigSimH5 =
       std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
-  constexpr InitialConfig _initialConfigSimCSV =
+  const InitialConfig _initialConfigSimCSV =
         //std::make_tuple( 0.005f, 20.0f, 0.1f, 50000.0f );
       std::make_tuple( 0.2f, 2.0f, 1.5f, 5.0f );
 
-  constexpr InitialConfig _initialConfigSimREST =
+  const InitialConfig _initialConfigSimREST =
         std::make_tuple( 0.005f, 20.0f, 0.1f, 500.0f );
 
   constexpr float invRGBInt = 1.0f / 255;
