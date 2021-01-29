@@ -23,7 +23,7 @@
 #ifndef __VISIMPL__OPENGLWIDGET__
 #define __VISIMPL__OPENGLWIDGET__
 
-#ifdef VISIMPL_USE_ZEROEQ
+#if defined(VISIMPL_USE_ZEROEQ) && defined(WIN32)
   #include <winsock2.h>
 #endif
 
