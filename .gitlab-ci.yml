@@ -92,7 +92,6 @@ Win7:
   - call %ENVFILESDIR%\HDF5-1.8.17-vs12-x64.bat
   - set BUILD_GENERATOR=Visual Studio 14 Win64
   - set CMAKE_EXTRA_ARGS=-DCLONE_SUBPROJECTS=ON
-  - set PATH=%PATH%;"c:\\Program Files (x86)\\Git\\bin"
-  - bash.exe --login .gitlab-ci.sh
+  - '"c:\Program Files\Git\bin\bash.exe" --login  .gitlab-ci.sh'
  tags:
   - win7
