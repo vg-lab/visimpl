@@ -81,12 +81,11 @@ OSX-Subproject:
 Win7:
  stage: build
  script:
-#  Enable ZeroEQ subproject and copy BonjourSDK to build server. 
-#  - call %ENVFILESDIR%\Bonjour-SDK.bat
+  - call %ENVFILESDIR%\Bonjour-SDK.bat
   - call %ENVFILESDIR%\Boost-1.72-vs14-x64.bat
   - call %ENVFILESDIR%\Qt-5.12-vs14.bat
   - call %ENVFILESDIR%\eigen-3.1.2-vs12-x64.bat
-  - call %ENVFILESDIR%\glut.bat
+  - call %ENVFILESDIR%\glut-2.8.1.bat
   - call %ENVFILESDIR%\glew-2.1.0.bat
   - call %ENVFILESDIR%\glm.bat
   - call %ENVFILESDIR%\HDF5-1.8.17-vs12-x64.bat
