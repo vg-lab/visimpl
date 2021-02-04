@@ -56,8 +56,10 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DCLONE_SUBPROJECTS=ON
 make
 ```
 
-## Attributions
+## Acknowledgments
 
-This project has been made within the [URJC](https://urjc.es/) with the collaboration
-and funding of the [HBP](https://www.humanbrainproject.eu/en/) european project, and 
-it is included in its [EBrains](https://ebrains.eu/) research platform. 
+This project has been made within the [Universidad Rey Juan Carlos](https://urjc.es/)
+with the collaboration of the [Human Brain Project](https://www.humanbrainproject.eu/en/),
+funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation
+under Specific Grant Agreements No. 720270 and No. 785907 (Human Brain Project SGA1 and SGA2).
+It is included in its [EBrains](https://ebrains.eu/) research platform. 
