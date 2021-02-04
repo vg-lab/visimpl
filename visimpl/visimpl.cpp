@@ -61,7 +61,7 @@ int main( int argc, char** argv )
 
   std::string networkFile;
   std::string activityFile;
-  std::string zeqUri;
+  std::string zeqUri = std::string( "" );
   std::string target = std::string( "" );
   std::string report = std::string( "" );
   std::string subsetEventFile( "" );

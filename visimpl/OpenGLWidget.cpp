@@ -87,6 +87,7 @@ namespace visimpl
   , _showCurrentTime( true )
   , _wireframe( false )
   , _camera( nullptr )
+  , _cameraOrbital( nullptr )
   , _lastCameraPosition( 0, 0, 0)
   , _scaleFactor( 1.0f, 1.0f, 1.0f )
   , _scaleFactorExternal( false )
@@ -172,7 +173,7 @@ namespace visimpl
   , _selectedPickingSingle( 0 )
   {
   #ifdef VISIMPL_USE_ZEROEQ
-    if ( zeqUri != "" )
+    if ( !zeqUri.empty( ) )
       _camera = new Camera( zeqUri );
     else
   #endif
@@ -228,7 +229,11 @@ namespace visimpl
 
   OpenGLWidget::~OpenGLWidget( void )
   {
-    delete _camera;
+    if( _cameraOrbital )
+    {
+      delete _cameraOrbital;
+      delete _camera;
+    }
 
     if( _shaderParticlesDefault )
       delete _shaderParticlesDefault;
@@ -301,7 +306,8 @@ namespace visimpl
     changeSimulationDecayValue( std::get< T_DECAY >( config ) );
 
   #ifdef VISIMPL_USE_ZEROEQ
-    _player->connectZeq( _zeqUri );
+    if( !_zeqUri.empty( ))
+      _player->connectZeq( _zeqUri );
   #endif
     this->_paint = true;
     update( );
@@ -655,9 +661,9 @@ namespace visimpl
 
     glUniform1f( particleRadius, _particleRadiusThreshold );
 
-    glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
-                               _camera->position( )[ 1 ],
-                               _camera->position( )[ 2 ] );
+    glm::vec3 cameraPosition ( _cameraOrbital->position( )[ 0 ],
+                               _cameraOrbital->position( )[ 1 ],
+                               _cameraOrbital->position( )[ 2 ] );
 
     if( _player->isPlaying( ) || _lastCameraPosition != cameraPosition || _flagUpdateRender )
     {
@@ -761,7 +767,7 @@ namespace visimpl
 
       if ( _paint )
       {
-        _camera->anim( );
+        _cameraOrbital->anim( );
 
         if( _particleSystem )
         {

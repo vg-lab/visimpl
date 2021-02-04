@@ -161,14 +161,14 @@ namespace visimpl
                    std::min( 255, std::max( 0, int( color_.z( ) * 255 ))));
   }
 
-  static glm::vec3 floatPtrToVec3( float* floatPos )
+  static inline glm::vec3 floatPtrToVec3( float* floatPos )
   {
     return glm::vec3( floatPos[ 0 ],
                       floatPos[ 1 ],
                       floatPos[ 2 ]);
   }
 
-  static glm::mat4x4 floatPtrToMat4( float* floatPos )
+  static inline glm::mat4x4 floatPtrToMat4( float* floatPos )
   {
     return glm::mat4x4( floatPos[ 0 ], floatPos[ 1 ],
                         floatPos[ 2 ], floatPos[ 3 ],
