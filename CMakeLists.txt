@@ -12,8 +12,6 @@ cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 project( visimpl VERSION 1.1.0 )
 set( visimpl_VERSION_ABI 6 )
 
-cmake_policy(SET CMP0074 NEW)
-
 SET( VISIMPL_LICENSE "GPL")
 
 # Disable in source building
