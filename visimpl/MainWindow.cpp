@@ -156,16 +156,9 @@ namespace visimpl
 #endif
   }
 
-  void MainWindow::init( const std::string&
-#ifdef VISIMPL_USE_ZEROEQ
-                         zeqUri
-#endif
-                         )
+  void MainWindow::init( const std::string& zeqUri )
   {
     _openGLWidget = new OpenGLWidget( 0, 0, zeqUri );
-#else
-    _openGLWidget = new OpenGLWidget( 0, 0 );
-#endif
 
     this->setCentralWidget( _openGLWidget );
     qDebug( ) << _openGLWidget->format( );
@@ -256,8 +249,7 @@ namespace visimpl
 
 #ifdef VISIMPL_USE_ZEROEQ
 
-    if( !zeqUri.empty( ))
-      _setZeqUri( zeqUri );
+    _setZeqUri( zeqUri );
 
 #endif
   }
