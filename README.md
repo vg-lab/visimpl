@@ -50,7 +50,7 @@ ViSimpl has been succesfully built and used on Ubuntu 14.04/16.04 and Mac OSX
 Yosemite. The following steps should be enough to build it:
 
 ```bash
-git clone --recursive https://gitlab.gmrv.es/nsviz/visimpl.git ViSimpl
+git clone --recursive https://github.com/vg-lab/visimpl.git ViSimpl
 mkdir ViSimpl/build && cd ViSimpl/build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCLONE_SUBPROJECTS=ON
 make
