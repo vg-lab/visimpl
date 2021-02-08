@@ -3,6 +3,8 @@
 
 https://vg-lab.es/
 
+[ViSimpl](https://vg-lab.es/visimpl/)
+
 ## Introduction
 
 ViSimpl consists of a set of analysis tools providing different views for the
@@ -58,8 +60,7 @@ make
 
 ## Acknowledgments
 
-This project has been made within the [Universidad Rey Juan Carlos](https://urjc.es/)
-with the collaboration of the [Human Brain Project](https://www.humanbrainproject.eu/en/),
-funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation
-under Specific Grant Agreement No. 785907 (Human Brain Project SGA2).
-It is included in its [EBrains](https://ebrains.eu/) research platform. 
+This project has been made at the [Universidad Rey Juan Carlos](https://urjc.es/)
+partially supported by the [Brain Simulation Platform](https://ebrains.eu/) funded
+from the European Union's Horizon 2020 Framework Programme for Research and
+Innovation under the Specific Grant Agreement No. 785907 ([Human Brain Project](https://www.humanbrainproject.eu/en/) SGA2).
