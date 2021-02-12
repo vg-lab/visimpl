@@ -9,7 +9,7 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 1.0.0 )
+project( visimpl VERSION 1.1.0 )
 set( visimpl_VERSION_ABI 6 )
 
 SET( VISIMPL_LICENSE "GPL")
@@ -21,7 +21,6 @@ endif()
 
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake
   ${CMAKE_SOURCE_DIR}/CMake/common )
-
 
 if(NOT EXISTS ${CMAKE_SOURCE_DIR}/CMake/common/Common.cmake)
   message(FATAL_ERROR "CMake/common missing, run: git submodule update --init")

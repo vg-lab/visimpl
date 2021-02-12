@@ -28,7 +28,6 @@
 
 namespace visimpl
 {
-
   typedef Eigen::Vector3f evec3;
   typedef Eigen::Vector4f evec4;
   typedef Eigen::Matrix4f emat4;
@@ -181,36 +180,31 @@ namespace visimpl
                         floatPos[ 14 ], floatPos[ 15 ]);
   }
 
-  class Camera : public prefr::ICamera, public reto::Camera
+  class Camera : public prefr::ICamera, public reto::OrbitalCameraController
   {
   public:
 
-    Camera( void ) : prefr::ICamera( ), reto::Camera( ){ }
+    Camera( void ) : prefr::ICamera( ), reto::OrbitalCameraController( ){ }
 
 #ifdef VISIMPL_USE_ZEROEQ
-    Camera( std::string zeqUri_ ): prefr::ICamera( ), reto::Camera( zeqUri_ ){ }
+    Camera( std::string zeqUri_ ): prefr::ICamera( ), reto::OrbitalCameraController( nullptr , zeqUri_ ){ }
 #endif
 
     glm::vec3 PReFrCameraPosition( void )
     {
-      auto viewM = viewMatrix( );
-      return glm::vec3( viewM[ 3 ],
-                        viewM[ 7 ],
-                        viewM[ 11 ]);
+      return floatPtrToVec3( position().data() );
     }
 
     glm::mat4x4 PReFrCameraViewMatrix( void )
     {
-      return floatPtrToMat4( viewMatrix( ));
+      return floatPtrToMat4( camera()->viewMatrix( ));
     }
 
     glm::mat4x4 PReFrCameraViewProjectionMatrix( void )
     {
-      return floatPtrToMat4( projectionViewMatrix( ));
+      return floatPtrToMat4( camera()->projectionViewMatrix());
     }
   };
 }
-
-
 
 #endif /* VISIMPL_TYPES_H_ */

@@ -1,10 +1,23 @@
 /*
- * @file  Histogram.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #include "Histogram.h"
@@ -19,6 +32,8 @@
 #ifdef VISIMPL_USE_OPENMP
 #include <omp.h>
 #endif
+
+#include <exception>
 
 namespace visimpl
 {
@@ -53,9 +68,7 @@ namespace visimpl
   , _autoBuildHistogram( true )
   , _autoCalculateColors( true )
   {
-//    init( );
   }
-
 
   HistogramWidget::HistogramWidget( const simil::Spikes& spikes,
                                  float startTime,
@@ -90,7 +103,6 @@ namespace visimpl
   , _autoBuildHistogram( true )
   , _autoCalculateColors( true )
   {
-//    init( );
   }
 
   HistogramWidget::HistogramWidget( const simil::SpikeData& spikeReport )
@@ -124,9 +136,7 @@ namespace visimpl
   , _autoBuildHistogram( true )
   , _autoCalculateColors( true )
   {
-//    init( );
   }
-
 
   void HistogramWidget::Spikes( const simil::Spikes& spikes,
                                     float startTime,
@@ -164,6 +174,8 @@ namespace visimpl
 
   void HistogramWidget::Update( THistogram histogramNumber )
   {
+    _startTime = _player->startTime( );
+    _endTime = _player->endTime( );
     BuildHistogram( histogramNumber );
     CalculateColors( histogramNumber );
   }
@@ -171,7 +183,6 @@ namespace visimpl
   void HistogramWidget::BuildHistogram( THistogram histogramNumber )
   {
     Histogram* histogram = &_mainHistogram;
-//    Histogram* aux = new Histogram( *histogram );
 
     if( histogramNumber == T_HIST_FOCUS )
       histogram = &_focusHistogram;
@@ -184,7 +195,7 @@ namespace visimpl
 
 #ifndef VISIMPL_USE_OPENMP
 
-    float deltaTime = ( totalTime ) / histogram->size( );
+    const float deltaTime = ( totalTime ) / histogram->size( );
     float currentTime = _startTime + deltaTime;
 
     auto globalBin = globalHistogram.begin( );
@@ -207,7 +218,7 @@ namespace visimpl
 
 #else
 
-    float invTotalTime = 1.0f / totalTime;
+    const float invTotalTime = 1.0f / totalTime;
     unsigned int numThreads = 4;
 
     omp_set_dynamic( 0 );
@@ -236,19 +247,15 @@ namespace visimpl
         ( globalHistogram )[ bin ]++;
         ++spikeIt;
       }
-
     }
-
 #endif // VISIMPL_USE_OPENMP
 
     unsigned int cont = 0;
-//    unsigned int maxPos = 0;
     for( auto bin: *histogram )
     {
       if( bin > histogram->_maxValueHistogramLocal )
       {
         histogram->_maxValueHistogramLocal = bin;
-//        maxPos = cont;
       }
       cont++;
     }
@@ -265,10 +272,9 @@ namespace visimpl
         }
       }
     }
-
   }
 
-  float base = 1.0001f;
+  constexpr float base = 1.0001f;
 
   // All these functions consider a maxValue = 1.0f / <calculated_maxValue >
   float linearFunc( float value, float invMaxValue )
@@ -292,19 +298,10 @@ namespace visimpl
     switch( colorScale )
     {
       case T_COLOR_LINEAR:
-
         result = 1.0f / maxValue;
-
         break;
-//      case T_COLOR_EXPONENTIAL:
-//
-//        result = maxValue;
-//
-//        break;
       case T_COLOR_LOGARITHMIC:
-
         result = 1.0f / log10f( maxValue );
-
         break;
       default:
         VISIMPL_THROW( "Selected color scale function is not available.")
@@ -323,7 +320,6 @@ namespace visimpl
 
     if( _repMode == T_REP_DENSE )
     {
-
       QGradientStops stops;
 
       float maxValue = 0.0f;
@@ -354,7 +350,6 @@ namespace visimpl
     }
     else if( _repMode == T_REP_CURVE )
     {
-
       float invMaxValueLocal;
       float invMaxValueGlobal;
 
@@ -374,7 +369,7 @@ namespace visimpl
       float globalY;
       float localY;
       unsigned int counter = 0;
-      float invBins = 1.0f / float( histogram->size( ) - 1);
+      const float invBins = 1.0f / float( histogram->size( ) - 1);
 
       for( auto bin: *histogram )
       {
@@ -385,20 +380,17 @@ namespace visimpl
 
         if( bin > 0)
         {
-            globalY = _scaleFuncGlobal( float( bin ), invMaxValueGlobal );
-
-            localY = _scaleFuncLocal( float( bin ), invMaxValueLocal );
+          globalY = _scaleFuncGlobal( float( bin ), invMaxValueGlobal );
+          localY = _scaleFuncLocal( float( bin ), invMaxValueLocal );
         }
 
-          auxGlobal.push_back( QPointF( currentX, 1.0f - globalY ));
-
-          auxLocal.push_back( QPointF( currentX, 1.0f - localY ));
+        auxGlobal.push_back( QPointF( currentX, 1.0f - globalY ));
+        auxLocal.push_back( QPointF( currentX, 1.0f - localY ));
 
         counter++;
       }
 
       histogram->_curveStopsGlobal = auxGlobal;
-
       histogram->_curveStopsLocal = auxLocal;
     }
 
@@ -419,7 +411,6 @@ namespace visimpl
   {
     return _name;
   }
-
 
   void HistogramWidget::bins( unsigned int binsNumber )
   {
@@ -479,8 +470,7 @@ namespace visimpl
 
   void HistogramWidget::filteredGIDs( const GIDUSet& gids )
   {
-//    if( gids.size( ) > 0 )
-      _filteredGIDs = gids;
+    _filteredGIDs = gids;
   }
 
   const GIDUSet& HistogramWidget::filteredGIDs( void ) const
@@ -490,56 +480,50 @@ namespace visimpl
 
   void HistogramWidget::colorScaleLocal( TColorScale scale )
   {
-
     _prevColorScaleLocal = _colorScaleLocal;
     _colorScaleLocal = scale;
 
     switch( _colorScaleLocal )
     {
       case T_COLOR_LINEAR:
-
         _scaleFuncLocal = linearFunc;
-
         break;
-  //    case T_COLOR_EXPONENTIAL:
-  //
-  //      _scaleFuncLocal = exponentialFunc;
-  //
-  //      break;
       case T_COLOR_LOGARITHMIC:
-
         _scaleFuncLocal = logarithmicFunc;
-
         break;
       default:
+        {
+          const auto message = std::string("Invalid TColorScale value ") +
+                               std::to_string(static_cast<int>(scale)) + " " +
+                               std::string(__FILE__) + ":" +
+                               std::to_string(__LINE__);
+          throw std::out_of_range(message.c_str());
+        }
         break;
     }
   }
 
   void HistogramWidget::colorScaleGlobal( TColorScale scale )
   {
-
     _prevColorScaleGlobal = _colorScaleGlobal;
     _colorScaleGlobal = scale;
 
     switch( _colorScaleGlobal )
     {
       case T_COLOR_LINEAR:
-
         _scaleFuncGlobal = linearFunc;
-
         break;
-  //    case T_COLOR_EXPONENTIAL:
-  //
-  //      _scaleFuncGlobal = exponentialFunc;
-  //
-  //      break;
       case T_COLOR_LOGARITHMIC:
-
         _scaleFuncGlobal = logarithmicFunc;
-
         break;
       default:
+        {
+          const auto message = std::string("Invalid TColorScale value ") +
+                               std::to_string(static_cast<int>(scale)) + " " +
+                               std::string(__FILE__) + ":" +
+                               std::to_string(__LINE__);
+          throw std::out_of_range(message.c_str());
+        }
         break;
     }
   }
@@ -560,7 +544,6 @@ namespace visimpl
     return _normRule;
   }
 
-
   void HistogramWidget::gridLinesNumber( unsigned int linesNumber )
   {
     _gridLinesNumber = linesNumber;
@@ -570,10 +553,8 @@ namespace visimpl
     std::vector< float > gridLines;
     if( linesNumber > 0 )
     {
-
       float current = 0;
-
-      float delta = 1.0f / float( linesNumber + 1 );
+      const float delta = 1.0f / float( linesNumber + 1 );
 
       gridLines.push_back( 0.0f );
 
@@ -586,7 +567,6 @@ namespace visimpl
     }
 
     _mainHistogram._gridLines = gridLines;
-
   }
 
   unsigned int HistogramWidget::gridLinesNumber( void ) const
@@ -616,7 +596,6 @@ namespace visimpl
     return _focusHistogram.size( );
   }
 
-
   unsigned int HistogramWidget::maxLocal( void ) const
   {
     return _mainHistogram._maxValueHistogramLocal;
@@ -636,7 +615,6 @@ namespace visimpl
   {
     return _focusHistogram._maxValueHistogramGlobal;
   }
-
 
   const utils::InterpolationSet< glm::vec4 >&
   HistogramWidget::colorMapper( void )
@@ -855,11 +833,9 @@ namespace visimpl
       painter.drawLine( line );
 
       penColor = QColor( 255, 255, 255 );
-
     }
     else if( _repMode == T_REP_CURVE )
     {
-
       painter.setRenderHint( QPainter::Antialiasing );
 
       painter.fillRect( rect( ), QBrush( QColor( 255, 255, 255, 255 ),
@@ -867,7 +843,6 @@ namespace visimpl
 
       QColor globalColor( _colorGlobal );
       QColor localColor( _colorLocal );
-
 
       if( _fillPlots )
       {
@@ -914,10 +889,9 @@ namespace visimpl
 
         if( _paintTimeline )
         {
+          const float timeValue = ( _endTime - _startTime ) * line + _startTime;
 
-          float timeValue = ( _endTime - _startTime ) * line + _startTime;
-
-          QString value = QString::number( ( unsigned int ) timeValue );
+          QString value = QString::number( static_cast<int>(timeValue) );
           int valueLength = value.length( ) * _pixelsPerCharacter;
           if( width( ) - positionX < valueLength )
             _pixelMargin = -valueLength;
@@ -926,9 +900,7 @@ namespace visimpl
           painter.setPen( pen );
 
           QFont backFont = painter.font( );
-
           painter.drawText( position, value );
-
         }
 
         QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
@@ -936,9 +908,7 @@ namespace visimpl
         painter.setPen( pen );
         painter.drawLine( marker );
       }
-
     }
-
 
     if( _lastMousePosition )
     {
@@ -947,7 +917,7 @@ namespace visimpl
       localPosition.setX( std::min( width( ), std::max( 0, localPosition.x( ))));
       localPosition.setY( std::min( height( ), std::max( 0, localPosition.y( ))));
 
-      float percentage = float( localPosition.x( )) / float( width( ));
+      const float percentage = float( localPosition.x( )) / float( width( ));
 
       int positionX = localPosition.x( );
       int margin = 5;
@@ -980,7 +950,6 @@ namespace visimpl
       QPen pen( penColor );
       painter.setPen( pen );
 
-//      currentHeight = currentHeight / 2;
       QPoint position ( positionX + margin, height( ) * 0.75f );
 
       painter.drawText( position, QString::number( valueAt( percentage )));
@@ -1043,9 +1012,5 @@ namespace visimpl
         painter.drawText( position, value );
       }
     }
-
   }
-
 }
-
-

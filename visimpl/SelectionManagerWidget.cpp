@@ -20,8 +20,10 @@
  *
  */
 
+// ViSimpl
 #include "SelectionManagerWidget.h"
 
+// Qt
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
@@ -32,7 +34,6 @@
 
 namespace visimpl
 {
-
   SelectionManagerWidget::SelectionManagerWidget( QWidget* parent_ )
   : QWidget( parent_ )
   , _listViewAvailable( nullptr )
@@ -43,18 +44,14 @@ namespace visimpl
   , _buttonRemoveFromSelection( nullptr )
   {
     init( );
-  }
 
-  SelectionManagerWidget::~SelectionManagerWidget( void )
-  {
-
+    this->setWindowTitle(tr("Selection Manager"));
+    this->setWindowIcon(QIcon(":/icons/visimpl-icon-square.png"));
   }
 
   void SelectionManagerWidget::init( void )
   {
-
     QVBoxLayout* layoutTop = new QVBoxLayout( );
-
     this->setLayout( layoutTop );
 
     _tabWidget = new QTabWidget( );
@@ -67,8 +64,8 @@ namespace visimpl
 
     _initTabSelection( );
     _initTabExport( );
-    // Foot
 
+    // Foot
     QPushButton* buttonCancel = new QPushButton( "Cancel" );
     buttonCancel->setMaximumWidth( 100 );
     QPushButton* buttonAccept = new QPushButton( "Accept" );
@@ -139,7 +136,7 @@ namespace visimpl
     QGridLayout* layoutExport = new QGridLayout( );
     containerExport->setLayout( layoutExport );
 
-    _pathExportDefault = QString::fromStdString( std::getenv( "PWD" ));
+    _pathExportDefault = QDir::currentPath();
     _lineEditFilePath = new QLineEdit( _pathExportDefault.append( "/output.txt"));
 
     _lineEditPrefix = new QLineEdit( );
@@ -192,7 +189,6 @@ namespace visimpl
              this, SLOT( _buttonSaveClicked( void )));
 
     _tabWidget->addTab( containerExport, "Export" );
-
   }
 
   void SelectionManagerWidget::setGIDs( const TGIDSet& all_,
@@ -264,12 +260,10 @@ namespace visimpl
 
       ++index;
     }
-
   }
 
   void SelectionManagerWidget::_reloadLists( void )
   {
-
     for( auto gid : _gidsAll )
     {
       bool stateSelected = ( _gidsSelected.find( gid ) != _gidsSelected.end( ));
@@ -284,21 +278,16 @@ namespace visimpl
     }
 
     _updateListsLabelNumbers( );
-
   }
 
   void SelectionManagerWidget::_updateListsLabelNumbers( void )
   {
-    _labelAvailable->setText( QString( "Available GIDs: ").append(
-        QString::number( _gidsAvailable.size( ))));
-
-    _labelSelection->setText( QString( "Selected GIDs: ").append(
-        QString::number( _gidsSelected.size( ))));
+    _labelAvailable->setText( QString( "Available GIDs: ") + QString::number( _gidsAvailable.size( )));
+    _labelSelection->setText( QString( "Selected GIDs: ") + QString::number( _gidsSelected.size( )));
   }
 
   void SelectionManagerWidget::_addToSelected( void )
   {
-
     auto selectedIndices =
         _listViewAvailable->selectionModel( )->selectedIndexes( );
 
@@ -321,11 +310,8 @@ namespace visimpl
       auto gidIndex = _gidIndex.find( gid );
       assert( gidIndex != _gidIndex.end( ));
 
-
-
       _listViewAvailable->setRowHidden( gidIndex->second, true );
       _listViewSelected->setRowHidden( gidIndex->second, false );
-
     }
 
     _listViewAvailable->selectionModel( )->clearSelection( );
@@ -335,7 +321,6 @@ namespace visimpl
 
   void SelectionManagerWidget::_removeFromSelected( void )
   {
-
     auto selectedIndices =
           _listViewSelected->selectionModel( )->selectedIndexes( );
 
@@ -355,7 +340,6 @@ namespace visimpl
 
       _listViewAvailable->setRowHidden( gidIndex->second, false );
       _listViewSelected->setRowHidden( gidIndex->second, true );
-
     }
 
     _listViewSelected->selectionModel( )->clearSelection( );
@@ -372,7 +356,6 @@ namespace visimpl
 
     if( file.exists( filePath ))
     {
-
       QMessageBox msgBox( this );
       msgBox.setText( "The selected file already exists." );
       msgBox.setInformativeText( "Do you want to overwrite?" );
@@ -400,7 +383,6 @@ namespace visimpl
     file.close( );
 
     QMessageBox::information( this, QString( "Save successful" ), QString( "Selection saved to file." ));
-
   }
 
   void SelectionManagerWidget::_buttonAcceptClicked( void )
@@ -440,7 +422,5 @@ namespace visimpl
 
     _saveToFile( _lineEditFilePath->text( ), separator,
                  _lineEditPrefix->text( ), _lineEditSuffix->text( ));
-
   }
-
 }

@@ -31,7 +31,6 @@ set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 
 set(VISIMPL_SOURCES
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
-  CMakeSetup.rc
 
   visimpl.ui
   resources.qrc
@@ -52,9 +51,7 @@ set(VISIMPL_SOURCES
   prefr/UpdaterStaticPosition.cpp
 
   render/Plane.cpp
-
-
-    ui/DataInspector.cpp
+  ui/DataInspector.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -77,7 +74,6 @@ set(VISIMPL_HEADERS
   render/Plane.h
 
   ui/DataInspector.h
-  
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -93,6 +89,14 @@ set(VISIMPL_LINK_LIBRARIES
   scoop
 )
 
+if(WIN32)
+  if(MINGW)
+  	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mwindows")
+  endif(MINGW)
+  configure_file("${PROJECT_SOURCE_DIR}/visimpl/visimplWinProps.rc.in" "${PROJECT_BINARY_DIR}/visimplWinProps.rc")
+  set( VISIMPL_SOURCES ${VISIMPL_SOURCES} "${PROJECT_BINARY_DIR}/visimplWinProps.rc")
+  add_definitions("-DVISIMPL_STATIC")
+endif(WIN32)
 
 if ( NOT DEFAULT_CONTEXT_OPENGL_MAJOR )
   set( DEFAULT_CONTEXT_OPENGL_MAJOR 4 )

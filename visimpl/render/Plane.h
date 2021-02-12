@@ -23,8 +23,10 @@
 #ifndef VISIMPL_RENDER_PLANE_H_
 #define VISIMPL_RENDER_PLANE_H_
 
+// ReTo
 #include <reto/reto.h>
 
+// Visimpl
 #include "../types.h"
 
 namespace visimpl
@@ -32,7 +34,6 @@ namespace visimpl
   class Plane
   {
   public:
-
     Plane( );
 
     void points( evec3 first, evec3 second, evec3 third, evec3 fourth );
@@ -54,10 +55,6 @@ namespace visimpl
     std::vector< evec3 > _points;
     std::vector< float > _vertices;
   };
-
-
 }
-
-
 
 #endif /* VISIMPL_RENDER_PLANE_H_ */

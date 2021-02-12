@@ -23,11 +23,11 @@
 #ifndef __VISIMPL__COLOROPERATIONMODEL__
 #define __VISIMPL__COLOROPERATIONMODEL__
 
+// Prefr
 #include <prefr/prefr.h>
 
 namespace prefr
 {
-
   enum ColorOperation
   {
     ADDITION = 0,
@@ -39,7 +39,6 @@ namespace prefr
   class ColorOperationModel : public Model
   {
   public:
-
     glm::vec4 (*colorop)(const glm::vec4& lhs, const glm::vec4& rhs);
 
     ColorOperationModel( float min, float max,
@@ -48,13 +47,8 @@ namespace prefr
     void setColorOperation( ColorOperation colorOp );
 
   protected:
-
     ColorOperation _colorOperation;
-
   };
-
-
 }
-
 
 #endif /* __VISIMPL__COLOROPERATIONMODEL__ */

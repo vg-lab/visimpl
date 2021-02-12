@@ -1,15 +1,22 @@
 # ViSimpl - Multi-view analysis tools
-(c) 2015-2020. GMRV / URJC
+(c) 2015-2021. GMRV / URJC
 
-www.gmrv.es
-gmrv@gmrv.es
+https://vg-lab.es/
+
+[ViSimpl](https://vg-lab.es/visimpl/)
 
 ## Introduction
 
 ViSimpl consists of a set of analysis tools providing different views for the
 deep analysis of the brain simulation datasets. This project contains both
 SimPart and StackViz, ready to be used with BlueConfig datasets among other
-file formats such as specific HDF5 and CSV.
+file formats such as specific HDF5 and CSV. 
+ViSimpl can represent and simulate data provided by [nest](https://github.com/nest)
+connecting to a server that provides its REST API.   
+
+## Known limitations
+
+ViSimpl can only simulate data within 32 bits size and precision. 
 
 ## Dependencies
 
@@ -41,15 +48,19 @@ compile the project with ZeroEQ and its vocabulary libraries (Lexis and GMRVLex)
 
 ## Building
 
-ViSimpl has been succesfully built and used on Ubuntu 14.04/16.04, Mac OSX
-Yosemite and Windows 7/8 (Visual Studio 2013 Win64). Please note that Brion
-compatibility on Windows is limited, therefore ViSimpl is not guaranteed to
-work with Brion in Windows systems. The following steps should be enough to build
- it:
+ViSimpl has been succesfully built and used on Ubuntu 14.04/16.04 and Mac OSX
+Yosemite. The following steps should be enough to build it:
 
 ```bash
-git clone --recursive https://gitlab.gmrv.es/nsviz/visimpl.git ViSimpl
+git clone --recursive https://github.com/vg-lab/visimpl.git ViSimpl
 mkdir ViSimpl/build && cd ViSimpl/build
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCLONE_SUBPROJECTS=ON
 make
 ```
+
+## Acknowledgments
+
+This project has been made at the [Universidad Rey Juan Carlos](https://urjc.es/)
+partially supported by the [Brain Simulation Platform](https://ebrains.eu/) funded
+from the European Union's Horizon 2020 Framework Programme for Research and
+Innovation under the Specific Grant Agreement No. 785907 ([Human Brain Project](https://www.humanbrainproject.eu/en/) SGA2).

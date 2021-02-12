@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -34,6 +34,7 @@
     <addaction name="actionOpenBlueConfig"/>
     <addaction name="actionOpenCSVFiles"/>
     <addaction name="actionCloseData"/>
+    <addaction name="actionOpenH5Files"/>
     <addaction name="separator"/>
     <addaction name="actionOpenSubsetEventsFile"/>
     <addaction name="separator"/>
@@ -79,6 +80,7 @@
    </attribute>
    <addaction name="actionOpenBlueConfig"/>
    <addaction name="actionOpenCSVFiles"/>
+   <addaction name="actionOpenH5Files"/>
    <addaction name="separator"/>
    <addaction name="actionOpenSubsetEventsFile"/>
    <addaction name="separator"/>
@@ -249,6 +251,18 @@
    </property>
    <property name="toolTip">
     <string>Open subset/events file</string>
+   </property>
+  </action>
+  <action name="actionOpenH5Files">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/folder.png</normaloff>:/icons/folder.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open H5 network and activity files...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open HDF5 network and activity files...</string>
    </property>
   </action>
  </widget>

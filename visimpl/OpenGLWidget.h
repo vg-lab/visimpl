@@ -23,9 +23,15 @@
 #ifndef __VISIMPL__OPENGLWIDGET__
 #define __VISIMPL__OPENGLWIDGET__
 
+#if defined(VISIMPL_USE_ZEROEQ) && defined(WIN32)
+  #include <winsock2.h>
+#endif
+
+// Qt
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
-#include <QLabel>
+
+// C++
 #include <chrono>
 #include <unordered_set>
 #include <queue>
@@ -60,6 +66,8 @@
   #include <mutex>
 #endif
 
+class QLabel;
+
 namespace visimpl
 {
   typedef enum
@@ -70,14 +78,12 @@ namespace visimpl
   } TPlaybackMode;
 
   class OpenGLWidget
-    : public QOpenGLWidget
-    , public QOpenGLFunctions
+  : public QOpenGLWidget
+  , public QOpenGLFunctions
   {
-
     Q_OBJECT;
 
   public:
-
     typedef enum
     {
       tBlueConfig,
@@ -93,18 +99,17 @@ namespace visimpl
 
     struct EventLabel
     {
-    public:
+      QWidget *upperWidget;
+      QLabel  *colorLabel;
+      QLabel  *label;
 
-      QWidget* upperWidget;
-      QFrame* frame;
-      QLabel* label;
-
+      EventLabel():upperWidget{nullptr}, colorLabel{nullptr}, label{nullptr}{};
     };
 
     OpenGLWidget( QWidget* parent = 0,
                   Qt::WindowFlags windowFlags = 0,
                   const std::string& zeqUri = "" );
-    ~OpenGLWidget( void );
+    virtual ~OpenGLWidget();
 
     void createParticleSystem(  );
     void loadData( const std::string& fileName,
@@ -141,6 +146,8 @@ namespace visimpl
     void SetAlphaBlendingAccumulative( bool accumulative = true );
 
     void subsetEventsManager( simil::SubsetEventManager* manager );
+
+    simil::SubsetEventManager* subsetEventsManager( void );
 
     const scoop::ColorPalette& colorPalette( void );
 
@@ -191,7 +198,6 @@ namespace visimpl
     void clippingPlanesColor( const QColor& color_ );
     QColor clippingPlanesColor( void );
 
-    void toggleShowUnselected( void );
     void changeClearColor( void );
     void toggleUpdateOnIdle( void );
     void toggleShowFPS( void );
@@ -228,10 +234,7 @@ namespace visimpl
     GIDVec getPlanesContainedElements( void ) const;
 
   protected:
-
     void _resolveFlagsOperations( void );
-
-
 
     void _updateParticles( float renderDelta );
     void _paintParticles( void );
@@ -309,9 +312,6 @@ namespace visimpl
     vec3 _scaleFactor;
     bool _scaleFactorExternal;
 
-//    glm::vec3 _boundingBoxMin;
-//    glm::vec3 _boundingBoxMax;
-
     bool _focusOnSelection;
     bool _pendingSelection;
     bool _backtrace;
@@ -369,9 +369,7 @@ namespace visimpl
     Plane _planeRight;
     evec4 _planesColor;
 
-
     double _deltaTime;
-
     double _sbsTimePerStep;
     double _sbsInvTimePerStep;
     double _sbsBeginTime;
@@ -447,8 +445,6 @@ namespace visimpl
     TGIDSet _gids;
     TPosVect _positions;
   };
-
 } // namespace visimpl
 
 #endif // __VISIMPL__OPENGLWIDGET__
-

@@ -20,7 +20,11 @@
  *
  */
 
+// Visimpl
 #include "ColorOperationModel.h"
+
+// C++
+#include <exception>
 
 namespace prefr
 {
@@ -44,7 +48,6 @@ namespace prefr
     setColorOperation(colorOp);
   }
 
-
   void ColorOperationModel::setColorOperation(ColorOperation colorOp)
   {
     _colorOperation = colorOp;
@@ -62,6 +65,15 @@ namespace prefr
         break;
       case ColorOperation::DIVISION:
         colorop = div<glm::vec4>;
+        break;
+      default:
+        {
+          const auto message = std::string("Invalid ColorOperation value ") +
+                               std::to_string(static_cast<int>(_colorOperation)) + " " +
+                               std::string(__FILE__) + ":" +
+                               std::to_string(__LINE__);
+          throw std::out_of_range(message.c_str());
+        }
         break;
     }
   }

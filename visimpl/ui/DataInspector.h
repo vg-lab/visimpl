@@ -23,41 +23,43 @@
 #ifndef DATAINSPECTOR_H
 #define DATAINSPECTOR_H
 
-#include <QWidget>
+// Qt
 #include <QGroupBox>
-#include <QLabel>
 
+// Simil
 #include <simil/simil.h>
 
-class DataInspector: public QGroupBox
+class QWidget;
+class QLabel;
+
+class DataInspector : public QGroupBox
 {
   Q_OBJECT
-
 public:
+    DataInspector(const QString &title, QWidget *parent = nullptr);
 
-  DataInspector(const QString &title, QWidget *parent = nullptr);
+    void addWidget(QWidget *widget, int row, int column,
+                   int rowSpan, int columnSpan,
+                   Qt::Alignment alignment = Qt::Alignment());
 
-  void addWidget(QWidget *widget, int row, int column,
-                 int rowSpan, int columnSpan,
-                 Qt::Alignment alignment = Qt::Alignment());
+    void setSimPlayer(simil::SimulationPlayer * simPlayer_);
 
-  void setSimPlayer(simil::SimulationPlayer * simPlayer_);
+public slots:
+  void updateInfo( void );
 
 signals:
-
   void simDataChanged( void );
 
 protected:
+    virtual void paintEvent(QPaintEvent *event);
 
-  virtual void paintEvent(QPaintEvent *event);
-
-  unsigned int _gidsize;
-  unsigned int _spikesize;
-  QLabel * _labelGIDs;
-  QLabel *_labelSpikes;
-  QLabel *_labelStartTime;
-  QLabel *_labelEndTime;
-  simil::SimulationPlayer * _simPlayer;
+    unsigned int _gidsize;
+    unsigned int _spikesize;
+    QLabel * _labelGIDs;
+    QLabel *_labelSpikes;
+    QLabel *_labelStartTime;
+    QLabel *_labelEndTime;
+    simil::SimulationPlayer * _simPlayer;
 };
 
 #endif // DATAINSPECTOR_H

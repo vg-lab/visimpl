@@ -1,80 +1,101 @@
 /*
- * @file  TransferFunctionWidget.h
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #ifndef __TRANSFERFUNCTIONWIDGET_H__
 #define __TRANSFERFUNCTIONWIDGET_H__
 
+// Sumrice
+#include <sumrice/api.h>
+#include <sumrice/types.h>
+
+// Preft
 #include <prefr/prefr.h>
 
+// Qt
 #include <QWidget>
-#include <QPushButton>
-#include <QMouseEvent>
-#include <QDoubleSpinBox>
-#include <QLabel>
-#include <QComboBox>
 
-#include "EditorTF/ColorPoints.h"
-#include "EditorTF/Gradient.h"
+class ColorPoints;
+class Gradient;
 
-class TransferFunctionWidget : public QWidget
+class QPushButton;
+class QMouseEvent;
+class QDoubleSpinBox;
+class QLabel;
+class QComboBox;
+
+class SUMRICE_API TransferFunctionWidget : public QWidget
 {
   Q_OBJECT;
 
 public:
 
-  class Preset
-  {
-  public:
-    Preset( const QString& name_, const QGradientStops& stops_ )
-      : _name( name_ )
-      , _stops( stops_ )
+    class Preset
     {
-    }
-    const QString& name( ) const { return _name; }
-    const QGradientStops& stops( ) const { return _stops; }
-  protected:
-    QString _name;
-    QGradientStops _stops;
-  };
+      public:
+        Preset(const QString &name_, const QGradientStops &stops_)
+        : _name(name_)
+        , _stops(stops_)
+        {}
 
-  TransferFunctionWidget( QWidget* parent = 0 );
-  virtual ~TransferFunctionWidget( );
+        const QString& name() const
+        {
+          return _name;
+        }
 
-  visimpl::TTransferFunction getColors( bool includeAlpha = true );
+        const QGradientStops& stops() const
+        {
+          return _stops;
+        }
+
+      protected:
+        QString _name;
+        QGradientStops _stops;
+    };
+
+  TransferFunctionWidget(QWidget* parent = nullptr);
+  virtual ~TransferFunctionWidget( )
+  {};
+
+  visimpl::TTransferFunction getColors( bool includeAlpha = true ) const;
+
   void setColorPoints( const visimpl::TTransferFunction& colors,
                        bool updateResult = true );
 
-  visimpl::TSizeFunction getSizeFunction( void );
+  visimpl::TSizeFunction getSizeFunction( void ) const;
   void setSizeFunction( const visimpl::TSizeFunction& sizeFunc );
 
 
-  visimpl::TTransferFunction getPreviewColors( void );
-  visimpl::TSizeFunction getSizePreview( void );
-
-
-
+  visimpl::TTransferFunction getPreviewColors( void ) const;
+  visimpl::TSizeFunction getSizePreview( void ) const;
 
 protected slots:
-
   void gradientClicked( void );
-
-//  void buttonClicked( QAbstractButton* button );
   void acceptClicked( void );
   void cancelClicked( void );
   void previewClicked( void );
-
   void colorPointsChanged( const QPolygonF &points );
-
   void presetSelected( int presetIdx );
 
 signals:
-
   void colorChanged( void );
   void previewColor( void );
 
@@ -82,11 +103,10 @@ signals:
   void sizePreview( void );
 
 protected:
-
-  visimpl::TSizeFunction pointsToSizeFunc( const QPolygonF& points );
+  visimpl::TSizeFunction pointsToSizeFunc( const QPolygonF& points ) const;
   visimpl::TSizeFunction pointsToSizeFunc( const QPolygonF& points,
                                   float minValue,
-                                  float maxValue );
+                                  float maxValue ) const;
   QPolygonF sizeFuncToPoints( const visimpl::TSizeFunction& sizeFunc );
 
   virtual void mousePressEvent( QMouseEvent * event );
@@ -112,8 +132,6 @@ protected:
   QLabel* _minValueLabel;
   QLabel* _maxValueLabel;
 
-//    osg::ref_ptr<osg::Texture1D> _texture;
-
   Gradient* _gradientFrame;
   Gradient* _nTGradientFrame;
   Gradient* redGradientFrame;
@@ -133,7 +151,5 @@ protected:
 
   std::vector< Preset > _presets;
 };
-
-
 
 #endif /* __TRANSFERFUNCTIONWIDGET_H__ */

@@ -26,7 +26,6 @@
 
 namespace visimpl
 {
-
   Plane::Plane( )
   : _vao( 0 )
   , _vboVertex( 0 )
@@ -121,9 +120,5 @@ namespace visimpl
     glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
     program_->unuse( );
-
   }
-
-
 }
-

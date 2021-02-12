@@ -32,16 +32,12 @@ namespace visimpl
   class UpdaterStaticPosition : public prefr::Updater
   {
   public:
-
     UpdaterStaticPosition( void );
-    ~UpdaterStaticPosition( void );
+
+    virtual ~UpdaterStaticPosition() {};
 
     void updateParticle( prefr::tparticle current, float deltaTime );
-
-
   };
-
-
 }
 
 

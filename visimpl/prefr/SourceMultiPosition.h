@@ -23,7 +23,10 @@
 #ifndef SRC_PREFR_SOURCEMULTIPOSITION_H_
 #define SRC_PREFR_SOURCEMULTIPOSITION_H_
 
+// Visimpl
 #include "../types.h"
+
+// Prefr
 #include <prefr/prefr.h>
 
 namespace visimpl
@@ -31,9 +34,9 @@ namespace visimpl
   class SourceMultiPosition : public prefr::Source
   {
   public:
-
     SourceMultiPosition( void );
-    ~SourceMultiPosition( void );
+
+    virtual ~SourceMultiPosition( ) {};
 
     void setIdxTranslation( const tUintUMap& idxTranslation );
     void setPositions( const tGidPosMap& positions );
@@ -43,13 +46,9 @@ namespace visimpl
     vec3 position( unsigned int idx );
 
   protected:
-
     const tGidPosMap* _positions;
     const tUintUMap* _idxTranslate;
   };
-
-
 }
-
 
 #endif /* SRC_PREFR_SOURCEMULTIPOSITION_H_ */

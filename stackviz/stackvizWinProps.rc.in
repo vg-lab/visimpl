@@ -1,0 +1,27 @@
+AppIcon ICON "@visimpl_SOURCE_DIR@/stackviz/icons/qnl-icon.ico"
+1 VERSIONINFO
+FILEVERSION @visimpl_VERSION_MAJOR@, @visimpl_VERSION_MINOR@, @visimpl_VERSION_PATCH@, 0
+PRODUCTVERSION @visimpl_VERSION_MAJOR@, @visimpl_VERSION_MINOR@, @visimpl_VERSION_PATCH@, 0
+FILEFLAGSMASK 0
+FILEOS 0x40000
+FILETYPE 1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+    VALUE "CompanyName", "Universidad Rey Juan Carlos"
+    VALUE "FileDescription", "stackviz"
+      VALUE "FileVersion", "@visimpl_VERSION_MAJOR@.@visimpl_VERSION_MINOR@.@visimpl_VERSION_PATCH@"
+      VALUE "InternalName", "StackViz"
+      VALUE "LegalCopyright", "GNU Public License"
+      VALUE "OriginalFilename", "stackviz.exe"
+      VALUE "ProductName", "StackViz"
+      VALUE "ProductVersion", "@visimpl_VERSION_MAJOR@.@visimpl_VERSION_MINOR@.@visimpl_VERSION_PATCH@"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

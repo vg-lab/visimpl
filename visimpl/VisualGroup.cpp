@@ -20,12 +20,12 @@
  *
  */
 
+// Visimpl
 #include "VisualGroup.h"
 
 namespace visimpl
 {
-
-  static float invRGBInt = 1.0f / 255;
+  constexpr float invRGBInt = 1.0f / 255;
 
   unsigned int VisualGroup::_counter = 0;
 
@@ -138,12 +138,6 @@ namespace visimpl
     assert( cluster_ );
 
     _cluster = cluster_;
-
-//    if( _model )
-//      _cluster->setModel( _model );
-//
-//    if( _source )
-//      _cluster->setSource( _source );
   }
 
   prefr::Cluster* VisualGroup::cluster( void ) const
@@ -156,9 +150,6 @@ namespace visimpl
     assert( model_ );
 
     _model = model_;
-
-//    if( _cluster )
-//      _cluster->setModel( _model );
   }
 
   prefr::Model* VisualGroup::model( void ) const
@@ -171,11 +162,6 @@ namespace visimpl
     assert( source_ );
 
     _source = source_;
-//    _source->restart( );
-//    _source->active( _active );
-//
-//    if( _cluster )
-//      _cluster->setSource( _source );
   }
 
   SourceMultiPosition* VisualGroup::source( void ) const
@@ -251,8 +237,4 @@ namespace visimpl
 
      return result;
    }
-
 }
-
-
-

@@ -20,27 +20,20 @@
  *
  */
 
+// ViSimpl
 #include "CompositeColorUpdater.h"
 
 namespace prefr
 {
-
   CompositeColorUpdater::CompositeColorUpdater( )
   : Updater( )
-  {}
-
-  CompositeColorUpdater::~CompositeColorUpdater()
   {}
 
   void CompositeColorUpdater::emitParticle( const Cluster& cluster,
                                             const tparticle_ptr current )
   {
-
-    ColorOperationModel* model =
-        dynamic_cast< ColorOperationModel* >( cluster.model( ));
-
-    ColorSource* source =
-        dynamic_cast< ColorSource* >( cluster.source( ));
+    auto model = dynamic_cast< ColorOperationModel* >( cluster.model( ));
+    auto source = dynamic_cast< ColorSource* >( cluster.source( ));
 
     if( !current->alive( ))
     {
@@ -61,17 +54,13 @@ namespace prefr
                                       const tparticle_ptr current,
                                       float deltaTime )
   {
-    ColorOperationModel* model =
-        dynamic_cast< ColorOperationModel* >( cluster.model( ));
-
-    ColorSource* source =
-        dynamic_cast< ColorSource* >( cluster.source( ));
+    auto model = dynamic_cast< ColorOperationModel* >( cluster.model( ));
+    auto source = dynamic_cast< ColorSource* >( cluster.source( ));
 
     float refLife = 0;
 
     if( current->alive( ))
     {
-
       current->set_life( std::max(0.0f, current->life( ) - deltaTime ));
 
       refLife = 1.0f - glm::clamp( current->life( ) * model->inverseMaxLife( ),
@@ -79,7 +68,6 @@ namespace prefr
 
       if( !source->still( ))
       {
-
         current->set_velocityModule( model->velocity.GetValue( refLife ));
 
         current->set_position( current->position( )
@@ -93,8 +81,5 @@ namespace prefr
 
       current->set_size( model->size.GetValue( refLife ) + source->size( ));
     }
-
   }
-
 }
-

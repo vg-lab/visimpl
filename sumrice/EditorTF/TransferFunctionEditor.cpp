@@ -1,33 +1,41 @@
 /*
- * @file  TransferFuncionEditor.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
+// Sumrice
 #include "TransferFunctionEditor.h"
 #include "ColorPoints.h"
 
+// C++
 #include <iostream>
 #include <limits>
 #include <fstream>
 
+// Qt
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
-//typedef std::map<float, osg::Vec4> Colors;
-
-/*
-  TransferFunctionEditor::Impl
-*/
-
-TransferFunctionEditor::TransferFunctionEditor( QWidget* parent_ ) :
-    _parent( parent_ )
+TransferFunctionEditor::TransferFunctionEditor( QWidget* parent_ )
+: _parent( parent_ )
 {
-//    setupUi(parent);
-
   gradientFrame = new Gradient( );
   noTransparencyGradientFrame = new Gradient( );
 
@@ -53,139 +61,89 @@ TransferFunctionEditor::TransferFunctionEditor( QWidget* parent_ ) :
 
   this->setLayout( verticalLayout );
 
-    /* Setting gradient frames */
-    QGradientStops stops;
-    stops << qMakePair(0.0, QColor(0, 0, 0, 0)) 
-          << qMakePair(1.0, QColor(255, 255, 255, 255));
-    gradientFrame->setDirection(Gradient::HORIZONTAL);
-    gradientFrame->setGradientStops(stops);
+  QGradientStops stops;
+  stops << qMakePair(0.0, QColor(0, 0, 0, 0))
+        << qMakePair(1.0, QColor(255, 255, 255, 255));
+  gradientFrame->setDirection(Gradient::HORIZONTAL);
+  gradientFrame->setGradientStops(stops);
 
-    QGradientStops ntStops;
-    stops << qMakePair(0.0, QColor(0, 0, 0, 255))
-          << qMakePair(1.0, QColor(255, 255, 255, 255));
-    noTransparencyGradientFrame->setDirection(Gradient::HORIZONTAL);
-    noTransparencyGradientFrame->setGradientStops(stops);
+  QGradientStops ntStops;
+  stops << qMakePair(0.0, QColor(0, 0, 0, 255))
+        << qMakePair(1.0, QColor(255, 255, 255, 255));
+  noTransparencyGradientFrame->setDirection(Gradient::HORIZONTAL);
+  noTransparencyGradientFrame->setGradientStops(stops);
 
-    QPolygonF points;
-    points << QPointF(0, 0) << QPointF(1, 1);
+  QPolygonF points;
+  points << QPointF(0, 0) << QPointF(1, 1);
 
-    _redPoints = new ColorPoints(redGradientFrame);
-    _redPoints->setPoints(points);
-    redGradientFrame->redGradient();
+  _redPoints = new ColorPoints(redGradientFrame);
+  _redPoints->setPoints(points);
+  redGradientFrame->redGradient();
     
-    _greenPoints = new ColorPoints(greenGradientFrame);
-    _greenPoints->setPoints(points);
-    greenGradientFrame->greenGradient();
+  _greenPoints = new ColorPoints(greenGradientFrame);
+  _greenPoints->setPoints(points);
+  greenGradientFrame->greenGradient();
 
-    _bluePoints = new ColorPoints(blueGradientFrame);
-    _bluePoints->setPoints(points);
-    blueGradientFrame->blueGradient();
+  _bluePoints = new ColorPoints(blueGradientFrame);
+  _bluePoints->setPoints(points);
+  blueGradientFrame->blueGradient();
 
-    _alphaPoints = new ColorPoints(alphaGradientFrame);
-    _alphaPoints->setPoints(points);
-    alphaGradientFrame->alphaGradient();
+  _alphaPoints = new ColorPoints(alphaGradientFrame);
+  _alphaPoints->setPoints(points);
+  alphaGradientFrame->alphaGradient();
 
-    /* Connecting slots */
-//    connect(buttonBox, SIGNAL(clicked(QAbstractButton*)),
-//            this, SLOT(buttonClicked(QAbstractButton*)));
+  connect(_redPoints, SIGNAL(pointInserted(int, float)), _greenPoints, SLOT(insertPoint(int, float)));
+  connect(_redPoints, SIGNAL(pointInserted(int, float)), _bluePoints, SLOT(insertPoint(int, float)));
+  connect(_redPoints, SIGNAL(pointInserted(int, float)), _alphaPoints, SLOT(insertPoint(int, float)));
 
-    connect(_redPoints, SIGNAL(pointInserted(int, float)), 
-            _greenPoints, SLOT(insertPoint(int, float)));
-    connect(_redPoints, SIGNAL(pointInserted(int, float)), 
-            _bluePoints, SLOT(insertPoint(int, float)));
-    connect(_redPoints, SIGNAL(pointInserted(int, float)), 
-            _alphaPoints, SLOT(insertPoint(int, float)));
+  connect(_greenPoints, SIGNAL(pointInserted(int, float)), _redPoints, SLOT(insertPoint(int, float)));
+  connect(_greenPoints, SIGNAL(pointInserted(int, float)), _bluePoints, SLOT(insertPoint(int, float)));
+  connect(_greenPoints, SIGNAL(pointInserted(int, float)), _alphaPoints, SLOT(insertPoint(int, float)));
 
-    connect(_greenPoints, SIGNAL(pointInserted(int, float)), 
-            _redPoints, SLOT(insertPoint(int, float)));
-    connect(_greenPoints, SIGNAL(pointInserted(int, float)), 
-            _bluePoints, SLOT(insertPoint(int, float)));
-    connect(_greenPoints, SIGNAL(pointInserted(int, float)), 
-            _alphaPoints, SLOT(insertPoint(int, float)));
+  connect(_bluePoints, SIGNAL(pointInserted(int, float)), _redPoints, SLOT(insertPoint(int, float)));
+  connect(_bluePoints, SIGNAL(pointInserted(int, float)), _greenPoints, SLOT(insertPoint(int, float)));
+  connect(_bluePoints, SIGNAL(pointInserted(int, float)), _alphaPoints, SLOT(insertPoint(int, float)));
 
-    connect(_bluePoints, SIGNAL(pointInserted(int, float)), 
-            _redPoints, SLOT(insertPoint(int, float)));
-    connect(_bluePoints, SIGNAL(pointInserted(int, float)), 
-            _greenPoints, SLOT(insertPoint(int, float)));
-    connect(_bluePoints, SIGNAL(pointInserted(int, float)), 
-            _alphaPoints, SLOT(insertPoint(int, float)));
+  connect(_alphaPoints, SIGNAL(pointInserted(int, float)), _redPoints, SLOT(insertPoint(int, float)));
+  connect(_alphaPoints, SIGNAL(pointInserted(int, float)), _greenPoints, SLOT(insertPoint(int, float)));
+  connect(_alphaPoints, SIGNAL(pointInserted(int, float)), _bluePoints, SLOT(insertPoint(int, float)));
 
-    connect(_alphaPoints, SIGNAL(pointInserted(int, float)), 
-            _redPoints, SLOT(insertPoint(int, float)));
-    connect(_alphaPoints, SIGNAL(pointInserted(int, float)), 
-            _greenPoints, SLOT(insertPoint(int, float)));
-    connect(_alphaPoints, SIGNAL(pointInserted(int, float)), 
-            _bluePoints, SLOT(insertPoint(int, float)));
+  connect(_redPoints, SIGNAL(pointRemoved(int)), _greenPoints, SLOT(removePoint(int)));
+  connect(_redPoints, SIGNAL(pointRemoved(int)), _bluePoints, SLOT(removePoint(int)));
+  connect(_redPoints, SIGNAL(pointRemoved(int)), _alphaPoints, SLOT(removePoint(int)));
 
-    connect(_redPoints, SIGNAL(pointRemoved(int)), 
-            _greenPoints, SLOT(removePoint(int)));
-    connect(_redPoints, SIGNAL(pointRemoved(int)), 
-            _bluePoints, SLOT(removePoint(int)));
-    connect(_redPoints, SIGNAL(pointRemoved(int)), 
-            _alphaPoints, SLOT(removePoint(int)));
+  connect(_greenPoints, SIGNAL(pointRemoved(int)), _redPoints, SLOT(removePoint(int)));
+  connect(_greenPoints, SIGNAL(pointRemoved(int)), _bluePoints, SLOT(removePoint(int)));
+  connect(_greenPoints, SIGNAL(pointRemoved(int)), _alphaPoints, SLOT(removePoint(int)));
 
-    connect(_greenPoints, SIGNAL(pointRemoved(int)), 
-            _redPoints, SLOT(removePoint(int)));
-    connect(_greenPoints, SIGNAL(pointRemoved(int)), 
-            _bluePoints, SLOT(removePoint(int)));
-    connect(_greenPoints, SIGNAL(pointRemoved(int)), 
-            _alphaPoints, SLOT(removePoint(int)));
+  connect(_bluePoints, SIGNAL(pointRemoved(int)), _redPoints, SLOT(removePoint(int)));
+  connect(_bluePoints, SIGNAL(pointRemoved(int)), _greenPoints, SLOT(removePoint(int)));
+  connect(_bluePoints, SIGNAL(pointRemoved(int)), _alphaPoints, SLOT(removePoint(int)));
 
-    connect(_bluePoints, SIGNAL(pointRemoved(int)), 
-            _redPoints, SLOT(removePoint(int)));
-    connect(_bluePoints, SIGNAL(pointRemoved(int)), 
-            _greenPoints, SLOT(removePoint(int)));
-    connect(_bluePoints, SIGNAL(pointRemoved(int)), 
-            _alphaPoints, SLOT(removePoint(int)));
+  connect(_alphaPoints, SIGNAL(pointRemoved(int)), _redPoints, SLOT(removePoint(int)));
+  connect(_alphaPoints, SIGNAL(pointRemoved(int)), _greenPoints, SLOT(removePoint(int)));
+  connect(_alphaPoints, SIGNAL(pointRemoved(int)), _bluePoints, SLOT(removePoint(int)));
 
-    connect(_alphaPoints, SIGNAL(pointRemoved(int)), 
-            _redPoints, SLOT(removePoint(int)));
-    connect(_alphaPoints, SIGNAL(pointRemoved(int)), 
-            _greenPoints, SLOT(removePoint(int)));
-    connect(_alphaPoints, SIGNAL(pointRemoved(int)), 
-            _bluePoints, SLOT(removePoint(int)));
+  connect(_redPoints, SIGNAL(pointAbscissaChanged(int, float)), _greenPoints, SLOT(movePointAbscissa(int, float)));
+  connect(_redPoints, SIGNAL(pointAbscissaChanged(int, float)), _bluePoints, SLOT(movePointAbscissa(int, float)));
+  connect(_redPoints, SIGNAL(pointAbscissaChanged(int, float)), _alphaPoints, SLOT(movePointAbscissa(int, float)));
 
-    connect(_redPoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _greenPoints, SLOT(movePointAbscissa(int, float)));
-    connect(_redPoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _bluePoints, SLOT(movePointAbscissa(int, float)));
-    connect(_redPoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _alphaPoints, SLOT(movePointAbscissa(int, float)));
+  connect(_greenPoints, SIGNAL(pointAbscissaChanged(int, float)), _redPoints, SLOT(movePointAbscissa(int, float)));
+  connect(_greenPoints, SIGNAL(pointAbscissaChanged(int, float)), _bluePoints, SLOT(movePointAbscissa(int, float)));
+  connect(_greenPoints, SIGNAL(pointAbscissaChanged(int, float)), _alphaPoints, SLOT(movePointAbscissa(int, float)));
 
-    connect(_greenPoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _redPoints, SLOT(movePointAbscissa(int, float)));
-    connect(_greenPoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _bluePoints, SLOT(movePointAbscissa(int, float)));
-    connect(_greenPoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _alphaPoints, SLOT(movePointAbscissa(int, float)));
+  connect(_bluePoints, SIGNAL(pointAbscissaChanged(int, float)), _redPoints, SLOT(movePointAbscissa(int, float)));
+  connect(_bluePoints, SIGNAL(pointAbscissaChanged(int, float)), _greenPoints, SLOT(movePointAbscissa(int, float)));
+  connect(_bluePoints, SIGNAL(pointAbscissaChanged(int, float)), _alphaPoints, SLOT(movePointAbscissa(int, float)));
 
-    connect(_bluePoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _redPoints, SLOT(movePointAbscissa(int, float)));
-    connect(_bluePoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _greenPoints, SLOT(movePointAbscissa(int, float)));
-    connect(_bluePoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _alphaPoints, SLOT(movePointAbscissa(int, float)));
+  connect(_alphaPoints, SIGNAL(pointAbscissaChanged(int, float)), _redPoints, SLOT(movePointAbscissa(int, float)));
+  connect(_alphaPoints, SIGNAL(pointAbscissaChanged(int, float)), _greenPoints, SLOT(movePointAbscissa(int, float)));
+  connect(_alphaPoints, SIGNAL(pointAbscissaChanged(int, float)), _bluePoints, SLOT(movePointAbscissa(int, float)));
 
-    connect(_alphaPoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _redPoints, SLOT(movePointAbscissa(int, float)));
-    connect(_alphaPoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _greenPoints, SLOT(movePointAbscissa(int, float)));
-    connect(_alphaPoints, SIGNAL(pointAbscissaChanged(int, float)), 
-            _bluePoints, SLOT(movePointAbscissa(int, float)));
-
-    connect(_redPoints, SIGNAL(pointsChanged(const QPolygonF &)),
-            this, SLOT(colorPointsChanged(const QPolygonF &)));
-    connect(_greenPoints, SIGNAL(pointsChanged(const QPolygonF &)),
-            this, SLOT(colorPointsChanged(const QPolygonF &)));
-    connect(_bluePoints, SIGNAL(pointsChanged(const QPolygonF &)),
-            this, SLOT(colorPointsChanged(const QPolygonF &)));
-    connect(_alphaPoints, SIGNAL(pointsChanged(const QPolygonF &)),
-            this, SLOT(colorPointsChanged(const QPolygonF &)));
-
-}
-
-TransferFunctionEditor::~TransferFunctionEditor()
-{
+  connect(_redPoints, SIGNAL(pointsChanged(const QPolygonF &)), this, SLOT(colorPointsChanged(const QPolygonF &)));
+  connect(_greenPoints, SIGNAL(pointsChanged(const QPolygonF &)), this, SLOT(colorPointsChanged(const QPolygonF &)));
+  connect(_bluePoints, SIGNAL(pointsChanged(const QPolygonF &)), this, SLOT(colorPointsChanged(const QPolygonF &)));
+  connect(_alphaPoints, SIGNAL(pointsChanged(const QPolygonF &)), this, SLOT(colorPointsChanged(const QPolygonF &)));
 }
 
 visimpl::TTransferFunction TransferFunctionEditor::getColorPoints( void )
@@ -201,7 +159,6 @@ visimpl::TTransferFunction TransferFunctionEditor::getColorPoints( void )
 
   return result;
 }
-
 
 void TransferFunctionEditor::colorPointsChanged
 (const QPolygonF &points)
@@ -239,8 +196,6 @@ void TransferFunctionEditor::colorPointsChanged
 
 void TransferFunctionEditor::setColorPoints( const visimpl::TTransferFunction& colors )
 {
-//  QGradientStops gradientColors;
-//  QGradientStops ntGradientColors;
   QPolygonF redPoints;
   QPolygonF greenPoints;
   QPolygonF bluePoints;
@@ -248,78 +203,15 @@ void TransferFunctionEditor::setColorPoints( const visimpl::TTransferFunction& c
 
   for( auto c : colors )
   {
-//    QGradientStop stop ( qreal( c.first ), c.second );
-//    gradientColors.push_back( stop );
-//
-//    QGradientStop aux( stop );
-//    aux.second.setAlphaF( 1.0 );
-//    ntGradientColors.push_back( aux );
-
     redPoints.append( QPointF( c.first, c.second.redF( )));
     greenPoints.append( QPointF( c.first, c.second.greenF( )));
     bluePoints.append( QPointF( c.first, c.second.blueF( )));
     alphaPoints.append( QPointF( c.first, c.second.alphaF( )));
-
   }
-
-//  gradientFrame->setGradientStops( gradientColors );
-//
-//  noTransparencyGradientFrame->setGradientStops( ntGradientColors );
 
   _redPoints->setPoints( redPoints, true );
   _greenPoints->setPoints( greenPoints, true );
   _bluePoints->setPoints( bluePoints, true );
   _alphaPoints->setPoints( alphaPoints, true );
 }
-
-void TransferFunctionEditor::buttonClicked(QAbstractButton* /*button*/)
-{
-//    switch (buttonBox->standardButton(button))
-//    {
-//    case QDialogButtonBox::Apply: applyColorMap(); break;
-//    default:;
-//    }
-}
-
-void TransferFunctionEditor::applyColorMap()
-{
-//    if (_texture.get() == 0)
-//        return;
-//
-//    const QGradientStops &stops = gradientFrame->getGradientStops();
-//
-//    size_t max = _texture->getImage()->s();
-//    QGradientStops::const_iterator next = stops.begin();
-//    QGradientStops::const_iterator previous = next++;
-//    for (; next != stops.end(); previous = next++)
-//    {
-//        unsigned int start = (unsigned int)(max * previous->first);
-//        unsigned int end = (unsigned int)(max * next->first);
-//        for (size_t i = start; i < end; ++i)
-//        {
-//            float a = (i - start) / double(end - start);
-//            unsigned char *color = _texture->getImage()->data(i);
-//            color[0] = round(previous->second.red() * (1 - a) +
-//                             next->second.red() * a);
-//            color[1] = round(previous->second.green() * (1 - a) +
-//                             next->second.green() * a);
-//            color[2] = round(previous->second.blue() * (1 - a) +
-//                             next->second.blue() * a);
-//            color[3] = round(previous->second.alpha() * (1 - a) +
-//                             next->second.alpha() * a);
-//        }
-//    }
-//    _texture->getImage()->dirty();
-}
-
-
-/*
-  Constructor 
-*/
-
-
-/* 
-  Destructor
-*/
-
 

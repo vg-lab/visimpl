@@ -204,8 +204,6 @@ void main( )
 
 )";
 
-
-
 }
 
 #endif /* PREFRSHADERS_H_ */

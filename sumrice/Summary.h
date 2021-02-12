@@ -1,10 +1,23 @@
 /*
- * @file  Summary.h
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 #ifndef __SIMULATIONSUMMARYWIDGET_H__
@@ -13,6 +26,7 @@
 #include <prefr/prefr.h>
 #include <simil/simil.h>
 #include <scoop/scoop.h>
+#include <sumrice/api.h>
 
 #include <QWidget>
 #include <QGridLayout>
@@ -35,7 +49,7 @@ namespace visimpl
   class HistogramWidget;
 
 
-  struct Selection
+  struct SUMRICE_API Selection
   {
   public:
 
@@ -58,7 +72,7 @@ namespace visimpl
     static unsigned int _counter;
   };
 
-  class Summary : public QWidget
+  class SUMRICE_API Summary : public QWidget
   {
 
     Q_OBJECT;
@@ -76,7 +90,7 @@ namespace visimpl
   #endif
                          );
 
-    virtual void mouseMoveEvent( QMouseEvent* event_ );
+    virtual void mouseMoveEvent( QMouseEvent* event_ ) override;
 
     unsigned int bins( void );
     float zoomFactor( void );
@@ -114,6 +128,8 @@ namespace visimpl
     void histogramClicked( visimpl::HistogramWidget* );
 
   public slots:
+
+    void UpdateHistograms( void );
 
     void importSubsetsFromSubsetMngr( void );
 
@@ -229,7 +245,6 @@ namespace visimpl
 
     void CreateSummarySpikes( );
     void InsertSummarySpikes( const GIDUSet& gids );
-  //  void CreateSummaryVoltages( void );
 
     void UpdateGradientColors( bool replace = false );
 
@@ -242,8 +257,8 @@ namespace visimpl
     void _resizeCharts( unsigned int newMinSize, Qt::Orientation orientation );
     void _resizeEvents( unsigned int newMinSize );
 
-    virtual void wheelEvent( QWheelEvent* event );
-    virtual void resizeEvent( QResizeEvent* event );
+    virtual void wheelEvent( QWheelEvent* event ) override;
+    virtual void resizeEvent( QResizeEvent* event ) override;
 
     unsigned int _bins;
     float _zoomFactor;
@@ -263,7 +278,6 @@ namespace visimpl
 
     unsigned int _gridLinesNumber;
 
-  //  brion::SpikeReport* _spikeReport;
     simil::SimulationData* _simData;
     simil::SpikeData* _spikeReport;
 

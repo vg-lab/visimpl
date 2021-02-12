@@ -1,5 +1,10 @@
 # ViSimpl
 
+## 1.1.0
+
+* StackViz & ViSimpl HDF5 sets and events file loading.
+* StackViz focus and follow buttons working again. 
+
 ## 1.0.0
 
 * Added selection, groups and attributes visualization modes.

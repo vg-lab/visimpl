@@ -1,14 +1,29 @@
 /*
- * @file  ColorPoints.cpp
- * @brief
- * @author Sergio E. Galindo <sergio.galindo@urjc.es>
- * @date
- * @remarks Copyright (c) GMRV/URJC. All rights reserved.
- *          Do not distribute without further notice.
+ * Copyright (c) 2015-2020 GMRV/URJC.
+ *
+ * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
+ *
+ * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License version 3.0 as published
+ * by the Free Software Foundation.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
+// C++
 #include <cassert>
 
+// Qt
 #include <QFrame>
 #include <QPainter>
 #include <QtCore/QEvent>
@@ -16,6 +31,7 @@
 #include <QMouseEvent>
 #include <qapplication.h>
 
+// Sumrice
 #include "ColorPoints.h"
 
 /*
@@ -26,9 +42,6 @@ inline static bool pointLessThan(const QPointF &p1, const QPointF &p2)
     return p1.x() < p2.x();
 }
 
-/* 
-   Constructor 
-*/
 ColorPoints::ColorPoints(QFrame *frame)
     : QObject(frame)
 {
@@ -119,7 +132,7 @@ bool ColorPoints::eventFilter(QObject *object, QEvent *event_)
 
         case QEvent::MouseMove: {
             QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event_);
-            if (_currentPoint >= 0 && mouseEvent->buttons() & Qt::LeftButton)
+            if (_currentPoint >= 0 && (mouseEvent->buttons() & Qt::LeftButton))
                 movePoint(_currentPoint, mouseEvent->pos());
             return true;
             break;
@@ -141,7 +154,6 @@ bool ColorPoints::eventFilter(QObject *object, QEvent *event_)
 
     return false;
 }
-
 
 void ColorPoints::paintPoints()
 {

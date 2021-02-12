@@ -23,23 +23,24 @@
 #ifndef SELECTIONMANAGERWIDGET_H_
 #define SELECTIONMANAGERWIDGET_H_
 
+// Qt
 #include <QListView>
 #include <QStandardItemModel>
 #include <QPushButton>
 #include <QLineEdit>
 #include <QRadioButton>
 
+// C++
 #include <unordered_set>
 
+// ViSimpl
 #include "types.h"
 
 namespace visimpl
 {
-
   class SelectionManagerWidget : public QWidget
   {
     Q_OBJECT;
-
   public:
 
     enum TSeparator
@@ -51,7 +52,7 @@ namespace visimpl
     };
 
     SelectionManagerWidget( QWidget* parent = 0 );
-    ~SelectionManagerWidget( void );
+    virtual ~SelectionManagerWidget( void ) {};
 
     void init( void );
 
@@ -64,11 +65,9 @@ namespace visimpl
     void clearSelection( void );
 
   signals:
-
     void selectionChanged( void );
 
   protected slots:
-
     void _addToSelected( void );
     void _removeFromSelected( void );
 
@@ -78,9 +77,7 @@ namespace visimpl
     void _buttonCancelClicked( void );
     void _buttonAcceptClicked( void );
 
-
   protected:
-
     void _initTabSelection( void );
     void _initTabExport( void );
 
@@ -94,7 +91,6 @@ namespace visimpl
                       const QString& prefix = "",
                       const QString& suffix = "" );
 
-
     TGIDUSet _gidsAll;
     TGIDUSet _gidsSelected;
     TGIDUSet _gidsAvailable;
@@ -102,7 +98,6 @@ namespace visimpl
     QTabWidget* _tabWidget;
 
     // Selection tab
-
     QListView* _listViewAvailable;
     QListView* _listViewSelected;
 
@@ -118,7 +113,6 @@ namespace visimpl
     TUIntUintMap _gidIndex;
 
     // Export tab
-
     QLineEdit* _lineEditFilePath;
     QLineEdit* _lineEditPrefix;
     QLineEdit* _lineEditSuffix;
@@ -133,11 +127,7 @@ namespace visimpl
     QPushButton* _buttonSave;
 
     QString _pathExportDefault;
-
   };
-
 }
-
-
 
 #endif /* SELECTIONMANAGERWIDGET_H_ */

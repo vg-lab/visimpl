@@ -20,15 +20,20 @@
  *
  */
 
+#ifdef WIN32
+#include <winsock2.h>
+#endif
+
+// Qt
 #include <QApplication>
-#include "MainWindow.h"
 #include <QDebug>
 #include <QOpenGLWidget>
 #include <QDir>
 #include <QString>
 
+// Project
+#include "MainWindow.h"
 #include <visimpl/version.h>
-
 
 void setFormat( void );
 void usageMessage(  char* progName );
@@ -50,7 +55,6 @@ int main( int argc, char** argv )
 #endif
 
   QApplication application( argc, argv );
-
 
   simil::TSimulationType simType = simil::TSimSpikes;
   simil::TDataType dataType = simil::TBlueConfig;
@@ -132,8 +136,6 @@ int main( int argc, char** argv )
 #ifdef SIMIL_WITH_REST_API
       if( i + 2 < argc )
       {
-
-
         ++i;
         networkFile = std::string( argv[ i ]);
         ++i;
@@ -213,9 +215,6 @@ int main( int argc, char** argv )
     }
   }
 
-
-
-
   setFormat( );
   visimpl::MainWindow mainWindow;
   mainWindow.setWindowTitle("SimPart");
@@ -284,7 +283,7 @@ void usageMessage( char* progName )
             << "\t[ -bc <blue_config_path> [-target <target> ] | "
             << "-csv <network_path> <activity_path> ] "
             << std::endl
-            << "-rest <url> <port>  "
+            << "\t[ -rest <url> <port> ]"
             << std::endl
             << "\t[ -se <subset_events_file> ] "
             << std::endl
@@ -345,27 +344,26 @@ void dumpVersion( void )
   std::cerr << "\tno";
   #endif
   std::cerr << std::endl;
-
   std::cerr << std::endl;
-
 }
-
 
 void setFormat( void )
 {
-
   int ctxOpenGLMajor = DEFAULT_CONTEXT_OPENGL_MAJOR;
   int ctxOpenGLMinor = DEFAULT_CONTEXT_OPENGL_MINOR;
   int ctxOpenGLSamples = 0;
 
-  if ( std::getenv("CONTEXT_OPENGL_MAJOR"))
-    ctxOpenGLMajor = std::stoi( std::getenv("CONTEXT_OPENGL_MAJOR"));
+  const auto major = std::getenv("CONTEXT_OPENGL_MAJOR");
+  if ( major )
+    ctxOpenGLMajor = std::stoi( major );
 
-  if ( std::getenv("CONTEXT_OPENGL_MINOR"))
-    ctxOpenGLMinor = std::stoi( std::getenv("CONTEXT_OPENGL_MINOR"));
+  const auto minor = std::getenv("CONTEXT_OPENGL_MINOR");
+  if ( minor )
+    ctxOpenGLMinor = std::stoi( minor );
 
-  if ( std::getenv("CONTEXT_OPENGL_SAMPLES"))
-    ctxOpenGLSamples = std::stoi( std::getenv("CONTEXT_OPENGL_SAMPLES"));
+  const auto samples = std::getenv("CONTEXT_OPENGL_SAMPLES");
+  if ( samples )
+    ctxOpenGLSamples = std::stoi( samples );
 
   std::cerr << "Setting OpenGL context to "
             << ctxOpenGLMajor << "." << ctxOpenGLMinor << std::endl;
@@ -383,7 +381,6 @@ void setFormat( void )
     format.setProfile( QSurfaceFormat::CompatibilityProfile );
   else
     format.setProfile( QSurfaceFormat::CoreProfile );
-
 }
 
 bool atLeastTwo( bool a, bool b, bool c )

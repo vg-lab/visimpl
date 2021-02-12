@@ -23,18 +23,18 @@
 #ifndef __VISIMPL__COLOREMISSIONNODE__
 #define __VISIMPL__COLOREMISSIONNODE__
 
+// Prefr
 #include <prefr/prefr.h>
 
 namespace prefr
 {
-
   class ColorSource : public Source
   {
   public:
-
     ColorSource( float emissionRate, const glm::vec3& _position,
                  const glm::vec4& color, bool still = false);
-    virtual ~ColorSource();
+
+    virtual ~ColorSource() {};
 
     virtual void color( const glm::vec4& color );
     virtual const glm::vec4& color( void );
@@ -48,14 +48,10 @@ namespace prefr
     virtual bool emits() const;
 
   protected:
-
     glm::vec4 _color;
     float _size;
     bool _still;
-
-
   };
-
 }
 
 #endif /* __VISIMPL__COLOREMISSIONNODE__ */

@@ -38,7 +38,6 @@
 
 namespace visimpl
 {
-
   enum tVisualMode
   {
     TMODE_SELECTION = 0,
@@ -52,9 +51,6 @@ namespace visimpl
   public:
 
     DomainManager( prefr::ParticleSystem* particleSystem, const TGIDSet& gids );
-
-    ~DomainManager( );
-
 
 #ifdef SIMIL_USE_BRION
     void init( const tGidPosMap& positions, const brion::BlueConfig* blueConfig );
@@ -107,7 +103,6 @@ namespace visimpl
     const std::vector< VisualGroup* >& attributeGroups( void ) const;
 
     const tGidPosMap& positions( void ) const;
-    //void positions( const tGidPosMap& );
 
     void reloadPositions( void );
 
@@ -229,7 +224,6 @@ namespace visimpl
 
     tNeuronAttribs _gidTypes;
 
-
     std::vector< std::string > _namesTypesMorpho;
     std::vector< std::string > _namesTypesFunction;
 
@@ -251,8 +245,6 @@ namespace visimpl
     std::unordered_map< std::string, unsigned int > _namesIdxMorpho;
     std::unordered_map< std::string, unsigned int > _namesIdxFunction;
   };
-
-
 }
 
 #endif /* __VISIMPL_VISUALGROUPMANAGER__ */
