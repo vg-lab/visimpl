@@ -37,7 +37,7 @@
 
 #ifdef VISIMPL_USE_ZEROEQ
 // zeroeq
-#include <ZeroEQ/types.h>
+#include <zeroeq/types.h>
 #endif
 
 void setFormat( void );
