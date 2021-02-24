@@ -69,12 +69,8 @@ MainWindow::MainWindow( QWidget* parent_ )
 , _simulationType( simil::TSimNetwork )
 , _summary( nullptr )
 , _player( nullptr )
-, _data( nullptr )
 , _subsetEventManager( nullptr )
-, _autoAddAvailableSubsets( true )
 , _autoCalculateCorrelations( false )
-, _autoAddEvents( true )
-, _autoAddEventSubset( true )
 , _dockSimulation( nullptr )
 , _playButton( nullptr )
 , _simSlider( nullptr )
@@ -90,10 +86,6 @@ MainWindow::MainWindow( QWidget* parent_ )
 , _publisher( nullptr )
 , _thread( nullptr )
 #endif
-, _contentWidget( nullptr )
-, _stackLayout( nullptr )
-, _columnsNumber( 3 )
-, resizingEnabled( true )
 {
   _ui->setupUi( this );
 
@@ -109,9 +101,6 @@ MainWindow::MainWindow( QWidget* parent_ )
   // Connect about dialog
   connect( _ui->actionAbout, SIGNAL( triggered( void )),
            this, SLOT( aboutDialog( void )));
-
-  _columnsNumber = 100;
-  resizingEnabled = false;
 }
 
 void MainWindow::init( const std::string&
@@ -152,6 +141,8 @@ void MainWindow::init( const std::string&
 #endif
   _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
   _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
+
+  _ui->actionShowDataManager->setEnabled(false);
 }
 
 MainWindow::~MainWindow( void )
@@ -203,13 +194,10 @@ void MainWindow::openBlueConfig( const std::string& fileName,
     case simil::TSimSpikes:
     {
       auto spikeData = new simil::SpikeData( fileName, simil::TBlueConfig, target );
-
       spikeData->reduceDataToGIDS( );
 
-      _data = spikeData;
-
       auto player = new simil::SpikesPlayer( );
-      player->LoadData( _data );
+      player->LoadData( spikeData );
       _player = player;
 
       _subsetEventManager = _player->data( )->subsetsEvents( );
@@ -230,19 +218,7 @@ void MainWindow::openBlueConfig( const std::string& fileName,
 
   }
 
-  configurePlayer( );
-  initSummaryWidget( );
-
-  openSubsetEventFile( subsetEventFile, true );
-
-  if( _autoAddEvents )
-    _summary->generateEventsRep( );
-
-  if( _autoAddEventSubset )
-    _summary->importSubsetsFromSubsetMngr( );
-
-  if( _displayManager )
-    _displayManager->refresh( );
+  updateUIonOpen(subsetEventFile);
 }
 
 void MainWindow::openHDF5File( const std::string& networkFile,
@@ -258,19 +234,7 @@ void MainWindow::openHDF5File( const std::string& networkFile,
 
   _subsetEventManager = _player->data()->subsetsEvents();
 
-  configurePlayer();
-  initSummaryWidget();
-
-  openSubsetEventFile(subsetEventFile, true);
-
-  if (_autoAddEvents)
-    _summary->generateEventsRep();
-
-  if (_autoAddEventSubset)
-    _summary->importSubsetsFromSubsetMngr();
-
-  if (_displayManager)
-    _displayManager->refresh();
+  updateUIonOpen(subsetEventFile);
 }
 
 void MainWindow::openCSVFile( const std::string& networkFile,
@@ -287,19 +251,7 @@ void MainWindow::openCSVFile( const std::string& networkFile,
 
   _subsetEventManager = _player->data()->subsetsEvents();
 
-  configurePlayer();
-  initSummaryWidget();
-
-  openSubsetEventFile(subsetEventFile, true);
-
-  if (_autoAddEvents)
-    _summary->generateEventsRep();
-
-  if (_autoAddEventSubset)
-    _summary->importSubsetsFromSubsetMngr();
-
-  if (_displayManager)
-    _displayManager->refresh();
+  updateUIonOpen(subsetEventFile);
 }
 
 void MainWindow::openSubsetEventFile(const std::string &filePath, bool append)
@@ -456,7 +408,9 @@ void MainWindow::togglePlaybackDock(void)
 
 void MainWindow::showDisplayManagerWidget( void )
 {
-  if( !_displayManager )
+  if(!_summary) return;
+
+  if( !_displayManager)
   {
     _displayManager = new DisplayManagerWidget( );
     _displayManager->init( _summary->eventWidgets(),
@@ -491,8 +445,8 @@ void MainWindow::initPlaybackDock( )
   _playing = false;
   constexpr unsigned int totalHSpan = 20;
 
-  QWidget* content = new QWidget( );
-  QGridLayout* dockLayout = new QGridLayout( );
+  auto content = new QWidget( );
+  auto dockLayout = new QGridLayout( );
   content->setLayout( dockLayout );
 
   _simSlider = new CustomSlider( Qt::Horizontal );
@@ -504,9 +458,9 @@ void MainWindow::initPlaybackDock( )
   _playButton = new QPushButton( );
   _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
                               QSizePolicy::MinimumExpanding );
-  QPushButton *stopButton = new QPushButton();
-  QPushButton *nextButton = new QPushButton();
-  QPushButton *prevButton = new QPushButton();
+  auto stopButton = new QPushButton();
+  auto nextButton = new QPushButton();
+  auto prevButton = new QPushButton();
 
   _repeatButton = new QPushButton();
   _repeatButton->setCheckable(true);
@@ -591,13 +545,11 @@ void MainWindow::initSummaryWidget( )
 
   if( _simulationType == simil::TSimSpikes )
   {
-    auto spikesPlayer = dynamic_cast< simil::SpikesPlayer* >( _player);
+    auto spikesPlayer = dynamic_cast< simil::SpikesPlayer* >( _player );
 
     _summary->Init( spikesPlayer->data( ));
     _summary->simulationPlayer( _player );
   }
-
-  _stackLayout = new QGridLayout( );
 
   this->setCentralWidget( _summary );
 
@@ -812,7 +764,6 @@ void MainWindow::UpdateSimulationSlider(float percentage)
     _summary->focusPlayback();
 }
 
-
 #ifdef VISIMPL_USE_ZEROEQ
 
 #ifdef VISIMPL_USE_GMRVLEX
@@ -925,7 +876,6 @@ void MainWindow::playAtButtonClicked(void)
 
 void MainWindow::loadComplete(void)
 {
-  resizingEnabled = true;
   _summary->showMarker(false);
 }
 
@@ -1067,5 +1017,21 @@ void MainWindow::openH5FilesThroughDialog(void)
   QApplication::setOverrideCursor(Qt::WaitCursor);
   openHDF5File(networkFilename.toStdString(), simil::TSimSpikes, activityFilename.toStdString());
   QApplication::restoreOverrideCursor();
+}
+
+void MainWindow::updateUIonOpen(const std::string &eventsFile)
+{
+  configurePlayer( );
+  initSummaryWidget( );
+
+  openSubsetEventFile( eventsFile, true );
+
+  _summary->generateEventsRep( );
+  _summary->importSubsetsFromSubsetMngr( );
+
+  if( _displayManager )
+    _displayManager->refresh( );
+
+  _ui->actionShowDataManager->setEnabled(true);
 }
 

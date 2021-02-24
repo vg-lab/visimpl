@@ -57,32 +57,32 @@ void DisplayManagerWidget::init(  const std::vector< visimpl::EventWidget* >* ev
   const QStringList eventHeaders = { "Name", "Show", "Delete" };
   const QStringList histoHeaders = { "Name", "Size", "Show", "Delete" };
 
-  QGridLayout* globalLayout = new QGridLayout( );
+  auto globalLayout = new QGridLayout( );
 
   // Events
   _eventsLayout = new QGridLayout( );
   _eventsLayout->setAlignment( Qt::AlignTop );
 
-  QWidget* eventScrollContainer = new QWidget( );
+  auto eventScrollContainer = new QWidget( );
   eventScrollContainer->setLayout( _eventsLayout );
 
-  QScrollArea* eventScroll = new QScrollArea( );
+  auto eventScroll = new QScrollArea( );
   eventScroll->setWidget( eventScrollContainer );
   eventScroll->setWidgetResizable( true );
   eventScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
 
-  QGroupBox* eventGroup = new QGroupBox( );
+  auto eventGroup = new QGroupBox( );
   eventGroup->setTitle( "Events" );
   eventGroup->setMinimumHeight( 300 );
   eventGroup->setMaximumHeight( 300 );
   eventGroup->setLayout( new QVBoxLayout( ));
 
-  QGridLayout* headerEventLayout = new QGridLayout( );
+  auto headerEventLayout = new QGridLayout( );
   headerEventLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 2);
   headerEventLayout->addWidget( new QLabel( "Visible" ), 0, 2, 1, 1);
   headerEventLayout->addWidget( new QLabel( "Delete" ), 0, 3, 1, 1);
 
-  QWidget* eventHeader = new QWidget( );
+  auto eventHeader = new QWidget( );
   eventHeader->setLayout( headerEventLayout );
 
   eventGroup->layout( )->addWidget( eventHeader );
@@ -92,33 +92,33 @@ void DisplayManagerWidget::init(  const std::vector< visimpl::EventWidget* >* ev
   _histogramsLayout = new QGridLayout( );
   _histogramsLayout->setAlignment( Qt::AlignTop );
 
-  QWidget* histoScrollContainer = new QWidget( );
+  auto histoScrollContainer = new QWidget( );
   histoScrollContainer->setLayout( _histogramsLayout );
 
-  QScrollArea* histoScroll = new QScrollArea( );
+  auto histoScroll = new QScrollArea( );
   histoScroll->setWidget( histoScrollContainer );
   histoScroll->setWidgetResizable( true );
   histoScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
 
-  QGroupBox* histGroup = new QGroupBox( );
+  auto histGroup = new QGroupBox( );
   histGroup->setTitle( "Histograms" );
   histGroup->setMinimumHeight( 300 );
   histGroup->setMaximumHeight( 300 );
   histGroup->setLayout(  new QVBoxLayout( ) );
 
-  QGridLayout* headerHistoLayout = new QGridLayout( );
+  auto headerHistoLayout = new QGridLayout( );
   headerHistoLayout->addWidget( new QLabel( "Name" ), 0, 0, 1, 2);
   headerHistoLayout->addWidget( new QLabel( "Size" ), 0, 2, 1, 1);
   headerHistoLayout->addWidget( new QLabel( "Visible" ), 0, 3, 1, 1);
   headerHistoLayout->addWidget( new QLabel( "Delete" ), 0, 4, 1, 1);
 
-  QWidget* histoHeader = new QWidget( );
+  auto histoHeader = new QWidget( );
   histoHeader->setLayout( headerHistoLayout );
 
   histGroup->layout( )->addWidget( histoHeader );
   histGroup->layout( )->addWidget( histoScroll );
 
-  QPushButton* closeButton = new QPushButton( "Close", this );
+  auto closeButton = new QPushButton( "Close", this );
   connect( closeButton, SIGNAL( clicked( )), this, SLOT( close( )));
 
   globalLayout->addWidget( eventGroup, 0, 0, 5, 5 );
