@@ -20,14 +20,22 @@
  *
  */
 
-#include <QApplication>
+// Qt
 #include "MainWindow.h"
+
+#include <QApplication>
 #include <QDebug>
 #include <QOpenGLWidget>
 #include <QDir>
 
+// Project
 #include <stackviz/version.h>
 #include <sumrice/sumrice.h>
+
+#ifdef VISIMPL_USE_ZEROEQ
+// zeroeq
+#include <ZeroEQ/types.h>
+#endif
 
 void usageMessage(  char* progName );
 void dumpVersion( void );
@@ -194,6 +202,14 @@ int main( int argc, char** argv )
     mainWindow.showFullScreen( );
 
   mainWindow.show( );
+
+#ifdef VISIMPL_USE_ZEROEQ
+  if(zeqUri.empty())
+  {
+    zeqUri = zeroeq::DEFAULT_SESSION;
+  }
+#endif
+
   mainWindow.init( zeqUri );
 
   if( !networkFile.empty( ))
