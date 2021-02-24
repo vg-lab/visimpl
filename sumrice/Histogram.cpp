@@ -883,19 +883,28 @@ namespace visimpl
     {
       for( auto line : _mainHistogram._gridLines )
       {
-        int positionX = line * width( );
+        const int positionX = line * width( );
 
         QPen pen( penColor );
 
         if( _paintTimeline )
         {
           const float timeValue = ( _endTime - _startTime ) * line + _startTime;
+          QString value;
+          if(ceilf(timeValue) == timeValue)
+          {
+            value = QString::number(static_cast<int>(timeValue));
+          }
+          else
+          {
+            value = QString::number(timeValue, 'f', 2);
+          }
 
-          QString value = QString::number( static_cast<int>(timeValue) );
-          int valueLength = value.length( ) * _pixelsPerCharacter;
+          const int valueLength = value.length( ) * _pixelsPerCharacter;
+
           if( width( ) - positionX < valueLength )
             _pixelMargin = -valueLength;
-          QPoint position ( positionX + _pixelMargin, currentHeight * 0.25 );
+          const QPoint position ( positionX + _pixelMargin, currentHeight * 0.25 );
           pen.setColor( QColor( 150, 150, 150 ));
           painter.setPen( pen );
 
@@ -923,24 +932,21 @@ namespace visimpl
       int margin = 5;
 
       QString value = QString::number( valueAt( percentage ));
-      int valueLength = value.length( ) * 10;
+      const int valueLength = value.length( ) * 10;
       if( width( ) - positionX < valueLength )
         margin = -valueLength;
 
       if( _regionPercentage && _paintRegion )
       {
-
-        int regionPosX = width( ) * ( *_regionPercentage );
-
-        int regionW = _regionWidth * width( );
+        const int regionPosX = width( ) * ( *_regionPercentage );
+        const int regionW = _regionWidth * width( );
         int start = std::max( 0, regionPosX - regionW );
+
         if( ( regionPosX + regionW ) > width( ) )
           start = width( ) - regionW * 2;
 
-        QRect region( std::max( 0, start ), 0, regionW * 2, height( ));
-
-        QPen pen( Qt::NoPen );
-        QBrush brush( QColor( 30, 30, 30, 30 ));
+        const QRect region( std::max( 0, start ), 0, regionW * 2, height( ));
+        const QBrush brush( QColor( 30, 30, 30, 30 ));
 
         painter.setBrush( brush );
         painter.setPen( QColor( 0, 0, 0, 200 ));
