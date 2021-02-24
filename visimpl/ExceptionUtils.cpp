@@ -34,7 +34,7 @@ uint8_t Utils::alternate_stack[Utils::STACK_SIZE];
 #include <execinfo.h>
 
 //-----------------------------------------------------------------------------
-void signalHandler(int signal, siginfo_t *siginfo, void *context)
+void signalHandler(int signal, siginfo_t *siginfo, __attribute__ ((unused)) void *context)
 {
   const char *signal_text = nullptr;
 
