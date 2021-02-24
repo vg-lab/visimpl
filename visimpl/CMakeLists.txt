@@ -52,8 +52,6 @@ set(VISIMPL_SOURCES
 
   render/Plane.cpp
   ui/DataInspector.cpp
-  
-  ExceptionUtils.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -89,10 +87,6 @@ set(VISIMPL_LINK_LIBRARIES
   prefr
   sumrice
   scoop
-  bfd
-  iberty
-  imagehlp
-  z
 )
 
 if(WIN32)
