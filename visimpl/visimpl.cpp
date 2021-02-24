@@ -34,6 +34,7 @@
 // Project
 #include "MainWindow.h"
 #include <visimpl/version.h>
+#include "ExceptionUtils.h"
 
 void setFormat( void );
 void usageMessage(  char* progName );
@@ -42,6 +43,9 @@ bool atLeastTwo( bool a, bool b, bool c );
 
 int main( int argc, char** argv )
 {
+  Utils::installSignalHandler();
+  Utils::installExceptionHandler();
+
   // Linux osg obj importer has a bug with non english lang.
 #ifndef Win32
   setenv("LANG", "C", 1);
@@ -229,6 +233,12 @@ int main( int argc, char** argv )
     mainWindow.showFullScreen( );
 
   mainWindow.show( );
+
+  if(zeqUri.empty())
+  {
+    zeqUri = zeroeq::DEFAULT_SESSION;
+  }
+
   mainWindow.init( zeqUri );
 
   if( !scaleFactor.empty( ))
