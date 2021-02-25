@@ -286,7 +286,6 @@ namespace visimpl
     GIDUSet _gids;
 
     visimpl::HistogramWidget* _mainHistogram;
-    visimpl::HistogramWidget* _detailHistogram;
     visimpl::HistogramWidget* _focusedHistogram;
 
 

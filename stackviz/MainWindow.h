@@ -157,16 +157,11 @@ namespace stackviz
     simil::TSimulationType _simulationType;
 
     visimpl::Summary* _summary;
-    QTimer _selectionsTimer;
 
     simil::SimulationPlayer* _player;
-    simil::SimulationData* _data;
     simil::SubsetEventManager* _subsetEventManager;
 
-    bool _autoAddAvailableSubsets;
     bool _autoCalculateCorrelations;
-    bool _autoAddEvents;
-    bool _autoAddEventSubset;
 
     // Playback Control
     QDockWidget* _dockSimulation;
@@ -189,8 +184,6 @@ namespace stackviz
     bool _zeqConnection;
 
     std::string _zeqUri;
-
-    servus::URI _uri;
     zeroeq::Subscriber* _subscriber;
     zeroeq::Publisher* _publisher;
 
@@ -199,15 +192,13 @@ namespace stackviz
   #endif
 
   private:
-
-    QWidget* _contentWidget;
-    QGridLayout* _stackLayout;
-    unsigned int _columnsNumber;
-    bool resizingEnabled;
-    std::vector< QCheckBox* > _checkBoxes;
+    /** \brief Helper method to update the UI after a dataset has been loaded.
+     * \param[in] eventsFile Subset events filename.
+     *
+     */
+    void updateUIonOpen(const std::string &eventsFile);
 
     std::vector< std::string > _correlations;
-
   };
 
 

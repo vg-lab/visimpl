@@ -39,7 +39,6 @@ FocusFrame::FocusFrame( QWidget* parent_ )
 , _fillPlots( true )
 { }
 
-
 void FocusFrame::viewRegion( const visimpl::HistogramWidget& histogram,
                              float marker,// float offset,
                              float regionWidth )
@@ -72,7 +71,6 @@ void FocusFrame::viewRegion( const visimpl::HistogramWidget& histogram,
 
   _lastPointLocal = end;
   _lastPointGlobal = end;
-
 }
 
 void FocusFrame::clear( void )
@@ -82,7 +80,6 @@ void FocusFrame::clear( void )
 
 void FocusFrame::paintEvent( QPaintEvent* /*event_*/ )
 {
-
   QPainter painter( this );
 
   painter.setRenderHint( QPainter::Antialiasing );

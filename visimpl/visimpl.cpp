@@ -35,6 +35,11 @@
 #include "MainWindow.h"
 #include <visimpl/version.h>
 
+#ifdef VISIMPL_USE_ZEROEQ
+// zeroeq
+#include <zeroeq/types.h>
+#endif
+
 void setFormat( void );
 void usageMessage(  char* progName );
 void dumpVersion( void );
@@ -229,6 +234,14 @@ int main( int argc, char** argv )
     mainWindow.showFullScreen( );
 
   mainWindow.show( );
+
+#ifdef VISIMPL_USE_ZEROEQ
+  if(zeqUri.empty())
+  {
+    zeqUri = zeroeq::DEFAULT_SESSION;
+  }
+#endif
+
   mainWindow.init( zeqUri );
 
   if( !scaleFactor.empty( ))

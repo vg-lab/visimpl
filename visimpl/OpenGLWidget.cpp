@@ -87,7 +87,6 @@ namespace visimpl
   , _showCurrentTime( true )
   , _wireframe( false )
   , _camera( nullptr )
-  , _cameraOrbital( nullptr )
   , _lastCameraPosition( 0, 0, 0)
   , _scaleFactor( 1.0f, 1.0f, 1.0f )
   , _scaleFactorExternal( false )
@@ -173,11 +172,12 @@ namespace visimpl
   , _selectedPickingSingle( 0 )
   {
   #ifdef VISIMPL_USE_ZEROEQ
-    if ( !zeqUri.empty( ) )
-      _camera = new Camera( zeqUri );
+    if ( !_zeqUri.empty( ) )
+      _camera = new Camera( _zeqUri );
     else
   #endif
-    _camera = new Camera( );
+      _camera = new Camera( );
+
     _camera->camera()->farPlane( 100000.f );
 
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
@@ -229,11 +229,8 @@ namespace visimpl
 
   OpenGLWidget::~OpenGLWidget( void )
   {
-    if( _cameraOrbital )
-    {
-      delete _cameraOrbital;
+    if( _camera )
       delete _camera;
-    }
 
     if( _shaderParticlesDefault )
       delete _shaderParticlesDefault;
@@ -379,7 +376,6 @@ namespace visimpl
   #endif
     this->_paint = true;
     update( );
-
   }
 #endif
 
@@ -433,22 +429,25 @@ namespace visimpl
                     _player->currentTime( ):
                     _sbsPlaying ? _sbsBeginTime : _sbsEndTime;
 
-    _sbsBeginTime = std::max( ( double ) _player->startTime( ),
-                              _sbsBeginTime - _player->deltaTime( ));
+    _sbsBeginTime = std::max( static_cast<double>(_player->startTime( )),
+                              _sbsBeginTime - static_cast<double>(_player->deltaTime( )));
 
     _sbsEndTime = _sbsBeginTime + _player->deltaTime( );
 
-    _player->GoTo( _sbsBeginTime );
+    if(_sbsBeginTime < _sbsEndTime)
+    {
+      _player->GoTo( _sbsBeginTime );
 
-    _backtraceSimulation( );
+      _backtraceSimulation( );
 
-    _sbsStepSpikes = _player->spikesBetween( _sbsBeginTime, _sbsEndTime );
+      _sbsStepSpikes = _player->spikesBetween( _sbsBeginTime, _sbsEndTime );
 
-    _sbsCurrentTime = _sbsBeginTime;
-    _sbsCurrentSpike = _sbsStepSpikes.first;
+      _sbsCurrentTime = _sbsBeginTime;
+      _sbsCurrentSpike = _sbsStepSpikes.first;
 
-    _sbsFirstStep = false;
-    _sbsPlaying = true;
+      _sbsFirstStep = false;
+      _sbsPlaying = true;
+    }
   }
 
   void OpenGLWidget::_configureStepByStep( void )
@@ -518,11 +517,13 @@ namespace visimpl
   {
     float endTime = _player->currentTime( );
     float startTime = std::max( 0.0f, endTime - _domainManager->decay( ));
-    simil::SpikesCRange context =
-        _player->spikesBetween( startTime, endTime );
+    if(startTime < endTime)
+    {
+      const auto context = _player->spikesBetween( startTime, endTime );
 
-    if( context.first != context.second )
-      _domainManager->processInput( context, startTime, endTime, true );
+      if( context.first != context.second )
+        _domainManager->processInput( context, startTime, endTime, true );
+    }
   }
 
   void OpenGLWidget::changeShader( int shaderIndex )
@@ -661,9 +662,9 @@ namespace visimpl
 
     glUniform1f( particleRadius, _particleRadiusThreshold );
 
-    glm::vec3 cameraPosition ( _cameraOrbital->position( )[ 0 ],
-                               _cameraOrbital->position( )[ 1 ],
-                               _cameraOrbital->position( )[ 2 ] );
+    glm::vec3 cameraPosition ( _camera->position( )[ 0 ],
+                               _camera->position( )[ 1 ],
+                               _camera->position( )[ 2 ] );
 
     if( _player->isPlaying( ) || _lastCameraPosition != cameraPosition || _flagUpdateRender )
     {
@@ -767,7 +768,7 @@ namespace visimpl
 
       if ( _paint )
       {
-        _cameraOrbital->anim( );
+        _camera->anim( );
 
         if( _particleSystem )
         {

@@ -49,7 +49,7 @@ static QString colorScaleToString( visimpl::TColorScale colorScale )
     case visimpl::T_COLOR_LOGARITHMIC:
       return QString( "Logarithmic");
     default:
-      return QString( );
+      return QString();
   }
 }
 
@@ -75,7 +75,6 @@ namespace visimpl
   , _spikeReport( nullptr )
   , _player( nullptr )
   , _mainHistogram( nullptr )
-  , _detailHistogram( nullptr )
   , _focusedHistogram( nullptr )
   , _mousePressed( false )
   , _stackType( stackType )
@@ -123,8 +122,8 @@ namespace visimpl
   {
     setMouseTracking( true );
 
-    _initCentralGUI( );
-    auto footWidget = _initFootGUI( );
+    _initCentralGUI();
+    auto footWidget = _initFootGUI();
 
     if( _stackType == T_STACK_EXPANDABLE )
     {
@@ -143,9 +142,9 @@ namespace visimpl
 
     _insertionTimer.setSingleShot( false );
     _insertionTimer.setInterval( 250 );
-    connect( &_insertionTimer, SIGNAL( timeout( )),
-             this, SLOT(deferredInsertion( )));
-    _insertionTimer.start( );
+    connect( &_insertionTimer, SIGNAL( timeout()),
+             this, SLOT(deferredInsertion()));
+    _insertionTimer.start();
 
   #endif
 
@@ -159,7 +158,7 @@ namespace visimpl
   {
     _simData = data_;
 
-    switch( data_->simulationType( ))
+    switch( data_->simulationType())
     {
       case simil::TSimSpikes:
       {
@@ -174,16 +173,16 @@ namespace visimpl
         break;
     }
 
-    _gids = GIDUSet( data_->gids( ).begin( ), data_->gids( ).end( ));
+    _gids = GIDUSet( data_->gids().begin(), data_->gids().end());
 
-    Init( );
+    Init();
   }
 
   void Summary::_initCentralGUI( void )
   {
     if( _stackType == T_STACK_FIXED )
     {
-      _layoutHistograms = new QGridLayout( );
+      _layoutHistograms = new QGridLayout();
       this->setLayout( _layoutHistograms );
     }
     else if( _stackType == T_STACK_EXPANDABLE )
@@ -192,29 +191,29 @@ namespace visimpl
       _regionWidth = 0.1f;
       _summaryColumns = _maxColumns - 2;
 
-      _layoutMain = new QVBoxLayout( );
+      _layoutMain = new QVBoxLayout();
       _layoutMain->setAlignment( Qt::AlignTop );
 
-      _layoutEventLabels = new QGridLayout( );
+      _layoutEventLabels = new QGridLayout();
       _layoutEventLabels->setAlignment( Qt::AlignTop );
       _layoutEventLabels->setVerticalSpacing( 0 );
 
-      QWidget* eventLabelsContainer = new QWidget( );
+      QWidget* eventLabelsContainer = new QWidget();
       eventLabelsContainer->setLayout( _layoutEventLabels );
       eventLabelsContainer->setMaximumWidth( 150 );
 
-      _eventLabelsScroll = new QScrollArea( );
+      _eventLabelsScroll = new QScrollArea();
       _eventLabelsScroll->setWidgetResizable( true );
       _eventLabelsScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
       _eventLabelsScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _eventLabelsScroll->setVisible( false );
       _eventLabelsScroll->setWidget( eventLabelsContainer );
 
-      _layoutEvents = new QGridLayout( );
+      _layoutEvents = new QGridLayout();
       _layoutEvents->setAlignment( Qt::AlignTop );
       _layoutEvents->setVerticalSpacing( 0 );
 
-      QWidget* eventsContainer = new QWidget( );
+      QWidget* eventsContainer = new QWidget();
       eventsContainer->setLayout( _layoutEvents );
 
       _scrollEvent = new QScrollArea();
@@ -224,37 +223,37 @@ namespace visimpl
       _scrollEvent->setVisible( false );
       _scrollEvent->setWidget( eventsContainer );
 
-      connect( _scrollEvent->horizontalScrollBar( ), SIGNAL( actionTriggered( int )),
+      connect( _scrollEvent->horizontalScrollBar(), SIGNAL( actionTriggered( int )),
                this, SLOT( moveHoriScrollSync( int )));
 
-      connect( _scrollEvent->verticalScrollBar( ), SIGNAL( actionTriggered( int )),
+      connect( _scrollEvent->verticalScrollBar(), SIGNAL( actionTriggered( int )),
                this, SLOT( moveVertScrollSync( int )));
 
-      connect( _eventLabelsScroll->verticalScrollBar( ), SIGNAL( actionTriggered( int )),
+      connect( _eventLabelsScroll->verticalScrollBar(), SIGNAL( actionTriggered( int )),
                this, SLOT( moveVertScrollSync( int )));
 
-      _layoutHistoLabels = new QGridLayout( );
+      _layoutHistoLabels = new QGridLayout();
       _layoutHistoLabels->setAlignment( Qt::AlignTop );
       _layoutHistoLabels->setVerticalSpacing( 0 );
 
-      QWidget* histoLabelsContainer = new QWidget( );
+      QWidget* histoLabelsContainer = new QWidget();
       histoLabelsContainer->setLayout( _layoutHistoLabels );
       histoLabelsContainer->setMaximumWidth( 150 );
 
-      _scrollHistoLabels = new QScrollArea( );
+      _scrollHistoLabels = new QScrollArea();
       _scrollHistoLabels->setWidgetResizable( true );
       _scrollHistoLabels->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
       _scrollHistoLabels->setWidget( histoLabelsContainer );
 
 
-      _layoutHistograms = new QGridLayout( );
+      _layoutHistograms = new QGridLayout();
       _layoutHistograms->setAlignment( Qt::AlignTop );
       _layoutHistograms->setVerticalSpacing( 0 );
 
-      QWidget* histogramsContainer = new QWidget( );
+      QWidget* histogramsContainer = new QWidget();
       histogramsContainer->setLayout( _layoutHistograms );
 
-      _scrollHistogram = new QScrollArea( );
+      _scrollHistogram = new QScrollArea();
       _scrollHistogram->setWidgetResizable( true );
       _scrollHistogram->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
       _scrollHistogram->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
@@ -262,13 +261,13 @@ namespace visimpl
       _scrollHistogram->horizontalScrollBar()->setMinimum(0);
       _scrollHistogram->horizontalScrollBar()->setMaximum(1000);
 
-      connect( _scrollHistogram->horizontalScrollBar( ), SIGNAL( actionTriggered( int )),
+      connect( _scrollHistogram->horizontalScrollBar(), SIGNAL( actionTriggered( int )),
                this, SLOT( moveHoriScrollSync( int )));
 
-      connect( _scrollHistogram->verticalScrollBar( ), SIGNAL( actionTriggered( int )),
+      connect( _scrollHistogram->verticalScrollBar(), SIGNAL( actionTriggered( int )),
                this, SLOT( moveVertScrollSync( int )));
 
-      connect( _scrollHistoLabels->verticalScrollBar( ), SIGNAL( actionTriggered( int )),
+      connect( _scrollHistoLabels->verticalScrollBar(), SIGNAL( actionTriggered( int )),
                this, SLOT( moveVertScrollSync( int )));
 
       _splitHorizEvents = new QSplitter( Qt::Horizontal );
@@ -281,33 +280,33 @@ namespace visimpl
       _splitHorizHisto->addWidget( _scrollHistogram );
 
       connect( _splitHorizEvents, SIGNAL( splitterMoved( int, int )),
-               this, SLOT( syncSplitters( ) ));
+               this, SLOT( syncSplitters() ));
 
       connect( _splitHorizHisto, SIGNAL( splitterMoved( int, int )),
-               this, SLOT( syncSplitters( ) ));
+               this, SLOT( syncSplitters() ));
     }
   }
 
   QWidget* Summary::_initFootGUI( void )
   {
-    QWidget* foot = new QWidget( );
-    QGridLayout* footLayout = new QGridLayout( );
+    QWidget* foot = new QWidget();
+    QGridLayout* footLayout = new QGridLayout();
 
     QStringList csItems;
     csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LINEAR )));
     csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LOGARITHMIC )));
 
-    QComboBox* localComboBox = new QComboBox( );
+    QComboBox* localComboBox = new QComboBox();
     localComboBox->addItems( csItems );
 
-    QComboBox* globalComboBox = new QComboBox( );
+    QComboBox* globalComboBox = new QComboBox();
     globalComboBox->addItems( csItems );
 
-    _focusWidget = new FocusFrame( );
+    _focusWidget = new FocusFrame();
     _focusWidget->colorLocal( _colorLocal );
     _focusWidget->colorGlobal( _colorGlobal );
 
-    _localColorWidget = new QWidget( );
+    _localColorWidget = new QWidget();
     _localColorWidget->setPalette( QPalette( _colorLocal ));
     _localColorWidget->setAutoFillBackground( true );
     _localColorWidget->setMaximumWidth( 30 );
@@ -315,7 +314,7 @@ namespace visimpl
     _localColorWidget->setMinimumHeight( 30 );
     _localColorWidget->setMaximumHeight( 30 );
 
-    _globalColorWidget = new QWidget( );
+    _globalColorWidget = new QWidget();
     _globalColorWidget->setPalette( QPalette( _colorGlobal ));
     _globalColorWidget->setAutoFillBackground( true );
     _globalColorWidget->setMaximumWidth( 30 );
@@ -330,31 +329,31 @@ namespace visimpl
     _localMaxLabel = new QLabel( "" );
     _localMaxLabel->setMaximumWidth( 50 );
 
-    _spinBoxBins = new QSpinBox( );
+    _spinBoxBins = new QSpinBox();
     _spinBoxBins->setMinimum( 50 );
     _spinBoxBins->setMaximum( 100000 );
     _spinBoxBins->setSingleStep( 50 );
     _spinBoxBins->setValue( _bins );
 
-    _spinBoxScaleHorizontal = new QDoubleSpinBox( );
+    _spinBoxScaleHorizontal = new QDoubleSpinBox();
     _spinBoxScaleHorizontal->setMinimum( 1.0 );
     _spinBoxScaleHorizontal->setMaximum( 500 );
     _spinBoxScaleHorizontal->setSingleStep( 0.1 );
     _spinBoxScaleHorizontal->setValue( DEFAULT_SCALE );
 
-    _spinBoxScaleVertical = new QDoubleSpinBox( );
+    _spinBoxScaleVertical = new QDoubleSpinBox();
     _spinBoxScaleVertical->setMinimum( 1.0 );
     _spinBoxScaleVertical->setMaximum( 5 );
     _spinBoxScaleVertical->setSingleStep( 0.1 );
     _spinBoxScaleVertical->setValue( DEFAULT_SCALE );
 
-    _spinBoxZoomFactor = new QDoubleSpinBox( );
+    _spinBoxZoomFactor = new QDoubleSpinBox();
     _spinBoxZoomFactor->setMinimum( 1.0 );
     _spinBoxZoomFactor->setMaximum( 1000.0 );
     _spinBoxZoomFactor->setSingleStep( 0.5 );
     _spinBoxZoomFactor->setValue( _zoomFactor );
 
-    QSpinBox* gridSpinBox = new QSpinBox( );
+    QSpinBox* gridSpinBox = new QSpinBox();
     gridSpinBox->setMinimum( 0 );
     gridSpinBox->setMaximum( 10000 );
     gridSpinBox->setSingleStep( 1 );
@@ -362,14 +361,14 @@ namespace visimpl
 
     QPushButton* focusButton = new QPushButton( "Focus" );
 
-    QScrollArea* scrollFootLeft = new QScrollArea( );
+    QScrollArea* scrollFootLeft = new QScrollArea();
     scrollFootLeft->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
     scrollFootLeft->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
     scrollFootLeft->setWidgetResizable( true );
     scrollFootLeft->setMaximumWidth( 300 );
 
-    QWidget* containerFootLeft = new QWidget( );
-    QVBoxLayout* layoutFootLeft = new QVBoxLayout( );
+    QWidget* containerFootLeft = new QWidget();
+    QVBoxLayout* layoutFootLeft = new QVBoxLayout();
     layoutFootLeft->setAlignment( Qt::AlignTop );
     containerFootLeft->setLayout( layoutFootLeft );
     containerFootLeft->setMinimumWidth( _footWidthMax );
@@ -380,7 +379,7 @@ namespace visimpl
     tmpFootLeft = containerFootLeft;
 
     QGroupBox* groupBoxNorm = new QGroupBox( "Normalization: ");
-    QGridLayout* layoutNorm = new QGridLayout( );
+    QGridLayout* layoutNorm = new QGridLayout();
     layoutNorm->setAlignment( Qt::AlignTop );
     groupBoxNorm->setLayout( layoutNorm );
 
@@ -393,7 +392,7 @@ namespace visimpl
     layoutNorm->addWidget( globalComboBox, 1, 2, 1, 1 );
 
     QGroupBox* groupBoxRuleConfig = new QGroupBox( "Rule configuration: ");
-    QGridLayout* layoutRuleConfig = new QGridLayout( );
+    QGridLayout* layoutRuleConfig = new QGridLayout();
     layoutRuleConfig->setAlignment( Qt::AlignTop );
     groupBoxRuleConfig->setLayout( layoutRuleConfig );
 
@@ -402,14 +401,14 @@ namespace visimpl
 
     scrollFootLeft->setWidget( containerFootLeft );
 
-    QScrollArea* scrollFootRight = new QScrollArea( );
+    QScrollArea* scrollFootRight = new QScrollArea();
     scrollFootRight->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
     scrollFootRight->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
     scrollFootRight->setWidgetResizable( true );
     scrollFootRight->setMaximumWidth( 300 );
 
-    QWidget* containerFootRight = new QWidget( );
-    QVBoxLayout* layoutFootRight = new QVBoxLayout( );
+    QWidget* containerFootRight = new QWidget();
+    QVBoxLayout* layoutFootRight = new QVBoxLayout();
     layoutFootRight->setAlignment( Qt::AlignTop );
     containerFootRight->setLayout( layoutFootRight );
     containerFootRight->setMinimumWidth( _footWidthMax );
@@ -420,7 +419,7 @@ namespace visimpl
     tmpFootRight = containerFootRight;
 
     QGroupBox* groupBoxScale = new QGroupBox( "Scale adjustment" );
-    QGridLayout* layoutScale = new QGridLayout( );
+    QGridLayout* layoutScale = new QGridLayout();
     groupBoxScale->setLayout( layoutScale );
     layoutScale->addWidget( new QLabel( "Horizontal: "), 0, 0, 1, 1 );
     layoutScale->addWidget( _spinBoxScaleHorizontal, 0, 1, 1, 1 );
@@ -435,7 +434,7 @@ namespace visimpl
 
 
     QGroupBox* groupBoxBinConfig = new QGroupBox( "Bin configuration:" );
-    QGridLayout* layoutBinConfig = new QGridLayout( );
+    QGridLayout* layoutBinConfig = new QGridLayout();
     layoutBinConfig->setAlignment( Qt::AlignTop );
     groupBoxBinConfig->setLayout( layoutBinConfig );
 
@@ -445,7 +444,7 @@ namespace visimpl
     layoutBinConfig->addWidget( _spinBoxZoomFactor, 1, 1, 1, 1 );
 
     QGroupBox* groupBoxInformation = new QGroupBox( "Data inspector: ");
-    QGridLayout* layoutInformation = new QGridLayout( );
+    QGridLayout* layoutInformation = new QGridLayout();
     layoutInformation->setAlignment( Qt::AlignTop );
     groupBoxInformation->setLayout( layoutInformation );
 
@@ -487,15 +486,15 @@ namespace visimpl
     connect( gridSpinBox, SIGNAL( valueChanged( int )),
              this, SLOT( gridLinesNumber( int )));
 
-    connect( focusButton, SIGNAL( clicked( )),
-             this, SLOT( focusPlayback( )));
+    connect( focusButton, SIGNAL( clicked()),
+             this, SLOT( focusPlayback()));
 
     foot->setLayout( footLayout );
 
     return foot;
   }
 
-  void Summary::Init( )
+  void Summary::Init()
   {
     if( !_spikeReport )
       return;
@@ -556,7 +555,7 @@ namespace visimpl
       mainRow.label->setMinimumHeight( _heightPerRow );
       mainRow.label->setMaximumHeight( _heightPerRow );
 
-      const unsigned int row = _histogramWidgets.size( );
+      const unsigned int row = _histogramWidgets.size();
       _layoutHistoLabels->addWidget( mainRow.label, row , 0, 1, 1 );
       _layoutHistograms->addWidget( _mainHistogram, row, 1, 1, _summaryColumns );
 
@@ -579,19 +578,19 @@ namespace visimpl
         _scrollEvent->setVisible( false );
     }
 
-    update( );
+    update();
   }
 
   void Summary::generateEventsRep( void )
   {
-    if( _simData->subsetsEvents( )->numEvents( ) > 0 )
+    if( _simData->subsetsEvents()->numEvents() > 0 )
     {
       _eventLabelsScroll->setVisible( true );
       _scrollEvent->setVisible( true );
 
-      simil::EventRange timeFrames = _simData->subsetsEvents( )->events( );
+      simil::EventRange timeFrames = _simData->subsetsEvents()->events();
 
-      float invTotal = 1.0f / ( _spikeReport->endTime( ) - _spikeReport->startTime( ));
+      float invTotal = 1.0f / ( _spikeReport->endTime() - _spikeReport->startTime());
 
       unsigned int counter = 0;
       for( auto it = timeFrames.first; it != timeFrames.second; ++it, ++counter )
@@ -605,30 +604,30 @@ namespace visimpl
 
           float startPercentage =
               std::max( 0.0f,
-                        ( time.first - _spikeReport->startTime( )) * invTotal);
+                        ( time.first - _spikeReport->startTime()) * invTotal);
 
           float endPercentage =
               std::min( 1.0f,
-                        ( time.second - _spikeReport->startTime( )) * invTotal);
+                        ( time.second - _spikeReport->startTime()) * invTotal);
 
           timeFrame.percentages.push_back(
               std::make_pair( startPercentage, endPercentage ));
         }
 
-        timeFrame.color = _eventsPalette.colors( )[
-          counter /* %  _eventsPalette.size( ) */ ];
+        timeFrame.color = _eventsPalette.colors()[
+          counter /* %  _eventsPalette.size() */ ];
 
         _events.push_back( timeFrame );
 
-        QLabel* label = new QLabel( timeFrame.name.c_str( ));
+        QLabel* label = new QLabel( timeFrame.name.c_str());
         label->setMinimumHeight( 20 );
         label->setMinimumWidth( _maxLabelWidth );
         label->setMaximumWidth( _maxLabelWidth );
         label->setMinimumHeight( _heightPerRow );
         label->setMaximumHeight( _heightPerRow );
-        label->setToolTip( timeFrame.name.c_str( ));
+        label->setToolTip( timeFrame.name.c_str());
 
-        EventWidget* eventWidget = new EventWidget( );
+        EventWidget* eventWidget = new EventWidget();
         eventWidget->name( timeFrame.name );
         eventWidget->setSizePolicy( QSizePolicy::Expanding,
                                     QSizePolicy::Expanding );
@@ -654,11 +653,11 @@ namespace visimpl
   void Summary::importSubsetsFromSubsetMngr( void )
   {
     simil::SubsetMapRange subsets =
-        _spikeReport->subsetsEvents( )->subsets( );
+        _spikeReport->subsetsEvents()->subsets();
 
     for( auto it = subsets.first; it != subsets.second; ++it )
     {
-      GIDUSet subset( it->second.begin( ), it->second.end( ));
+      GIDUSet subset( it->second.begin(), it->second.end());
       insertSubset( it->first, subset );
     }
   }
@@ -671,14 +670,14 @@ namespace visimpl
   {
     const GIDUSet& selected = selection.gids;
 
-    if( selected.size( ) == _gids.size( ) || selected.size( ) == 0)
+    if( selected.size() == _gids.size() || selected.size() == 0)
       return;
 
 
     if( _stackType == TStackType::T_STACK_EXPANDABLE )
     {
 
-      std::cout << "Adding new selection " << selection.name << " with size " << selected.size( ) << std::endl;
+      std::cout << "Adding new selection " << selection.name << " with size " << selected.size() << std::endl;
   #ifdef VISIMPL_USE_ZEROEQ
 
       if( deferred )
@@ -696,10 +695,10 @@ namespace visimpl
   #ifdef VISIMPL_USE_ZEROEQ
   void Summary::deferredInsertion( void )
   {
-    if( _pendingSelections.size( ) > 0 )
+    if( _pendingSelections.size() > 0 )
     {
-      auto selection = _pendingSelections.front( );
-      _pendingSelections.pop_front( );
+      auto selection = _pendingSelections.front();
+      _pendingSelections.pop_front();
 
       QString labelText =
           QString( "Selection-").append( QString::number( selection.id ));
@@ -715,7 +714,7 @@ namespace visimpl
       if( !ok )
         return;
 
-      selection.name = labelText.toStdString( );
+      selection.name = labelText.toStdString();
 
       insertSubset( selection );
     }
@@ -729,7 +728,7 @@ namespace visimpl
       for( auto histogram : _histogramWidgets )
       {
         histogram->Spikes(*_spikeReport);
-        histogram->Update( );
+        histogram->Update();
       }
   }
 
@@ -746,7 +745,7 @@ namespace visimpl
 
     histogram->filteredGIDs( subset );
     histogram->name( name );
-    histogram->colorMapper( _mainHistogram->colorMapper( ));
+    histogram->colorMapper( _mainHistogram->colorMapper());
     histogram->colorScaleLocal( _colorScaleLocal );
     histogram->colorScaleGlobal( _colorScaleGlobal );
     histogram->colorLocal( _colorLocal );
@@ -758,7 +757,7 @@ namespace visimpl
 
     histogram->init( _bins, _zoomFactor );
 
-    if( histogram->empty( ))
+    if( histogram->empty())
     {
       delete histogram;
       return;
@@ -773,14 +772,14 @@ namespace visimpl
     histogram->_events = &_events;
 
     currentRow.histogram = histogram;
-    currentRow.label = new QLabel( name.c_str( ));
+    currentRow.label = new QLabel( name.c_str());
     currentRow.label->setMinimumWidth( _maxLabelWidth );
     currentRow.label->setMaximumWidth( _maxLabelWidth );
     currentRow.label->setMinimumHeight( _heightPerRow );
     currentRow.label->setMaximumHeight( _heightPerRow );
-    currentRow.label->setToolTip( name.c_str( ));
+    currentRow.label->setToolTip( name.c_str());
 
-    const unsigned int row = _histogramWidgets.size( );
+    const unsigned int row = _histogramWidgets.size();
     _layoutHistoLabels->addWidget( currentRow.label, row , 0, 1, 1 );
     _layoutHistograms->addWidget( histogram, row, 1, 1, _summaryColumns );
 
@@ -803,7 +802,7 @@ namespace visimpl
 
     _histogramWidgets.push_back( histogram );
 
-    update( );
+    update();
   }
 
   void Summary::childHistogramPressed( const QPoint& position, float /*percentage*/ )
@@ -811,27 +810,27 @@ namespace visimpl
     if( _stackType == T_STACK_FIXED )
     {
       const QPoint cursorLocalPoint = _mainHistogram->mapFromGlobal( position );
-      const float percentage = float( cursorLocalPoint.x( )) / _mainHistogram->width( );
+      const float percentage = float( cursorLocalPoint.x()) / _mainHistogram->width();
 
       emit histogramClicked( percentage );
       return;
     }
 
-    if( _focusedHistogram != sender( ))
+    if( _focusedHistogram != sender())
     {
       _focusedHistogram =
-              dynamic_cast< visimpl::HistogramWidget* >( sender( ));
+              dynamic_cast< visimpl::HistogramWidget* >( sender());
 
       _focusedHistogram->regionWidth( _regionWidth );
     }
 
     const QPoint cursorLocalPoint = _focusedHistogram->mapFromGlobal( position );
-    const float percentage = float( cursorLocalPoint.x( )) / _focusedHistogram->width( );
+    const float percentage = float( cursorLocalPoint.x()) / _focusedHistogram->width();
 
     _currentValueLabel->setText(
         QString::number( _focusedHistogram->focusValueAt( percentage )));
-    _localMaxLabel->setText( QString::number( _focusedHistogram->focusMaxLocal( )));
-    _globalMaxLabel->setText( QString::number( _focusedHistogram->focusMaxGlobal( )));
+    _localMaxLabel->setText( QString::number( _focusedHistogram->focusMaxLocal()));
+    _globalMaxLabel->setText( QString::number( _focusedHistogram->focusMaxGlobal()));
 
     if( _overRegionEdgeLower )
     {
@@ -846,7 +845,7 @@ namespace visimpl
     else
     {
       _regionGlobalPosition = position;
-      _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
+      _regionWidthPixels = _regionWidth * _focusedHistogram->width();
 
        SetFocusRegionPosition( cursorLocalPoint );
 
@@ -880,7 +879,7 @@ namespace visimpl
     {
       if( modifiers == Qt::ControlModifier )
         emit histogramClicked(
-            dynamic_cast< visimpl::HistogramWidget* >( sender( )));
+            dynamic_cast< visimpl::HistogramWidget* >( sender()));
       else if( modifiers == Qt::ShiftModifier )
         emit histogramClicked( percentage );
     }
@@ -905,9 +904,9 @@ namespace visimpl
     // Limit the region position with borders
     _regionLocalPosition.setX( std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
     _regionLocalPosition.setX( std::min( _regionLocalPosition.x(  ),
-                          _focusedHistogram->width( ) - _regionWidthPixels));
+                          _focusedHistogram->width() - _regionWidthPixels));
 
-    setFocusAt( static_cast<float>(_regionLocalPosition.x( )) / _focusedHistogram->width( ) );
+    setFocusAt( static_cast<float>(_regionLocalPosition.x()) / _focusedHistogram->width() );
   }
 
   void Summary::updateRegionBounds( void )
@@ -915,34 +914,34 @@ namespace visimpl
     if( _focusedHistogram )
     {
       _regionLocalPosition =
-          QPoint( _focusedHistogram->width( ) * _regionPercentage,
-                  _focusedHistogram->height( ) * 0.5f );
+          QPoint( _focusedHistogram->width() * _regionPercentage,
+                  _focusedHistogram->height() * 0.5f );
 
-      _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
+      _regionWidthPixels = _regionWidth * _focusedHistogram->width();
 
       _regionLocalPosition.setX(
           std::max( _regionWidthPixels, _regionLocalPosition.x(  )));
 
       _regionLocalPosition.setX( std::min( _regionLocalPosition.x(  ),
-                            _focusedHistogram->width( ) - _regionWidthPixels));
+                            _focusedHistogram->width() - _regionWidthPixels));
 
-      calculateRegionBounds( );
+      calculateRegionBounds();
 
-      _focusWidget->update( );
+      _focusWidget->update();
     }
   }
 
   void Summary::calculateRegionBounds( void )
   {
     _regionEdgeLower = std::max( _regionPercentage - _regionWidth, _regionWidth );
-    _regionEdgePointLower = _regionLocalPosition.x( ) - _regionWidthPixels;
+    _regionEdgePointLower = _regionLocalPosition.x() - _regionWidthPixels;
     _regionEdgeUpper = std::min( _regionPercentage + _regionWidth, 1.0f - _regionWidth);
-    _regionEdgePointUpper = _regionLocalPosition.x( ) + _regionWidthPixels;
+    _regionEdgePointUpper = _regionLocalPosition.x() + _regionWidthPixels;
   }
 
   void Summary::updateMouseMarker( QPoint point )
   {
-    auto focusedHistogram = qobject_cast< visimpl::HistogramWidget* >( sender( ));
+    auto focusedHistogram = qobject_cast< visimpl::HistogramWidget* >( sender());
     if(!focusedHistogram)
       return;
 
@@ -950,11 +949,11 @@ namespace visimpl
 
     if( _stackType != T_STACK_EXPANDABLE )
     {
-      _mainHistogram->update( );
+      _mainHistogram->update();
       return;
     }
 
-    const float invWidth = 1.0f / float( focusedHistogram->width( ));
+    const float invWidth = 1.0f / float( focusedHistogram->width());
     const QPoint cursorLocalPoint = focusedHistogram->mapFromGlobal( point );
 
     if( focusedHistogram == _focusedHistogram )
@@ -964,41 +963,41 @@ namespace visimpl
         if( _selectedEdgeLower )
         {
 
-          float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointLower ) * invWidth;
+          float diffPerc = ( cursorLocalPoint.x() - _regionEdgePointLower ) * invWidth;
 
           _regionWidth -= diffPerc;
 
-          const float regionMinSize = 5.0f / focusedHistogram->width( );
+          const float regionMinSize = 5.0f / focusedHistogram->width();
 
           _regionWidth = std::max( regionMinSize, std::min( 0.5f, _regionWidth ));
 
-          _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
+          _regionWidthPixels = _regionWidth * _focusedHistogram->width();
 
-          calculateRegionBounds( );
+          calculateRegionBounds();
 
           _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
-          _focusWidget->update( );
+          _focusWidget->update();
 
           QApplication::setOverrideCursor( Qt::SizeHorCursor );
         }
         else if ( _selectedEdgeUpper )
         {
-          const float diffPerc = ( cursorLocalPoint.x( ) - _regionEdgePointUpper ) * invWidth;
+          const float diffPerc = ( cursorLocalPoint.x() - _regionEdgePointUpper ) * invWidth;
 
           _regionWidth += diffPerc;
 
-          const float regionMinSize = 5.0f / focusedHistogram->width( );
+          const float regionMinSize = 5.0f / focusedHistogram->width();
 
           _regionWidth = std::max( regionMinSize,
                                    std::min( 0.5f, _regionWidth ));
 
-          _regionWidthPixels = _regionWidth * _focusedHistogram->width( );
+          _regionWidthPixels = _regionWidth * _focusedHistogram->width();
 
-          calculateRegionBounds( );
+          calculateRegionBounds();
 
           _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage,
                                     _regionWidth );
-          _focusWidget->update( );
+          _focusWidget->update();
 
           QApplication::setOverrideCursor( Qt::SizeHorCursor );
         }
@@ -1017,13 +1016,13 @@ namespace visimpl
       } // end mousePressed
       else
       {
-        if( abs(cursorLocalPoint.x( ) - _regionEdgePointLower) < regionEditMarginPixels )
+        if( abs(cursorLocalPoint.x() - _regionEdgePointLower) < regionEditMarginPixels )
         {
           _overRegionEdgeLower = true;
 
           QApplication::setOverrideCursor( Qt::SizeHorCursor );
         }
-        else if( abs(_regionEdgePointUpper - cursorLocalPoint.x( )) < regionEditMarginPixels )
+        else if( abs(_regionEdgePointUpper - cursorLocalPoint.x()) < regionEditMarginPixels )
         {
           _overRegionEdgeUpper = true;
 
@@ -1053,11 +1052,11 @@ namespace visimpl
     }
   }
 
-  void Summary::CreateSummarySpikes( )
+  void Summary::CreateSummarySpikes()
   {
     auto initHistogram = [this](HistogramWidget *w)
     {
-      if( !w->isInitialized( ) )
+      if( !w->isInitialized() )
         w->init( _bins, _zoomFactor );
     };
     std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), initHistogram);
@@ -1067,20 +1066,20 @@ namespace visimpl
   {
     auto updateColors = [&replace](HistogramWidget *w)
     {
-      if( !w->isInitialized( ) || replace)
-        w->CalculateColors( );
+      if( !w->isInitialized() || replace)
+        w->CalculateColors();
     };
     std::for_each( _histogramWidgets.begin(), _histogramWidgets.end(), updateColors);
   }
 
   unsigned int Summary::histogramsNumber( void )
   {
-    return _histogramWidgets.size( );
+    return _histogramWidgets.size();
   }
 
   void Summary::binsChanged( void )
   {
-    const unsigned int binsNumber = _spinBoxBins->value( );
+    const unsigned int binsNumber = _spinBoxBins->value();
     bins( binsNumber );
   }
 
@@ -1090,7 +1089,7 @@ namespace visimpl
 
 #ifdef VISIMPL_USE_OPENMP
     #pragma omp parallel for
-    for( int i = 0; i < ( int )_histogramWidgets.size( ); ++i )
+    for( int i = 0; i < ( int )_histogramWidgets.size(); ++i )
     {
       auto histogram = _histogramWidgets[ i ];
 #else
@@ -1098,13 +1097,13 @@ namespace visimpl
     {
 #endif
       histogram->bins( _bins );
-      histogram->update( );
+      histogram->update();
     }
   }
 
   void Summary::zoomFactorChanged( void )
   {
-    double value = _spinBoxZoomFactor->value( );
+    double value = _spinBoxZoomFactor->value();
 
     zoomFactor( value );
   }
@@ -1115,7 +1114,7 @@ namespace visimpl
 
 #ifdef VISIMPL_USE_OPENMP
     #pragma omp parallel for
-    for( int i = 0; i < static_cast<int>(_histogramWidgets.size( )); ++i )
+    for( int i = 0; i < static_cast<int>(_histogramWidgets.size()); ++i )
     {
       auto histogram = _histogramWidgets[ i ];
 #else
@@ -1124,7 +1123,7 @@ namespace visimpl
 #endif
 
       histogram->zoomFactor( _zoomFactor );
-      histogram->update( );
+      histogram->update();
     }
   }
 
@@ -1135,12 +1134,12 @@ namespace visimpl
     auto setFill = [&fillPlots_](HistogramWidget *w)
     {
       w->fillPlots( fillPlots_ );
-      w->update( );
+      w->update();
     };
     std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), setFill);
 
     _focusWidget->fillPlots( _fillPlots );
-    _focusWidget->update( );
+    _focusWidget->update();
   }
 
   void Summary::toggleAutoNameSelections( void )
@@ -1166,7 +1165,7 @@ namespace visimpl
     {
       w->setMinimumHeight( height_ );
       w->setMaximumHeight( height_ );
-      w->update( );
+      w->update();
     };
     std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), updateHeight);
   }
@@ -1195,7 +1194,7 @@ namespace visimpl
   {
     if( hideDelete )
     {
-      eventVisibility( i, !_eventWidgets[ i ]->isVisible( ));
+      eventVisibility( i, !_eventWidgets[ i ]->isVisible());
     }
     else
     {
@@ -1207,7 +1206,7 @@ namespace visimpl
   {
     if( hideDelete )
     {
-      subsetVisibility( i, !_histogramWidgets[ i ]->isVisible( ));
+      subsetVisibility( i, !_histogramWidgets[ i ]->isVisible());
     }
     else
     {
@@ -1221,13 +1220,13 @@ namespace visimpl
 
     auto updateWidget = [&counter](EventWidget *w)
     {
-      if( w->isVisible( ))
+      if( w->isVisible())
       {
         w->index( counter );
         ++counter;
       }
 
-      w->update( );
+      w->update();
     };
     std::for_each(_eventWidgets.begin(), _eventWidgets.end(), updateWidget);
   }
@@ -1238,13 +1237,13 @@ namespace visimpl
 
     auto updateHistogram = [&counter](HistogramWidget *w)
     {
-      if( !w->isVisible( ))
+      if( !w->isVisible())
         return;
 
       w->firstHistogram( counter == 0 );
       ++counter;
 
-      w->update( );
+      w->update();
     };
     std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), updateHistogram);
   }
@@ -1258,7 +1257,7 @@ namespace visimpl
 
     _events[ i ].visible = show;
 
-    updateEventWidgets( );
+    updateEventWidgets();
 
     repaintHistograms();
   }
@@ -1270,7 +1269,7 @@ namespace visimpl
     row.histogram->setVisible( show );
     row.label->setVisible( show );
 
-    updateHistogramWidgets( );
+    updateHistogramWidgets();
   }
 
   void Summary::clearEvents( void )
@@ -1285,16 +1284,16 @@ namespace visimpl
     };
     std::for_each(_eventRows.begin(), _eventRows.end(), removeRow);
 
-    _events.clear( );
-    _eventWidgets.clear( );
-    _eventRows.clear( );
+    _events.clear();
+    _eventWidgets.clear();
+    _eventRows.clear();
 
-    updateEventWidgets( );
+    updateEventWidgets();
 
     _eventLabelsScroll->setVisible( false );
     _scrollEvent->setVisible( false );
 
-    update( );
+    update();
   }
 
   void Summary::removeEvent( unsigned int i )
@@ -1307,14 +1306,14 @@ namespace visimpl
     delete timeFrameRow.label;
     delete timeFrameRow.widget;
 
-    _events.erase( _events.begin( ) + i );
-    _eventWidgets.erase( _eventWidgets.begin( ) + i );
+    _events.erase( _events.begin() + i );
+    _eventWidgets.erase( _eventWidgets.begin() + i );
 
-    _eventRows.erase( _eventRows.begin( ) + i);
+    _eventRows.erase( _eventRows.begin() + i);
 
-    updateEventWidgets( );
+    updateEventWidgets();
 
-    if( _eventRows.size( ) == 0 )
+    if( _eventRows.size() == 0 )
     {
       _eventLabelsScroll->setVisible( false );
       _scrollEvent->setVisible( false );
@@ -1326,14 +1325,14 @@ namespace visimpl
     auto& summaryRow = _histogramRows[ i ];
 
     // Avoid deleting last histogram
-    if( _mainHistogram == summaryRow.histogram && _histogramRows.size( ) <= 1 )
+    if( _mainHistogram == summaryRow.histogram && _histogramRows.size() <= 1 )
         return;
 
     if( _focusedHistogram == summaryRow.histogram )
     {
       _focusedHistogram = nullptr;
-      _focusWidget->clear( );
-      _focusWidget->update( );
+      _focusWidget->clear();
+      _focusWidget->update();
     }
 
     _layoutHistoLabels->removeWidget( summaryRow.label );
@@ -1343,11 +1342,11 @@ namespace visimpl
     delete summaryRow.histogram;
     delete summaryRow.checkBox;
 
-    _histogramWidgets.erase( _histogramWidgets.begin( ) + i );
+    _histogramWidgets.erase( _histogramWidgets.begin() + i );
 
-    _histogramRows.erase( _histogramRows.begin( ) + i );
+    _histogramRows.erase( _histogramRows.begin() + i );
 
-    updateHistogramWidgets( );
+    updateHistogramWidgets();
   }
 
   void Summary::colorScaleLocal( int value )
@@ -1375,11 +1374,15 @@ namespace visimpl
       w->colorScaleLocal( colorScale );
       w->CalculateColors( visimpl::HistogramWidget::T_HIST_MAIN );
       w->CalculateColors( visimpl::HistogramWidget::T_HIST_FOCUS );
-      w->update( );
+      w->update();
     };
     std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), setScaleLocal);
 
-    _focusWidget->update( );
+    if(_focusedHistogram)
+    {
+      _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+    }
+    _focusWidget->update();
   }
 
   visimpl::TColorScale Summary::colorScaleLocal( void )
@@ -1396,11 +1399,15 @@ namespace visimpl
       w->colorScaleGlobal( colorScale );
       w->CalculateColors( visimpl::HistogramWidget::T_HIST_MAIN );
       w->CalculateColors( visimpl::HistogramWidget::T_HIST_FOCUS );
-      w->update( );
+      w->update();
     };
     std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), setScaleGlobal);
 
-    _focusWidget->update( );
+    if(_focusedHistogram)
+    {
+      _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+    }
+    _focusWidget->update();
   }
 
   visimpl::TColorScale Summary::colorScaleGlobal( void )
@@ -1430,7 +1437,7 @@ namespace visimpl
     auto updateGridLinesNumber = [&linesNumber](HistogramWidget *w)
     {
       w->gridLinesNumber( linesNumber );
-      w->update( );
+      w->update();
     };
     std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), updateGridLinesNumber);
   }
@@ -1501,14 +1508,14 @@ namespace visimpl
 
   void Summary::_updateScaleHorizontal( void )
   {
-    _scaleCurrentHorizontal = std::max( 1.0, _spinBoxScaleHorizontal->value( ));
+    _scaleCurrentHorizontal = std::max( 1.0, _spinBoxScaleHorizontal->value());
 
     unsigned int rightMarginFactor = 1;
 
     if( _scaleCurrentHorizontal == 1.0 )
       rightMarginFactor = 2;
 
-    const unsigned int viewSize = _scrollHistogram->width( );
+    const unsigned int viewSize = _scrollHistogram->width();
 
      _sizeView = viewSize - _sizeMargin * rightMarginFactor;
 
@@ -1520,7 +1527,7 @@ namespace visimpl
 
   void Summary::_updateScaleVertical( void )
   {
-    _scaleCurrentVertical = std::max( 1.0, _spinBoxScaleVertical->value( ));
+    _scaleCurrentVertical = std::max( 1.0, _spinBoxScaleVertical->value());
 
     _sizeChartVertical = _sizeChartVerticalDefault * _scaleCurrentVertical;
 
@@ -1536,14 +1543,14 @@ namespace visimpl
     if( ( _stackType != T_STACK_EXPANDABLE) || !_layoutMain || !_scrollHistogram )
       return;
 
-    _layoutMain->activate( );
-    _layoutHistograms->activate( );
+    _layoutMain->activate();
+    _layoutHistograms->activate();
 
-    const unsigned int splitterRightSide = _scrollHistogram->width( );
+    const unsigned int splitterRightSide = _scrollHistogram->width();
 
-    _sizeChartHorizontal = _mainHistogram->size( ).width( );
+    _sizeChartHorizontal = _mainHistogram->size().width();
 
-    if( _flagUpdateChartSize && _mainHistogram->size( ).width( ) > 0)
+    if( _flagUpdateChartSize && _mainHistogram->size().width() > 0)
     {
       _sizeMargin = ( splitterRightSide - _sizeChartHorizontal ) / 2;
 
@@ -1563,13 +1570,13 @@ namespace visimpl
   {
     constexpr float minScale = 1.0f;
 
-    const bool sign = ( event_->delta( ) > 0 );
+    const bool sign = ( event_->delta() > 0 );
     const float adjustment = ( _scaleStep * ( sign ? 1 : ( -1 )));
 
-    if( event_->modifiers( ).testFlag( Qt::ControlModifier ))
+    if( event_->modifiers().testFlag( Qt::ControlModifier ))
     {
       if( _scaleCurrentHorizontal == minScale )
-        _sizeView = _mainHistogram->size( ).width( ) - _sizeMargin * 2;
+        _sizeView = _mainHistogram->size().width() - _sizeMargin * 2;
 
       _scaleCurrentHorizontal = std::max( minScale, _scaleCurrentHorizontal + adjustment );
 
@@ -1580,7 +1587,7 @@ namespace visimpl
 
       _spinBoxScaleHorizontal->setValue( _scaleCurrentHorizontal );
     }
-    else if( event_->modifiers( ).testFlag( Qt::ShiftModifier ))
+    else if( event_->modifiers().testFlag( Qt::ShiftModifier ))
     {
       _scaleCurrentVertical =
           std::max( minScale, _scaleCurrentVertical + adjustment );
@@ -1596,24 +1603,24 @@ namespace visimpl
     {
       if(_scrollHistogram)
       {
-        const auto pos = _scrollHistogram->horizontalScrollBar( )->value( ) + (10 * adjustment);
+        const auto pos = _scrollHistogram->horizontalScrollBar()->value() + (10 * adjustment);
 
-        _scrollHistoLabels->horizontalScrollBar( )->setValue( pos );
-        _scrollHistogram->horizontalScrollBar( )->setValue( pos );
+        _scrollHistoLabels->horizontalScrollBar()->setValue( pos );
+        _scrollHistogram->horizontalScrollBar()->setValue( pos );
       }
 
       if(_scrollEvent)
       {
-        const auto pos = _scrollEvent->horizontalScrollBar( )->value( ) + (10 * adjustment);
+        const auto pos = _scrollEvent->horizontalScrollBar()->value() + (10 * adjustment);
 
-        _eventLabelsScroll->horizontalScrollBar( )->setValue( pos );
-        _scrollEvent->horizontalScrollBar( )->setValue( pos );
+        _eventLabelsScroll->horizontalScrollBar()->setValue( pos );
+        _scrollEvent->horizontalScrollBar()->setValue( pos );
       }
     }
 
-    updateRegionBounds( );
+    updateRegionBounds();
 
-    event_->ignore( );
+    event_->ignore();
   }
 
   void Summary::moveHoriScrollSync( int /*action*/ )
@@ -1622,12 +1629,12 @@ namespace visimpl
     if(!sbar) return;
 
     if( sbar && _syncScrollsHorizontally &&
-        (sbar == _scrollEvent->horizontalScrollBar( ) ||
-         sbar == _scrollHistogram->horizontalScrollBar( )))
+        (sbar == _scrollEvent->horizontalScrollBar() ||
+         sbar == _scrollHistogram->horizontalScrollBar()))
     {
-      int newPos = sbar->sliderPosition( );
-      _scrollEvent->horizontalScrollBar( )->setValue( newPos );
-      _scrollHistogram->horizontalScrollBar( )->setValue( newPos );
+      int newPos = sbar->sliderPosition();
+      _scrollEvent->horizontalScrollBar()->setValue( newPos );
+      _scrollHistogram->horizontalScrollBar()->setValue( newPos );
     }
   }
 
@@ -1638,45 +1645,45 @@ namespace visimpl
       const auto sbar = qobject_cast<QScrollBar *>(sender());
       if(!sbar) return;
 
-      const auto newPos = sbar->sliderPosition( );
+      const auto newPos = sbar->sliderPosition();
 
-      if( sbar == _eventLabelsScroll->verticalScrollBar( ) ||
-          sbar == _scrollEvent->verticalScrollBar( ))
+      if( sbar == _eventLabelsScroll->verticalScrollBar() ||
+          sbar == _scrollEvent->verticalScrollBar())
       {
-        _eventLabelsScroll->verticalScrollBar( )->setValue( newPos );
-        _scrollEvent->verticalScrollBar( )->setValue( newPos );
+        _eventLabelsScroll->verticalScrollBar()->setValue( newPos );
+        _scrollEvent->verticalScrollBar()->setValue( newPos );
       }
-      else if( sbar == _scrollHistoLabels->verticalScrollBar( ) ||
-               sbar == _scrollHistogram->verticalScrollBar( ) )
+      else if( sbar == _scrollHistoLabels->verticalScrollBar() ||
+               sbar == _scrollHistogram->verticalScrollBar() )
       {
-        _scrollHistoLabels->verticalScrollBar( )->setValue( newPos );
-        _scrollHistogram->verticalScrollBar( )->setValue( newPos );
+        _scrollHistoLabels->verticalScrollBar()->setValue( newPos );
+        _scrollHistogram->verticalScrollBar()->setValue( newPos );
       }
     }
   }
 
-  void Summary::syncSplitters( )
+  void Summary::syncSplitters()
   {
-    if( sender( ) == _splitHorizEvents )
-      _splitHorizHisto->setSizes( _splitHorizEvents->sizes( ));
+    if( sender() == _splitHorizEvents )
+      _splitHorizHisto->setSizes( _splitHorizEvents->sizes());
     else
-      _splitHorizEvents->setSizes( _splitHorizHisto->sizes( ));
+      _splitHorizEvents->setSizes( _splitHorizHisto->sizes());
 
-    unsigned int splitterRightSide = _scrollHistogram->size( ).width( );
+    unsigned int splitterRightSide = _scrollHistogram->size().width();
 
     unsigned int rightMarginFactor = splitterRightSide > _sizeChartHorizontal ? 2 : 1;
 
     _sizeView = splitterRightSide - ( _sizeMargin * rightMarginFactor );
     _sizeChartHorizontal =
-        _mainHistogram ? _mainHistogram->size( ).width( ) : _sizeView * _scaleCurrentHorizontal;
+        _mainHistogram ? _mainHistogram->size().width() : _sizeView * _scaleCurrentHorizontal;
 
     _scaleCurrentHorizontal = static_cast<float> (_sizeChartHorizontal) / _sizeView;
   }
 
-  void Summary::adjustSplittersSize( )
+  void Summary::adjustSplittersSize()
   {
-    int lhs = width( ) * 0.2;
-    int rhs = width( ) - lhs;
+    int lhs = width() * 0.2;
+    int rhs = width() - lhs;
 
     QList< int > sizes;
     sizes << lhs << rhs;
@@ -1687,7 +1694,7 @@ namespace visimpl
 
   void Summary::focusPlayback( void )
   {
-    setFocusAt( _player->GetRelativeTime( ) );
+    setFocusAt( _player->GetRelativeTime() );
   }
 
   void Summary::setFocusAt( float perc )
@@ -1702,10 +1709,10 @@ namespace visimpl
         _focusedHistogram = _histogramWidgets.front();
       }
 
-      updateRegionBounds( );
+      updateRegionBounds();
 
       _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
-      _focusWidget->update( );
+      _focusWidget->update();
 
       _focusedHistogram->regionWidth( _regionWidth );
       _focusedHistogram->paintRegion(true);

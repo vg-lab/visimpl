@@ -419,30 +419,23 @@ namespace visimpl
 
   void MainWindow::openHDF5ThroughDialog( void )
   {
-    QString path = QFileDialog::getOpenFileName(
+    auto path = QFileDialog::getOpenFileName(
       this, tr( "Open a H5 network file" ), _lastOpenedNetworkFileName,
       tr( "hdf5 ( *.h5);; All files (*)" ), nullptr,
       QFileDialog::DontUseNativeDialog );
 
-    std::string networkFile;
-    std::string activityFile;
+    if ( path.isEmpty() ) return;
 
-    if ( path == QString( "" ) )
-      return;
-
-    networkFile = path.toStdString( );
+    const auto networkFile = path.toStdString( );
 
     path =
       QFileDialog::getOpenFileName( this, tr( "Open a H5 activity file" ), path,
                                     tr( "hdf5 ( *.h5);; All files (*)" ),
                                     nullptr, QFileDialog::DontUseNativeDialog );
 
-    if ( path == QString( "" ) )
-    {
-      return;
-    }
+    if ( path.isEmpty() ) return;
 
-    activityFile = path.toStdString( );
+    const auto activityFile = path.toStdString( );
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
     openHDF5File( networkFile, simil::TSimSpikes, activityFile );
@@ -650,7 +643,6 @@ namespace visimpl
 
     _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
       boost::bind( &MainWindow::requestPlayAt, this, _1 ) );
-
 #endif
 
     changeEditorColorMapping( );
@@ -672,8 +664,8 @@ namespace visimpl
 
     unsigned int totalHSpan = 20;
 
-    QWidget* content = new QWidget( );
-    QGridLayout* dockLayout = new QGridLayout( );
+    auto content = new QWidget( );
+    auto dockLayout = new QGridLayout( );
     content->setLayout( dockLayout );
 
     _simSlider = new CustomSlider( Qt::Horizontal );
@@ -685,9 +677,9 @@ namespace visimpl
     _playButton = new QPushButton( );
     _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
                                 QSizePolicy::MinimumExpanding );
-    QPushButton* stopButton = new QPushButton( );
-    QPushButton* nextButton = new QPushButton( );
-    QPushButton* prevButton = new QPushButton( );
+    auto stopButton = new QPushButton( );
+    auto nextButton = new QPushButton( );
+    auto prevButton = new QPushButton( );
 
     _repeatButton = new QPushButton( );
     _repeatButton->setCheckable( true );
@@ -1673,21 +1665,19 @@ namespace visimpl
 
   void MainWindow::_setZeqUri( const std::string& uri_ )
   {
-    _zeqConnection = true;
-    _zeqUri = uri_.empty( ) ? zeroeq::DEFAULT_SESSION : uri_;
+    if(!uri_.empty())
+    {
+      _zeqUri = uri_;
+      _zeqConnection = true;
+      _subscriber = new zeroeq::Subscriber( _zeqUri );
 
-    _subscriber = new zeroeq::Subscriber( _zeqUri );
+      _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
+        [&]( const void* data_, unsigned long long size_ )
+        { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
 
-    _subscriber->subscribe(
-      lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
-      [&]( const void* data_, unsigned long long size_ ) {
-        _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ) );
-      } );
-
-    _thread = new std::thread( [this]( ) {
-      while ( _zeqConnection )
-        _subscriber->receive( 10000 );
-    } );
+      _thread = new std::thread( [this]( )
+      { while ( _zeqConnection ) _subscriber->receive( 10000 ); } );
+    }
   }
 
   void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )

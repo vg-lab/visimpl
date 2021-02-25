@@ -287,7 +287,6 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
-
     std::unordered_set< uint32_t > _selectedGIDs;
 
     std::queue< std::pair< unsigned int, bool >> _pendingGroupStateChanges;
@@ -306,7 +305,6 @@ namespace visimpl
     bool _wireframe;
 
     Camera* _camera;
-    reto::OrbitalCameraController* _cameraOrbital;
     glm::vec3 _lastCameraPosition;
 
     vec3 _scaleFactor;
