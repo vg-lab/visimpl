@@ -27,7 +27,7 @@ namespace prefr
 {
 
 const static std::string prefrVertexShader = R"(
-#version 430
+#version 330
 //#extension GL_ARB_separate_shader_objects: enable
 
 uniform mat4 modelViewProjM;
@@ -63,7 +63,7 @@ void main()
 )";
 
 const static std::string prefrFragmentShaderDefault = R"(
-#version 430
+#version 330
 in vec4 color; 
 in vec2 uvCoord;
 out vec4 outputColor;
@@ -118,7 +118,6 @@ out float id;
 
 void main()
 {
-
   vec4 position = vec4((vertexPosition.x * particlePosition.a * cameraRight) + 
                   (vertexPosition.y * particlePosition.a * cameraUp) + 
                   particlePosition.rgb, 1.0); 
@@ -169,7 +168,7 @@ void main( )
 })";
 
 const static std::string planeVertCode = R"(
-#version 430
+#version 330
 
 in vec3 inPos;
 
@@ -190,7 +189,7 @@ void main( )
 
 
 const static std::string planeFragCode = R"(
-#version 430
+#version 330
 
 in vec4 outColor;
 out vec4 outputColor;

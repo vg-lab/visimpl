@@ -1667,16 +1667,38 @@ namespace visimpl
   {
     if(!uri_.empty())
     {
-      _zeqUri = uri_;
-      _zeqConnection = true;
-      _subscriber = new zeroeq::Subscriber( _zeqUri );
+      bool failed = false;
+      try
+      {
+        _zeqUri = uri_;
+        _zeqConnection = true;
+        _subscriber = new zeroeq::Subscriber( _zeqUri );
 
-      _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
-        [&]( const void* data_, unsigned long long size_ )
-        { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
+        _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
+          [&]( const void* data_, unsigned long long size_ )
+          { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
 
-      _thread = new std::thread( [this]( )
-      { while ( _zeqConnection ) _subscriber->receive( 10000 ); } );
+        _thread = new std::thread( [this]( )
+        { while ( _zeqConnection ) _subscriber->receive( 10000 ); } );
+      }
+      catch(std::exception &e)
+      {
+        std::cerr << e.what() << std::endl << " " << __FILE__ << ":" << __LINE__ << std::endl;
+        failed = true;
+      }
+      catch(...)
+      {
+        std::cerr << "Unknown exception catched when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
+        failed = true;
+      }
+
+      if(failed)
+      {
+        _zeqUri.clear();
+        _zeqConnection = false;
+        _subscriber = nullptr;
+        _thread = nullptr;
+      }
     }
   }
 

@@ -173,10 +173,32 @@ namespace visimpl
   {
   #ifdef VISIMPL_USE_ZEROEQ
     if ( !_zeqUri.empty( ) )
-      _camera = new Camera( _zeqUri );
-    else
+    {
+      bool failed = false;
+      try
+      {
+        _camera = new Camera( _zeqUri );
+      }
+      catch(std::exception &e)
+      {
+        std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
+        failed = true;
+      }
+      catch(...)
+      {
+        std::cerr << "Unknown exception catched when initializing camera. " << __FILE__ << ":" << __LINE__ << std::endl;
+        failed = true;
+      }
+
+      if(failed)
+      {
+        _camera = nullptr;
+        _zeqUri.clear();
+      }
+    }
   #endif
-      _camera = new Camera( );
+
+    if(!_camera) _camera = new Camera( );
 
     _camera->camera()->farPlane( 100000.f );
 
@@ -304,7 +326,20 @@ namespace visimpl
 
   #ifdef VISIMPL_USE_ZEROEQ
     if( !_zeqUri.empty( ))
-      _player->connectZeq( _zeqUri );
+    {
+      try
+      {
+        _player->connectZeq( _zeqUri );
+      }
+      catch(std::exception &e)
+      {
+        std::cerr << e.what() << std::endl;
+      }
+      catch(...)
+      {
+        std::cerr << "Unknown exception catched when connecting player. " << __FILE__ << ":" << __LINE__ << std::endl;
+      }
+    }
   #endif
     this->_paint = true;
     update( );
@@ -372,7 +407,14 @@ namespace visimpl
     subsetEventsManager(netData->subsetsEvents());
 
   #ifdef VISIMPL_USE_ZEROEQ
-    _player->connectZeq( _zeqUri );
+    try
+    {
+      _player->connectZeq( _zeqUri );
+    }
+    catch(...)
+    {
+
+    }
   #endif
     this->_paint = true;
     update( );
