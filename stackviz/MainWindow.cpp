@@ -927,15 +927,8 @@ void MainWindow::aboutDialog( void )
 
 #ifdef VISIMPL_USE_SIMIL
     "</li><li>SimIL " + SIMIL_REV_STRING +
-    "</li><li>Brion " + BRION_REV_STRING +
 #else
     "</li><li>SimIL " + tr ("support not built.") +
-#endif
-
-#if defined(SIMIL_USE_BRION) and defined(VISIMPL_USE_SIMIL)
-    "</li><li>Brion " + BRION_REV_STRING +
-#else
-    "</li><li>Brion " + tr ("support not built.") +
 #endif
 
 #ifdef VISIMPL_USE_ZEROEQ

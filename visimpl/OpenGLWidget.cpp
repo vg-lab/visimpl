@@ -885,7 +885,6 @@ namespace visimpl
 
       if( _player && _elapsedTimeSliderAcc > _sliderUpdatePeriodMicroseconds )
       {
-
         _elapsedTimeSliderAcc = 0.0f;
 
     #ifdef VISIMPL_USE_ZEROEQ
