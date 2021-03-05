@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2015-2020 GMRV/URJC.
+ * Copyright (c) 2015-2020 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
- * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License version 3.0 as published
@@ -344,14 +344,6 @@ void dumpVersion( void )
 
   std::cerr << "GmrvZeq support built-in: ";
   #ifdef VISIMPL_USE_GMRVLEX
-  std::cerr << "\tyes";
-  #else
-  std::cerr << "\tno";
-  #endif
-  std::cerr << std::endl;
-
-  std::cerr << "Deflect support built-in: ";
-  #ifdef VISIMPL_USE_DEFLECT
   std::cerr << "\tyes";
   #else
   std::cerr << "\tno";

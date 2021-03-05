@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2015-2020 GMRV/URJC.
+ * Copyright (c) 2015-2020 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
- * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License version 3.0 as published
@@ -22,12 +22,6 @@
 
 #ifdef VISIMPL_USE_GMRVLEX
 #include <gmrvlex/version.h>
-#endif
-#ifdef VISIMPL_USE_DEFLECT
-#include <deflect/version.h>
-#endif
-#ifdef VISIMPL_USE_NSOL
-#include <nsol/version.h>
 #endif
 #ifdef VISIMPL_USE_ZEROEQ
 #include <zeroeq/version.h>
@@ -93,6 +87,8 @@ namespace visimpl
 #endif
     , _ui( new Ui::MainWindow )
     , _lastOpenedNetworkFileName( "" )
+    , _playIcon(":/icons/play.svg")
+    , _pauseIcon(":/icons/pause.svg")
     , _openGLWidget( nullptr )
     , _domainManager( nullptr )
     , _subsetEvents( nullptr )
@@ -510,30 +506,10 @@ namespace visimpl
       "<h4>" + tr( "Build info:" ) + "</h4>" +
       "<ul>"
 
-#ifdef VISIMPL_USE_DEFLECT
-      "</li><li>Deflect " +
-      DEFLECT_REV_STRING +
-#else
-      "</li><li>Deflect " +
-      tr( "support not built." ) +
-#endif
-
-#ifdef VISIMPL_USE_FIRES
-      "</li><li>FiReS " + FIRES_REV_STRING +
-#else
-      "</li><li>FiReS " + tr( "support not built." ) +
-#endif
-
 #ifdef VISIMPL_USE_GMRVLEX
       "</li><li>GmrvLex " + GMRVLEX_REV_STRING +
 #else
       "</li><li>GmrvLex " + tr( "support not built." ) +
-#endif
-
-#ifdef VISIMPL_USE_NSOL
-      "</li><li>Nsol " + NSOL_REV_STRING +
-#else
-      "</li><li>Nsol " + tr( "support not built." ) +
 #endif
 
 #ifdef VISIMPL_USE_PREFR
@@ -560,6 +536,12 @@ namespace visimpl
       "</li><li>SimIL " + tr( "support not built." ) +
 #endif
 
+#if defined(SIMIL_USE_BRION) and defined(VISIMPL_USE_SIMIL)
+    "</li><li>Brion " + BRION_REV_STRING +
+#else
+    "</li><li>Brion " + tr ("support not built.") +
+#endif
+
 #ifdef VISIMPL_USE_ZEROEQ
       "</li><li>ZeroEQ " + ZEROEQ_REV_STRING +
 #else
@@ -567,11 +549,10 @@ namespace visimpl
 #endif
 
       "</li></ul>" + "<h4>" + tr( "Developed by:" ) + "</h4>" +
-      "GMRV / URJC / UPM"
+      "VG-Lab / URJC / UPM"
       "<br><a href='https://vg-lab.es/'>https://vg-lab.es/</a>"
-      //"<br><a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
       "<br>(C) 2015-" + QString::number(QDateTime::currentDateTime().date().year()) + "<br><br>"
-      "<a href='https://vg-lab.es/'><img src=':/icons/logoGMRV.png'/></a>"
+      "<a href='https://vg-lab.es/'><img src=':/icons/logoVGLab.png'/></a>"
       "&nbsp;&nbsp;&nbsp;&nbsp;"
       "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
       "&nbsp;&nbsp;&nbsp;&nbsp;"
@@ -674,43 +655,18 @@ namespace visimpl
     _simSlider->setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Preferred );
     _simSlider->setEnabled(false);
 
-    _playButton = new QPushButton( );
+    _playButton = new QPushButton(_playIcon, tr(""));
     _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
                                 QSizePolicy::MinimumExpanding );
-    auto stopButton = new QPushButton( );
-    auto nextButton = new QPushButton( );
-    auto prevButton = new QPushButton( );
+    auto stopButton = new QPushButton(QIcon(":/icons/stop.svg"), tr(""));
+    auto nextButton = new QPushButton(QIcon(":/icons/next.svg"), tr(""));
+    auto prevButton = new QPushButton(QIcon(":/icons/previous.svg"), tr(""));
 
-    _repeatButton = new QPushButton( );
+    _repeatButton = new QPushButton(QIcon(":/icons/repeat.svg"), tr(""));
     _repeatButton->setCheckable( true );
     _repeatButton->setChecked( false );
 
-    _goToButton = new QPushButton( );
-    _goToButton->setText( QString( "Play at..." ) );
-
-    QIcon stopIcon;
-    QIcon nextIcon;
-    QIcon prevIcon;
-    QIcon repeatIcon;
-
-    _playIcon.addFile( QStringLiteral( ":/icons/play.png" ), QSize( ),
-                       QIcon::Normal, QIcon::Off );
-    _pauseIcon.addFile( QStringLiteral( ":/icons/pause.png" ), QSize( ),
-                        QIcon::Normal, QIcon::Off );
-    stopIcon.addFile( QStringLiteral( ":/icons/stop.png" ), QSize( ),
-                      QIcon::Normal, QIcon::Off );
-    nextIcon.addFile( QStringLiteral( ":/icons/next.png" ), QSize( ),
-                      QIcon::Normal, QIcon::Off );
-    prevIcon.addFile( QStringLiteral( ":/icons/previous.png" ), QSize( ),
-                      QIcon::Normal, QIcon::Off );
-    repeatIcon.addFile( QStringLiteral( ":/icons/repeat.png" ), QSize( ),
-                        QIcon::Normal, QIcon::Off );
-
-    _playButton->setIcon( _playIcon );
-    stopButton->setIcon( stopIcon );
-    nextButton->setIcon( nextIcon );
-    prevButton->setIcon( prevIcon );
-    _repeatButton->setIcon( repeatIcon );
+    _goToButton = new QPushButton( tr("Play at...") );
 
     _startTimeLabel = new QLabel( "" );
     _startTimeLabel->setSizePolicy( QSizePolicy::MinimumExpanding,
@@ -768,6 +724,7 @@ namespace visimpl
                                           QSizePolicy::MinimumExpanding );
 
     _tfWidget = new TransferFunctionWidget( );
+    _tfWidget->setWindowIcon(QIcon(":/visimpl.png"));
     _tfWidget->setMinimumHeight( 100 );
 
     _subsetImporter = new SubsetImporter( this );

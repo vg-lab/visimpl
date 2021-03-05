@@ -1,24 +1,25 @@
 <RCC>
   <qresource prefix="/">
-    <file>icons/folder-doc.png</file>
-    <file>icons/folder.png</file>
-    <file>icons/hide.png</file>
-    <file>icons/show.png</file>
-    <file>icons/menu-play.png</file>
-    <file>icons/visimpl-icon-square.png</file>
-    <file>icons/logoGMRV.png</file>
+    <file>icons/folder-doc.svg</file>
+    <file>icons/folder.svg</file>
+    <file>icons/hide.svg</file>
+    <file>icons/show.svg</file>
+    <file>icons/logoVGLab.png</file>
     <file>icons/logoURJC.png</file>
     <file>icons/logoUPM.png</file>
-    <file>icons/query.png</file>
-    <file>icons/home.png</file>
-    <file>icons/close.png</file>
-    <file>icons/open_bc.png</file>
-    <file>icons/colorpicker.png</file>
-    <file>icons/play.png</file>
-    <file>icons/pause.png</file>
-    <file>icons/stop.png</file>
-    <file>icons/repeat.png</file>
-    <file>icons/previous.png</file>
-    <file>icons/next.png</file>
+    <file>icons/query.svg</file>
+    <file>icons/home.svg</file>
+    <file>icons/close.svg</file>
+    <file>icons/folder-bc.svg</file>
+    <file>icons/folder-csv.svg</file>
+    <file>icons/folder-h5.svg</file>
+    <file>icons/colorpicker.svg</file>
+    <file>icons/play.svg</file>
+    <file>icons/pause.svg</file>
+    <file>icons/stop.svg</file>
+    <file>icons/repeat.svg</file>
+    <file>icons/previous.svg</file>
+    <file>icons/next.svg</file>
+    <file>visimpl.png</file>
   </qresource>
 </RCC>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 GMRV/URJC.
+ * Copyright (c) 2015-2020 VG-Lab/URJC.
  *
  * Authors: Aaron Sujar <aaron.sujar@urjc.es>
  *
