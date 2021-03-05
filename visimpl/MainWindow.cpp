@@ -546,7 +546,7 @@ namespace visimpl
       "VG-Lab / URJC / UPM"
       "<br><a href='https://vg-lab.es/'>https://vg-lab.es/</a>"
       "<br>(C) 2015-" + QString::number(QDateTime::currentDateTime().date().year()) + "<br><br>"
-      "<a href='https://vg-lab.es/'><img src=':/icons/logoVGLab.png'/></a>"
+      "<a href='https://vg-lab.es'><img src=':/icons/logoVGLab.png'/></a>"
       "&nbsp;&nbsp;&nbsp;&nbsp;"
       "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
       "&nbsp;&nbsp;&nbsp;&nbsp;"

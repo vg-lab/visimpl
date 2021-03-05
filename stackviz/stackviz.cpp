@@ -67,7 +67,6 @@ int main( int argc, char** argv )
   simil::TDataType dataType = simil::TBlueConfig;
   simil::TSimulationType simType = simil::TSimSpikes;
 
-
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
   int initWindowWidth, initWindowHeight;
 
@@ -192,17 +191,6 @@ int main( int argc, char** argv )
   stackviz::MainWindow mainWindow;
   mainWindow.setWindowTitle("StackViz");
 
-  if ( initWindowSize )
-    mainWindow.resize( initWindowWidth, initWindowHeight );
-
-  if ( initWindowMaximized )
-    mainWindow.showMaximized( );
-
-  if ( fullscreen )
-    mainWindow.showFullScreen( );
-
-  mainWindow.show( );
-
 #ifdef VISIMPL_USE_ZEROEQ
   if(zeqUri.empty())
   {
@@ -211,6 +199,16 @@ int main( int argc, char** argv )
 #endif
 
   mainWindow.init( zeqUri );
+
+  if ( initWindowSize )
+    mainWindow.resize( initWindowWidth, initWindowHeight );
+
+  if ( initWindowMaximized )
+    mainWindow.showMaximized( );
+  else if ( fullscreen )
+    mainWindow.showFullScreen( );
+  else
+    mainWindow.show( );
 
   if( !networkFile.empty( ))
   switch( dataType )
@@ -238,8 +236,8 @@ int main( int argc, char** argv )
     default:
       break;
   }
-  return application.exec();
 
+  return application.exec();
 }
 
 void usageMessage( char* progName )
