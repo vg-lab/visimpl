@@ -207,8 +207,6 @@ void DisplayManagerWidget::refreshEvents(void)
   unsigned int row = 0;
   for (const auto &ev : *_eventData)
   {
-    TDisplayEventTuple pointers;
-
     QWidget *container = new QWidget();
     container->setMaximumHeight(50);
     // Fill name
@@ -260,8 +258,6 @@ void DisplayManagerWidget::refreshHistograms(void)
   unsigned int row = 0;
   for (const auto &hist : *_histData)
   {
-    TDisplayEventTuple pointers;
-
     QWidget *container = new QWidget();
     container->setMaximumHeight(50);
 

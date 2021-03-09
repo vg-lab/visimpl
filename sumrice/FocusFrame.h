@@ -32,7 +32,7 @@ class FocusFrame : public QFrame
 
 public:
 
-  FocusFrame( QWidget* parent = 0 );
+  FocusFrame( QWidget* parent = nullptr );
 
   void viewRegion( const visimpl::HistogramWidget& histogram,
                    float marker,// float offset,

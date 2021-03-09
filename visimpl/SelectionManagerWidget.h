@@ -38,7 +38,8 @@
 
 namespace visimpl
 {
-  class SelectionManagerWidget : public QWidget
+  class SelectionManagerWidget
+  : public QWidget
   {
     Q_OBJECT;
   public:
@@ -51,7 +52,7 @@ namespace visimpl
       TSEP_OTHER
     };
 
-    SelectionManagerWidget( QWidget* parent = 0 );
+    SelectionManagerWidget( QWidget* parent = nullptr );
     virtual ~SelectionManagerWidget( void ) {};
 
     void init( void );

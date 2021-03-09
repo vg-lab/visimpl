@@ -30,12 +30,8 @@
 #include <QScrollArea>
 #include <QCheckBox>
 
-// #include "SimulationPlayer.h"
 #include <sumrice/sumrice.h>
 #include <simil/simil.h>
-// #include "SimulationSummaryWidget.h"
-
-// #include "EditorTF/TransferFunctionEditor.h"
 
 #ifdef VISIMPL_USE_ZEROEQ
 #include <zeroeq/zeroeq.h>
@@ -55,19 +51,19 @@
 
 namespace Ui
 {
-class MainWindow;
+  class MainWindow;
 }
 
 namespace stackviz
 {
 
   class MainWindow
-    : public QMainWindow
+  : public QMainWindow
   {
     Q_OBJECT
 
   public:
-    explicit MainWindow( QWidget* parent = 0 );
+    explicit MainWindow( QWidget* parent = nullptr );
     ~MainWindow( void );
 
     void init( const std::string& zeqUri = "" );

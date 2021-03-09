@@ -29,7 +29,8 @@
 #include <QtCore/QEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
-#include <qapplication.h>
+#include <QApplication>
+#include <QPainterPath>
 
 // Sumrice
 #include "ColorPoints.h"
@@ -224,7 +225,7 @@ const QPolygonF &ColorPoints::points() const
 {
     _points = points_;
     _currentPoint = -1;
-    qSort(_points.begin(), _points.end(), pointLessThan);
+    std::sort(_points.begin(), _points.end(), pointLessThan);
     if (emitUpdate)
         emit pointsChanged(_points);
 
@@ -237,7 +238,7 @@ void ColorPoints::updatePointList()
         oldCurrent = _points[_currentPoint];
     
     /* First and last points are never sorted */
-    qSort(_points.begin() + 1, _points.end() - 1, pointLessThan);
+    std::sort(_points.begin() + 1, _points.end() - 1, pointLessThan);
     
     /* Finding the new current point */
     if (_currentPoint != -1)

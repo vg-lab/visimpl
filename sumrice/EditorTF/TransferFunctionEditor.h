@@ -38,7 +38,7 @@ class TransferFunctionEditor : public QWidget
 Q_OBJECT
 
 public:
-   TransferFunctionEditor( QWidget *parent_ = 0 );
+   TransferFunctionEditor( QWidget *parent_ = nullptr );
 
    ~TransferFunctionEditor( ) {};
 

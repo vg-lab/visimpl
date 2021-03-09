@@ -154,7 +154,7 @@ namespace visimpl
 
   void MainWindow::init( const std::string& zeqUri )
   {
-    _openGLWidget = new OpenGLWidget( 0, 0, zeqUri );
+    _openGLWidget = new OpenGLWidget( nullptr, Qt::WindowFlags(), zeqUri );
 
     this->setCentralWidget( _openGLWidget );
     qDebug( ) << _openGLWidget->format( );

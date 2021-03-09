@@ -34,7 +34,7 @@ public:
     enum Direction {HORIZONTAL, VERTICAL};
 
 public:
-    Gradient(QWidget *parent = 0);
+    Gradient(QWidget *parent = nullptr);
     virtual ~Gradient( ) {}
 
 public:

@@ -867,7 +867,7 @@ void MainWindow::calculateCorrelations(void)
 
   cc.configureEvents(eventNames, deltaTime);
 
-  auto correlateSubsets = [&eventNames, deltaTime, &cc](const std::string &event)
+  auto correlateSubsets = [&eventNames, &cc](const std::string &event)
   {
     cc.correlateSubset( event, eventNames, deltaTime, 2600, 2900 );
   };

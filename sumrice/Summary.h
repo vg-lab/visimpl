@@ -79,7 +79,7 @@ namespace visimpl
 
   public:
 
-    Summary( QWidget* parent = 0, TStackType stackType = T_STACK_FIXED);
+    Summary( QWidget* parent = nullptr, TStackType stackType = T_STACK_FIXED);
     virtual ~Summary( ){};
 
     void Init( simil::SimulationData* data_ );

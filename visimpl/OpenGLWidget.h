@@ -106,8 +106,8 @@ namespace visimpl
       EventLabel():upperWidget{nullptr}, colorLabel{nullptr}, label{nullptr}{};
     };
 
-    OpenGLWidget( QWidget* parent = 0,
-                  Qt::WindowFlags windowFlags = 0,
+    OpenGLWidget( QWidget* parent = nullptr,
+                  Qt::WindowFlags windowFlags = Qt::WindowFlags(),
                   const std::string& zeqUri = "" );
     virtual ~OpenGLWidget();
 
