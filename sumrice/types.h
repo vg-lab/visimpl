@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2015-2020 GMRV/URJC.
+ * Copyright (c) 2015-2020 VG-Lab/URJC.
  *
  * Authors: Pablo Toharia Rabasco  <pablo.toharia@urjc.es>
  *
- * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License version 3.0 as published

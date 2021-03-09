@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="resources.qrc">
-    <normaloff>:/icons/visimpl-icon-square.png</normaloff>:/icons/visimpl-icon-square.png</iconset>
+    <normaloff>:/visimpl.png</normaloff>:/visimpl.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar">
@@ -109,7 +109,7 @@
   <action name="actionOpenBlueConfig">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/open_bc.png</normaloff>:/icons/open_bc.png</iconset>
+     <normaloff>:/icons/folder-bc.svg</normaloff>:/icons/folder-bc.svg</iconset>
    </property>
    <property name="text">
     <string>Open BlueConfig...</string>
@@ -127,7 +127,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>
+     <normaloff>:/icons/close.svg</normaloff>:/icons/close.svg</iconset>
    </property>
    <property name="text">
     <string>Close Data</string>
@@ -165,7 +165,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/lines.png</normaloff>:/icons/lines.png</iconset>
+     <normaloff>:/icons/fill.svg</normaloff>:/icons/fill.svg</iconset>
    </property>
    <property name="text">
     <string>Fill Plots</string>
@@ -179,9 +179,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normalon>:/icons/menu-play.png</normalon>
-    </iconset>
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/play.svg</normaloff>
+     <normalon>:/icons/play.svg</normalon>:/icons/play.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Playback Dock</string>
@@ -196,7 +196,7 @@
   <action name="actionShowDataManager">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/list.png</normaloff>:/icons/list.png</iconset>
+     <normaloff>:/icons/generic-info.svg</normaloff>:/icons/generic-info.svg</iconset>
    </property>
    <property name="text">
     <string>Show Data Manager</string>
@@ -205,7 +205,7 @@
   <action name="actionFocusOnPlayhead">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/focus.png</normaloff>:/icons/focus.png</iconset>
+     <normaloff>:/icons/focus.svg</normaloff>:/icons/focus.svg</iconset>
    </property>
    <property name="text">
     <string>Focus on playhead</string>
@@ -220,7 +220,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/autofocus.png</normaloff>:/icons/autofocus.png</iconset>
+     <normaloff>:/icons/autofocus.svg</normaloff>:/icons/autofocus.svg</iconset>
    </property>
    <property name="text">
     <string>Follow playhead</string>
@@ -232,7 +232,7 @@
   <action name="actionOpenCSVFiles">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/folder.png</normaloff>:/icons/folder.png</iconset>
+     <normaloff>:/icons/folder-csv.svg</normaloff>:/icons/folder-csv.svg</iconset>
    </property>
    <property name="text">
     <string>Open CSV Files...</string>
@@ -244,7 +244,7 @@
   <action name="actionOpenSubsetEventsFile">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/folder-doc.png</normaloff>:/icons/folder-doc.png</iconset>
+     <normaloff>:/icons/folder-doc.svg</normaloff>:/icons/folder-doc.svg</iconset>
    </property>
    <property name="text">
     <string>Open Subset Events File...</string>
@@ -256,7 +256,7 @@
   <action name="actionOpenH5Files">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/folder.png</normaloff>:/icons/folder.png</iconset>
+     <normaloff>:/icons/folder-h5.svg</normaloff>:/icons/folder-h5.svg</iconset>
    </property>
    <property name="text">
     <string>Open H5 network and activity files...</string>

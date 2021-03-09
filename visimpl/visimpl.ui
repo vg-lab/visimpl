@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="resources.qrc">
-    <normaloff>:/icons/visimpl-icon-square.png</normaloff>:/icons/visimpl-icon-square.png</iconset>
+    <normaloff>:/visimpl.png</normaloff>:/visimpl.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar">
@@ -32,8 +32,6 @@
      <string>File</string>
     </property>
     <addaction name="actionOpenBlueConfig"/>
-    <addaction name="actionOpenXMLScene"/>
-    <addaction name="actionOpenSWCFile"/>
     <addaction name="actionOpenCSVFiles"/>
     <addaction name="actionOpenH5Files"/>
     <addaction name="separator"/>
@@ -89,13 +87,11 @@
    <addaction name="separator"/>
    <addaction name="actionCloseData"/>
    <addaction name="separator"/>
-   <addaction name="actionOpenSWCFile"/>
    <addaction name="actionHome"/>
    <addaction name="actionBackgroundColor"/>
    <addaction name="separator"/>
    <addaction name="actionTogglePlaybackDock"/>
    <addaction name="actionToggleSimConfigDock"/>
-   <addaction name="actionOpenXMLScene"/>
    <addaction name="separator"/>
    <addaction name="actionShowInactive"/>
   </widget>
@@ -129,7 +125,7 @@
   <action name="actionBackgroundColor">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/colorpicker.png</normaloff>:/icons/colorpicker.png</iconset>
+     <normaloff>:/icons/colorpicker.svg</normaloff>:/icons/colorpicker.svg</iconset>
    </property>
    <property name="text">
     <string>Background color...</string>
@@ -141,7 +137,7 @@
   <action name="actionOpenBlueConfig">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/open_bc.png</normaloff>:/icons/open_bc.png</iconset>
+     <normaloff>:/icons/folder-bc.svg</normaloff>:/icons/folder-bc.svg</iconset>
    </property>
    <property name="text">
     <string>Open BlueConfig...</string>
@@ -153,31 +149,13 @@
     <string>Ctrl+Shift+B</string>
    </property>
   </action>
-  <action name="actionOpenXMLScene">
-   <property name="icon">
-    <iconset>
-     <normaloff>:/icons/open_xml.png</normaloff>:/icons/open_xml.png</iconset>
-   </property>
-   <property name="text">
-    <string>Open XML Scene</string>
-   </property>
-   <property name="toolTip">
-    <string>Open XML Scene</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+X</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-  </action>
   <action name="actionCloseData">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>
+     <normaloff>:/icons/close.svg</normaloff>:/icons/close.svg</iconset>
    </property>
    <property name="text">
     <string>Close Data</string>
@@ -193,24 +171,6 @@
    </property>
    <property name="iconVisibleInMenu">
     <bool>true</bool>
-   </property>
-  </action>
-  <action name="actionOpenSWCFile">
-   <property name="icon">
-    <iconset>
-     <normaloff>:/icons/open_swc.png</normaloff>:/icons/open_swc.png</iconset>
-   </property>
-   <property name="text">
-    <string>Open SWC</string>
-   </property>
-   <property name="toolTip">
-    <string>Open SWC</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+S</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
    </property>
   </action>
   <action name="actionShowFPSOnIdleUpdate">
@@ -233,7 +193,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/query.png</normaloff>:/icons/query.png</iconset>
+     <normaloff>:/icons/query.svg</normaloff>:/icons/query.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Simulation Config Dock</string>
@@ -248,7 +208,7 @@
   <action name="actionHome">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/home.png</normaloff>:/icons/home.png</iconset>
+     <normaloff>:/icons/home.svg</normaloff>:/icons/home.svg</iconset>
    </property>
    <property name="text">
     <string>Home</string>
@@ -259,9 +219,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
-     <normalon>:/icons/menu-play.png</normalon>
-    </iconset>
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/play.svg</normaloff>
+     <normalon>:/icons/play.svg</normalon>:/icons/play.svg</iconset>
    </property>
    <property name="text">
     <string>Toggle Playback Dock</string>
@@ -331,9 +291,9 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/hide.png</normaloff>
-     <normalon>:/icons/show.png</normalon>:/icons/hide.png</iconset>
+    <iconset>
+     <normaloff>:/icons/hide.svg</normaloff>
+     <normalon>:/icons/show.svg</normalon>:/icons/hide.svg</iconset>
    </property>
    <property name="text">
     <string>Show inactive</string>
@@ -365,7 +325,7 @@
   <action name="actionOpenCSVFiles">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/folder.png</normaloff>:/icons/folder.png</iconset>
+     <normaloff>:/icons/folder-csv.svg</normaloff>:/icons/folder-csv.svg</iconset>
    </property>
    <property name="text">
     <string>Open CSV Files...</string>
@@ -377,7 +337,7 @@
   <action name="actionOpenSubsetEventsFile">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/folder-doc.png</normaloff>:/icons/folder-doc.png</iconset>
+     <normaloff>:/icons/folder-doc.svg</normaloff>:/icons/folder-doc.svg</iconset>
    </property>
    <property name="text">
     <string>Open Subset/Events File...</string>
@@ -389,7 +349,7 @@
   <action name="actionOpenH5Files">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/folder.png</normaloff>:/icons/folder.png</iconset>
+     <normaloff>:/icons/folder-h5.svg</normaloff>:/icons/folder-h5.svg</iconset>
    </property>
    <property name="text">
     <string>Open H5 Network and Activity Files...</string>

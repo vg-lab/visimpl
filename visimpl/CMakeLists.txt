@@ -128,4 +128,14 @@ if (BRION_FOUND)
   list(APPEND VISIMPL_LINK_LIBRARIES Brion Brain)
 endif()
 
+
+if (APPLE)
+  set(VISIMPL_ICON visimpl.icns)
+endif()
+
+if (UNIX AND NOT APPLE)
+  set(VISIMPL_ICON visimpl.png )
+endif()
+
+
 common_application( visimpl GUI ${COMMON_APP_ARGS})

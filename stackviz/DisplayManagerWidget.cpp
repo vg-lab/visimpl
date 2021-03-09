@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2015-2020 GMRV/URJC.
+ * Copyright (c) 2015-2020 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
- * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License version 3.0 as published
@@ -49,7 +49,7 @@ void DisplayManagerWidget::init(  const std::vector< visimpl::EventWidget* >* ev
   setMinimumWidth( 500 );
 
   setWindowTitle( "Visibility manager" );
-  setWindowIcon(QIcon(":/icons/visimpl-icon-square.png"));
+  setWindowIcon(QIcon(":/visimpl.png"));
 
   _eventData = eventData;
   _histData = histData;
@@ -207,8 +207,6 @@ void DisplayManagerWidget::refreshEvents(void)
   unsigned int row = 0;
   for (const auto &ev : *_eventData)
   {
-    TDisplayEventTuple pointers;
-
     QWidget *container = new QWidget();
     container->setMaximumHeight(50);
     // Fill name
@@ -217,13 +215,13 @@ void DisplayManagerWidget::refreshEvents(void)
 
     QLabel *nameLabel = new QLabel(tr(ev->name().c_str()), container);
     QPushButton *hideButton = new QPushButton(container);
-    hideButton->setIcon(QIcon(QPixmap(":icons/show.png")));
+    hideButton->setIcon(QIcon(QPixmap(":icons/show.svg")));
     hideButton->setCheckable(true);
     hideButton->setChecked(true);
     hideButton->setWhatsThis("Click to show/hide the row in main view.");
 
     QPushButton *deleteButton = new QPushButton(container);
-    deleteButton->setIcon(QIcon(QPixmap(":icons/trash.png")));
+    deleteButton->setIcon(QIcon(QPixmap(":icons/trash.svg")));
 
     contLayout->addWidget(nameLabel, row, 0, 1, 2);
     contLayout->addWidget(hideButton, row, 2, 1, 1);
@@ -260,8 +258,6 @@ void DisplayManagerWidget::refreshHistograms(void)
   unsigned int row = 0;
   for (const auto &hist : *_histData)
   {
-    TDisplayEventTuple pointers;
-
     QWidget *container = new QWidget();
     container->setMaximumHeight(50);
 
@@ -274,13 +270,13 @@ void DisplayManagerWidget::refreshHistograms(void)
     QLabel *numberLabel = new QLabel(QString::number(hist->gidsSize()), container);
 
     QPushButton *hideButton = new QPushButton(container);
-    hideButton->setIcon(QIcon(QPixmap(":icons/show.png")));
+    hideButton->setIcon(QIcon(QPixmap(":icons/show.svg")));
     hideButton->setCheckable(true);
     hideButton->setChecked(true);
     hideButton->setWhatsThis("Click to show/hide the row in main view.");
 
     QPushButton *deleteButton = new QPushButton(container);
-    deleteButton->setIcon(QIcon(QPixmap(":icons/trash.png")));
+    deleteButton->setIcon(QIcon(QPixmap(":icons/trash.svg")));
 
     contLayout->addWidget(nameLabel, row, 0, 1, 2);
     contLayout->addWidget(numberLabel, row, 2, 1, 1);
@@ -329,7 +325,7 @@ void DisplayManagerWidget::hideEventClicked()
 
       bool hidden = button->isChecked();
 
-      button->setIcon(QIcon(hidden ? ":icons/show.png" : ":icons/hide.png"));
+      button->setIcon(QIcon(hidden ? ":icons/show.svg" : ":icons/hide.svg"));
 
       emit(eventVisibilityChanged(counter, hidden));
 
@@ -381,7 +377,7 @@ void DisplayManagerWidget::hideHistoClicked()
 
       bool hidden = button->isChecked();
 
-      button->setIcon(QIcon(hidden ? ":icons/show.png" : ":icons/hide.png"));
+      button->setIcon(QIcon(hidden ? ":icons/show.svg" : ":icons/hide.svg"));
 
       emit(subsetVisibilityChanged(counter, hidden));
 

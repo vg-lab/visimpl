@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2015-2020 GMRV/URJC.
+ * Copyright (c) 2015-2020 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
- * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License version 3.0 as published
@@ -29,7 +29,8 @@
 #include <QtCore/QEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
-#include <qapplication.h>
+#include <QApplication>
+#include <QPainterPath>
 
 // Sumrice
 #include "ColorPoints.h"
@@ -224,7 +225,7 @@ const QPolygonF &ColorPoints::points() const
 {
     _points = points_;
     _currentPoint = -1;
-    qSort(_points.begin(), _points.end(), pointLessThan);
+    std::sort(_points.begin(), _points.end(), pointLessThan);
     if (emitUpdate)
         emit pointsChanged(_points);
 
@@ -237,7 +238,7 @@ void ColorPoints::updatePointList()
         oldCurrent = _points[_currentPoint];
     
     /* First and last points are never sorted */
-    qSort(_points.begin() + 1, _points.end() - 1, pointLessThan);
+    std::sort(_points.begin() + 1, _points.end() - 1, pointLessThan);
     
     /* Finding the new current point */
     if (_currentPoint != -1)

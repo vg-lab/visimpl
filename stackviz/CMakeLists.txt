@@ -92,4 +92,14 @@ if (BRION_FOUND)
   list(APPEND STACKVIZ_LINK_LIBRARIES Brion Brain)
 endif()
 
+
+if (APPLE)
+  set(VISIMPL_ICON visimpl.icns)
+endif()
+
+if (UNIX AND NOT APPLE)
+  set(VISIMPL_ICON visimpl.png )
+endif()
+
+
 common_application( stackviz GUI ${COMMON_APP_ARGS})

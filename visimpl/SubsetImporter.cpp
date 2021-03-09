@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2015-2020 GMRV/URJC.
+ * Copyright (c) 2015-2020 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
- * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License version 3.0 as published
@@ -40,29 +40,29 @@ namespace visimpl
   {
     init( );
 
-    setWindowIcon(QIcon(tr(":/icons/visimpl-icon-square.png")));
+    setWindowIcon(QIcon(tr(":/visimpl.png")));
     setWindowTitle(tr("Import Subsets"));
   }
 
   void SubsetImporter::init( void )
   {
-    QVBoxLayout* layoutUpper = new QVBoxLayout( );
+    auto layoutUpper = new QVBoxLayout( );
     this->setLayout( layoutUpper );
 
-    QGroupBox* gbSubsets = new QGroupBox( "Available subsets" );
-    QVBoxLayout* layoutGroupBox = new QVBoxLayout( );
+    auto gbSubsets = new QGroupBox( tr("Available subsets") );
+    auto layoutGroupBox = new QVBoxLayout( );
     gbSubsets->setLayout( layoutGroupBox );
 
-    QWidget* header = new QWidget( );
-    QGridLayout* layoutHeader = new QGridLayout( );
+    auto header = new QWidget( );
+    auto layoutHeader = new QGridLayout( );
     header->setLayout( layoutHeader );
-    QLabel* checkBoxHeader = new QLabel( tr( "Subset name" ));
-    QLabel* labelHeader = new QLabel( tr( "# elements" ));
+    auto checkBoxHeader = new QLabel( tr( "Subset name" ));
+    auto labelHeader = new QLabel( tr( "# elements" ));
 
     layoutHeader->addWidget( checkBoxHeader, 0, 0, 1, 2 );
     layoutHeader->addWidget( labelHeader, 0, 2, 1, 1 );
 
-    QScrollArea* scrollSubsets = new QScrollArea( );
+    auto scrollSubsets = new QScrollArea( );
     layoutGroupBox->addWidget( header );
     layoutGroupBox->addWidget( scrollSubsets );
 
@@ -70,14 +70,14 @@ namespace visimpl
     _layoutSubsets->setMargin( 0 );
     scrollSubsets->setLayout( _layoutSubsets );
 
-    QWidget* foot = new QWidget( );
-    QGridLayout* layoutBottom = new QGridLayout( );
+    auto foot = new QWidget( );
+    auto layoutBottom = new QGridLayout( );
     foot->setLayout( layoutBottom );
 
-    _buttonAccept = new QPushButton( "Accept" );
-    _buttonCancel = new QPushButton( "Cancel" );
+    _buttonAccept = new QPushButton( tr("Accept") );
+    _buttonCancel = new QPushButton( tr("Cancel") );
 
-    QFrame* line = new QFrame( );
+    auto line = new QFrame( );
     line->setFrameShape( QFrame::HLine );
     line->setFrameShadow( QFrame::Sunken );
 
@@ -107,12 +107,12 @@ namespace visimpl
     {
       const auto subset = _subsetEventManager->getSubset( subsetName );
 
-      QWidget* container = new QWidget( );
-      QGridLayout* layout = new QGridLayout( );
-      QCheckBox* checkBox = new QCheckBox( subsetName.c_str( ));
-      QLabel* label = new QLabel( QString::number( subset.size( )));
+      auto container = new QWidget( );
+      auto layout = new QGridLayout( );
+      auto checkBox = new QCheckBox( subsetName.c_str( ));
+      auto label = new QLabel( QString::number( subset.size( )));
 
-      auto row = std::make_tuple( container, layout, checkBox, label );
+      const auto row = std::make_tuple( container, layout, checkBox, label );
       _subsets.insert( std::make_pair( subsetName, row ));
 
       checkBox->setChecked( true );
@@ -144,7 +144,7 @@ namespace visimpl
   {
     std::vector< std::string > result;
 
-    auto selectSubsetIfChecked = [&result, this](const std::pair<const std::string, tSubsetLine> &row)
+    auto selectSubsetIfChecked = [&result](const std::pair<const std::string, tSubsetLine> &row)
     {
       if( std::get< sl_checkbox >( row.second )->isChecked( ))
         result.push_back( row.first );

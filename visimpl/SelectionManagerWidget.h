@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2015-2020 GMRV/URJC.
+ * Copyright (c) 2015-2020 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
- * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License version 3.0 as published
@@ -38,7 +38,8 @@
 
 namespace visimpl
 {
-  class SelectionManagerWidget : public QWidget
+  class SelectionManagerWidget
+  : public QWidget
   {
     Q_OBJECT;
   public:
@@ -51,7 +52,7 @@ namespace visimpl
       TSEP_OTHER
     };
 
-    SelectionManagerWidget( QWidget* parent = 0 );
+    SelectionManagerWidget( QWidget* parent = nullptr );
     virtual ~SelectionManagerWidget( void ) {};
 
     void init( void );

@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2015-2020 GMRV/URJC.
+ * Copyright (c) 2015-2020 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
- * This file is part of ViSimpl <https://github.com/gmrvvis/visimpl>
+ * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License version 3.0 as published
@@ -22,12 +22,6 @@
 
 #ifdef VISIMPL_USE_GMRVLEX
 #include <gmrvlex/version.h>
-#endif
-#ifdef VISIMPL_USE_DEFLECT
-#include <deflect/version.h>
-#endif
-#ifdef VISIMPL_USE_NSOL
-#include <nsol/version.h>
 #endif
 #ifdef VISIMPL_USE_ZEROEQ
 #include <zeroeq/version.h>
@@ -54,6 +48,7 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QShortcut>
+#include <QDateTime>
 
 #include <boost/bind.hpp>
 
@@ -77,6 +72,8 @@ MainWindow::MainWindow( QWidget* parent_ )
 , _repeatButton( nullptr )
 , _goToButton( nullptr )
 , _playing( false )
+, _playIcon(":/icons/play.svg")
+, _pauseIcon(":/icons/pause.svg")
 , _startTimeLabel( nullptr )
 , _endTimeLabel( nullptr )
 , _displayManager( nullptr )
@@ -455,43 +452,19 @@ void MainWindow::initPlaybackDock( )
   _simSlider->setSizePolicy( QSizePolicy::Preferred,
                              QSizePolicy::Preferred );
 
-  _playButton = new QPushButton( );
+  _playButton = new QPushButton(_playIcon, tr("") );
   _playButton->setSizePolicy( QSizePolicy::MinimumExpanding,
                               QSizePolicy::MinimumExpanding );
-  auto stopButton = new QPushButton();
-  auto nextButton = new QPushButton();
-  auto prevButton = new QPushButton();
+  auto stopButton = new QPushButton(QIcon(":/icons/stop.svg"), tr(""));
+  auto nextButton = new QPushButton(QIcon(":/icons/next.svg"), tr(""));
+  auto prevButton = new QPushButton(QIcon(":/icons/previous.svg"), tr(""));
 
-  _repeatButton = new QPushButton();
+  _repeatButton = new QPushButton(QIcon(":/icons/repeat.svg"), tr(""));
   _repeatButton->setCheckable(true);
   _repeatButton->setChecked(false);
 
   _goToButton = new QPushButton();
   _goToButton->setText(QString("Play at..."));
-
-  QIcon stopIcon;
-  QIcon nextIcon;
-  QIcon prevIcon;
-  QIcon repeatIcon;
-
-  _playIcon.addFile( QStringLiteral( ":/icons/play.png" ), QSize( ),
-                     QIcon::Normal, QIcon::Off );
-  _pauseIcon.addFile( QStringLiteral( ":/icons/pause.png" ), QSize( ),
-                      QIcon::Normal, QIcon::Off) ;
-  stopIcon.addFile( QStringLiteral( ":/icons/stop.png" ), QSize( ),
-                    QIcon::Normal, QIcon::Off );
-  nextIcon.addFile( QStringLiteral( ":/icons/next.png" ), QSize( ),
-                    QIcon::Normal, QIcon::Off );
-  prevIcon.addFile( QStringLiteral( ":/icons/previous.png" ), QSize( ),
-                    QIcon::Normal, QIcon::Off );
-  repeatIcon.addFile( QStringLiteral( ":/icons/repeat.png" ), QSize( ),
-                      QIcon::Normal, QIcon::Off );
-
-  _playButton->setIcon(_playIcon);
-  stopButton->setIcon(stopIcon);
-  nextButton->setIcon(nextIcon);
-  prevButton->setIcon(prevIcon);
-  _repeatButton->setIcon(repeatIcon);
 
   _startTimeLabel = new QLabel( "" );
   _startTimeLabel->setSizePolicy( QSizePolicy::MinimumExpanding,
@@ -894,7 +867,7 @@ void MainWindow::calculateCorrelations(void)
 
   cc.configureEvents(eventNames, deltaTime);
 
-  auto correlateSubsets = [&eventNames, deltaTime, &cc](const std::string &event)
+  auto correlateSubsets = [&eventNames, &cc](const std::string &event)
   {
     cc.correlateSubset( event, eventNames, deltaTime, 2600, 2900 );
   };
@@ -921,36 +894,17 @@ void MainWindow::aboutDialog( void )
 {
   QString msj =
     QString( "<h2>ViSimpl - StackViz</h2>" ) +
-    tr( "A multi-view visual analyzer of brain simulation data. " ) +
-    "<br>" +
+    tr( "A multi-view visual analyzer of brain simulation data. " ) + "<br>" +
     tr( "Version " ) + stackviz::Version::getString( ).c_str( ) +
     tr( " rev (%1)<br>").arg(stackviz::Version::getRevision( )) +
-    "<a href='https://gmrv.es/visimpl/'>https://gmrv.es/visimpl</a>" +
+    "<a href='https://vg-lab.es/visimpl/'>https://vg-lab.es/visimpl</a>" +
     "<h4>" + tr( "Build info:" ) + "</h4>" +
     "<ul>"
-
-#ifdef VISIMPL_USE_DEFLECT
-    "</li><li>Deflect " + DEFLECT_REV_STRING +
-#else
-    "</li><li>Deflect " + tr ("support not built.") +
-#endif
-
-#ifdef VISIMPL_USE_FIRES
-    "</li><li>FiReS " + FIRES_REV_STRING +
-#else
-    "</li><li>FiReS " + tr ("support not built.") +
-#endif
 
 #ifdef VISIMPL_USE_GMRVLEX
     "</li><li>GmrvLex " + GMRVLEX_REV_STRING +
 #else
     "</li><li>GmrvLex " + tr ("support not built.") +
-#endif
-
-#ifdef VISIMPL_USE_NSOL
-    "</li><li>Nsol " + NSOL_REV_STRING +
-#else
-    "</li><li>Nsol " + tr ("support not built.") +
 #endif
 
 #ifdef VISIMPL_USE_PREFR
@@ -985,11 +939,10 @@ void MainWindow::aboutDialog( void )
 
   "</li></ul>" +
   "<h4>" + tr( "Developed by:" ) + "</h4>" +
-  "GMRV / URJC / UPM"
-  "<br><a href='https://gmrv.es/gmrvvis'>https://gmrv.es/gmrvvis</a>"
-  //"<br><a href='mailto:gmrv@gmrv.es'>gmrv@gmrv.es</a><br><br>"
-  "<br>(C) 2015-2017<br><br>"
-  "<a href='https://gmrv.es/gmrvvis'><img src=':/icons/logoGMRV.png'/></a>"
+  "VG-Lab / URJC / UPM"
+  "<br><a href='https://vg-lab.es'>https://vg-lab.es</a>"
+  "<br>(C) 2015-" + QString::number(QDateTime::currentDateTime().date().year()) + "<br><br>"
+  "<a href='https://vg-lab.es'><img src=':/icons/logoVGLab.png'/></a>"
   "&nbsp;&nbsp;&nbsp;&nbsp;"
   "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
   "&nbsp;&nbsp;&nbsp;&nbsp;"

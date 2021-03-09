@@ -2,7 +2,7 @@
 #git_subproject( ZeroEQ https://github.com/HBPVis/ZeroEQ.git 73b209a )
 #git_subproject( Lexis https://github.com/HBPVis/Lexis.git c24dc07 )
 #git_subproject( gmrvlex git@gitlab.gmrv.es:nsviz/gmrvlex.git c20b194 )
-git_subproject( Brion https://github.com/BlueBrain/Brion.git 073f356 )
+#git_subproject( Brion https://github.com/BlueBrain/Brion.git 073f356 )
 git_subproject( ReTo https://github.com/gmrvvis/ReTo.git 14e08c0 )
 git_subproject( prefr https://github.com/gmrvvis/prefr.git cddcf27 )
 git_subproject( SimIL https://github.com/gmrvvis/SimIL.git 697bc51 )
