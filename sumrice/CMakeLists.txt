@@ -57,6 +57,11 @@ if (LEXIS_FOUND)
   list( APPEND SUMRICE_LINK_LIBRARIES Lexis )
 endif()
 
+if (OPENMP_FOUND)
+  list(APPEND SUMRICE_LINK_LIBRARIES OpenMP::OpenMP_CXX)
+endif()
+
+
 set(SUMRICE_INCLUDE_NAME sumrice)
 set(SUMRICE_NAMESPACE sumrice)
 add_definitions(-DVISIMPL_SHARED)
