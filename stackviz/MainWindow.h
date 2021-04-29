@@ -84,6 +84,12 @@ namespace stackviz
                       const std::string& activityFile = "",
                       const std::string& subsetEventFile = "" );
 
+#ifdef SIMIL_WITH_REST_API
+    void openRestListener( const std::string& networkFile,
+                           simil::TSimulationType simulationType,
+                           const std::string& activityFile = "",
+                           const std::string& subsetEventFile = "");
+#endif
 
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
@@ -186,6 +192,11 @@ namespace stackviz
     std::thread* _thread;
 
   #endif
+
+  #ifdef SIMIL_WITH_REST_API
+    simil::LoaderSimData* _importer;
+  #endif
+
 
   private:
     /** \brief Helper method to update the UI after a dataset has been loaded.

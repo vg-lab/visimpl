@@ -41,7 +41,6 @@ set(STACKVIZ_HEADERS
   log.h  
 )
 
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set(STACKVIZ_LINK_LIBRARIES
@@ -94,11 +93,11 @@ endif()
 
 
 if (APPLE)
-  set(VISIMPL_ICON visimpl.icns)
+  set(STACKVIZ_ICON visimpl.icns)
 endif()
 
 if (UNIX AND NOT APPLE)
-  set(VISIMPL_ICON visimpl.png )
+  set(STACKVIZ_ICON visimpl.png )
 endif()
 
 

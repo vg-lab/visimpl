@@ -32,6 +32,7 @@
 #include <QShortcut>
 #include <QGraphicsOpacityEffect>
 #include <QLabel>
+#include <QDir>
 
 // C++
 #include <sstream>
@@ -268,6 +269,10 @@ namespace visimpl
 
     if( _player )
       delete _player;
+#ifdef SIMIL_WITH_REST_API
+    if(_importer)
+      delete _importer;
+#endif
   }
 
   void OpenGLWidget::loadData( const std::string& fileName,
@@ -281,11 +286,19 @@ namespace visimpl
 
     _deltaTime = 0.5f;
 
-    simil::SpikeData* spikeData = new simil::SpikeData( fileName, fileType, report );
-    spikeData->reduceDataToGIDS( );
+    try
+    {
+      auto spikeData = new simil::SpikeData( fileName, fileType, report );
+      spikeData->reduceDataToGIDS( );
 
-    _player = new simil::SpikesPlayer( );
-    _player->LoadData( spikeData );
+      _player = new simil::SpikesPlayer( );
+      _player->LoadData( spikeData );
+    }
+    catch(const std::exception &e)
+    {
+      std::cerr << "ERROR: " << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
+      throw;
+    }
 
     InitialConfig config;
     float scale = 1.0f;
@@ -370,9 +383,14 @@ namespace visimpl
     std::cout << "Network" << std::endl;
     std::cout << "--------------------------------------" << std::endl;
 
+    simil::Network* netData = _importer->loadNetwork(url,port);
+
     simil::SimulationData* simData = _importer->loadSimulationData(url,port);
 
-    simil::Network* netData = _importer->loadNetwork(url,port);
+    // @felix REFACTOR NEEDED: if we continue the network will be empty as the
+    // data has not yet been received and nothing will be shown.
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
+    //
 
     std::cout << "Loaded GIDS: " << netData->gids( ).size( ) << std::endl;
     std::cout << "Loaded positions: " << netData->positions( ).size( )
@@ -381,7 +399,6 @@ namespace visimpl
     std::cout << "--------------------------------------" << std::endl;
     std::cout << "Spikes" << std::endl;
     std::cout << "--------------------------------------" << std::endl;
-
 
     simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer();
     spPlayer->LoadData( netData, simData );
@@ -600,50 +617,131 @@ namespace visimpl
     makeCurrent( );
     prefr::Config::init( );
 
-    // Initialize shader
-    _shaderParticlesDefault = new reto::ShaderProgram( );
-    _shaderParticlesDefault->loadVertexShaderFromText( prefr::prefrVertexShader );
-    _shaderParticlesDefault->loadFragmentShaderFromText( prefr::prefrFragmentShaderDefault );
-    _shaderParticlesDefault->compileAndLink( );
-    _shaderParticlesDefault->autocatching( );
+    // For debugging purposes only
+    bool success = false;
+    const auto shadersFile = std::getenv("VISIMPL_SHADERS_FILE");
+    if(shadersFile)
+    {
+      QFile sFile{QString::fromLocal8Bit(shadersFile)};
+      if(sFile.open(QIODevice::ReadOnly|QIODevice::Text))
+      {
+        const auto contents = sFile.readAll();
+        const auto shaders = contents.split('@');
 
-    _shaderParticlesCurrent = _shaderParticlesDefault;
-    _currentShader = T_SHADER_DEFAULT;
+        if(shaders.size() == 7)
+        {
+          bool shadersSuccess[4]{true, true, true, true};
+          auto prefrVertexShader = std::string(shaders.at(0).data(), shaders.at(0).size());
 
-    // Initialize shader
-    _shaderParticlesSolid = new reto::ShaderProgram( );
-    _shaderParticlesSolid->loadVertexShaderFromText( prefr::prefrVertexShader );
-    _shaderParticlesSolid->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
-    _shaderParticlesSolid->compileAndLink( );
-    _shaderParticlesSolid->autocatching( );
+          _shaderParticlesDefault = new reto::ShaderProgram( );
+          shadersSuccess[0] &= _shaderParticlesDefault->loadVertexShaderFromText( std::string(shaders.at(0).data(), shaders.at(0).size()) );
+          shadersSuccess[0] &= _shaderParticlesDefault->loadFragmentShaderFromText( std::string(shaders.at(1).data(), shaders.at(1).size()) );
+          shadersSuccess[0] &= _shaderParticlesDefault->compileAndLink( );
+          _shaderParticlesDefault->autocatching( );
 
+          if(!shadersSuccess[0])
+          {
+            std::cout << "shaders failed at _shaderParticlesDefault." << __FILE__ << ":" << __LINE__ << std::endl;
+          }
 
-    _shaderPicking = new prefr::RenderProgram( );
-    _shaderPicking->loadVertexShaderFromText( prefr::prefrVertexShaderPicking );
-    _shaderPicking->loadFragmentShaderFromText( prefr::prefrFragmentShaderPicking );
-    _shaderPicking->compileAndLink( );
+          _shaderParticlesCurrent = _shaderParticlesDefault;
+          _currentShader = T_SHADER_DEFAULT;
 
-    _shaderClippingPlanes = new reto::ShaderProgram( );
-    _shaderClippingPlanes->loadVertexShaderFromText( prefr::planeVertCode );
-    _shaderClippingPlanes->loadFragmentShaderFromText( prefr::planeFragCode );
-    _shaderClippingPlanes->compileAndLink( );
-    _shaderClippingPlanes->autocatching( );
+          _shaderParticlesSolid = new reto::ShaderProgram( );
+          shadersSuccess[1] &= _shaderParticlesSolid->loadVertexShaderFromText( std::string(shaders.at(0).data(), shaders.at(0).size()) );
+          shadersSuccess[1] &= _shaderParticlesSolid->loadFragmentShaderFromText( std::string(shaders.at(2).data(), shaders.at(2).size()) );
+          shadersSuccess[1] &= _shaderParticlesSolid->compileAndLink( );
+          _shaderParticlesSolid->autocatching( );
 
-    unsigned int maxParticles =
-        std::max(( unsigned int ) 100000, ( unsigned int ) _player->gids( ).size( ));
+          if(!shadersSuccess[1])
+          {
+            std::cout << "shaders failed at _shaderParticlesSolid." << __FILE__ << ":" << __LINE__ << std::endl;
+          }
+
+          _shaderPicking = new prefr::RenderProgram( );
+          shadersSuccess[2] &= _shaderPicking->loadVertexShaderFromText( std::string(shaders.at(3).data(), shaders.at(3).size()) );
+          shadersSuccess[2] &= _shaderPicking->loadFragmentShaderFromText( std::string(shaders.at(4).data(), shaders.at(4).size()) );
+          shadersSuccess[2] &= _shaderPicking->compileAndLink( );
+
+          if(!shadersSuccess[2])
+          {
+            std::cout << "shaders failed at _shaderPicking." << __FILE__ << ":" << __LINE__ << std::endl;
+          }
+
+          _shaderClippingPlanes = new reto::ShaderProgram( );
+          shadersSuccess[3] &= _shaderClippingPlanes->loadVertexShaderFromText( std::string(shaders.at(5).data(), shaders.at(5).size()) );
+          shadersSuccess[3] &= _shaderClippingPlanes->loadFragmentShaderFromText( std::string(shaders.at(6).data(), shaders.at(6).size()) );
+          shadersSuccess[3] &= _shaderClippingPlanes->compileAndLink( );
+          _shaderClippingPlanes->autocatching( );
+
+          if(!shadersSuccess[3])
+          {
+            std::cout << "shaders failed at _shaderClippingPlanes." << __FILE__ << ":" << __LINE__ << std::endl;
+          }
+
+          if(shadersSuccess[0] && shadersSuccess[1] && shadersSuccess[2] && shadersSuccess[3])
+          {
+            success = true;
+            std::cout << "Loaded shaders from: " << sFile.fileName().toStdString() << std::endl;
+          }
+        }
+      }
+      else
+      {
+        std::cerr << "Unable to read " << sFile.fileName().toStdString() << " reverting to default shaders.";
+      }
+    }
+
+    if(!success)
+    {
+      // Default shaders.
+
+      // Initialize shader
+      _shaderParticlesDefault = new reto::ShaderProgram( );
+      _shaderParticlesDefault->loadVertexShaderFromText( prefr::prefrVertexShader );
+      _shaderParticlesDefault->loadFragmentShaderFromText( prefr::prefrFragmentShaderDefault );
+      _shaderParticlesDefault->compileAndLink( );
+      _shaderParticlesDefault->autocatching( );
+
+      _shaderParticlesCurrent = _shaderParticlesDefault;
+      _currentShader = T_SHADER_DEFAULT;
+
+      _shaderParticlesSolid = new reto::ShaderProgram( );
+      _shaderParticlesSolid->loadVertexShaderFromText( prefr::prefrVertexShader );
+      _shaderParticlesSolid->loadFragmentShaderFromText( prefr::prefrFragmentShaderSolid );
+      _shaderParticlesSolid->compileAndLink( );
+      _shaderParticlesSolid->autocatching( );
+
+      _shaderPicking = new prefr::RenderProgram( );
+      _shaderPicking->loadVertexShaderFromText( prefr::prefrVertexShaderPicking );
+      _shaderPicking->loadFragmentShaderFromText( prefr::prefrFragmentShaderPicking );
+      _shaderPicking->compileAndLink( );
+
+      _shaderClippingPlanes = new reto::ShaderProgram( );
+      _shaderClippingPlanes->loadVertexShaderFromText( prefr::planeVertCode );
+      _shaderClippingPlanes->loadFragmentShaderFromText( prefr::planeFragCode );
+      _shaderClippingPlanes->compileAndLink( );
+      _shaderClippingPlanes->autocatching( );
+
+      std::cout << "Loaded default shaders." << std::endl;
+    }
+
+    const unsigned int maxParticles =
+        std::max(100000u, static_cast<unsigned int>( _player->gids( ).size( )));
 
     _updateData( );
 
     _particleSystem = new prefr::ParticleSystem( maxParticles, _camera );
     _flagResetParticles = true;
 
-    _domainManager = new DomainManager( _particleSystem, _gids);
+    _domainManager = new DomainManager( _particleSystem, _player->gids());
 #ifdef SIMIL_USE_BRION
       _domainManager->init( _gidPositions, _player->data( )->blueConfig( ));
 #else
       _domainManager->init( _gidPositions );
 #endif
     _domainManager->initializeParticleSystem( );
+    _domainManager->updateData( _player->gids(), _gidPositions);
 
     _pickRenderer =
         dynamic_cast< prefr::GLPickRenderer* >( _particleSystem->renderer( ));
@@ -677,11 +775,8 @@ namespace visimpl
 
     glFrontFace(GL_CCW);
 
-    _shaderParticlesCurrent->use( );
-        // unsigned int shader;
-        // shader = _particlesShader->getID();
-    unsigned int shader;
-    shader = _shaderParticlesCurrent->program( );
+    _shaderParticlesCurrent->use();
+    unsigned int shader = _shaderParticlesCurrent->program( );
 
     unsigned int uModelViewProjM;
     unsigned int cameraUp;
@@ -694,7 +789,6 @@ namespace visimpl
 
     cameraUp = glGetUniformLocation( shader, "cameraUp" );
     cameraRight = glGetUniformLocation( shader, "cameraRight" );
-
     particleRadius = glGetUniformLocation( shader, "radiusThreshold" );
 
     float* viewM = _camera->camera()->viewMatrix( );
@@ -785,7 +879,7 @@ namespace visimpl
       std::chrono::time_point< std::chrono::system_clock > now =
           std::chrono::system_clock::now( );
 
-      unsigned int elapsedMicroseconds =
+      const unsigned int elapsedMicroseconds =
           std::chrono::duration_cast< std::chrono::microseconds >
             ( now - _lastFrame ).count( );
 
@@ -844,7 +938,6 @@ namespace visimpl
               default:
                 break;
             }
-
 
             if( _elapsedTimeRenderAcc >= _renderPeriodMicroseconds )
             {
@@ -1068,18 +1161,19 @@ namespace visimpl
 
   void OpenGLWidget::_updateData( void )
   {
-    _gids = _player->gids();
-    _positions = _player->positions();
+    const auto &positions = _player->positions();
 
     _gidPositions.clear();
+    _gidPositions.reserve(positions.size());
 
-    _gidPositions.reserve(_positions.size());
-    auto gidit = _gids.begin();
-    for (auto pos : _positions)
+    auto gidit = _player->gids().begin();
+    for (const auto &pos : positions)
     {
-      vec3 position(pos.x(), pos.y(), pos.z());
+      const vec3 position(pos.x() * _scaleFactor.x,
+                          pos.y() * _scaleFactor.y,
+                          pos.z() * _scaleFactor.z);
 
-      _gidPositions.insert(std::make_pair(*gidit, position * _scaleFactor));
+      _gidPositions.insert(std::make_pair(*gidit, position));
       ++gidit;
     }
   }
@@ -1087,7 +1181,7 @@ namespace visimpl
   void OpenGLWidget::_updateNewData( void )
   {
     _updateData();
-    _domainManager->updateData(_gids, _gidPositions );
+    _domainManager->updateData(_player->gids(), _gidPositions );
     _focusOn( _domainManager->boundingBox( ));
     _flagNewData = false;
     _flagUpdateRender = true;
@@ -1121,12 +1215,20 @@ namespace visimpl
 
   void OpenGLWidget::updateCameraBoundingBox( bool setBoundingBox )
   {
-    auto boundingBox = _domainManager->boundingBox( );
+    if(_gidPositions.empty()) return;
 
-    if( setBoundingBox )
-      _boundingBoxHome = boundingBox;
+    const auto boundingBox = _domainManager->boundingBox( );
 
-    _focusOn( boundingBox );
+    const glm::vec3 MAX{std::numeric_limits<float>::max(),std::numeric_limits<float>::max(),std::numeric_limits<float>::max()};
+    const glm::vec3 MIN{std::numeric_limits<float>::min(),std::numeric_limits<float>::min(),std::numeric_limits<float>::min()};
+
+    if(boundingBox.first != MAX && boundingBox.second != MIN)
+    {
+      if( setBoundingBox )
+        _boundingBoxHome = boundingBox;
+
+      _focusOn( boundingBox );
+    }
   }
 
   void OpenGLWidget::_focusOn( const tBoundingBox& boundingBox )
@@ -1143,9 +1245,8 @@ namespace visimpl
   {
     _shaderPicking->use( );
     unsigned int shader = _shaderPicking->program( );
+    unsigned int particleRadius = glGetUniformLocation( shader, "radiusThreshold" );
 
-    unsigned int particleRadius =
-        glGetUniformLocation( shader, "radiusThreshold" );
     glUniform1f( particleRadius, _particleRadiusThreshold );
 
     auto result =
@@ -1199,7 +1300,7 @@ namespace visimpl
     if( update && _player )
     {
       _updateData();
-      _domainManager->updateData(_gids, _gidPositions );
+      _domainManager->updateData(_player->gids(), _gidPositions );
       _focusOn( _domainManager->boundingBox( ));
     }
 

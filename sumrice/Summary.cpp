@@ -136,8 +136,6 @@ namespace visimpl
       _layoutMain->addWidget(_splitVertEventsHisto );
     }
 
-    this->setLayout( _layoutMain );
-
   #ifdef VISIMPL_USE_ZEROEQ
 
     _insertionTimer.setSingleShot( false );
@@ -193,6 +191,7 @@ namespace visimpl
 
       _layoutMain = new QVBoxLayout();
       _layoutMain->setAlignment( Qt::AlignTop );
+      this->setLayout( _layoutMain );
 
       _layoutEventLabels = new QGridLayout();
       _layoutEventLabels->setAlignment( Qt::AlignTop );
@@ -1099,6 +1098,12 @@ namespace visimpl
       histogram->bins( _bins );
       histogram->update();
     }
+
+    if(_focusedHistogram)
+    {
+      _focusWidget->viewRegion( *_focusedHistogram, _regionPercentage, _regionWidth );
+      _focusWidget->update();
+    }
   }
 
   void Summary::zoomFactorChanged( void )
@@ -1570,7 +1575,7 @@ namespace visimpl
   {
     constexpr float minScale = 1.0f;
 
-    const bool sign = ( event_->delta() > 0 );
+    const bool sign = ( event_->angleDelta().y() > 0 );
     const float adjustment = ( _scaleStep * ( sign ? 1 : ( -1 )));
 
     if( event_->modifiers().testFlag( Qt::ControlModifier ))

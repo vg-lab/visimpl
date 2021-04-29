@@ -190,7 +190,6 @@ void DisplayManagerWidget::clearHistogramWidgets(void)
   }
 
   _histograms.clear();
-
 }
 
 void DisplayManagerWidget::refresh()

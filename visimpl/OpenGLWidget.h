@@ -439,9 +439,7 @@ namespace visimpl
     QPoint _pickingPosition;
     unsigned int _selectedPickingSingle;
 
-    tGidPosMap _gidPositions;
-    TGIDSet _gids;
-    TPosVect _positions;
+    tGidPosMap _gidPositions; // particle positions * scale.
   };
 } // namespace visimpl
 
