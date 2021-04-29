@@ -243,23 +243,21 @@ namespace visimpl
     std::copy( _gidsAll.begin( ), _gidsAll.end( ), gids.begin( ));
     std::sort( gids.begin( ), gids.end( ));
 
+    QList<QStandardItem *> available, selected;
     for( auto gid : gids )
     {
-      QStandardItem* itemAvailable = new QStandardItem( );
-      QVariant value = QVariant::fromValue( gid );
+      const auto text = QString::number(gid);
 
-      itemAvailable->setData( value, Qt::DisplayRole );
-
-      QStandardItem* itemSelected = new QStandardItem( );
-      itemSelected->setData( value, Qt::DisplayRole );
-
-      _modelAvailable->appendRow( itemAvailable );
-      _modelSelected->appendRow( itemSelected );
+      available << new QStandardItem(text);
+      selected << new QStandardItem(text);
 
       _gidIndex.insert( std::make_pair( gid, index ));
 
       ++index;
     }
+
+    _modelAvailable->insertColumn(0, available );
+    _modelSelected->insertColumn(0, selected );
   }
 
   void SelectionManagerWidget::_reloadLists( void )

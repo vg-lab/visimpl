@@ -29,7 +29,9 @@
 #include <QDebug>
 #include <QOpenGLWidget>
 #include <QDir>
+#include <QFile>
 #include <QString>
+#include <QApplication>
 
 // Project
 #include "MainWindow.h"
@@ -40,10 +42,17 @@
 #include <zeroeq/types.h>
 #endif
 
-void setFormat( void );
+#define GL_MINIMUM_REQUIRED_MAJOR 4
+#define GL_MINIMUM_REQUIRED_MINOR 0
+
+constexpr float TESTTIME = 2.f;
+constexpr int TESTPARTICLES = 50; // num particles == TESTPARTICLES^3
+
+bool setFormat( void );
 void usageMessage(  char* progName );
 void dumpVersion( void );
 bool atLeastTwo( bool a, bool b, bool c );
+bool generateTestFiles(const QString &path, std::string &networkFile, std::string &activityFile);
 
 int main( int argc, char** argv )
 {
@@ -81,12 +90,10 @@ int main( int argc, char** argv )
          std::strcmp( argv[i], "-h" ) == 0 )
     {
       usageMessage( argv[0] );
-      return 0;
     }
     if ( std::strcmp( argv[i], "--version" ) == 0 )
     {
       dumpVersion( );
-      return 0;
     }
     if( std::strcmp( argv[ i ], "-zeq" ) == 0 )
     {
@@ -108,8 +115,9 @@ int main( int argc, char** argv )
         dataType = simil::TBlueConfig;
       }
       else
+      {
         usageMessage( argv[0] );
-
+      }
     }
     else if( std::strcmp( argv[ i ], "-h5" ) == 0 )
     {
@@ -122,7 +130,9 @@ int main( int argc, char** argv )
         dataType = simil::THDF5;
       }
       else
+      {
         usageMessage( argv[0] );
+      }
     }
     else if( std::strcmp( argv[ i ], "-csv") == 0 )
     {
@@ -148,8 +158,8 @@ int main( int argc, char** argv )
         dataType = simil::TREST;
       }
 #else
-        std::cerr << "REST API not supported." << std::endl;
-        return -1;
+      std::cerr << "REST API not supported." << std::endl;
+      return -1;
 #endif
     }
 
@@ -203,11 +213,13 @@ int main( int argc, char** argv )
     {
       fullscreen = true;
     }
+
     if ( strcmp( argv[i], "--maximize-window" ) == 0 ||
          strcmp( argv[i],"-mw") == 0 )
     {
       initWindowMaximized = true;
     }
+
     if ( strcmp( argv[i], "--window-size" ) == 0 ||
          strcmp( argv[i],"-ws") == 0 )
     {
@@ -216,11 +228,31 @@ int main( int argc, char** argv )
         usageMessage( argv[0] );
       initWindowWidth = atoi( argv[ ++i ] );
       initWindowHeight = atoi( argv[ ++i ] );
+    }
 
+    if(strcmp(argv[i], "--testFile") == 0)
+    {
+      QString path;
+      if(++i < argc)
+      {
+        path = QString::fromLocal8Bit(argv[i]);
+      }
+
+      if(!generateTestFiles(path, networkFile, activityFile))
+        usageMessage(argv[0]);
+      else
+        dataType = simil::TCSV;
     }
   }
 
-  setFormat( );
+  if(!setFormat( ))
+  {
+    std::cerr << "Unable to set OpenGL format, minimum required "
+              << GL_MINIMUM_REQUIRED_MAJOR << "." << GL_MINIMUM_REQUIRED_MINOR
+              << std::endl;
+    std::exit(-1);
+  }
+
   visimpl::MainWindow mainWindow;
   mainWindow.setWindowTitle("SimPart");
 
@@ -294,8 +326,10 @@ void usageMessage( char* progName )
             << "\t[ -bc <blue_config_path> [-target <target> ] | "
             << "-csv <network_path> <activity_path> ] "
             << std::endl
+#ifdef SIMIL_WITH_REST_API
             << "\t[ -rest <url> <port> ]"
             << std::endl
+#endif
             << "\t[ -se <subset_events_file> ] "
             << std::endl
 //            << "\t[ -spikes ] "
@@ -312,6 +346,8 @@ void usageMessage( char* progName )
             << std::endl
             << "\t[ -mw | --maximize-window ]"
             << std::endl
+            << "\t[ --testFile [path] ]"
+            << std::endl
             << "\t[ --version ]"
             << std::endl
             << "\t[ --help | -h ]"
@@ -323,7 +359,6 @@ void usageMessage( char* progName )
 
 void dumpVersion( void )
 {
-
   std::cerr << std::endl
             << "visimpl "
             << visimpl::Version::getMajor( ) << "."
@@ -348,13 +383,16 @@ void dumpVersion( void )
   #endif
   std::cerr << std::endl;
   std::cerr << std::endl;
+
+  exit(0);
 }
 
-void setFormat( void )
+bool setFormat( void )
 {
   int ctxOpenGLMajor = DEFAULT_CONTEXT_OPENGL_MAJOR;
   int ctxOpenGLMinor = DEFAULT_CONTEXT_OPENGL_MINOR;
   int ctxOpenGLSamples = 0;
+  int ctxOpenGLVSync = 1;
 
   const auto major = std::getenv("CONTEXT_OPENGL_MAJOR");
   if ( major )
@@ -368,25 +406,100 @@ void setFormat( void )
   if ( samples )
     ctxOpenGLSamples = std::stoi( samples );
 
-  std::cerr << "Setting OpenGL context to "
+  std::cout << "Setting OpenGL context to "
             << ctxOpenGLMajor << "." << ctxOpenGLMinor << std::endl;
 
   QSurfaceFormat format;
   format.setVersion( ctxOpenGLMajor, ctxOpenGLMinor);
-  format.setProfile( QSurfaceFormat::CoreProfile );
 
   if ( ctxOpenGLSamples != 0 )
     format.setSamples( ctxOpenGLSamples );
 
+  format.setSwapInterval( ctxOpenGLVSync );
 
-  QSurfaceFormat::setDefaultFormat( format );
   if ( std::getenv("CONTEXT_OPENGL_COMPATIBILITY_PROFILE"))
     format.setProfile( QSurfaceFormat::CompatibilityProfile );
   else
     format.setProfile( QSurfaceFormat::CoreProfile );
+
+  QSurfaceFormat::setDefaultFormat( format );
+
+  return ( format.majorVersion() >= GL_MINIMUM_REQUIRED_MAJOR ) &&
+         ( format.minorVersion( ) >= GL_MINIMUM_REQUIRED_MINOR );
 }
 
 bool atLeastTwo( bool a, bool b, bool c )
 {
   return a ^ b ? c : a;
+}
+
+bool generateTestFiles(const QString &path, std::string &networkFile, std::string &activityFile)
+{
+  QDir filePath = path.isEmpty() ? QApplication::applicationDirPath() : path;
+  if(!filePath.isReadable())
+  {
+    std::cerr << "Path of test files cannot be accessed: " << filePath.absolutePath().toStdString() << std::endl;
+    return false;
+  }
+
+  QFile nFile{filePath.absoluteFilePath("network.csv")};
+  QFile aFile{filePath.absoluteFilePath("activity.csv")};
+
+  if(nFile.exists() && aFile.exists())
+  {
+    std::cout << "Test files already exists in path: " << filePath.absolutePath().toStdString() << std::endl;
+    networkFile = nFile.fileName().toStdString();
+    activityFile = aFile.fileName().toStdString();
+    return true;
+  }
+
+  if(!nFile.open(QIODevice::WriteOnly) || !aFile.open(QIODevice::WriteOnly))
+  {
+    std::cerr << "Unable to create test files in path: " << filePath.absolutePath().toStdString() << std::endl;
+    return false;
+  }
+
+  std::cout << "Created test files in path: " << filePath.absolutePath().toStdString() << std::endl;
+  std::cout << "Network: " << nFile.fileName().toStdString() << std::endl;
+  std::cout << "Activity: " << aFile.fileName().toStdString() << std::endl;
+
+  auto printDoubleWithPoint = [](const double v)
+  {
+    auto value = std::to_string(v);
+    std::replace(value.begin(), value.end(), ',', '.');
+    return value;
+  };
+
+  int index = 0;
+  float time = 0.f;
+
+  for(float i = -TESTPARTICLES/2 * 10; i < TESTPARTICLES/2 * 10; i+=10)
+  {
+    for(float j = -TESTPARTICLES/2 * 10; j < TESTPARTICLES/2 * 10; j+=10)
+    {
+      for(float k = -TESTPARTICLES/2 * 10; k < TESTPARTICLES/2 * 10; k+=10)
+      {
+        std::string line = std::to_string(index) + "," + printDoubleWithPoint(i) + "," + printDoubleWithPoint(j) + "," + printDoubleWithPoint(k) + "\n";
+        nFile.write(line.c_str());
+
+        line = std::to_string(index) + "," + printDoubleWithPoint(time) + "\n";
+        aFile.write(line.c_str());
+        line = std::to_string(index) + "," + printDoubleWithPoint((2*TESTTIME)-time) + "\n";
+        aFile.write(line.c_str());
+
+        ++index;
+      }
+    }
+    time += TESTTIME/TESTPARTICLES;
+  }
+
+  nFile.flush();
+  nFile.close();
+  aFile.flush();
+  aFile.close();
+
+  networkFile = nFile.fileName().toStdString();
+  activityFile = aFile.fileName().toStdString();
+
+  return true;
 }

@@ -56,16 +56,14 @@ int main( int argc, char** argv )
 
   QApplication application(argc,argv);
 
-  std::string networkFile;
-  std::string activityFile;
+  std::string networkFile, activityFile, subsetEventFile;
   std::string zeqUri;
-  std::string target ( "" );
-  std::string report ( "" );
-  std::string subsetEventFile( "" );
-  std::string correlations( "" );
+  std::string target;
+  std::string correlations;
 
   simil::TDataType dataType = simil::TBlueConfig;
-  simil::TSimulationType simType = simil::TSimSpikes;
+  // @felix This shouldn't be constexpr? Could change to voltages in the future?
+  constexpr simil::TSimulationType simType = simil::TSimSpikes;
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
   int initWindowWidth, initWindowHeight;
@@ -78,35 +76,41 @@ int main( int argc, char** argv )
       usageMessage( argv[0] );
       return 0;
     }
+
     if ( std::strcmp( argv[i], "--version" ) == 0 )
     {
       dumpVersion( );
       return 0;
     }
+
     if( std::strcmp( argv[ i ], "-zeq" ) == 0 )
     {
 #ifdef VISIMPL_USE_ZEROEQ
       if( ++i < argc )
       {
         zeqUri = std::string( argv[ i ]);
+        continue;
       }
 #else
       std::cerr << "Zeq not supported " << std::endl;
       return -1;
 #endif
     }
+
     if( std::strcmp( argv[ i ], "-bc" ) == 0 )
     {
       if( ++i < argc )
       {
         networkFile = std::string( argv[ i ]);
         dataType = simil::TBlueConfig;
+        continue;
       }
       else
         usageMessage( argv[0] );
 
     }
-    else if( std::strcmp( argv[ i ], "-h5" ) == 0 )
+
+    if( std::strcmp( argv[ i ], "-h5" ) == 0 )
     {
       if( i + 2 < argc )
       {
@@ -115,11 +119,13 @@ int main( int argc, char** argv )
         ++i;
         activityFile = std::string( argv[ i ]);
         dataType = simil::THDF5;
+        continue;
       }
       else
         usageMessage( argv[0] );
     }
-    else if( std::strcmp( argv[ i ], "-csv") == 0 )
+
+    if( std::strcmp( argv[ i ], "-csv") == 0 )
     {
       if( i + 2 < argc )
       {
@@ -128,7 +134,26 @@ int main( int argc, char** argv )
         ++i;
         activityFile = std::string( argv[ i ]);
         dataType = simil::TCSV;
+        continue;
       }
+    }
+
+    if( std::strcmp( argv[ i ], "-rest") == 0 )
+    {
+#ifdef SIMIL_WITH_REST_API
+      if( i + 2 < argc )
+      {
+        ++i;
+        networkFile = std::string( argv[ i ]);
+        ++i;
+        activityFile = std::string( argv[ i ]);
+        dataType = simil::TREST;
+        continue;
+      }
+#else
+        std::cerr << "REST API not supported." << std::endl;
+        return -1;
+#endif
     }
 
     if( std::strcmp( argv[ i ], "-target" ) == 0 )
@@ -136,6 +161,7 @@ int main( int argc, char** argv )
       if(++i < argc )
       {
         target = argv[ i ];
+        continue;
       }
       else
         usageMessage( argv[0] );
@@ -146,21 +172,18 @@ int main( int argc, char** argv )
       if(++i < argc )
       {
         correlations = argv[ i ];
+        continue;
       }
       else
         usageMessage( argv[0] );
     }
-
-//    if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
-//    {
-//       simType = simil::TSimSpikes;
-//    }
 
     if( strcmp( argv[ i ], "-se" ) == 0 )
     {
       if( ++i < argc )
       {
         subsetEventFile = std::string( argv[ i ]);
+        continue;
       }
       else
         usageMessage( argv[ 0 ]);
@@ -170,12 +193,16 @@ int main( int argc, char** argv )
          strcmp( argv[i],"-fs") == 0 )
     {
       fullscreen = true;
+      continue;
     }
+
     if ( strcmp( argv[i], "--maximize-window" ) == 0 ||
          strcmp( argv[i],"-mw") == 0 )
     {
       initWindowMaximized = true;
+      continue;
     }
+
     if ( strcmp( argv[i], "--window-size" ) == 0 ||
          strcmp( argv[i],"-ws") == 0 )
     {
@@ -184,7 +211,7 @@ int main( int argc, char** argv )
         usageMessage( argv[0] );
       initWindowWidth = atoi( argv[ ++i ] );
       initWindowHeight = atoi( argv[ ++i ] );
-
+      continue;
     }
   }
 
@@ -228,11 +255,15 @@ int main( int argc, char** argv )
           mainWindow.addCorrelation( c.toStdString( ));
       }
       mainWindow.calculateCorrelations( );
-
       break;
     case simil::TDataType::TCSV:
       mainWindow.openCSVFile( networkFile, simType, activityFile, subsetEventFile );
       break;
+#ifdef SIMIL_WITH_REST_API
+    case simil::TDataType::TREST:
+      mainWindow.openRestListener( networkFile, simType, activityFile, subsetEventFile);
+      break;
+#endif
     default:
       break;
   }
@@ -248,10 +279,16 @@ void usageMessage( char* progName )
             << "\t[ -bc <blue_config_path> [-target <target_name>] | "
             << "-csv <network_path> <activity_path> ] "
             << std::endl
+#ifdef SIMIL_WITH_REST_API
+            << "\t[ -rest <url> <port> ]"
+            << std::endl
+#endif
             << "\t[ -se <subset_events_file> ] "
             << std::endl
+#ifdef VISIMPL_USE_ZEROEQ
             << "\t[ -zeq <session_name*> ]"
             << std::endl
+#endif
             << "\t[ -ws | --window-size ] <width> <height> ]"
             << std::endl
             << "\t[ -fs | --fullscreen ] "
@@ -269,7 +306,6 @@ void usageMessage( char* progName )
 
 void dumpVersion( void )
 {
-
   std::cerr << std::endl
             << "stackviz "
             << stackviz::Version::getMajor( ) << "."
@@ -278,20 +314,28 @@ void dumpVersion( void )
             << " (" << stackviz::Version::getRevision( ) << ")"
             << std::endl << std::endl;
 
-  std::cerr << "zeq support built-in: ";
-  #ifdef VISIMPL_USE_ZEROEQ
+  std::cerr << "ZeroEQ support built-in: ";
+#ifdef VISIMPL_USE_ZEROEQ
   std::cerr << "\t\tyes";
-  #else
+#else
   std::cerr << "\t\tno";
-  #endif
+#endif
   std::cerr << std::endl;
 
   std::cerr << "GmrvZeq support built-in: ";
-  #ifdef VISIMPL_USE_GMRVLEX
+#ifdef VISIMPL_USE_GMRVLEX
   std::cerr << "\tyes";
-  #else
+#else
   std::cerr << "\tno";
-  #endif
+#endif
+
+  std::cerr << "REST API support: ";
+#ifdef SIMIL_WITH_REST_API
+  std::cerr << "\tyes";
+#else
+  std::cerr << "\tno";
+#endif
+
   std::cerr << std::endl;
   std::cerr << std::endl;
 }

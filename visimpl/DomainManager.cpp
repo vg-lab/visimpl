@@ -37,14 +37,14 @@ namespace visimpl
                           glm::vec3& maxBounds,
                           const glm::vec3& position)
   {
-    for( unsigned int i = 0; i < 3; ++i )
+    for(const auto i: {0,1,2})
     {
       minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
       maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
     }
   }
 
-  static float invRGBInt = 1.0f / 255;
+  constexpr float invRGBInt = 1.0f / 255;
 
   static std::unordered_map< std::string, std::string > _attributeNameLabels =
   {
@@ -87,7 +87,6 @@ namespace visimpl
     if( blueConfig )
       _gidTypes = _loadNeuronTypes( *blueConfig );
 #endif
-
 
     _sourceSelected = new SourceMultiPosition( );
 
@@ -163,11 +162,13 @@ namespace visimpl
 
   void DomainManager::reloadPositions( void )
   {
+    if(_gidToParticle.empty()) return;
+
     _resetBoundingBox( );
 
-    for( auto gidPartId : _gidToParticle )
+    auto expandBB = [this](const std::pair<unsigned int, unsigned int> &gidPartId)
     {
-      auto pos = _gidPositions.find( gidPartId.first );
+      const auto pos = _gidPositions.find( gidPartId.first );
 
       auto particle = _particleSystem->particles( ).at( gidPartId.second );
       particle.set_position( pos->second );
@@ -175,7 +176,8 @@ namespace visimpl
       expandBoundingBox( _boundingBox.first,
                          _boundingBox.second,
                          pos->second );
-    }
+    };
+    std::for_each(_gidToParticle.cbegin(), _gidToParticle.cend(), expandBB);
   }
 
   const TGIDSet& DomainManager::gids( void ) const
@@ -183,7 +185,7 @@ namespace visimpl
     return _gids;
   }
 
-  void DomainManager::mode( tVisualMode newMode )
+  void DomainManager::mode(const tVisualMode newMode )
   {
     clearView( );
 
@@ -215,7 +217,7 @@ namespace visimpl
     }
   }
 
-  tVisualMode DomainManager::mode( void )
+  tVisualMode DomainManager::mode( void ) const
   {
     return _mode;
   }
@@ -381,9 +383,8 @@ namespace visimpl
 
     _sourceSelected->setPositions( _gidPositions );
     clearView();
-    reloadPositions();
-
     update();
+    reloadPositions();
   }
 
   void DomainManager::_resetBoundingBox( void )
@@ -483,6 +484,10 @@ namespace visimpl
     indicesUnselected.reserve( numParticles );
 
     auto availableParticles =  _particleSystem->retrieveUnused( numParticles );
+    const auto count = availableParticles.size();
+    _gidToParticle.reserve(count);
+    _particleToGID.reserve(count);
+    _gidSource.reserve(count);
 
     std::cout << "Retrieved " << availableParticles.size( ) << std::endl;
 
@@ -491,7 +496,7 @@ namespace visimpl
     auto gidit = _gids.begin( );
     for( auto particle : availableParticles )
     {
-      unsigned int id = particle.id( );
+      const unsigned int id = particle.id( );
 
       // Create reference
       _gidToParticle.insert( std::make_pair( *gidit, id ));
@@ -935,7 +940,9 @@ namespace visimpl
     tBoundingBox result = _boundingBox;
 
     if( _boundingBox.first == _boundingBox.second )
+    {
       result.second = _boundingBox.second + vec3( 0.1f, 0.1f, 0.1f );
+    }
 
     return result;
   }

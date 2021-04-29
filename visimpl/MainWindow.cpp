@@ -42,7 +42,6 @@
 
 #include "MainWindow.h"
 
-#include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
@@ -103,6 +102,9 @@ namespace visimpl
     , _simConfigurationDock( nullptr )
     , _modeSelectionWidget( nullptr )
     , _toolBoxOptions( nullptr )
+#ifdef SIMIL_WITH_REST_API
+    , _objectInspectorGB{nullptr}
+#endif
     , _groupBoxTransferFunction( nullptr )
     , _tfWidget( nullptr )
     , _selectionManager( nullptr )
@@ -157,7 +159,6 @@ namespace visimpl
     _openGLWidget = new OpenGLWidget( nullptr, Qt::WindowFlags(), zeqUri );
 
     this->setCentralWidget( _openGLWidget );
-    qDebug( ) << _openGLWidget->format( );
 
     _openGLWidget->idleUpdate( _ui->actionUpdateOnIdle->isChecked( ) );
 
@@ -292,8 +293,20 @@ namespace visimpl
                                    const std::string& reportLabel,
                                    const std::string& subsetEventFile )
   {
-    _openGLWidget->loadData( fileName, simil::TDataType::TBlueConfig,
-                             simulationType, reportLabel );
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    try
+    {
+      _openGLWidget->loadData( fileName, simil::TDataType::TBlueConfig,
+                               simulationType, reportLabel );
+    }
+    catch(const std::exception &e)
+    {
+      QApplication::restoreOverrideCursor();
+      const auto errorText = QString::fromLocal8Bit(e.what());
+      QMessageBox::critical(this, tr("Error loading BlueConfig file"), errorText, QMessageBox::Ok);
+      return;
+    }
 
     configureComponents( );
 
@@ -304,6 +317,8 @@ namespace visimpl
     QStringList attributes = {"Morphological type", "Functional type"};
 
     _comboAttribSelection->addItems( attributes );
+
+    QApplication::restoreOverrideCursor();
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -330,9 +345,7 @@ namespace visimpl
         _lastOpenedNetworkFileName = QFileInfo( path ).path( );
         std::string fileName = path.toStdString( );
 
-        QApplication::setOverrideCursor(Qt::WaitCursor);
         openBlueConfig( fileName, simType, reportLabel );
-        QApplication::restoreOverrideCursor();
       }
     }
 #endif
@@ -361,9 +374,7 @@ namespace visimpl
         std::string networkFile = pathNetwork.toStdString( );
         std::string activityFile = pathActivity.toStdString( );
 
-        QApplication::setOverrideCursor(Qt::WaitCursor);
         openCSVFile( networkFile, simType, activityFile );
-        QApplication::restoreOverrideCursor();
       }
     }
   }
@@ -373,14 +384,28 @@ namespace visimpl
                                  const std::string& activityFile,
                                  const std::string& subsetEventFile )
   {
-    _openGLWidget->loadData( networkFile, simil::TDataType::THDF5,
-                             simulationType, activityFile );
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    try
+    {
+      _openGLWidget->loadData( networkFile, simil::TDataType::THDF5,
+                               simulationType, activityFile );
+    }
+    catch(const std::exception &e)
+    {
+      QApplication::restoreOverrideCursor();
+      const auto errorText = QString::fromLocal8Bit(e.what());
+      QMessageBox::critical(this, tr("Error loading HDF5 file"), errorText, QMessageBox::Ok);
+      return;
+    }
 
     configureComponents( );
 
     openSubsetEventFile( subsetEventFile, false );
 
     _configurePlayer( );
+
+    QApplication::restoreOverrideCursor();
   }
 
   void MainWindow::openCSVFile( const std::string& networkFile,
@@ -388,14 +413,28 @@ namespace visimpl
                                 const std::string& activityFile,
                                 const std::string& subsetEventFile )
   {
-    _openGLWidget->loadData( networkFile, simil::TDataType::TCSV,
-                             simulationType, activityFile );
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    try
+    {
+      _openGLWidget->loadData( networkFile, simil::TDataType::TCSV,
+                               simulationType, activityFile );
+    }
+    catch(const std::exception &e)
+    {
+      QApplication::restoreOverrideCursor();
+      const auto errorText = QString::fromLocal8Bit(e.what());
+      QMessageBox::critical(this, tr("Error loading CSV file"), errorText, QMessageBox::Ok);
+      return;
+    }
 
     configureComponents( );
 
     openSubsetEventFile( subsetEventFile, false );
 
     _configurePlayer( );
+
+    QApplication::restoreOverrideCursor();
   }
 
 #ifdef SIMIL_WITH_REST_API
@@ -433,9 +472,7 @@ namespace visimpl
 
     const auto activityFile = path.toStdString( );
 
-    QApplication::setOverrideCursor(Qt::WaitCursor);
     openHDF5File( networkFile, simil::TSimSpikes, activityFile );
-    QApplication::restoreOverrideCursor();
   }
 
   void MainWindow::openSubsetEventFile( const std::string& filePath,
@@ -451,17 +488,30 @@ namespace visimpl
     if(!eventsFile.exists())
       return;
 
-    if(eventsFile.suffix().toLower().compare("json") == 0)
+    QString errorText;
+    try
     {
-      _subsetEvents->loadJSON( filePath );
+      if(eventsFile.suffix().toLower().compare("json") == 0)
+      {
+        _subsetEvents->loadJSON( filePath );
+      }
+      else if(eventsFile.suffix().toLower().compare("h5") == 0)
+      {
+        _subsetEvents->loadH5( filePath );
+      }
+      else
+      {
+        errorText = tr("Events file not supported: %1").arg(eventsFile.absoluteFilePath());
+      }
     }
-    else if(eventsFile.suffix().toLower().compare("h5") == 0)
+    catch(const std::exception &e)
     {
-      _subsetEvents->loadH5( filePath );
+      errorText = QString::fromLocal8Bit(e.what());
     }
-    else
+
+    if(!errorText.isEmpty())
     {
-      std::cout << "Subset Events file not found: " << filePath << std::endl;
+      QMessageBox::warning(this, tr("Error loading Events file"), errorText, QMessageBox::Ok);
       return;
     }
 
@@ -718,8 +768,8 @@ namespace visimpl
                                           QSizePolicy::MinimumExpanding );
 
     _tfWidget = new TransferFunctionWidget( );
-    _tfWidget->setWindowIcon(QIcon(":/visimpl.png"));
     _tfWidget->setMinimumHeight( 100 );
+    _tfWidget->setDialogIcon(QIcon(":/visimpl.png"));
 
     _subsetImporter = new SubsetImporter( this );
     _subsetImporter->setWindowModality( Qt::WindowModal );

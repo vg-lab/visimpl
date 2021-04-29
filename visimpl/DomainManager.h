@@ -81,8 +81,8 @@ namespace visimpl
 
     void updateData(const TGIDSet& gids,const tGidPosMap& positions);
 
-    void mode( tVisualMode newMode );
-    tVisualMode mode( void );
+    void mode(const tVisualMode newMode );
+    tVisualMode mode( void ) const;
 
     void clearView( void );
 

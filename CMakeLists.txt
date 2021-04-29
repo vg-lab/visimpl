@@ -9,7 +9,7 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 1.1.2 )
+project( visimpl VERSION 1.1.3 )
 set( visimpl_VERSION_ABI 6 )
 
 SET( VISIMPL_LICENSE "GPL")
@@ -52,6 +52,8 @@ include(Common)
 option(VISIMPL_WITH_ZEQ "VISIMPL_WITH_ZEQ" ON)
 option(VISIMPL_WITH_GMRVLEX "VISIMPL_WITH_GMRVLEX" ON)
 
+set(VISIMPL_WITH_OPENMP ON)
+
 common_find_package( GLM REQUIRED SYSTEM )
 common_find_package( Qt5Core 5.4 REQUIRED )
 common_find_package( Qt5Gui 5.4 REQUIRED )
@@ -65,7 +67,9 @@ common_find_package( ReTo REQUIRED )
 common_find_package( SimIL REQUIRED )
 common_find_package( prefr REQUIRED )
 common_find_package( scoop REQUIRED )
-common_find_package( OpenMP )
+if ( VISIMPL_WITH_OPENMP )
+  common_find_package( OpenMP )
+endif()
 common_find_package( Boost REQUIRED )
 
 
@@ -106,6 +110,11 @@ if( VISIMPL_WITH_ZEQ )
   endif( )
   endif( )
 endif( )
+
+if (SIMIL_WITH_REST_API)
+  add_definitions(-DSIMIL_WITH_REST_API=1)
+endif()  
+
 common_find_package_post()
 
 add_subdirectory( sumrice )

@@ -27,7 +27,7 @@ namespace prefr
 {
 
 const static std::string prefrVertexShader = R"(
-#version 330
+#version 400
 //#extension GL_ARB_separate_shader_objects: enable
 
 uniform mat4 modelViewProjM;
@@ -63,7 +63,7 @@ void main()
 )";
 
 const static std::string prefrFragmentShaderDefault = R"(
-#version 330
+#version 400
 in vec4 color; 
 in vec2 uvCoord;
 out vec4 outputColor;
@@ -78,7 +78,7 @@ void main()
 
 )";
 
-const static std::string prefrFragmentShaderSolid = R"(#version 330
+const static std::string prefrFragmentShaderSolid = R"(#version 400
 uniform float radiusThreshold;
 in vec4 color; 
 in vec2 uvCoord;
@@ -95,7 +95,7 @@ void main()
   outputColor = color;
 })";
 
-const static std::string prefrVertexShaderPicking = R"(#version 330
+const static std::string prefrVertexShaderPicking = R"(#version 400
 #extension GL_ARB_separate_shader_objects: enable
 
 uniform mat4 modelViewProjM;
@@ -134,7 +134,7 @@ void main()
   id = gl_InstanceID;
 })";
 
-const static std::string prefrFragmentShaderPicking = R"(#version 330
+const static std::string prefrFragmentShaderPicking = R"(#version 400
 
 uniform float radiusThreshold;
 
@@ -168,7 +168,7 @@ void main( )
 })";
 
 const static std::string planeVertCode = R"(
-#version 330
+#version 400
 
 in vec3 inPos;
 
@@ -189,7 +189,7 @@ void main( )
 
 
 const static std::string planeFragCode = R"(
-#version 330
+#version 400
 
 in vec4 outColor;
 out vec4 outputColor;

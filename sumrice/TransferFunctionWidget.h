@@ -87,6 +87,13 @@ public:
   visimpl::TTransferFunction getPreviewColors( void ) const;
   visimpl::TSizeFunction getSizePreview( void ) const;
 
+  /** \brief Sets the icon for _dialog.
+   * \param[in] icon Window icon reference.
+   *
+   */
+  void setDialogIcon(const QIcon &icon)
+  { if(_dialog) _dialog->setWindowIcon(icon); }
+
 protected slots:
   void gradientClicked( void );
   void acceptClicked( void );
