@@ -59,10 +59,6 @@
 #include <QPushButton>
 #include <QToolBox>
 
-#ifdef VISIMPL_USE_GMRVLEX
-#include <gmrvlex/gmrvlex.h>
-#endif
-
 #include <thread>
 
 #include <sumrice/sumrice.h>
@@ -2096,12 +2092,12 @@ namespace visimpl
     }
   }
 
-  void MainWindow::sendZeroEQPlaybackOperation(const zeroeq::gmrv::PlaybackOperation op)
+  void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
   {
 #ifdef SIMIL_USE_ZEROEQ
     try
     {
-      _openGLWidget->player() ->zeqEvents( )->sendPlaybackOp( op );
+      _openGLWidget->player() ->zeqEvents( )->sendPlaybackOp( static_cast<zeroeq::gmrv::PlaybackOperation>(op) );
     }
     catch(const std::exception &e)
     {

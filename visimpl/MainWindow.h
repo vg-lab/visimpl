@@ -219,7 +219,7 @@ namespace visimpl
      * \param[in] op ZeroEQ Operation identifier.
      *
      */
-    void sendZeroEQPlaybackOperation(const zeroeq::gmrv::PlaybackOperation op);
+    void sendZeroEQPlaybackOperation(const unsigned int op);
 
     std::string _zeqUri;
     zeroeq::Subscriber* _subscriber;

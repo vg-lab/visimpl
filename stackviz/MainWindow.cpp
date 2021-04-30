@@ -1153,12 +1153,12 @@ void stackviz::MainWindow::openRestListener( const std::string& networkFile,
 
 #endif
 
-void stackviz::MainWindow::sendZeroEQPlaybackOperation(const zeroeq::gmrv::PlaybackOperation op)
+void stackviz::MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
 {
 #ifdef SIMIL_USE_ZEROEQ
   try
   {
-    _player ->zeqEvents( )->sendPlaybackOp( op );
+    _player ->zeqEvents( )->sendPlaybackOp( static_cast<zeroeq::gmrv::PlaybackOperation>(op) );
   }
   catch(const std::exception &e)
   {
