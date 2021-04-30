@@ -215,18 +215,18 @@ namespace visimpl
     void _setZeqUri( const std::string& );
     bool _zeqConnection;
 
-    /** \brief Wrapper aroung player operations to catch exceptions.
-     * \param[in] op ZeroEQ Operation identifier.
-     *
-     */
-    void sendZeroEQPlaybackOperation(const unsigned int op);
-
     std::string _zeqUri;
     zeroeq::Subscriber* _subscriber;
 
     std::thread* _thread;
 
   #endif // VISIMPL_USE_ZEROEQ
+
+    /** \brief Wrapper aroung player operations to catch exceptions.
+     * \param[in] op ZeroEQ Operation identifier.
+     *
+     */
+    void sendZeroEQPlaybackOperation(const unsigned int op);
 
     Ui::MainWindow* _ui;
 
