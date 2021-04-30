@@ -2118,6 +2118,8 @@ namespace visimpl
     {
       std::cerr << "Unknown exception when sending play operation. " << __FILE__ << ":" << __LINE__  << std::endl;
     }
+#else
+    __attribute__((unused)) const auto unused = op; // c++17 [[maybe_unused]]
 #endif
   }
 
