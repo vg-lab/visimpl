@@ -657,7 +657,9 @@ void MainWindow::Play( bool notify )
 
       if( notify )
       {
+#ifdef VISIMPL_USE_GMRVLEX
         sendZeroEQPlaybackOperation(zeroeq::gmrv::PLAY);
+#endif
       }
   }
 }
@@ -672,7 +674,9 @@ void MainWindow::Pause( bool notify )
 
     if( notify )
     {
+#ifdef VISIMPL_USE_GMRVLEX
       sendZeroEQPlaybackOperation(zeroeq::gmrv::PAUSE);
+#endif
     }
   }
 }
@@ -688,7 +692,9 @@ void MainWindow::Stop( bool notify )
     _playing = false;
     if( notify )
     {
+#ifdef VISIMPL_USE_GMRVLEX
       sendZeroEQPlaybackOperation(zeroeq::gmrv::STOP);
+#endif
     }
   }
 }
@@ -702,8 +708,10 @@ void MainWindow::Repeat( bool notify )
 
     if( notify )
     {
+#ifdef VISIMPL_USE_GMRVLEX
       const auto op = repeat ? zeroeq::gmrv::ENABLE_LOOP : zeroeq::gmrv::DISABLE_LOOP;
       sendZeroEQPlaybackOperation(op);
+#endif
     }
   }
 }
@@ -759,7 +767,9 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
         std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__ << std::endl;
       }
 #endif
+#ifdef VISIMPL_USE_GMRVLEX
       sendZeroEQPlaybackOperation(zeroeq::gmrv::PLAY);
+#endif
     }
   }
 }
@@ -783,7 +793,9 @@ void MainWindow::Restart( bool notify )
 
     if( notify )
     {
+#ifdef VISIMPL_USE_GMRVLEX
       sendZeroEQPlaybackOperation(zeroeq::gmrv::BEGIN);
+#endif
     }
   }
 }
@@ -796,7 +808,9 @@ void MainWindow::GoToEnd( bool notify )
 
     if( notify )
     {
+#ifdef VISIMPL_USE_GMRVLEX
       sendZeroEQPlaybackOperation(zeroeq::gmrv::END);
+#endif
     }
   }
 }

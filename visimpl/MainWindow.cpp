@@ -1907,7 +1907,9 @@ namespace visimpl
 
       if ( notify )
       {
+#ifdef VISIMPL_USE_GMRVLEX
         sendZeroEQPlaybackOperation( zeroeq::gmrv::PLAY );
+#endif
       }
     }
   }
@@ -1924,7 +1926,9 @@ namespace visimpl
 
       if ( notify )
       {
+#ifdef VISIMPL_USE_GMRVLEX
         sendZeroEQPlaybackOperation( zeroeq::gmrv::PAUSE );
+#endif
       }
     }
   }
@@ -1945,7 +1949,9 @@ namespace visimpl
 
       if ( notify )
       {
+#ifdef VISIMPL_USE_GMRVLEX
         sendZeroEQPlaybackOperation( zeroeq::gmrv::STOP );
+#endif
       }
     }
   }
@@ -1962,8 +1968,10 @@ namespace visimpl
 
       if ( notify )
       {
+#ifdef VISIMPL_USE_GMRVLEX
         const auto op = repeat ? zeroeq::gmrv::ENABLE_LOOP : zeroeq::gmrv::DISABLE_LOOP;
         sendZeroEQPlaybackOperation( op );
+#endif
       }
     }
   }
@@ -2019,8 +2027,9 @@ namespace visimpl
         std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__  << std::endl;
       }
 #endif
-
+#ifdef VISIMPL_USE_GMRVLEX
       sendZeroEQPlaybackOperation(zeroeq::gmrv::PLAY);
+#endif
     }
   }
 
@@ -2060,7 +2069,9 @@ namespace visimpl
         std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__  << std::endl;
       }
 #endif
+#ifdef VISIMPL_USE_GMRVLEX
       sendZeroEQPlaybackOperation( zeroeq::gmrv::PLAY);
+#endif
     }
   }
 
