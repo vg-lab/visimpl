@@ -663,11 +663,23 @@ namespace visimpl
     _simSlider->setEnabled(true);
 
 #ifdef SIMIL_USE_ZEROEQ
-    _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
-      boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ) );
+    try
+    {
+      _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
+        boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ) );
 
-    _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
-      boost::bind( &MainWindow::requestPlayAt, this, _1 ) );
+      _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
+        boost::bind( &MainWindow::requestPlayAt, this, _1 ) );
+    }
+    catch(std::exception &e)
+    {
+      std::cerr << "Exception when initializing player events. ";
+      std::cerr << e.what() << std::endl << " " << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception when initializing player events. " << __FILE__ << ":" << __LINE__ << std::endl;
+    }
 #endif
 
     changeEditorColorMapping( );
@@ -1684,12 +1696,13 @@ namespace visimpl
       }
       catch(std::exception &e)
       {
+        std::cerr << "Exception when initializing ZeroEQ. ";
         std::cerr << e.what() << std::endl << " " << __FILE__ << ":" << __LINE__ << std::endl;
         failed = true;
       }
       catch(...)
       {
-        std::cerr << "Unknown exception catched when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
+        std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
         failed = true;
       }
 
@@ -1898,10 +1911,7 @@ namespace visimpl
 
       if ( notify )
       {
-#ifdef SIMIL_USE_ZEROEQ
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          zeroeq::gmrv::PLAY );
-#endif
+        sendZeroEQPlaybackOperation( zeroeq::gmrv::PLAY );
       }
     }
   }
@@ -1918,10 +1928,7 @@ namespace visimpl
 
       if ( notify )
       {
-#ifdef SIMIL_USE_ZEROEQ
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          zeroeq::gmrv::PAUSE );
-#endif
+        sendZeroEQPlaybackOperation( zeroeq::gmrv::PAUSE );
       }
     }
   }
@@ -1942,10 +1949,7 @@ namespace visimpl
 
       if ( notify )
       {
-#ifdef SIMIL_USE_ZEROEQ
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          zeroeq::gmrv::STOP );
-#endif
+        sendZeroEQPlaybackOperation( zeroeq::gmrv::STOP );
       }
     }
   }
@@ -1962,10 +1966,8 @@ namespace visimpl
 
       if ( notify )
       {
-#ifdef SIMIL_USE_ZEROEQ
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          repeat ? zeroeq::gmrv::ENABLE_LOOP : zeroeq::gmrv::DISABLE_LOOP );
-#endif
+        const auto op = repeat ? zeroeq::gmrv::ENABLE_LOOP : zeroeq::gmrv::DISABLE_LOOP;
+        sendZeroEQPlaybackOperation( op );
       }
     }
   }
@@ -2006,13 +2008,23 @@ namespace visimpl
     if ( notify )
     {
 #ifdef SIMIL_USE_ZEROEQ
-      // Send event
-      _openGLWidget->player( )->zeqEvents( )->sendFrame(
-        _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
-
-      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-        zeroeq::gmrv::PLAY );
+      try
+      {
+        // Send event
+        _openGLWidget->player( )->zeqEvents( )->sendFrame(
+          _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+      }
+      catch(const std::exception &e)
+      {
+        std::cerr << "Exception when sending frame. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+      }
+      catch(...)
+      {
+        std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__  << std::endl;
+      }
 #endif
+
+      sendZeroEQPlaybackOperation(zeroeq::gmrv::PLAY);
     }
   }
 
@@ -2037,13 +2049,22 @@ namespace visimpl
     if ( notify )
     {
 #ifdef SIMIL_USE_ZEROEQ
+      try
+      {
         // Send event
-      _openGLWidget->player( )->zeqEvents( )->sendFrame(
-        _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
-
-      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-        zeroeq::gmrv::PLAY );
+        _openGLWidget->player( )->zeqEvents( )->sendFrame(
+          _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+      }
+      catch(const std::exception &e)
+      {
+        std::cerr << "Exception when sending frame. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+      }
+      catch(...)
+      {
+        std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__  << std::endl;
+      }
 #endif
+      sendZeroEQPlaybackOperation( zeroeq::gmrv::PLAY);
     }
   }
 
@@ -2073,6 +2094,24 @@ namespace visimpl
     {
       _playButton->setIcon( _playIcon );
     }
+  }
+
+  void MainWindow::sendZeroEQPlaybackOperation(const zeroeq::gmrv::PlaybackOperation op)
+  {
+#ifdef SIMIL_USE_ZEROEQ
+    try
+    {
+      _openGLWidget->player() ->zeqEvents( )->sendPlaybackOp( op );
+    }
+    catch(const std::exception &e)
+    {
+      std::cerr << "Exception when sending play operation. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception when sending play operation. " << __FILE__ << ":" << __LINE__  << std::endl;
+    }
+#endif
   }
 
 } // namespace visimpl

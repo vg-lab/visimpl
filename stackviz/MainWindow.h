@@ -205,6 +205,12 @@ namespace stackviz
      */
     void updateUIonOpen(const std::string &eventsFile);
 
+    /** \brief Wrapper aroung player operations to catch exceptions.
+     * \param[in] op ZeroEQ Operation identifier.
+     *
+     */
+    void sendZeroEQPlaybackOperation(const zeroeq::gmrv::PlaybackOperation op);
+
     std::vector< std::string > _correlations;
   };
 

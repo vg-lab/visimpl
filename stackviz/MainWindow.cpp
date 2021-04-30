@@ -154,21 +154,32 @@ MainWindow::~MainWindow( void )
   if( _zeqConnection )
   {
     _zeqConnection = false;
-    _thread->join();
 
-    delete _thread;
-
-    if(_subscriber)
+    if(_thread)
     {
-      _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
-      delete _subscriber;
-      _subscriber = nullptr;
+      _thread->join();
+      delete _thread;
+      _thread = nullptr;
     }
 
-    if(_publisher)
+    try
     {
-      delete _publisher;
-      _publisher = nullptr;
+      if(_subscriber)
+      {
+        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
+        delete _subscriber;
+        _subscriber = nullptr;
+      }
+
+      if(_publisher)
+      {
+        delete _publisher;
+        _publisher = nullptr;
+      }
+    }
+    catch(...)
+    {
+      // Nothing to do on destructor.
     }
   }
 #endif
@@ -446,13 +457,25 @@ void MainWindow::configurePlayer( void )
           QString::number( static_cast<double>(_player->endTime( ))));
 
   #ifdef SIMIL_USE_ZEROEQ
-  _player->connectZeq( _zeqUri );
+  try
+  {
+    _player->connectZeq( _zeqUri );
 
-  _player->zeqEvents( )->frameReceived.connect(
-        boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
+    _player->zeqEvents( )->frameReceived.connect(
+          boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
 
-  _player->zeqEvents( )->playbackOpReceived.connect(
-        boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+    _player->zeqEvents( )->playbackOpReceived.connect(
+          boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+  }
+  catch(const std::exception &e)
+  {
+    std::cerr << "Exception when initializing player events. ";
+    std::cerr << e.what() << std::endl << " " << __FILE__ << ":" << __LINE__ << std::endl;
+  }
+  catch(...)
+  {
+    std::cerr << "Unknown exception when initializing player events. " << __FILE__ << ":" << __LINE__ << std::endl;
+  }
   #endif
 }
 
@@ -634,9 +657,7 @@ void MainWindow::Play( bool notify )
 
       if( notify )
       {
-#ifdef VISIMPL_USE_ZEROEQ
-      _player ->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::PLAY );
-#endif
+        sendZeroEQPlaybackOperation(zeroeq::gmrv::PLAY);
       }
   }
 }
@@ -651,9 +672,7 @@ void MainWindow::Pause( bool notify )
 
     if( notify )
     {
-  #ifdef VISIMPL_USE_ZEROEQ
-    _player ->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::PAUSE );
-  #endif
+      sendZeroEQPlaybackOperation(zeroeq::gmrv::PAUSE);
     }
   }
 }
@@ -669,9 +688,7 @@ void MainWindow::Stop( bool notify )
     _playing = false;
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
-      _player ->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::STOP );
-#endif
+      sendZeroEQPlaybackOperation(zeroeq::gmrv::STOP);
     }
   }
 }
@@ -685,11 +702,8 @@ void MainWindow::Repeat( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
-      _player ->zeqEvents( )->sendPlaybackOp( repeat ?
-                                  zeroeq::gmrv::ENABLE_LOOP :
-                                  zeroeq::gmrv::DISABLE_LOOP );
-#endif
+      const auto op = repeat ? zeroeq::gmrv::ENABLE_LOOP : zeroeq::gmrv::DISABLE_LOOP;
+      sendZeroEQPlaybackOperation(op);
     }
   }
 }
@@ -729,13 +743,23 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
     if( notify )
     {
 #ifdef VISIMPL_USE_ZEROEQ
-    // Send event
-    _player ->zeqEvents( )->sendFrame( _simSlider->minimum( ),
-                           _simSlider->maximum( ),
-                           sliderPosition );
-
-    _player ->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::PLAY );
+      try
+      {
+        // Send event
+        _player ->zeqEvents( )->sendFrame( _simSlider->minimum( ),
+                               _simSlider->maximum( ),
+                               sliderPosition );
+      }
+      catch(const std::exception &e)
+      {
+        std::cerr << "Exception when sending frame. " << e.what() << std::endl;
+      }
+      catch(...)
+      {
+        std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__ << std::endl;
+      }
 #endif
+      sendZeroEQPlaybackOperation(zeroeq::gmrv::PLAY);
     }
   }
 }
@@ -759,9 +783,7 @@ void MainWindow::Restart( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
-    _player->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::BEGIN );
-#endif
+      sendZeroEQPlaybackOperation(zeroeq::gmrv::BEGIN);
     }
   }
 }
@@ -774,9 +796,7 @@ void MainWindow::GoToEnd( bool notify )
 
     if( notify )
     {
-#ifdef VISIMPL_USE_ZEROEQ
-    _player ->zeqEvents( )->sendPlaybackOp( zeroeq::gmrv::END );
-#endif
+      sendZeroEQPlaybackOperation(zeroeq::gmrv::END);
     }
   }
 }
@@ -852,25 +872,59 @@ void MainWindow::HistogramClicked(visimpl::HistogramWidget *histogram)
 
   std::vector<uint32_t> selected(selection->begin(), selection->end());
 
-  _publisher->publish(lexis::data::SelectedIDs(selected));
+  try
+  {
+    if(_publisher) _publisher->publish(lexis::data::SelectedIDs(selected));
+  }
+  catch(std::exception &e)
+  {
+    std::cerr << "Exception sending histogram id event. " << e.what() << std::endl;
+  }
+  catch(...)
+  {
+    std::cerr << "Unknown exception sending histrogram id event." << std::endl;
+  }
 }
 
 #endif
 
 void MainWindow::_setZeqUri(const std::string &uri_)
 {
-  _zeqUri = uri_.empty() ? zeroeq::DEFAULT_SESSION : uri_;
+  bool failed = false;
 
-  _zeqConnection = true;
-  _subscriber = new zeroeq::Subscriber(_zeqUri);
-  _publisher = new zeroeq::Publisher(_zeqUri);
+  try
+  {
+    _zeqUri = uri_.empty() ? zeroeq::DEFAULT_SESSION : uri_;
 
-  _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
-                         [&](const void *data_, const size_t size_)
-                         { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
+    _zeqConnection = true;
+    _subscriber = new zeroeq::Subscriber(_zeqUri);
+    _publisher = new zeroeq::Publisher(_zeqUri);
 
-  _thread = new std::thread([&]()
-  { while( _zeqConnection ) _subscriber->receive( 10000 );});
+    _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
+                           [&](const void *data_, const size_t size_)
+                           { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
+
+    _thread = new std::thread([&]()
+    { while( _zeqConnection ) _subscriber->receive( 10000 );});
+  }
+  catch(const std::exception &e)
+  {
+    std::cerr << "Exception initializing ZeroEQ. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    failed = true;
+  }
+  catch(...)
+  {
+    std::cerr << "Unknown exception initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
+    failed = true;
+  }
+
+  if(failed)
+  {
+    _zeqConnection = false;
+    _subscriber = nullptr;
+    _publisher = nullptr;
+    _thread = nullptr;
+  }
 }
 
 void MainWindow::_onSelectionEvent(lexis::data::ConstSelectedIDsPtr selected)
@@ -1096,4 +1150,23 @@ void stackviz::MainWindow::openRestListener( const std::string& networkFile,
   updateUIonOpen(subsetEventFile);
   QApplication::restoreOverrideCursor();
 }
+
 #endif
+
+void stackviz::MainWindow::sendZeroEQPlaybackOperation(const zeroeq::gmrv::PlaybackOperation op)
+{
+#ifdef SIMIL_USE_ZEROEQ
+  try
+  {
+    _player ->zeqEvents( )->sendPlaybackOp( op );
+  }
+  catch(const std::exception &e)
+  {
+    std::cerr << "Exception when sending play operation. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+  }
+  catch(...)
+  {
+    std::cerr << "Unknown exception when sending play operation. " << __FILE__ << ":" << __LINE__  << std::endl;
+  }
+#endif
+}

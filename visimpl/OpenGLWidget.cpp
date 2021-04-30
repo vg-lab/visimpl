@@ -346,11 +346,12 @@ namespace visimpl
       }
       catch(std::exception &e)
       {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "Exception when initializing ZeroEQ. ";
+        std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
       }
       catch(...)
       {
-        std::cerr << "Unknown exception catched when connecting player. " << __FILE__ << ":" << __LINE__ << std::endl;
+        std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
       }
     }
   #endif
@@ -428,9 +429,14 @@ namespace visimpl
     {
       _player->connectZeq( _zeqUri );
     }
+    catch(std::exception &e)
+    {
+      std::cerr << "Exception when initializing ZeroEQ. ";
+      std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    }
     catch(...)
     {
-
+      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
     }
   #endif
     this->_paint = true;
