@@ -24,7 +24,6 @@ Ubuntu-Optional-Deps-master-tags:
  stage: build
  script:
   - module load Qt-5.15.2
-  - export APP_VERSION="dev"
   - export APPIMAGES="visimpl stackviz"
   - export APPIMAGE_REPO="gitlabci@vg-lab.es:apps"
   - export APPIMAGE_ICON="visimpl/visimpl.png"
@@ -153,7 +152,6 @@ OSX-Subproject:
 # Win7:
 #  stage: build
 #   script:
-#   - call %ENVFILESDIR%\Bonjour-SDK.bat
 #   - call %ENVFILESDIR%\Boost-1.72-vs14-x64.bat
 #   - call %ENVFILESDIR%\Qt-5.12-vs14.bat
 #   - call %ENVFILESDIR%\eigen-3.1.2-vs12-x64.bat
