@@ -461,11 +461,15 @@ void MainWindow::configurePlayer( void )
   {
     _player->connectZeq( _zeqUri );
 
-    _player->zeqEvents( )->frameReceived.connect(
-          boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
+    const auto eventMgr = _player->zeqEvents( );
+    if(eventMgr)
+    {
+      eventMgr->frameReceived.connect(
+            boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
 
-    _player->zeqEvents( )->playbackOpReceived.connect(
-          boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+      eventMgr->playbackOpReceived.connect(
+            boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+    }
   }
   catch(const std::exception &e)
   {
@@ -754,9 +758,12 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
       try
       {
         // Send event
-        _player ->zeqEvents( )->sendFrame( _simSlider->minimum( ),
-                               _simSlider->maximum( ),
-                               sliderPosition );
+        if(_player->zeqEvents())
+        {
+          _player ->zeqEvents( )->sendFrame( _simSlider->minimum( ),
+                                             _simSlider->maximum( ),
+                                             sliderPosition );
+        }
       }
       catch(const std::exception &e)
       {
@@ -1172,7 +1179,10 @@ void stackviz::MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
 #ifdef SIMIL_USE_ZEROEQ
   try
   {
-    _player ->zeqEvents( )->sendPlaybackOp( static_cast<zeroeq::gmrv::PlaybackOperation>(op) );
+    if(_player ->zeqEvents( ))
+    {
+      _player ->zeqEvents( )->sendPlaybackOp( static_cast<zeroeq::gmrv::PlaybackOperation>(op) );
+    }
   }
   catch(const std::exception &e)
   {

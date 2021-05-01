@@ -661,16 +661,17 @@ namespace visimpl
 #ifdef SIMIL_USE_ZEROEQ
     try
     {
-      _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
-        boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ) );
-
-      _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
-        boost::bind( &MainWindow::requestPlayAt, this, _1 ) );
+      const auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+      if(eventMgr)
+      {
+        eventMgr->playbackOpReceived.connect( boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ) );
+        eventMgr->frameReceived.connect( boost::bind( &MainWindow::requestPlayAt, this, _1 ) );
+      }
     }
     catch(std::exception &e)
     {
       std::cerr << "Exception when initializing player events. ";
-      std::cerr << e.what() << std::endl << " " << __FILE__ << ":" << __LINE__ << std::endl;
+      std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
     }
     catch(...)
     {
@@ -1693,7 +1694,7 @@ namespace visimpl
       catch(std::exception &e)
       {
         std::cerr << "Exception when initializing ZeroEQ. ";
-        std::cerr << e.what() << std::endl << " " << __FILE__ << ":" << __LINE__ << std::endl;
+        std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
         failed = true;
       }
       catch(...)
@@ -2015,8 +2016,11 @@ namespace visimpl
       try
       {
         // Send event
-        _openGLWidget->player( )->zeqEvents( )->sendFrame(
-          _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+        auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+        if(eventMgr)
+        {
+          eventMgr->sendFrame( _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+        }
       }
       catch(const std::exception &e)
       {
@@ -2057,8 +2061,11 @@ namespace visimpl
       try
       {
         // Send event
-        _openGLWidget->player( )->zeqEvents( )->sendFrame(
-          _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+        auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+        if(eventMgr)
+        {
+          eventMgr->sendFrame(_simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+        }
       }
       catch(const std::exception &e)
       {
@@ -2108,7 +2115,11 @@ namespace visimpl
 #ifdef SIMIL_USE_ZEROEQ
     try
     {
-      _openGLWidget->player() ->zeqEvents( )->sendPlaybackOp( static_cast<zeroeq::gmrv::PlaybackOperation>(op) );
+      auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+      if(eventMgr)
+      {
+        eventMgr->sendPlaybackOp( static_cast<zeroeq::gmrv::PlaybackOperation>(op) );
+      }
     }
     catch(const std::exception &e)
     {
