@@ -49,6 +49,7 @@
 #include <QMessageBox>
 #include <QShortcut>
 #include <QDateTime>
+#include <QtGlobal>
 
 #include <boost/bind.hpp>
 
@@ -1037,7 +1038,7 @@ void MainWindow::aboutDialog( void )
     tr( " rev (%1)<br>").arg(stackviz::Version::getRevision( )) +
     "<a href='https://vg-lab.es/visimpl/'>https://vg-lab.es/visimpl</a>" +
     "<h4>" + tr( "Build info:" ) + "</h4>" +
-    "<ul>"
+    "<ul><li>Qt " + QT_VERSION_STR +
 
 #ifdef VISIMPL_USE_GMRVLEX
     "</li><li>GmrvLex " + GMRVLEX_REV_STRING +

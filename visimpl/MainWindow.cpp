@@ -58,6 +58,7 @@
 #include <QGroupBox>
 #include <QPushButton>
 #include <QToolBox>
+#include <QtGlobal>
 
 #include <thread>
 
@@ -550,7 +551,7 @@ namespace visimpl
       tr( " rev (%1)<br>" ).arg( visimpl::Version::getRevision( ) ) +
       "<a href='https://vg-lab.es/visimpl/'>https://vg-lab.es/visimpl</a>" +
       "<h4>" + tr( "Build info:" ) + "</h4>" +
-      "<ul>"
+      "<ul><li>Qt " + QT_VERSION_STR + 
 
 #ifdef VISIMPL_USE_GMRVLEX
       "</li><li>GmrvLex " + GMRVLEX_REV_STRING +
