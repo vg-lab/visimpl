@@ -222,6 +222,12 @@ namespace visimpl
 
   #endif // VISIMPL_USE_ZEROEQ
 
+    /** \brief Wrapper aroung player operations to catch exceptions.
+     * \param[in] op ZeroEQ Operation identifier.
+     *
+     */
+    void sendZeroEQPlaybackOperation(const unsigned int op);
+
     Ui::MainWindow* _ui;
 
     QString _lastOpenedNetworkFileName;

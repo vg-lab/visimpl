@@ -250,7 +250,7 @@ int main( int argc, char** argv )
     std::cerr << "Unable to set OpenGL format, minimum required "
               << GL_MINIMUM_REQUIRED_MAJOR << "." << GL_MINIMUM_REQUIRED_MINOR
               << std::endl;
-    std::exit(-1);
+    exit(-1);
   }
 
   visimpl::MainWindow mainWindow;

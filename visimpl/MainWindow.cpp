@@ -58,10 +58,7 @@
 #include <QGroupBox>
 #include <QPushButton>
 #include <QToolBox>
-
-#ifdef VISIMPL_USE_GMRVLEX
-#include <gmrvlex/gmrvlex.h>
-#endif
+#include <QtGlobal>
 
 #include <thread>
 
@@ -554,7 +551,7 @@ namespace visimpl
       tr( " rev (%1)<br>" ).arg( visimpl::Version::getRevision( ) ) +
       "<a href='https://vg-lab.es/visimpl/'>https://vg-lab.es/visimpl</a>" +
       "<h4>" + tr( "Build info:" ) + "</h4>" +
-      "<ul>"
+      "<ul><li>Qt " + QT_VERSION_STR + 
 
 #ifdef VISIMPL_USE_GMRVLEX
       "</li><li>GmrvLex " + GMRVLEX_REV_STRING +
@@ -663,11 +660,24 @@ namespace visimpl
     _simSlider->setEnabled(true);
 
 #ifdef SIMIL_USE_ZEROEQ
-    _openGLWidget->player( )->zeqEvents( )->playbackOpReceived.connect(
-      boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ) );
-
-    _openGLWidget->player( )->zeqEvents( )->frameReceived.connect(
-      boost::bind( &MainWindow::requestPlayAt, this, _1 ) );
+    try
+    {
+      const auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+      if(eventMgr)
+      {
+        eventMgr->playbackOpReceived.connect( boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ) );
+        eventMgr->frameReceived.connect( boost::bind( &MainWindow::requestPlayAt, this, _1 ) );
+      }
+    }
+    catch(std::exception &e)
+    {
+      std::cerr << "Exception when initializing player events. ";
+      std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception when initializing player events. " << __FILE__ << ":" << __LINE__ << std::endl;
+    }
 #endif
 
     changeEditorColorMapping( );
@@ -1684,12 +1694,13 @@ namespace visimpl
       }
       catch(std::exception &e)
       {
-        std::cerr << e.what() << std::endl << " " << __FILE__ << ":" << __LINE__ << std::endl;
+        std::cerr << "Exception when initializing ZeroEQ. ";
+        std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
         failed = true;
       }
       catch(...)
       {
-        std::cerr << "Unknown exception catched when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
+        std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
         failed = true;
       }
 
@@ -1898,9 +1909,8 @@ namespace visimpl
 
       if ( notify )
       {
-#ifdef SIMIL_USE_ZEROEQ
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          zeroeq::gmrv::PLAY );
+#ifdef VISIMPL_USE_GMRVLEX
+        sendZeroEQPlaybackOperation( zeroeq::gmrv::PLAY );
 #endif
       }
     }
@@ -1918,9 +1928,8 @@ namespace visimpl
 
       if ( notify )
       {
-#ifdef SIMIL_USE_ZEROEQ
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          zeroeq::gmrv::PAUSE );
+#ifdef VISIMPL_USE_GMRVLEX
+        sendZeroEQPlaybackOperation( zeroeq::gmrv::PAUSE );
 #endif
       }
     }
@@ -1942,9 +1951,8 @@ namespace visimpl
 
       if ( notify )
       {
-#ifdef SIMIL_USE_ZEROEQ
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          zeroeq::gmrv::STOP );
+#ifdef VISIMPL_USE_GMRVLEX
+        sendZeroEQPlaybackOperation( zeroeq::gmrv::STOP );
 #endif
       }
     }
@@ -1962,9 +1970,9 @@ namespace visimpl
 
       if ( notify )
       {
-#ifdef SIMIL_USE_ZEROEQ
-        _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-          repeat ? zeroeq::gmrv::ENABLE_LOOP : zeroeq::gmrv::DISABLE_LOOP );
+#ifdef VISIMPL_USE_GMRVLEX
+        const auto op = repeat ? zeroeq::gmrv::ENABLE_LOOP : zeroeq::gmrv::DISABLE_LOOP;
+        sendZeroEQPlaybackOperation( op );
 #endif
       }
     }
@@ -2006,12 +2014,26 @@ namespace visimpl
     if ( notify )
     {
 #ifdef SIMIL_USE_ZEROEQ
-      // Send event
-      _openGLWidget->player( )->zeqEvents( )->sendFrame(
-        _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
-
-      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-        zeroeq::gmrv::PLAY );
+      try
+      {
+        // Send event
+        auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+        if(eventMgr)
+        {
+          eventMgr->sendFrame( _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+        }
+      }
+      catch(const std::exception &e)
+      {
+        std::cerr << "Exception when sending frame. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+      }
+      catch(...)
+      {
+        std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__  << std::endl;
+      }
+#endif
+#ifdef VISIMPL_USE_GMRVLEX
+      sendZeroEQPlaybackOperation(zeroeq::gmrv::PLAY);
 #endif
     }
   }
@@ -2037,12 +2059,26 @@ namespace visimpl
     if ( notify )
     {
 #ifdef SIMIL_USE_ZEROEQ
+      try
+      {
         // Send event
-      _openGLWidget->player( )->zeqEvents( )->sendFrame(
-        _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
-
-      _openGLWidget->player( )->zeqEvents( )->sendPlaybackOp(
-        zeroeq::gmrv::PLAY );
+        auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+        if(eventMgr)
+        {
+          eventMgr->sendFrame(_simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+        }
+      }
+      catch(const std::exception &e)
+      {
+        std::cerr << "Exception when sending frame. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+      }
+      catch(...)
+      {
+        std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__  << std::endl;
+      }
+#endif
+#ifdef VISIMPL_USE_GMRVLEX
+      sendZeroEQPlaybackOperation( zeroeq::gmrv::PLAY);
 #endif
     }
   }
@@ -2073,6 +2109,30 @@ namespace visimpl
     {
       _playButton->setIcon( _playIcon );
     }
+  }
+
+  void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
+  {
+#ifdef SIMIL_USE_ZEROEQ
+    try
+    {
+      auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+      if(eventMgr)
+      {
+        eventMgr->sendPlaybackOp( static_cast<zeroeq::gmrv::PlaybackOperation>(op) );
+      }
+    }
+    catch(const std::exception &e)
+    {
+      std::cerr << "Exception when sending play operation. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception when sending play operation. " << __FILE__ << ":" << __LINE__  << std::endl;
+    }
+#else
+    __attribute__((unused)) const auto unused = op; // c++17 [[maybe_unused]]
+#endif
   }
 
 } // namespace visimpl
