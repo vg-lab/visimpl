@@ -45,7 +45,7 @@ include(GitExternal)
 
 # description
 set(VISIMPL_DESCRIPTION "Visimpl")
-set(COMMON_PROJECT_DOMAIN gmrv.es)
+set(COMMON_PROJECT_DOMAIN es.vg-lab)
 
 include(Common)
 
