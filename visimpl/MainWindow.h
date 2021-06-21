@@ -38,6 +38,9 @@
 // Sumrice
 #include <sumrice/sumrice.h>
 
+// C++
+#include <memory>
+
 class QDockWidget;
 class QPushButton;
 class QSlider;
@@ -72,7 +75,7 @@ namespace visimpl
                          bool updateOnIdle = true );
     virtual ~MainWindow( void );
 
-    void init( const std::string& zeqUri = "" );
+    void init( const std::string& zeqUri = std::string(), const std::string &zeqHost = std::string(), const uint32_t zeqPort = 0);
     void showStatusBarMessage ( const QString& message );
 
     void openBlueConfig( const std::string& fileName,
@@ -212,11 +215,8 @@ namespace visimpl
 
   protected:
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
-    void _setZeqUri( const std::string& );
+    void initializeZeroEQ(const std::string &session = std::string(), const std::string &host = std::string(), const uint32_t port = 0);
     bool _zeqConnection;
-
-    std::string _zeqUri;
-    zeroeq::Subscriber* _subscriber;
 
     std::thread* _thread;
 

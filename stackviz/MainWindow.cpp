@@ -59,6 +59,8 @@
 
 using namespace stackviz;
 
+template<class T> void ignore( const T& ) { }
+
 MainWindow::MainWindow( QWidget* parent_ )
 : QMainWindow( parent_ )
 , _ui( new Ui::MainWindow )
@@ -79,9 +81,7 @@ MainWindow::MainWindow( QWidget* parent_ )
 , _endTimeLabel( nullptr )
 , _displayManager( nullptr )
 #ifdef VISIMPL_USE_ZEROEQ
-, _zeqConnection( false )
-, _subscriber( nullptr )
-, _publisher( nullptr )
+, _zeqConnection{false}
 , _thread( nullptr )
 #endif
 #ifdef SIMIL_WITH_REST_API
@@ -104,13 +104,8 @@ MainWindow::MainWindow( QWidget* parent_ )
            this, SLOT( aboutDialog( void )));
 }
 
-void MainWindow::init( const std::string&
-  #ifdef VISIMPL_USE_ZEROEQ
-                         zeqUri
-  #endif
-    )
+void MainWindow::init( const std::string &zeqUri, const std::string &zeqHost, const uint32_t zeqPort)
 {
-
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( void )),
            this, SLOT( openBlueConfigThroughDialog( void )));
 
@@ -136,10 +131,16 @@ void MainWindow::init( const std::string&
 
 #ifdef VISIMPL_USE_ZEROEQ
 
-  _setZeqUri( zeqUri );
+  _setZeqUri( zeqUri, zeqHost, zeqPort );
   _ui->actionTogglePlaybackDock->setChecked( true );
 
+#else
+  // to avoid compilation warnings about unused parameter.
+  ignore(zeqUri);
+  ignore(zeqHost);
+  ignore(zeqPort);
 #endif
+
   _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
   _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
 
@@ -151,11 +152,9 @@ MainWindow::~MainWindow( void )
   delete _ui;
 
 #ifdef VISIMPL_USE_ZEROEQ
-
-  if( _zeqConnection )
+  if(_zeqConnection)
   {
     _zeqConnection = false;
-
     if(_thread)
     {
       _thread->join();
@@ -163,24 +162,9 @@ MainWindow::~MainWindow( void )
       _thread = nullptr;
     }
 
-    try
+    if(visimpl::ZeroEQConfig::instance().isConnected())
     {
-      if(_subscriber)
-      {
-        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
-        delete _subscriber;
-        _subscriber = nullptr;
-      }
-
-      if(_publisher)
-      {
-        delete _publisher;
-        _publisher = nullptr;
-      }
-    }
-    catch(...)
-    {
-      // Nothing to do on destructor.
+      visimpl::ZeroEQConfig::instance().subscriber()->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
     }
   }
 #endif
@@ -460,7 +444,15 @@ void MainWindow::configurePlayer( void )
   #ifdef SIMIL_USE_ZEROEQ
   try
   {
-    _player->connectZeq( _zeqUri );
+    auto &zInstance = visimpl::ZeroEQConfig::instance();
+    if(zInstance.isConnected())
+    {
+      _player->connectZeq( zInstance.subscriber(), zInstance.publisher() );
+    }
+    else
+    {
+      _player->connectZeq(zeroeq::DEFAULT_SESSION);
+    }
 
     const auto eventMgr = _player->zeqEvents( );
     if(eventMgr)
@@ -474,12 +466,13 @@ void MainWindow::configurePlayer( void )
   }
   catch(const std::exception &e)
   {
-    std::cerr << "Exception when initializing player events. ";
-    std::cerr << e.what() << std::endl << " " << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Exception when initializing player events. " << e.what() << ". "
+              << " " << __FILE__ << ":" << __LINE__ << std::endl;
   }
   catch(...)
   {
-    std::cerr << "Unknown exception when initializing player events. " << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Unknown exception when initializing player events. "
+              << __FILE__ << ":" << __LINE__ << std::endl;
   }
   #endif
 }
@@ -768,11 +761,13 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
       }
       catch(const std::exception &e)
       {
-        std::cerr << "Exception when sending frame. " << e.what() << std::endl;
+        std::cerr << "Exception when sending frame. " << e.what() << ". "
+                  << __FILE__ << ":" << __LINE__ << std::endl;
       }
       catch(...)
       {
-        std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__ << std::endl;
+        std::cerr << "Unknown exception when sending frame. "
+                  << __FILE__ << ":" << __LINE__ << std::endl;
       }
 #endif
 #ifdef VISIMPL_USE_GMRVLEX
@@ -896,57 +891,86 @@ void MainWindow::HistogramClicked(visimpl::HistogramWidget *histogram)
 
   try
   {
-    if(_publisher) _publisher->publish(lexis::data::SelectedIDs(selected));
+    auto &zInstance = visimpl::ZeroEQConfig::instance();
+    if(zInstance.isConnected()) zInstance.publisher()->publish(lexis::data::SelectedIDs(selected));
   }
   catch(std::exception &e)
   {
-    std::cerr << "Exception sending histogram id event. " << e.what() << std::endl;
+    std::cerr << "Exception sending histogram id event. " << e.what() << ". "
+              << __FILE__ << ":" << __LINE__ << std::endl;
   }
   catch(...)
   {
-    std::cerr << "Unknown exception sending histrogram id event." << std::endl;
+    std::cerr << "Unknown exception sending histogram id event."
+              << __FILE__ << ":" << __LINE__ << std::endl;
   }
 }
 
 #endif
 
-void MainWindow::_setZeqUri(const std::string &uri_)
+void MainWindow::_setZeqUri(const std::string &session, const std::string &host, const uint32_t port )
 {
   bool failed = false;
 
   try
   {
-    _zeqUri = uri_.empty() ? zeroeq::DEFAULT_SESSION : uri_;
-
     _zeqConnection = true;
-    _subscriber = new zeroeq::Subscriber(_zeqUri);
-    _publisher = new zeroeq::Publisher(_zeqUri);
+    auto &zInstance = visimpl::ZeroEQConfig::instance();
 
-    _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
-                           [&](const void *data_, const size_t size_)
-                           { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
+    if(!host.empty() && visimpl::isValidIPAddress(host))
+    {
+      zInstance.connect(host, port);
+    }
+    else
+    {
+      zInstance.connect(session);
+    }
+
+    // @felix Returns false if the publisher is not up, zeroeq promises to connect
+    //        when it becomes active.
+    zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
+                                      [&](const void *data_, const size_t size_)
+                                      { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
 
     _thread = new std::thread([&]()
-    { while( _zeqConnection ) _subscriber->receive( 10000 );});
+    {
+      bool valid = true;
+      while( _zeqConnection && valid)
+      {
+        try
+        {
+          zInstance.subscriber()->receive( 10000 );
+        }
+        catch(const std::exception &e)
+        {
+          std::cerr << "Exception in ZeroEQ receive loop: " << e.what() << ". "
+                    << __FILE__ << ":" << __LINE__ << std::endl;
+          valid = false;
+        }
+      }
+    });
   }
   catch(const std::exception &e)
   {
-    std::cerr << "Exception initializing ZeroEQ. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Exception initializing ZeroEQ: " << e.what() << ". "
+              << __FILE__ << ":" << __LINE__ << std::endl;
     failed = true;
   }
   catch(...)
   {
-    std::cerr << "Unknown exception initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Unknown exception initializing ZeroEQ. "
+              << __FILE__ << ":" << __LINE__ << std::endl;
     failed = true;
   }
 
   if(failed)
   {
     _zeqConnection = false;
-    _subscriber = nullptr;
-    _publisher = nullptr;
     _thread = nullptr;
+    visimpl::ZeroEQConfig::instance().disconnect();
   }
+
+  visimpl::ZeroEQConfig::instance().print();
 }
 
 void MainWindow::_onSelectionEvent(lexis::data::ConstSelectedIDsPtr selected)
@@ -1187,13 +1211,15 @@ void stackviz::MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
   }
   catch(const std::exception &e)
   {
-    std::cerr << "Exception when sending play operation. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Exception when sending play operation. " << e.what() << ". "
+              << __FILE__ << ":" << __LINE__ << std::endl;
   }
   catch(...)
   {
-    std::cerr << "Unknown exception when sending play operation. " << __FILE__ << ":" << __LINE__  << std::endl;
+    std::cerr << "Unknown exception when sending play operation. "
+              << __FILE__ << ":" << __LINE__  << std::endl;
   }
 #else
-  __attribute__((unused)) const auto unused = op; // c++17 [[maybe_unused]]
+  ignore(op); // c++17 [[maybe_unused]]
 #endif
 }

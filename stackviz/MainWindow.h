@@ -66,7 +66,7 @@ namespace stackviz
     explicit MainWindow( QWidget* parent = nullptr );
     ~MainWindow( void );
 
-    void init( const std::string& zeqUri = "" );
+    void init( const std::string& zeqUri = std::string(), const std::string &zeqHost = std::string(), const uint32_t zeqPort = 0);
     void showStatusBarMessage ( const QString& message );
 
     void openBlueConfig( const std::string& fileName,
@@ -147,7 +147,7 @@ namespace stackviz
   #ifdef VISIMPL_USE_ZEROEQ
 
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected );
-    void _setZeqUri( const std::string& );
+    void _setZeqUri( const std::string &session, const std::string &host, const uint32_t port );
 
   #endif
 
@@ -182,15 +182,8 @@ namespace stackviz
     DisplayManagerWidget* _displayManager;
 
   #ifdef VISIMPL_USE_ZEROEQ
-
     bool _zeqConnection;
-
-    std::string _zeqUri;
-    zeroeq::Subscriber* _subscriber;
-    zeroeq::Publisher* _publisher;
-
     std::thread* _thread;
-
   #endif
 
   #ifdef SIMIL_WITH_REST_API

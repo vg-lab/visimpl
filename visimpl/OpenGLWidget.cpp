@@ -72,16 +72,8 @@ namespace visimpl
   constexpr float invRGBInt = 1.0f / 255;
 
   OpenGLWidget::OpenGLWidget( QWidget* parent_,
-                              Qt::WindowFlags windowsFlags_,
-                              const std::string&
-  #ifdef VISIMPL_USE_ZEROEQ
-                              zeqUri
-  #endif
-    )
+                              Qt::WindowFlags windowsFlags_)
   : QOpenGLWidget( parent_, windowsFlags_ )
-  #ifdef VISIMPL_USE_ZEROEQ
-  , _zeqUri( zeqUri )
-  #endif
   , _fpsLabel( nullptr )
   , _labelCurrentTime( nullptr )
   , _showFps( false )
@@ -172,37 +164,6 @@ namespace visimpl
   , _domainManager( nullptr )
   , _selectedPickingSingle( 0 )
   {
-  #ifdef VISIMPL_USE_ZEROEQ
-    if ( !_zeqUri.empty( ) )
-    {
-      bool failed = false;
-      try
-      {
-        _camera = new Camera( _zeqUri );
-      }
-      catch(std::exception &e)
-      {
-        std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
-        failed = true;
-      }
-      catch(...)
-      {
-        std::cerr << "Unknown exception catched when initializing camera. " << __FILE__ << ":" << __LINE__ << std::endl;
-        failed = true;
-      }
-
-      if(failed)
-      {
-        _camera = nullptr;
-        _zeqUri.clear();
-      }
-    }
-  #endif
-
-    if(!_camera) _camera = new Camera( );
-
-    _camera->camera()->farPlane( 100000.f );
-
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
     _maxFPS = 60.0f;
@@ -248,6 +209,36 @@ namespace visimpl
 
     // This is needed to get key events
     this->setFocusPolicy( Qt::WheelFocus );
+
+#ifdef VISIMPL_USE_ZEROEQ
+    try
+    {
+      auto &zInstance = ZeroEQConfig::instance();
+      if(zInstance.isConnected())
+      {
+        _camera = new Camera(zeroeq::NULL_SESSION, zInstance.subscriber());
+      }
+      else
+      {
+        _camera = new Camera(zeroeq::DEFAULT_SESSION);
+      }
+    }
+    catch(std::exception &e)
+    {
+      std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
+      _camera = nullptr;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception catched when initializing camera. " << __FILE__ << ":" << __LINE__ << std::endl;
+      _camera = nullptr;
+    }
+#endif
+
+    if(!_camera)
+      _camera = new Camera( );
+
+    _camera->camera()->farPlane( 100000.f );
   }
 
   OpenGLWidget::~OpenGLWidget( void )
@@ -338,21 +329,26 @@ namespace visimpl
     changeSimulationDecayValue( std::get< T_DECAY >( config ) );
 
   #ifdef VISIMPL_USE_ZEROEQ
-    if( !_zeqUri.empty( ))
+    try
     {
-      try
+      auto &zInstance = ZeroEQConfig::instance();
+      if( zInstance.isConnected())
       {
-        _player->connectZeq( _zeqUri );
+        _player->connectZeq(zInstance.subscriber(), zInstance.publisher());
       }
-      catch(std::exception &e)
+      else
       {
-        std::cerr << "Exception when initializing ZeroEQ. ";
-        std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+        _player->connectZeq(zeroeq::DEFAULT_SESSION);
       }
-      catch(...)
-      {
-        std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-      }
+    }
+    catch(std::exception &e)
+    {
+      std::cerr << "Exception when initializing ZeroEQ. ";
+      std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
     }
   #endif
     this->_paint = true;
@@ -427,7 +423,15 @@ namespace visimpl
   #ifdef VISIMPL_USE_ZEROEQ
     try
     {
-      _player->connectZeq( _zeqUri );
+      auto &zInstance = ZeroEQConfig::instance();
+      if(zInstance.isConnected())
+      {
+        _player->connectZeq(zInstance.subscriber(), zInstance.publisher());
+      }
+      else
+      {
+        _player->connectZeq(zeroeq::DEFAULT_SESSION);
+      }
     }
     catch(std::exception &e)
     {
@@ -2180,4 +2184,5 @@ namespace visimpl
   {
     return _domainManager->decay( );
   }
+
 } // namespace visimpl

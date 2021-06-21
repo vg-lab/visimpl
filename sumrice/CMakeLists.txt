@@ -19,6 +19,7 @@ set(SUMRICE_PUBLIC_HEADERS
   log.h
   EventWidget.h  
   CorrelationComputer.h
+  Utils.h
 )
 
 set(SUMRICE_HEADERS
@@ -34,6 +35,7 @@ set(SUMRICE_SOURCES
   FocusFrame.cpp
   EventWidget.cpp
   CorrelationComputer.cpp
+  Utils.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES

@@ -106,9 +106,7 @@ namespace visimpl
       EventLabel():upperWidget{nullptr}, colorLabel{nullptr}, label{nullptr}{};
     };
 
-    OpenGLWidget( QWidget* parent = nullptr,
-                  Qt::WindowFlags windowFlags = Qt::WindowFlags(),
-                  const std::string& zeqUri = "" );
+    OpenGLWidget(QWidget* parent = nullptr, Qt::WindowFlags windowFlags = Qt::WindowFlags());
     virtual ~OpenGLWidget();
 
     void createParticleSystem(  );
@@ -290,12 +288,6 @@ namespace visimpl
     std::unordered_set< uint32_t > _selectedGIDs;
 
     std::queue< std::pair< unsigned int, bool >> _pendingGroupStateChanges;
-
-  #ifdef VISIMPL_USE_ZEROEQ
-
-    std::string _zeqUri;
-
-  #endif
 
     QLabel* _fpsLabel;
     QLabel* _labelCurrentTime;

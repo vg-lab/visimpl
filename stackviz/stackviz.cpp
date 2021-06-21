@@ -57,7 +57,8 @@ int main( int argc, char** argv )
   QApplication application(argc,argv);
 
   std::string networkFile, activityFile, subsetEventFile;
-  std::string zeqUri;
+  std::string zeqUri, zeqHost;
+  uint32_t zeqPort = 0;
   std::string target;
   std::string correlations;
 
@@ -86,9 +87,54 @@ int main( int argc, char** argv )
     if( std::strcmp( argv[ i ], "-zeq" ) == 0 )
     {
 #ifdef VISIMPL_USE_ZEROEQ
+      if(!zeqHost.empty())
+      {
+        std::cerr << "'zeq' and 'zhost' parameters can't be used simultaneously.";
+        usageMessage(argv[0]);
+      }
+
       if( ++i < argc )
       {
         zeqUri = std::string( argv[ i ]);
+        continue;
+      }
+#else
+      std::cerr << "Zeq not supported " << std::endl;
+      return -1;
+#endif
+    }
+
+    if( std::strcmp( argv[ i ], "-zhost" ) == 0 )
+    {
+#ifdef VISIMPL_USE_ZEROEQ
+      if(!zeqUri.empty())
+      {
+        std::cerr << "'zeq' and 'zhost' parameters can't be used simultaneously.";
+        usageMessage(argv[0]);
+      }
+
+      if( i + 2 < argc )
+      {
+        ++i;
+        zeqHost = std::string( argv[ i ] );
+        ++i;
+        const auto parameter = std::string(argv[i]);
+        bool success = true;
+        try
+        {
+          zeqPort = stoi(parameter);
+        }
+        catch(...)
+        {
+          success = false;
+        }
+
+        if(!success || zeqPort < 1024)
+        {
+          std::cerr << "Invalid zhost port";
+          usageMessage(argv[0]);
+        }
+
         continue;
       }
 #else
@@ -219,13 +265,13 @@ int main( int argc, char** argv )
   mainWindow.setWindowTitle("StackViz");
 
 #ifdef VISIMPL_USE_ZEROEQ
-  if(zeqUri.empty())
+  if(zeqUri.empty() && zeqHost.empty())
   {
     zeqUri = zeroeq::DEFAULT_SESSION;
   }
 #endif
 
-  mainWindow.init( zeqUri );
+  mainWindow.init( zeqUri, zeqHost, zeqPort );
 
   if ( initWindowSize )
     mainWindow.resize( initWindowWidth, initWindowHeight );
@@ -288,6 +334,8 @@ void usageMessage( char* progName )
 #ifdef VISIMPL_USE_ZEROEQ
             << "\t[ -zeq <session_name*> ]"
             << std::endl
+            << "\t[ -zhost <ip> <port> ]"
+            << std::endl
 #endif
             << "\t[ -ws | --window-size ] <width> <height> ]"
             << std::endl
@@ -328,6 +376,7 @@ void dumpVersion( void )
 #else
   std::cerr << "\tno";
 #endif
+  std::cerr << std::endl;
 
   std::cerr << "REST API support: ";
 #ifdef SIMIL_WITH_REST_API
@@ -335,7 +384,6 @@ void dumpVersion( void )
 #else
   std::cerr << "\tno";
 #endif
-
   std::cerr << std::endl;
   std::cerr << std::endl;
 }

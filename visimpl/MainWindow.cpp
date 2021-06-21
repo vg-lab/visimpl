@@ -78,7 +78,6 @@ namespace visimpl
     : QMainWindow( parent_ )
 #ifdef VISIMPL_USE_GMRVLEX
     , _zeqConnection( false )
-    , _subscriber( nullptr )
     , _thread( nullptr )
 #endif
     , _ui( new Ui::MainWindow )
@@ -151,9 +150,12 @@ namespace visimpl
 #endif
   }
 
-  void MainWindow::init( const std::string& zeqUri )
+  void MainWindow::init( const std::string& session,  const std::string &host, const uint32_t port)
   {
-    _openGLWidget = new OpenGLWidget( nullptr, Qt::WindowFlags(), zeqUri );
+#ifdef VISIMPL_USE_ZEROEQ
+    initializeZeroEQ(session, host, port);
+#endif
+    _openGLWidget = new OpenGLWidget( nullptr, Qt::WindowFlags());
 
     this->setCentralWidget( _openGLWidget );
 
@@ -240,12 +242,6 @@ namespace visimpl
 
     _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
     _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
-
-#ifdef VISIMPL_USE_ZEROEQ
-
-    _setZeqUri( zeqUri );
-
-#endif
   }
 
   MainWindow::~MainWindow( void )
@@ -256,14 +252,11 @@ namespace visimpl
     {
       _zeqConnection = false;
       _thread->join();
-
       delete _thread;
 
-      if(_subscriber)
+      if(ZeroEQConfig::instance().isConnected())
       {
-        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
-        delete _subscriber;
-        _subscriber = nullptr;
+        ZeroEQConfig::instance().subscriber()->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
       }
     }
 
@@ -1674,44 +1667,72 @@ namespace visimpl
 
 #endif
 
-  void MainWindow::_setZeqUri( const std::string& uri_ )
+  void MainWindow::initializeZeroEQ(const std::string &session, const std::string &host, const uint32_t port)
   {
-    if(!uri_.empty())
+    bool failed = false;
+
+    try
     {
-      bool failed = false;
-      try
+      auto &zInstance = ZeroEQConfig::instance();
+      if(!host.empty() && isValidIPAddress(host))
       {
-        _zeqUri = uri_;
+        zInstance.connect(host, port);
         _zeqConnection = true;
-        _subscriber = new zeroeq::Subscriber( _zeqUri );
-
-        _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
-          [&]( const void* data_, unsigned long long size_ )
-          { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
-
-        _thread = new std::thread( [this]( )
-        { while ( _zeqConnection ) _subscriber->receive( 10000 ); } );
       }
-      catch(std::exception &e)
+      else
       {
-        std::cerr << "Exception when initializing ZeroEQ. ";
-        std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
-        failed = true;
-      }
-      catch(...)
-      {
-        std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-        failed = true;
+        zInstance.connect(session);
+        _zeqConnection = true;
       }
 
-      if(failed)
+      zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
+                                        [&]( const void* data_, unsigned long long size_ )
+                                        { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
+
+      _thread = new std::thread( [this]( )
       {
-        _zeqUri.clear();
-        _zeqConnection = false;
-        _subscriber = nullptr;
-        _thread = nullptr;
-      }
+        bool valid = true;
+        while ( _zeqConnection && valid )
+        {
+          try
+          {
+            if(ZeroEQConfig::instance().isConnected())
+            {
+              ZeroEQConfig::instance().subscriber()->receive( 10000 );
+            }
+            else
+            {
+              _zeqConnection = false;
+            }
+          }
+          catch(const std::exception &e)
+          {
+            std::cerr << "ZeroEQ exception in receive loop: " << e.what() << std::endl;
+            valid = false;
+          }
+        }
+      });
     }
+    catch(std::exception &e)
+    {
+      std::cerr << "Exception when initializing ZeroEQ. " << e.what() << ". "
+                << __FILE__ << ":" << __LINE__ << std::endl;
+      failed = true;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
+      failed = true;
+    }
+
+    if(failed)
+    {
+      _zeqConnection = false;
+      _thread = nullptr;
+      ZeroEQConfig::instance().disconnect();
+    }
+
+    visimpl::ZeroEQConfig::instance().print();
   }
 
   void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
