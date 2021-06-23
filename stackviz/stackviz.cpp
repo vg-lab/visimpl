@@ -57,8 +57,8 @@ int main( int argc, char** argv )
   QApplication application(argc,argv);
 
   std::string networkFile, activityFile, subsetEventFile;
-  std::string zeqUri, zeqHost;
-  uint32_t zeqPort = 0;
+  std::string zeqUri;
+  bool zNull = false;
   std::string target;
   std::string correlations;
 
@@ -87,9 +87,9 @@ int main( int argc, char** argv )
     if( std::strcmp( argv[ i ], "-zeq" ) == 0 )
     {
 #ifdef VISIMPL_USE_ZEROEQ
-      if(!zeqHost.empty())
+      if(zNull)
       {
-        std::cerr << "'zeq' and 'zhost' parameters can't be used simultaneously.";
+        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
         usageMessage(argv[0]);
       }
 
@@ -104,39 +104,18 @@ int main( int argc, char** argv )
 #endif
     }
 
-    if( std::strcmp( argv[ i ], "-zhost" ) == 0 )
+    if( std::strcmp( argv[ i ], "-znull" ) == 0 )
     {
 #ifdef VISIMPL_USE_ZEROEQ
       if(!zeqUri.empty())
       {
-        std::cerr << "'zeq' and 'zhost' parameters can't be used simultaneously.";
+        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
         usageMessage(argv[0]);
       }
 
-      if( i + 2 < argc )
-      {
-        ++i;
-        zeqHost = std::string( argv[ i ] );
-        ++i;
-        const auto parameter = std::string(argv[i]);
-        bool success = true;
-        try
-        {
-          zeqPort = stoi(parameter);
-        }
-        catch(...)
-        {
-          success = false;
-        }
+      zNull = true;
+      continue;
 
-        if(!success || zeqPort < 1024)
-        {
-          std::cerr << "Invalid zhost port";
-          usageMessage(argv[0]);
-        }
-
-        continue;
-      }
 #else
       std::cerr << "Zeq not supported " << std::endl;
       return -1;
@@ -265,13 +244,18 @@ int main( int argc, char** argv )
   mainWindow.setWindowTitle("StackViz");
 
 #ifdef VISIMPL_USE_ZEROEQ
-  if(zeqUri.empty() && zeqHost.empty())
+  if(zeqUri.empty())
   {
     zeqUri = zeroeq::DEFAULT_SESSION;
   }
+
+  if(zNull)
+  {
+    zeqUri = zeroeq::NULL_SESSION;
+  }
 #endif
 
-  mainWindow.init( zeqUri, zeqHost, zeqPort );
+  mainWindow.init( zeqUri );
 
   if ( initWindowSize )
     mainWindow.resize( initWindowWidth, initWindowHeight );
@@ -334,7 +318,7 @@ void usageMessage( char* progName )
 #ifdef VISIMPL_USE_ZEROEQ
             << "\t[ -zeq <session_name*> ]"
             << std::endl
-            << "\t[ -zhost <ip> <port> ]"
+            << "\t[ -znull ]"
             << std::endl
 #endif
             << "\t[ -ws | --window-size ] <width> <height> ]"

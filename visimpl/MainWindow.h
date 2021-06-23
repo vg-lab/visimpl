@@ -75,7 +75,7 @@ namespace visimpl
                          bool updateOnIdle = true );
     virtual ~MainWindow( void );
 
-    void init( const std::string& zeqUri = std::string(), const std::string &zeqHost = std::string(), const uint32_t zeqPort = 0);
+    void init( const std::string& zeqUri = std::string() );
     void showStatusBarMessage ( const QString& message );
 
     void openBlueConfig( const std::string& fileName,
@@ -215,10 +215,7 @@ namespace visimpl
 
   protected:
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
-    void initializeZeroEQ(const std::string &session = std::string(), const std::string &host = std::string(), const uint32_t port = 0);
-    bool _zeqConnection;
-
-    std::thread* _thread;
+    void initializeZeroEQ(const std::string &session = std::string());
 
   #endif // VISIMPL_USE_ZEROEQ
 

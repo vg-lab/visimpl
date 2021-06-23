@@ -56,7 +56,6 @@ namespace Ui
 
 namespace stackviz
 {
-
   class MainWindow
   : public QMainWindow
   {
@@ -66,7 +65,7 @@ namespace stackviz
     explicit MainWindow( QWidget* parent = nullptr );
     ~MainWindow( void );
 
-    void init( const std::string& zeqUri = std::string(), const std::string &zeqHost = std::string(), const uint32_t zeqPort = 0);
+    void init( const std::string& zeqUri = std::string() );
     void showStatusBarMessage ( const QString& message );
 
     void openBlueConfig( const std::string& fileName,
@@ -147,7 +146,7 @@ namespace stackviz
   #ifdef VISIMPL_USE_ZEROEQ
 
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected );
-    void _setZeqUri( const std::string &session, const std::string &host, const uint32_t port );
+    void _setZeqUri( const std::string &session );
 
   #endif
 

@@ -104,7 +104,7 @@ MainWindow::MainWindow( QWidget* parent_ )
            this, SLOT( aboutDialog( void )));
 }
 
-void MainWindow::init( const std::string &zeqUri, const std::string &zeqHost, const uint32_t zeqPort)
+void MainWindow::init( const std::string &zeqUri )
 {
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( void )),
            this, SLOT( openBlueConfigThroughDialog( void )));
@@ -131,7 +131,7 @@ void MainWindow::init( const std::string &zeqUri, const std::string &zeqHost, co
 
 #ifdef VISIMPL_USE_ZEROEQ
 
-  _setZeqUri( zeqUri, zeqHost, zeqPort );
+  _setZeqUri( zeqUri );
   _ui->actionTogglePlaybackDock->setChecked( true );
 
 #else
@@ -908,18 +908,20 @@ void MainWindow::HistogramClicked(visimpl::HistogramWidget *histogram)
 
 #endif
 
-void MainWindow::_setZeqUri(const std::string &session, const std::string &host, const uint32_t port )
+void MainWindow::_setZeqUri(const std::string &session )
 {
   bool failed = false;
 
   try
   {
     _zeqConnection = true;
+    const auto zeqSession = session.empty() ? zeroeq::DEFAULT_SESSION : session;
+
     auto &zInstance = visimpl::ZeroEQConfig::instance();
 
-    if(!host.empty() && visimpl::isValidIPAddress(host))
+    if(zeqSession.compare(zeroeq::NULL_SESSION) == 0)
     {
-      zInstance.connect(host, port);
+      zInstance.connectNullSession();
     }
     else
     {
@@ -931,24 +933,6 @@ void MainWindow::_setZeqUri(const std::string &session, const std::string &host,
     zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
                                       [&](const void *data_, const size_t size_)
                                       { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
-
-    _thread = new std::thread([&]()
-    {
-      bool valid = true;
-      while( _zeqConnection && valid)
-      {
-        try
-        {
-          zInstance.subscriber()->receive( 10000 );
-        }
-        catch(const std::exception &e)
-        {
-          std::cerr << "Exception in ZeroEQ receive loop: " << e.what() << ". "
-                    << __FILE__ << ":" << __LINE__ << std::endl;
-          valid = false;
-        }
-      }
-    });
   }
   catch(const std::exception &e)
   {
@@ -1136,6 +1120,11 @@ void MainWindow::openH5FilesThroughDialog(void)
 void MainWindow::updateUIonOpen(const std::string &eventsFile)
 {
   configurePlayer( );
+
+#ifdef VISIMPL_USE_ZEROEQ
+  visimpl::ZeroEQConfig::instance().startReceiveLoop();
+#endif
+
   initSummaryWidget( );
 
   openSubsetEventFile( eventsFile, true );

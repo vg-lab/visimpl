@@ -58,14 +58,6 @@
 #include <sumrice/sumrice.h>
 #include <scoop/scoop.h>
 
-#ifdef VISIMPL_USE_ZEROEQ
-  #include <zeroeq/zeroeq.h>
-  #include <servus/uri.h>
-
-  #include <pthread.h>
-  #include <mutex>
-#endif
-
 class QLabel;
 
 namespace visimpl
@@ -284,6 +276,11 @@ namespace visimpl
     virtual void wheelEvent( QWheelEvent* event );
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
+
+    /** \brief Connects the player to ZeroEQ signaling.
+     *
+     */
+    void connectPlayerZeroEQ();
 
     std::unordered_set< uint32_t > _selectedGIDs;
 

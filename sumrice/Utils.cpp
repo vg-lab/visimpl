@@ -93,7 +93,7 @@ void visimpl::ZeroEQConfig::connect(const std::string &s)
 }
 
 //----------------------------------------------------------------------------
-void visimpl::ZeroEQConfig::connect(const std::string &h, const uint32_t p, bool invert)
+void visimpl::ZeroEQConfig::connect(const std::string &h, const uint16_t p, bool invert)
 {
   if(m_subscriber || m_publisher)
   {
@@ -120,14 +120,15 @@ void visimpl::ZeroEQConfig::connect(const std::string &h, const uint32_t p, bool
   zeroeq::URI uri_subscriber;
   uri_subscriber.setHost(m_host);
   uri_subscriber.setPort(m_port + (invert ? 1:0));
+
   zeroeq::URI uri_publisher;
   uri_publisher.setHost(m_host);
   uri_publisher.setPort(m_port + (!invert ? 1:0));
 
   try
   {
-    m_subscriber = std::make_shared<zeroeq::Subscriber>(uri_subscriber);
     m_publisher = std::make_shared<zeroeq::Publisher>(uri_publisher, m_session);
+    m_subscriber = std::make_shared<zeroeq::Subscriber>(uri_subscriber);
   }
   catch(const std::exception &e)
   {
@@ -148,7 +149,8 @@ void visimpl::ZeroEQConfig::print() const
   }
   else
   {
-    std::cout << "publisher uri: " << m_host << ":" << m_port << " - subscriber to session: " << m_session << std::endl;
+    std::cout << "publisher uri: " << m_host << ":" << m_port << " - subscriber to session: " << m_session << " - "
+              << "receiver loop: " << (m_run ? "":"not ") << "running." << std::endl;
   }
 }
 
@@ -160,6 +162,12 @@ void visimpl::ZeroEQConfig::disconnect()
   m_session.clear();
   m_host.clear();
   m_port = 0;
+  if(m_run)
+  {
+    m_run = false;
+    m_thread->join();
+  }
+  m_thread = nullptr;
 }
 
 //----------------------------------------------------------------------------
@@ -167,6 +175,104 @@ visimpl::ZeroEQConfig::~ZeroEQConfig()
 {
   disconnect();
   std::cout << "ZeroEQConfig -> disconnected." << std::endl;
+}
+
+//----------------------------------------------------------------------------
+void visimpl::ZeroEQConfig::connectNullSession()
+{
+  if(m_subscriber || m_publisher)
+  {
+    const auto message = std::string("ZeroEQ Already connected. ") + __FILE__ + ":" + std::to_string(__LINE__);
+    throw std::runtime_error(message);
+  }
+
+  m_session = zeroeq::NULL_SESSION;
+  m_host = "127.0.0.1";
+
+  for(const int port: PORTS)
+  {
+    try
+    {
+      m_port = port;
+
+      zeroeq::URI uri;
+      uri.setHost(m_host);
+      uri.setPort(m_port);
+
+      std::cout << "ZeroEQ: try publisher in port " << port << std::endl;
+      m_publisher = std::make_shared<zeroeq::Publisher>(uri, m_session);
+      break;
+    }
+    catch(...)
+    {
+      // nothing to do, unable to create a publisher in the
+      // used port, use next port until we run out of ports.
+    }
+  }
+
+  if(!m_publisher)
+  {
+    disconnect();
+    const auto message = std::string("ZeroEQ unable to publish in any of the known ports. ") + __FILE__ + ":" + std::to_string(__LINE__);
+    throw std::runtime_error(message);
+  }
+
+  zeroeq::URIs uris;
+
+  std::string subscriberPorts;
+  for(const int port: PORTS)
+  {
+    if(port == m_publisher->getURI().getPort())
+      continue;
+
+    zeroeq::URI uri;
+    uri.setHost(m_host);
+    uri.setPort(port);
+
+    uris.push_back(uri);
+
+    subscriberPorts += subscriberPorts.empty() ? "":",";
+    subscriberPorts += std::to_string(port);
+  }
+
+  try
+  {
+    std::cout << "ZeroEQ: try to subscribe to ports " << subscriberPorts << std::endl;
+    m_subscriber = std::make_shared<zeroeq::Subscriber>(uris);
+  }
+  catch(std::exception &e)
+  {
+    disconnect();
+    throw;
+  }
+}
+
+//----------------------------------------------------------------------------
+void visimpl::ZeroEQConfig::startReceiveLoop()
+{
+  if(!m_thread)
+  {
+    std::cout << "ZeroEQConfig STARTS TREAD" << std::endl;
+    m_run = true;
+    m_thread = std::make_shared<std::thread>([this]( )
+      {
+        while ( m_run )
+        {
+          try
+          {
+            if(m_subscriber)
+            {
+              m_subscriber->receive( 10000 );
+            }
+          }
+          catch(const std::exception &e)
+          {
+            // exception in zmq_poll
+            m_run = false;
+          }
+        }
+      });
+  }
 }
 
 #endif

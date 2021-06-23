@@ -64,6 +64,8 @@
 
 #include <sumrice/sumrice.h>
 
+template<class T> void ignore( const T& ) { }
+
 namespace visimpl
 {
   enum toolIndex
@@ -76,10 +78,6 @@ namespace visimpl
 
   MainWindow::MainWindow( QWidget* parent_, bool updateOnIdle )
     : QMainWindow( parent_ )
-#ifdef VISIMPL_USE_GMRVLEX
-    , _zeqConnection( false )
-    , _thread( nullptr )
-#endif
     , _ui( new Ui::MainWindow )
     , _lastOpenedNetworkFileName( "" )
     , _playIcon(":/icons/play.svg")
@@ -150,10 +148,10 @@ namespace visimpl
 #endif
   }
 
-  void MainWindow::init( const std::string& session,  const std::string &host, const uint32_t port)
+  void MainWindow::init( const std::string& session )
   {
 #ifdef VISIMPL_USE_ZEROEQ
-    initializeZeroEQ(session, host, port);
+    initializeZeroEQ(session);
 #endif
     _openGLWidget = new OpenGLWidget( nullptr, Qt::WindowFlags());
 
@@ -248,16 +246,9 @@ namespace visimpl
   {
 #ifdef VISIMPL_USE_ZEROEQ
 
-    if( _zeqConnection )
+    if(ZeroEQConfig::instance().isConnected())
     {
-      _zeqConnection = false;
-      _thread->join();
-      delete _thread;
-
-      if(ZeroEQConfig::instance().isConnected())
-      {
-        ZeroEQConfig::instance().subscriber()->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
-      }
+      ZeroEQConfig::instance().subscriber()->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
     }
 
 #endif
@@ -1667,51 +1658,27 @@ namespace visimpl
 
 #endif
 
-  void MainWindow::initializeZeroEQ(const std::string &session, const std::string &host, const uint32_t port)
+  void MainWindow::initializeZeroEQ(const std::string &session)
   {
     bool failed = false;
 
     try
     {
+      const auto zeqSession = session.empty() ? zeroeq::DEFAULT_SESSION : session;
+
       auto &zInstance = ZeroEQConfig::instance();
-      if(!host.empty() && isValidIPAddress(host))
+      if(zeqSession.compare(zeroeq::NULL_SESSION) == 0)
       {
-        zInstance.connect(host, port);
-        _zeqConnection = true;
+        zInstance.connectNullSession();
       }
       else
       {
         zInstance.connect(session);
-        _zeqConnection = true;
       }
 
       zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
                                         [&]( const void* data_, unsigned long long size_ )
                                         { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
-
-      _thread = new std::thread( [this]( )
-      {
-        bool valid = true;
-        while ( _zeqConnection && valid )
-        {
-          try
-          {
-            if(ZeroEQConfig::instance().isConnected())
-            {
-              ZeroEQConfig::instance().subscriber()->receive( 10000 );
-            }
-            else
-            {
-              _zeqConnection = false;
-            }
-          }
-          catch(const std::exception &e)
-          {
-            std::cerr << "ZeroEQ exception in receive loop: " << e.what() << std::endl;
-            valid = false;
-          }
-        }
-      });
     }
     catch(std::exception &e)
     {
@@ -1727,11 +1694,10 @@ namespace visimpl
 
     if(failed)
     {
-      _zeqConnection = false;
-      _thread = nullptr;
       ZeroEQConfig::instance().disconnect();
     }
 
+    // NOTE: ZeroEQ loop will be started in OpenGLWidget after loading data.
     visimpl::ZeroEQConfig::instance().print();
   }
 

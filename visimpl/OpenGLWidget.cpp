@@ -52,6 +52,10 @@
 #include <brion/brion.h>
 #endif
 
+#ifdef VISIMPL_USE_ZEROEQ
+  #include <zeroeq/zeroeq.h>
+#endif
+
 constexpr float ZOOM_FACTOR = 1.3f;
 constexpr float TRANSLATION_FACTOR = 0.001f;
 constexpr float ROTATION_FACTOR = 0.01f;
@@ -216,6 +220,7 @@ namespace visimpl
       auto &zInstance = ZeroEQConfig::instance();
       if(zInstance.isConnected())
       {
+        // NOTE: may not be null_session, but avoid the camera creating a thread.
         _camera = new Camera(zeroeq::NULL_SESSION, zInstance.subscriber());
       }
       else
@@ -225,12 +230,12 @@ namespace visimpl
     }
     catch(std::exception &e)
     {
-      std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
+      std::cerr << "Exception initializing camera. " << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
       _camera = nullptr;
     }
     catch(...)
     {
-      std::cerr << "Unknown exception catched when initializing camera. " << __FILE__ << ":" << __LINE__ << std::endl;
+      std::cerr << "Unknown exception when initializing camera. " << __FILE__ << ":" << __LINE__ << std::endl;
       _camera = nullptr;
     }
 #endif
@@ -328,29 +333,8 @@ namespace visimpl
     simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
     changeSimulationDecayValue( std::get< T_DECAY >( config ) );
 
-  #ifdef VISIMPL_USE_ZEROEQ
-    try
-    {
-      auto &zInstance = ZeroEQConfig::instance();
-      if( zInstance.isConnected())
-      {
-        _player->connectZeq(zInstance.subscriber(), zInstance.publisher());
-      }
-      else
-      {
-        _player->connectZeq(zeroeq::DEFAULT_SESSION);
-      }
-    }
-    catch(std::exception &e)
-    {
-      std::cerr << "Exception when initializing ZeroEQ. ";
-      std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
-    }
-    catch(...)
-    {
-      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-    }
-  #endif
+    connectPlayerZeroEQ();
+
     this->_paint = true;
     update( );
   }
@@ -420,29 +404,8 @@ namespace visimpl
 
     subsetEventsManager(netData->subsetsEvents());
 
-  #ifdef VISIMPL_USE_ZEROEQ
-    try
-    {
-      auto &zInstance = ZeroEQConfig::instance();
-      if(zInstance.isConnected())
-      {
-        _player->connectZeq(zInstance.subscriber(), zInstance.publisher());
-      }
-      else
-      {
-        _player->connectZeq(zeroeq::DEFAULT_SESSION);
-      }
-    }
-    catch(std::exception &e)
-    {
-      std::cerr << "Exception when initializing ZeroEQ. ";
-      std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
-    }
-    catch(...)
-    {
-      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-    }
-  #endif
+    connectPlayerZeroEQ();
+
     this->_paint = true;
     update( );
   }
@@ -2183,6 +2146,35 @@ namespace visimpl
   float OpenGLWidget::getSimulationDecayValue( void )
   {
     return _domainManager->decay( );
+  }
+
+  void OpenGLWidget::connectPlayerZeroEQ()
+  {
+#ifdef VISIMPL_USE_ZEROEQ
+    try
+    {
+      auto &zInstance = ZeroEQConfig::instance();
+      if(zInstance.isConnected())
+      {
+        _player->connectZeq(zInstance.subscriber(), zInstance.publisher());
+      }
+      else
+      {
+        _player->connectZeq(zeroeq::DEFAULT_SESSION);
+      }
+
+      zInstance.startReceiveLoop();
+    }
+    catch(std::exception &e)
+    {
+      std::cerr << "Exception when initializing ZeroEQ. ";
+      std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+#endif
   }
 
 } // namespace visimpl
