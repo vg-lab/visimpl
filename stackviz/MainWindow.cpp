@@ -137,8 +137,6 @@ void MainWindow::init( const std::string &zeqUri )
 #else
   // to avoid compilation warnings about unused parameter.
   ignore(zeqUri);
-  ignore(zeqHost);
-  ignore(zeqPort);
 #endif
 
   _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);

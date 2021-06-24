@@ -56,6 +56,8 @@ struct dotSeparator: std::numpunct<char>
     char do_decimal_point() const { return '.'; }
 };
 
+template<class T> void ignore( const T& ) { }
+
 bool setFormat( void );
 void usageMessage(  char* progName );
 void dumpVersion( void );
@@ -300,6 +302,8 @@ int main( int argc, char** argv )
   {
     zeqUri = zeroeq::NULL_SESSION;
   }
+#else
+  ignore(zNull);
 #endif
 
   mainWindow.init( zeqUri );
