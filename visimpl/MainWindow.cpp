@@ -153,7 +153,7 @@ namespace visimpl
 #ifdef VISIMPL_USE_ZEROEQ
     initializeZeroEQ(session);
 #else
-    ignore(session)
+    ignore(session);
 #endif
     _openGLWidget = new OpenGLWidget( nullptr, Qt::WindowFlags());
 
