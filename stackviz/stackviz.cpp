@@ -40,6 +40,8 @@
 void usageMessage(  char* progName );
 void dumpVersion( void );
 
+template<class T> void ignore( const T& ) { }
+
 int main( int argc, char** argv )
 {
   // Linux osg obj importer has a bug with non english lang.
@@ -253,6 +255,8 @@ int main( int argc, char** argv )
   {
     zeqUri = zeroeq::NULL_SESSION;
   }
+#else
+  ignore(zNull);
 #endif
 
   mainWindow.init( zeqUri );
