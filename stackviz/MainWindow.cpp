@@ -168,7 +168,6 @@ MainWindow::~MainWindow( void )
 #endif
 }
 
-
 void MainWindow::showStatusBarMessage ( const QString& message )
 {
   _ui->statusbar->showMessage( message );

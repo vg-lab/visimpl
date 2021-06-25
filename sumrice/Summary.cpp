@@ -1088,7 +1088,7 @@ namespace visimpl
 
 #ifdef VISIMPL_USE_OPENMP
     #pragma omp parallel for
-    for( int i = 0; i < ( int )_histogramWidgets.size(); ++i )
+    for( int i = 0; i < static_cast<int>(_histogramWidgets.size()); ++i )
     {
       auto histogram = _histogramWidgets[ i ];
 #else
@@ -1126,7 +1126,6 @@ namespace visimpl
     for( auto histogram : _histogramWidgets )
     {
 #endif
-
       histogram->zoomFactor( _zoomFactor );
       histogram->update();
     }

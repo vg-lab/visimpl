@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -94,6 +94,7 @@
    <addaction name="actionToggleSimConfigDock"/>
    <addaction name="separator"/>
    <addaction name="actionShowInactive"/>
+   <addaction name="actionStackViz"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -291,7 +292,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources.qrc">
      <normaloff>:/icons/hide.svg</normaloff>
      <normalon>:/icons/show.svg</normalon>:/icons/hide.svg</iconset>
    </property>
@@ -359,6 +360,18 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+H</string>
+   </property>
+  </action>
+  <action name="actionStackViz">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/visimpl.png</normaloff>:/visimpl.png</iconset>
+   </property>
+   <property name="text">
+    <string>StackViz</string>
+   </property>
+   <property name="toolTip">
+    <string>Open StackViz</string>
    </property>
   </action>
  </widget>

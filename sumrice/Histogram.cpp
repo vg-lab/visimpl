@@ -228,7 +228,7 @@ namespace visimpl
     {
       simil::TSpikes::const_iterator spikeIt = references[ i ];
 
-      float endTime = ( i < ( ( int )references.size( ) - 1 )) ?
+      const float endTime = ( i < ( static_cast<int>(references.size()) - 1 )) ?
                       references[ i + 1]->first :
                       _endTime;
 

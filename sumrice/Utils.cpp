@@ -165,7 +165,7 @@ void visimpl::ZeroEQConfig::disconnect()
   if(m_run)
   {
     m_run = false;
-    m_thread->join();
+    if(m_thread) m_thread->join();
   }
   m_thread = nullptr;
 }
@@ -250,7 +250,7 @@ void visimpl::ZeroEQConfig::connectNullSession()
 //----------------------------------------------------------------------------
 void visimpl::ZeroEQConfig::startReceiveLoop()
 {
-  if(!m_thread)
+  if(!m_thread && m_subscriber)
   {
     std::cout << "ZeroEQConfig STARTS TREAD" << std::endl;
     m_run = true;

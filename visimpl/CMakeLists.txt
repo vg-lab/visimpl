@@ -34,6 +34,7 @@ set(VISIMPL_SOURCES
 
   visimpl.ui
   resources.qrc
+  stackviz/resources.qrc
 
   visimpl.cpp
   MainWindow.cpp
@@ -52,6 +53,9 @@ set(VISIMPL_SOURCES
 
   render/Plane.cpp
   ui/DataInspector.cpp
+  
+  stackviz/StackViz.cpp
+  stackviz/DisplayManagerWidget.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -74,6 +78,9 @@ set(VISIMPL_HEADERS
   render/Plane.h
 
   ui/DataInspector.h
+  
+  stackviz/StackViz.h
+  stackviz/DisplayManagerWidget.h
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

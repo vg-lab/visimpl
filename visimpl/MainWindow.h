@@ -57,6 +57,8 @@ class MainWindow;
 
 namespace visimpl
 {
+  class StackViz;
+
   enum TSelectionSource
   {
     SRC_EXTERNAL = 0,
@@ -112,6 +114,7 @@ namespace visimpl
     void closeData( void );
 
     void dialogAbout( void );
+    void onStackVizActionTriggered();
     void dialogSelectionManagement( void );
     void dialogSubsetImporter( void );
 
@@ -304,5 +307,7 @@ namespace visimpl
     QDoubleSpinBox* _spinBoxClippingDist;
     QPushButton* _frameClippingColor;
     QPushButton* _buttonSelectionFromClippingPlanes;
+
+    StackViz *m_stackviz;
   };
 } // namespace visimpl

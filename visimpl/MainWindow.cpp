@@ -59,6 +59,7 @@
 #include <QPushButton>
 #include <QToolBox>
 #include <QtGlobal>
+#include "stackviz/StackViz.h"
 
 #include <thread>
 
@@ -133,6 +134,7 @@ namespace visimpl
     , _spinBoxClippingDist( nullptr )
     , _frameClippingColor( nullptr )
     , _buttonSelectionFromClippingPlanes( nullptr )
+    , m_stackviz{nullptr}
   {
     _ui->setupUi( this );
 
@@ -214,6 +216,8 @@ namespace visimpl
              SLOT( PlayPause( ) ) );
     addAction( actionTogglePause );
 
+    connect( _ui->actionStackViz, SIGNAL(triggered()), this, SLOT(onStackVizActionTriggered()));
+
 #ifdef VISIMPL_USE_ZEROEQ
     _ui->actionShowInactive->setEnabled( true );
     _ui->actionShowInactive->setChecked( true );
@@ -256,6 +260,7 @@ namespace visimpl
 #endif
 
     delete _ui;
+    if(m_stackviz) m_stackviz->deleteLater();
   }
 
   void MainWindow::showStatusBarMessage( const QString& message )
@@ -269,6 +274,8 @@ namespace visimpl
     _selectionManager->setGIDs( _domainManager->gids( ) );
 
     _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
+
+    if(m_stackviz) m_stackviz->init(_openGLWidget->player( ));
   }
 
   void MainWindow::openBlueConfig( const std::string& fileName,
@@ -1250,6 +1257,8 @@ namespace visimpl
 
     if ( _summary )
       _summary->repaintHistograms( );
+
+    if(m_stackviz) m_stackviz->updateHistograms();
   }
 
   void MainWindow::UpdateSimulationColorMapping( void )
@@ -2098,6 +2107,23 @@ namespace visimpl
     {
       _playButton->setIcon( _playIcon );
     }
+  }
+
+  void MainWindow::onStackVizActionTriggered()
+  {
+    if(m_stackviz)
+    {
+      m_stackviz->show();
+      m_stackviz->setFocus();
+      return;
+    }
+
+    m_stackviz = new StackViz(this);
+    if(_openGLWidget && _openGLWidget->player( ))
+    {
+      m_stackviz->init(_openGLWidget->player( ));
+    }
+    m_stackviz->show();
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
