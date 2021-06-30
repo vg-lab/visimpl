@@ -16,3 +16,4 @@ COPY install/translations /usr/translations/
 
 COPY visimpl.sh /usr/bin/
 COPY stackviz.sh /usr/bin/
+COPY simpart.sh /usr/bin/
