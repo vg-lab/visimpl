@@ -12,4 +12,4 @@ else
 	avahi-daemon --daemonize --no-drop-root --no-rlimits
 	sleep 1
 fi
-/usr/bin/stackviz
+/usr/bin/stackviz $@
