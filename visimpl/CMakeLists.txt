@@ -28,7 +28,6 @@ set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 #set(CMAKE_AUTOMOC ON)
 #set(CMAKE_AUTOUIC ON)
 
-
 set(VISIMPL_SOURCES
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
 

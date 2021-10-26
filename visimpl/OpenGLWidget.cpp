@@ -33,6 +33,7 @@
 #include <QGraphicsOpacityEffect>
 #include <QLabel>
 #include <QDir>
+#include <QMessageBox>
 
 // C++
 #include <sstream>
@@ -114,9 +115,8 @@ namespace visimpl
   , _pickRenderer( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
-#ifdef SIMIL_WITH_REST_API
-  , _importer( nullptr )
-#endif
+  , m_loader{nullptr}
+  , m_loaderDialog{nullptr}
   , _clippingPlaneLeft( nullptr )
   , _clippingPlaneRight( nullptr )
   , _planeHeight( 1 )
@@ -269,10 +269,9 @@ namespace visimpl
 
     if( _player )
       delete _player;
-#ifdef SIMIL_WITH_REST_API
-    if(_importer)
-      delete _importer;
-#endif
+
+    m_loader = nullptr;
+    closeLoadingDialog();
   }
 
   void OpenGLWidget::loadData( const std::string& fileName,
@@ -280,30 +279,97 @@ namespace visimpl
                                simil::TSimulationType simulationType,
                                const std::string& report)
   {
-    makeCurrent( );
+    m_loader = nullptr;
+    closeLoadingDialog();
 
     _simulationType = simulationType;
 
+    m_loaderDialog = new LoadingDialog(this);
+    m_loaderDialog->show();
+
+    QApplication::processEvents();
+
+    m_loader = std::make_shared<LoaderThread>();
+    m_loader->setData(fileType, fileName, report);
+
+    connect(m_loader.get(), SIGNAL(finished()),            this,           SLOT(onLoaderFinished()));
+    connect(m_loader.get(), SIGNAL(progress(int)),         m_loaderDialog, SLOT(setProgress(int)));
+    connect(m_loader.get(), SIGNAL(network(unsigned int)), m_loaderDialog, SLOT(setNetwork(unsigned int)));
+    connect(m_loader.get(), SIGNAL(spikes(unsigned int)),  m_loaderDialog, SLOT(setSpikesValue(unsigned int)));
+
+    m_loader->start();
+  }
+
+  void OpenGLWidget::onLoaderFinished()
+  {
+    makeCurrent( );
+
     _deltaTime = 0.5f;
 
-    try
+    if(m_loader)
     {
-      auto spikeData = new simil::SpikeData( fileName, fileType, report );
-      spikeData->reduceDataToGIDS( );
+      const auto error = m_loader->errors();
+      if(!error.empty())
+      {
+        closeLoadingDialog();
+        QApplication::restoreOverrideCursor();
 
-      _player = new simil::SpikesPlayer( );
-      _player->LoadData( spikeData );
+        const auto message = QString::fromStdString(error);
+        QMessageBox::critical(this, tr("Error loading data"), message, QMessageBox::Ok);
+
+        m_loader = nullptr;
+        return;
+      }
     }
-    catch(const std::exception &e)
+
+    const auto dataType = m_loader->type();
+
+    switch(dataType)
     {
-      std::cerr << "ERROR: " << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
-      throw;
+      case simil::TBlueConfig:
+      case simil::TCSV:
+      case simil::THDF5:
+        {
+          const auto spikeData = m_loader->simulationData();
+
+          _player = new simil::SpikesPlayer();
+          _player->LoadData(spikeData);
+
+          m_loader = nullptr;
+        }
+        break;
+      case simil::TREST:
+        {
+          const auto netData = m_loader->network();
+          const auto simData = m_loader->simulationData();
+
+          _player = new simil::SpikesPlayer();
+          _player->LoadData(netData, simData);
+
+          // NOTE: loader doesn't get destroyed because has a loop for getting data.
+        }
+        break;
+      case simil::TDataUndefined:
+      default:
+        {
+          m_loader = nullptr;
+          closeLoadingDialog();
+          QMessageBox::critical(this, tr("Error loading data"), tr("Data type is undefined after loading"), QMessageBox::Ok);
+
+          return;
+        }
+        break;
+    }
+
+    if(m_loaderDialog)
+    {
+      m_loaderDialog->setNetwork(_player->gidsSize());
+      m_loaderDialog->setSpikesValue(_player->spikesSize());
+      m_loaderDialog->repaint();
     }
 
     InitialConfig config;
-    float scale = 1.0f;
-
-    switch (fileType)
+    switch (dataType)
     {
       case simil::TBlueConfig:
         config = _initialConfigSimBlueConfig;
@@ -321,10 +387,11 @@ namespace visimpl
         break;
     }
 
-    scale = std::get< T_SCALE >( config );
-
     if( !_scaleFactorExternal )
+    {
+      const auto scale = std::get< T_SCALE >( config );
       _scaleFactor = vec3( scale, scale, scale );
+    }
 
     std::cout << "Using scale factor of " << _scaleFactor.x
               << ", " << _scaleFactor.y
@@ -357,92 +424,9 @@ namespace visimpl
   #endif
     this->_paint = true;
     update( );
+
+    emit dataLoaded();
   }
-
-#ifdef SIMIL_WITH_REST_API
-  void OpenGLWidget::loadRestData( const std::string& url,
-                               const simil::TDataType ,
-                               simil::TSimulationType simulationType,
-                               const std::string& port)
-  {
-
-    makeCurrent( );
-
-    InitialConfig config;
-    float scale = 1.0f;
-
-    config = _initialConfigSimREST;
-
-    _simulationType = simulationType;
-
-    _deltaTime = std::get< T_DELTATIME >( config );
-
-    _importer = new simil::LoaderRestData( );
-    static_cast<simil::LoaderRestData*>(_importer)->deltaTime(_deltaTime);
-
-    std::cout << "--------------------------------------" << std::endl;
-    std::cout << "Network" << std::endl;
-    std::cout << "--------------------------------------" << std::endl;
-
-    simil::Network* netData = _importer->loadNetwork(url,port);
-
-    simil::SimulationData* simData = _importer->loadSimulationData(url,port);
-
-    // @felix REFACTOR NEEDED: if we continue the network will be empty as the
-    // data has not yet been received and nothing will be shown.
-    std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-    //
-
-    std::cout << "Loaded GIDS: " << netData->gids( ).size( ) << std::endl;
-    std::cout << "Loaded positions: " << netData->positions( ).size( )
-              << std::endl;
-
-    std::cout << "--------------------------------------" << std::endl;
-    std::cout << "Spikes" << std::endl;
-    std::cout << "--------------------------------------" << std::endl;
-
-    simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer();
-    spPlayer->LoadData( netData, simData );
-    _player = spPlayer;
-    //_player->deltaTime( _deltaTime );
-
-    scale = std::get< T_SCALE >( config );
-
-    if( !_scaleFactorExternal )
-      _scaleFactor = vec3( scale, scale, scale );
-
-    std::cout << "Using scale factor of " << _scaleFactor.x
-              << ", " << _scaleFactor.y
-              << ", " << _scaleFactor.z
-              << std::endl;
-
-    createParticleSystem( );
-
-    simulationDeltaTime( std::get< T_DELTATIME >( config ) );
-    simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
-    changeSimulationDecayValue( std::get< T_DECAY >( config ) );
-
-    subsetEventsManager(netData->subsetsEvents());
-
-  #ifdef VISIMPL_USE_ZEROEQ
-    try
-    {
-      _player->connectZeq( _zeqUri );
-    }
-    catch(std::exception &e)
-    {
-      std::cerr << "Exception when initializing ZeroEQ. ";
-      std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
-    }
-    catch(...)
-    {
-      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-    }
-  #endif
-    this->_paint = true;
-    update( );
-  }
-#endif
 
   void OpenGLWidget::initializeGL( void )
   {
@@ -1026,7 +1010,7 @@ namespace visimpl
 
       if( _idleUpdate && _player)
         update( );
-    }
+  }
 
   void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
   {
@@ -2180,4 +2164,15 @@ namespace visimpl
   {
     return _domainManager->decay( );
   }
+
+  void OpenGLWidget::closeLoadingDialog()
+  {
+    if(m_loaderDialog)
+    {
+      m_loaderDialog->close();
+      delete m_loaderDialog;
+      m_loaderDialog = nullptr;
+    }
+  }
+
 } // namespace visimpl

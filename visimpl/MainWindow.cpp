@@ -136,6 +136,7 @@ namespace visimpl
     , _spinBoxClippingDist( nullptr )
     , _frameClippingColor( nullptr )
     , _buttonSelectionFromClippingPlanes( nullptr )
+    , m_type{simil::TDataType::TDataUndefined}
   {
     _ui->setupUi( this );
 
@@ -153,7 +154,8 @@ namespace visimpl
 
   void MainWindow::init( const std::string& zeqUri )
   {
-    _openGLWidget = new OpenGLWidget( nullptr, Qt::WindowFlags(), zeqUri );
+    _openGLWidget = new OpenGLWidget( this, Qt::WindowFlags(), zeqUri );
+    connect(_openGLWidget, SIGNAL(dataLoaded()), this, SLOT(onDataLoaded()));
 
     this->setCentralWidget( _openGLWidget );
 
@@ -192,7 +194,6 @@ namespace visimpl
     connect( _ui->actionQuit, SIGNAL( triggered( void ) ), this,
              SLOT( close( ) ) );
 
-    // Connect about dialog
     connect( _ui->actionAbout, SIGNAL( triggered( void ) ), this,
              SLOT( dialogAbout( void ) ) );
 
@@ -285,39 +286,6 @@ namespace visimpl
     _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
   }
 
-  void MainWindow::openBlueConfig( const std::string& fileName,
-                                   simil::TSimulationType simulationType,
-                                   const std::string& reportLabel,
-                                   const std::string& subsetEventFile )
-  {
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    try
-    {
-      _openGLWidget->loadData( fileName, simil::TDataType::TBlueConfig,
-                               simulationType, reportLabel );
-    }
-    catch(const std::exception &e)
-    {
-      QApplication::restoreOverrideCursor();
-      const auto errorText = QString::fromLocal8Bit(e.what());
-      QMessageBox::critical(this, tr("Error loading BlueConfig file"), errorText, QMessageBox::Ok);
-      return;
-    }
-
-    configureComponents( );
-
-    openSubsetEventFile( subsetEventFile, false );
-
-    _configurePlayer( );
-
-    QStringList attributes = {"Morphological type", "Functional type"};
-
-    _comboAttribSelection->addItems( attributes );
-
-    QApplication::restoreOverrideCursor();
-  }
-
   void MainWindow::openBlueConfigThroughDialog( void )
   {
 #ifdef SIMIL_USE_BRION
@@ -327,11 +295,10 @@ namespace visimpl
       tr( "BlueConfig ( BlueConfig CircuitConfig);; All files (*)" ), nullptr,
       QFileDialog::DontUseNativeDialog );
 
-    if ( path != QString( "" ) )
+    if ( !path.isEmpty() )
     {
       bool ok;
 
-      simil::TSimulationType simType = simil::TSimSpikes;
       QString text = QInputDialog::getText( this, tr( "Please type a target" ),
                                             tr( "Target name:" ),
                                             QLineEdit::Normal, "Mosaic", &ok );
@@ -342,9 +309,13 @@ namespace visimpl
         _lastOpenedNetworkFileName = QFileInfo( path ).path( );
         std::string fileName = path.toStdString( );
 
-        openBlueConfig( fileName, simType, reportLabel );
+        loadData(simil::TBlueConfig, fileName, reportLabel, simil::TSimSpikes);
       }
     }
+#else
+    const QString title = tr("Open BlueConfig");
+    const QString message = tr("BlueConfig loading is not supported in this version.");
+    QMessageBox::critical(this, title, message, QMessageBox::Button::Ok);
 #endif
   }
 
@@ -355,10 +326,8 @@ namespace visimpl
       _lastOpenedNetworkFileName, tr( "CSV (*.csv);; All files (*)" ), nullptr,
       QFileDialog::DontUseNativeDialog );
 
-    if ( pathNetwork != QString( "" ) )
+    if ( !pathNetwork.isEmpty() )
     {
-      simil::TSimulationType simType = simil::TSimSpikes;
-
       QString pathActivity = QFileDialog::getOpenFileName(
         this, tr( "Open CSV Activity file" ), _lastOpenedNetworkFileName,
         tr( "CSV (*.csv);; All files (*)" ), nullptr,
@@ -371,83 +340,10 @@ namespace visimpl
         std::string networkFile = pathNetwork.toStdString( );
         std::string activityFile = pathActivity.toStdString( );
 
-        openCSVFile( networkFile, simType, activityFile );
+        loadData(simil::TCSV, networkFile, activityFile, simil::TSimSpikes);
       }
     }
   }
-
-  void MainWindow::openHDF5File( const std::string& networkFile,
-                                 simil::TSimulationType simulationType,
-                                 const std::string& activityFile,
-                                 const std::string& subsetEventFile )
-  {
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    try
-    {
-      _openGLWidget->loadData( networkFile, simil::TDataType::THDF5,
-                               simulationType, activityFile );
-    }
-    catch(const std::exception &e)
-    {
-      QApplication::restoreOverrideCursor();
-      const auto errorText = QString::fromLocal8Bit(e.what());
-      QMessageBox::critical(this, tr("Error loading HDF5 file"), errorText, QMessageBox::Ok);
-      return;
-    }
-
-    configureComponents( );
-
-    openSubsetEventFile( subsetEventFile, false );
-
-    _configurePlayer( );
-
-    QApplication::restoreOverrideCursor();
-  }
-
-  void MainWindow::openCSVFile( const std::string& networkFile,
-                                simil::TSimulationType simulationType,
-                                const std::string& activityFile,
-                                const std::string& subsetEventFile )
-  {
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    try
-    {
-      _openGLWidget->loadData( networkFile, simil::TDataType::TCSV,
-                               simulationType, activityFile );
-    }
-    catch(const std::exception &e)
-    {
-      QApplication::restoreOverrideCursor();
-      const auto errorText = QString::fromLocal8Bit(e.what());
-      QMessageBox::critical(this, tr("Error loading CSV file"), errorText, QMessageBox::Ok);
-      return;
-    }
-
-    configureComponents( );
-
-    openSubsetEventFile( subsetEventFile, false );
-
-    _configurePlayer( );
-
-    QApplication::restoreOverrideCursor();
-  }
-
-#ifdef SIMIL_WITH_REST_API
-  void MainWindow::openRestListener( const std::string& url,
-                                     simil::TSimulationType simulationType,
-                                     const std::string& port,
-                                     const std::string& )
-  {
-    _openGLWidget->loadRestData( url, simil::TDataType::TREST, simulationType,
-                                 port );
-
-    configureComponents( );
-
-    _configurePlayer( );
-  }
-#endif
 
   void MainWindow::openHDF5ThroughDialog( void )
   {
@@ -469,7 +365,7 @@ namespace visimpl
 
     const auto activityFile = path.toStdString( );
 
-    openHDF5File( networkFile, simil::TSimSpikes, activityFile );
+    loadData(simil::THDF5, networkFile, activityFile, simil::TSimSpikes);
   }
 
   void MainWindow::openSubsetEventFile( const std::string& filePath,
@@ -2109,6 +2005,48 @@ namespace visimpl
     {
       _playButton->setIcon( _playIcon );
     }
+  }
+
+  void MainWindow::loadData(const simil::TDataType type,
+                            const std::string arg_1, const std::string arg_2,
+                            const simil::TSimulationType simType, const std::string &subsetEventFile)
+  {
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    try
+    {
+      m_type = type;
+      m_subsetEventFile = subsetEventFile;
+      _openGLWidget->loadData( arg_1, type, simType, arg_2 );
+    }
+    catch(const std::exception &e)
+    {
+      QApplication::restoreOverrideCursor();
+      const auto errorText = QString::fromLocal8Bit(e.what());
+      QMessageBox::critical(this, tr("Error loading data"), errorText, QMessageBox::Ok);
+      return;
+    }
+  }
+
+  void MainWindow::onDataLoaded()
+  {
+    configureComponents( );
+
+    openSubsetEventFile( m_subsetEventFile, false );
+
+    _configurePlayer( );
+
+    _comboAttribSelection->clear();
+
+    if(m_type == simil::TDataType::TBlueConfig)
+    {
+      const QStringList attributes = {"Morphological type", "Functional type"};
+      _comboAttribSelection->addItems( attributes );
+    }
+
+    _openGLWidget->closeLoadingDialog();
+
+    QApplication::restoreOverrideCursor();
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)

@@ -71,15 +71,9 @@ int main( int argc, char** argv )
   QApplication application( argc, argv );
 
   simil::TSimulationType simType = simil::TSimSpikes;
-  simil::TDataType dataType = simil::TBlueConfig;
+  simil::TDataType dataType = simil::TDataUndefined;
 
-  std::string networkFile;
-  std::string activityFile;
-  std::string zeqUri = std::string( "" );
-  std::string target = std::string( "" );
-  std::string report = std::string( "" );
-  std::string subsetEventFile( "" );
-  std::string scaleFactor("");
+  std::string networkFile, activityFile, zeqUri, subsetEventFile, scaleFactor;
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
   int initWindowWidth, initWindowHeight;
@@ -101,7 +95,10 @@ int main( int argc, char** argv )
       if( ++i < argc )
       {
         zeqUri = std::string( argv[ i ]);
+        continue;
       }
+      else
+        usageMessage(argv[0]);
 #else
       std::cerr << "ZeroEQ not supported." << std::endl;
       return -1;
@@ -109,57 +106,55 @@ int main( int argc, char** argv )
     }
     if( std::strcmp( argv[ i ], "-bc" ) == 0 )
     {
-      if( ++i < argc )
+      if( ++i < argc && dataType == simil::TDataUndefined)
       {
         networkFile = std::string( argv[ i ]);
         dataType = simil::TBlueConfig;
+        continue;
       }
       else
-      {
         usageMessage( argv[0] );
-      }
     }
-    else if( std::strcmp( argv[ i ], "-h5" ) == 0 )
+    if( std::strcmp( argv[ i ], "-h5" ) == 0 )
     {
-      if( i + 2 < argc )
+      if( i + 2 < argc && dataType == simil::TDataUndefined)
       {
-        ++i;
-        networkFile = std::string( argv[ i ]);
-        ++i;
-        activityFile = std::string( argv[ i ]);
         dataType = simil::THDF5;
+        networkFile = std::string( argv[ ++i ]);
+        activityFile = std::string( argv[ ++i ]);
+        continue;
       }
       else
-      {
         usageMessage( argv[0] );
-      }
     }
-    else if( std::strcmp( argv[ i ], "-csv") == 0 )
+    if( std::strcmp( argv[ i ], "-csv") == 0 )
     {
-      if( i + 2 < argc )
+      if( i + 2 < argc && dataType == simil::TDataUndefined)
       {
-        ++i;
-        networkFile = std::string( argv[ i ]);
-        ++i;
-        activityFile = std::string( argv[ i ]);
         dataType = simil::TCSV;
+        networkFile = std::string( argv[ ++i ]);
+        activityFile = std::string( argv[ ++i ]);
+        continue;
       }
+      else
+        usageMessage(argv[0]);
     }
 
     else if( std::strcmp( argv[ i ], "-rest") == 0 )
     {
 #ifdef SIMIL_WITH_REST_API
-      if( i + 2 < argc )
+      if( i + 2 < argc && dataType == simil::TDataUndefined)
       {
-        ++i;
-        networkFile = std::string( argv[ i ]);
-        ++i;
-        activityFile = std::string( argv[ i ]);
         dataType = simil::TREST;
+        networkFile = std::string( argv[ ++i ]);
+        activityFile = std::string( argv[ ++i ]);
+        continue;
       }
+      else
+        usageMessage(argv[0]);
 #else
       std::cerr << "REST API not supported." << std::endl;
-      return -1;
+      exit(-1);
 #endif
     }
 
@@ -175,9 +170,9 @@ int main( int argc, char** argv )
 
     if( std::strcmp( argv[ i ], "-target" ) == 0 )
     {
-      if(++i < argc )
+      if( ++i < argc )
       {
-        target = argv[ i ];
+        activityFile = argv[ i ];
       }
       else
         usageMessage( argv[0] );
@@ -185,7 +180,7 @@ int main( int argc, char** argv )
 
     if( std::strcmp( argv[ i ], "-scale" ) == 0 )
     {
-      if(++i < argc )
+      if( ++i < argc )
       {
         scaleFactor = argv[ i ];
       }
@@ -196,38 +191,47 @@ int main( int argc, char** argv )
     if( std::strcmp( argv[ i ], "-spikes" ) == 0 )
     {
       simType = simil::TSimSpikes;
+      continue;
     }
-    else if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
+    if( std::strcmp( argv[ i ], "-voltages" ) == 0 )
     {
       if(++i < argc )
       {
         simType = simil::TSimVoltages;
-        report = std::string( argv[ i ]);
+        activityFile = std::string( argv[ i ]);
+        continue;
       }
       else
         usageMessage( argv[0] );
     }
 
     if ( strcmp( argv[i], "--fullscreen" ) == 0 ||
-         strcmp( argv[i],"-fs") == 0 )
+         strcmp( argv[i], "-fs") == 0 )
     {
       fullscreen = true;
+      continue;
     }
 
     if ( strcmp( argv[i], "--maximize-window" ) == 0 ||
-         strcmp( argv[i],"-mw") == 0 )
+         strcmp( argv[i], "-mw") == 0 )
     {
       initWindowMaximized = true;
+      continue;
     }
 
     if ( strcmp( argv[i], "--window-size" ) == 0 ||
-         strcmp( argv[i],"-ws") == 0 )
+         strcmp( argv[i], "-ws") == 0 )
     {
       initWindowSize = true;
-      if ( i + 2 >= argc )
+
+      if ( i + 2 < argc )
+      {
+        initWindowWidth = atoi( argv[ ++i ] );
+        initWindowHeight = atoi( argv[ ++i ] );
+        continue;
+      }
+      else
         usageMessage( argv[0] );
-      initWindowWidth = atoi( argv[ ++i ] );
-      initWindowHeight = atoi( argv[ ++i ] );
     }
 
     if(strcmp(argv[i], "--testFile") == 0)
@@ -273,7 +277,7 @@ int main( int argc, char** argv )
   else if ( fullscreen )
     mainWindow.showFullScreen( );
   else
-    mainWindow.show( );
+    mainWindow.showNormal( );
 
   if( !scaleFactor.empty( ))
   {
@@ -292,27 +296,9 @@ int main( int argc, char** argv )
     }
   }
 
-  if( !networkFile.empty( ))
-  switch( dataType )
+  if(dataType != simil::TDataUndefined)
   {
-    case simil::TDataType::TBlueConfig:
-      mainWindow.openBlueConfig( networkFile, simType, target, subsetEventFile );
-      break;
-    case simil::TDataType::THDF5:
-      mainWindow.openHDF5File( networkFile, simType, activityFile, subsetEventFile );
-      break;
-    case simil::TDataType::TCSV:
-      mainWindow.openCSVFile( networkFile, simType, activityFile, subsetEventFile );
-      break;
-
-#ifdef SIMIL_WITH_REST_API
-    case simil::TDataType::TREST:
-    mainWindow.openRestListener( networkFile, simType, activityFile, subsetEventFile );
-    break;
-#endif
-
-    default:
-      break;
+    mainWindow.loadData(dataType, networkFile, activityFile, simType, subsetEventFile);
   }
 
   return application.exec();
