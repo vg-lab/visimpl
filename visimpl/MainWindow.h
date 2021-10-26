@@ -72,29 +72,14 @@ namespace visimpl
                          bool updateOnIdle = true );
     virtual ~MainWindow( void );
 
-    void init( const std::string& zeqUri = "" );
+    void init( const std::string& zeqUri = std::string() );
     void showStatusBarMessage ( const QString& message );
 
-    void openBlueConfig( const std::string& fileName,
-                         simil::TSimulationType simulationType,
-                         const std::string& report,
-                         const std::string& subsetEventFile = "");
-
-    void openHDF5File( const std::string& networkFile,
-                       simil::TSimulationType simulationType,
-                       const std::string& activityFile = "",
-                       const std::string& subsetEventFile = "" );
-
-    void openCSVFile( const std::string& networkFile,
-                      simil::TSimulationType simulationType,
-                      const std::string& activityFile = "",
-                      const std::string& subsetEventFile = "" );
-#ifdef SIMIL_WITH_REST_API
-    void openRestListener( const std::string& url,
-                      simil::TSimulationType simulationType,
-                      const std::string& port = "",
-                      const std::string& subsetEventFile = "" );
-#endif
+    void loadData(const simil::TDataType type,
+                  const std::string arg_1,
+                  const std::string arg_2,
+                  const simil::TSimulationType simType = simil::TSimulationType::TSimSpikes,
+                  const std::string &subsetEventFile = std::string());
 
   public slots:
 
@@ -188,6 +173,11 @@ namespace visimpl
     void setSelection( const GIDUSet& selection_, TSelectionSource source_ = SRC_UNDEFINED );
     void clearSelection( void );
     void selectionFromPlanes( void );
+
+    /** \brief Executed when OpenGlWidget reports finished loading data.
+     *
+     */
+    void onDataLoaded();
 
   protected:
     void _initSimControlDock( void );
@@ -307,5 +297,8 @@ namespace visimpl
     QDoubleSpinBox* _spinBoxClippingDist;
     QPushButton* _frameClippingColor;
     QPushButton* _buttonSelectionFromClippingPlanes;
+
+    std::string m_subsetEventFile;
+    simil::TDataType m_type;
   };
 } // namespace visimpl

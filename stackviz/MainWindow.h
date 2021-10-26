@@ -69,27 +69,11 @@ namespace stackviz
     void init( const std::string& zeqUri = "" );
     void showStatusBarMessage ( const QString& message );
 
-    void openBlueConfig( const std::string& fileName,
-                         simil::TSimulationType simulationType,
-                         const std::string& report,
-                         const std::string& subsetEventFile = "" );
-
-    void openHDF5File( const std::string& networkFile,
-                       simil::TSimulationType simulationType,
-                       const std::string& activityFile = "",
-                       const std::string& subsetEventFile = "" );
-
-    void openCSVFile( const std::string& networkFile,
-                      simil::TSimulationType simulationType,
-                      const std::string& activityFile = "",
-                      const std::string& subsetEventFile = "" );
-
-#ifdef SIMIL_WITH_REST_API
-    void openRestListener( const std::string& networkFile,
-                           simil::TSimulationType simulationType,
-                           const std::string& activityFile = "",
-                           const std::string& subsetEventFile = "");
-#endif
+    void loadData(const simil::TDataType type,
+                  const std::string &arg1,
+                  const std::string &arg2,
+                  const simil::TSimulationType simType = simil::TSimulationType::TSimSpikes,
+                  const std::string &subsetEventFile = "");
 
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
@@ -136,6 +120,7 @@ namespace stackviz
 
     void loadComplete( void );
 
+    void onLoadFinished();
 
   protected:
     void configurePlayer( void );
@@ -193,11 +178,6 @@ namespace stackviz
 
   #endif
 
-  #ifdef SIMIL_WITH_REST_API
-    simil::LoaderSimData* _importer;
-  #endif
-
-
   private:
     /** \brief Helper method to update the UI after a dataset has been loaded.
      * \param[in] eventsFile Subset events filename.
@@ -211,7 +191,16 @@ namespace stackviz
      */
     void sendZeroEQPlaybackOperation(const unsigned int op);
 
+    /* \brief Helper method to close the loading dialog.
+     *
+     */
+    void closeLoadingDialog();
+
     std::vector< std::string > _correlations;
+
+    std::string m_subsetEventFile;
+    std::shared_ptr<LoaderThread> m_loader;
+    LoadingDialog *m_loaderDialog;
   };
 
 

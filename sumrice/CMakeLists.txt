@@ -19,6 +19,8 @@ set(SUMRICE_PUBLIC_HEADERS
   log.h
   EventWidget.h  
   CorrelationComputer.h
+  LoaderThread.h
+  LoadingDialog.h
 )
 
 set(SUMRICE_HEADERS
@@ -34,6 +36,8 @@ set(SUMRICE_SOURCES
   FocusFrame.cpp
   EventWidget.cpp
   CorrelationComputer.cpp
+  LoaderThread.cpp
+  LoadingDialog.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES
@@ -60,7 +64,6 @@ endif()
 if (OPENMP_FOUND)
   list(APPEND SUMRICE_LINK_LIBRARIES OpenMP::OpenMP_CXX)
 endif()
-
 
 set(SUMRICE_INCLUDE_NAME sumrice)
 set(SUMRICE_NAMESPACE sumrice)

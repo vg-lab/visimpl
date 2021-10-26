@@ -84,9 +84,8 @@ MainWindow::MainWindow( QWidget* parent_ )
 , _publisher( nullptr )
 , _thread( nullptr )
 #endif
-#ifdef SIMIL_WITH_REST_API
-, _importer{nullptr}
-#endif
+, m_loader{nullptr}
+, m_loaderDialog{nullptr}
 {
   _ui->setupUi( this );
 
@@ -192,126 +191,6 @@ void MainWindow::showStatusBarMessage ( const QString& message )
   _ui->statusbar->showMessage( message );
 }
 
-void MainWindow::openBlueConfig( const std::string& fileName,
-                                 simil::TSimulationType simulationType,
-                                 const std::string& target,
-                                 const std::string& subsetEventFile )
-{
-  ( void ) target;
-
-  _simulationType = simulationType;
-  QApplication::setOverrideCursor(Qt::WaitCursor);
-
-  switch( _simulationType )
-  {
-    case simil::TSimSpikes:
-    {
-      try
-      {
-        auto spikeData = new simil::SpikeData( fileName, simil::TBlueConfig, target );
-        spikeData->reduceDataToGIDS( );
-
-        auto player = new simil::SpikesPlayer( );
-        player->LoadData( spikeData );
-        _player = player;
-
-        _subsetEventManager = _player->data( )->subsetsEvents( );
-      }
-      catch(const std::exception &e)
-      {
-        _player->Clear();
-        _subsetEventManager = nullptr;
-
-        QApplication::restoreOverrideCursor();
-        const auto errorText = QString::fromLocal8Bit(e.what());
-        QMessageBox::critical(this, tr("Error loading BlueConfig file"), errorText, QMessageBox::Ok);
-        return;
-      }
-      break;
-   }
-   case simil::TSimVoltages:
-  #ifdef SIMIL_USE_BRION
-//       _player = new simil::VoltagesPlayer( fileName, reportLabel, true);
-  #else
-       std::cerr << "SimIL without Brion support." << std::endl;
-       exit( -1 );
-  #endif
-  //     _deltaTime = _player->deltaTime( );
-       break;
-
-   default:
-     VISIMPL_THROW("Cannot load an undefined simulation type.");
-  }
-
-  updateUIonOpen(subsetEventFile);
-
-  QApplication::restoreOverrideCursor();
-}
-
-void MainWindow::openHDF5File( const std::string& networkFile,
-                               simil::TSimulationType simulationType,
-                               const std::string& activityFile,
-                               const std::string& subsetEventFile )
-{
-  QApplication::setOverrideCursor(Qt::WaitCursor);
-
-  _simulationType = simulationType;
-
-  try
-  {
-    simil::SpikesPlayer *player = new simil::SpikesPlayer();
-    player->LoadData(simil::TDataType::THDF5, networkFile, activityFile);
-    _player = player;
-
-    _subsetEventManager = _player->data()->subsetsEvents();
-  }
-  catch(const std::exception &e)
-  {
-    _player->Clear();
-    _subsetEventManager = nullptr;
-
-    QApplication::restoreOverrideCursor();
-    const auto errorText = QString::fromLocal8Bit(e.what());
-    QMessageBox::critical(this, tr("Error loading HDF5 file"), errorText, QMessageBox::Ok);
-    return;
-  }
-
-  updateUIonOpen(subsetEventFile);
-  QApplication::restoreOverrideCursor();
-}
-
-void MainWindow::openCSVFile( const std::string& networkFile,
-                              simil::TSimulationType simulationType,
-                              const std::string& activityFile,
-                              const std::string& subsetEventFile )
-{
-  QApplication::setOverrideCursor(Qt::WaitCursor);
-  _simulationType = simulationType;
-
-  try
-  {
-    simil::SpikesPlayer *player = new simil::SpikesPlayer();
-    _player = player;
-
-    player->LoadData(simil::TDataType::TCSV, networkFile, activityFile);
-
-    _subsetEventManager = _player->data()->subsetsEvents();
-  }
-  catch(const std::exception &e)
-  {
-    _player->Clear();
-    _subsetEventManager = nullptr;
-
-    QApplication::restoreOverrideCursor();
-    const auto errorText = QString::fromLocal8Bit(e.what());
-    QMessageBox::critical(this, tr("Error loading CSV file"), errorText, QMessageBox::Ok);
-    return;
-  }
-
-  updateUIonOpen(subsetEventFile);
-  QApplication::restoreOverrideCursor();
-}
-
 void MainWindow::openSubsetEventFile(const std::string &filePath, bool append)
 {
   if (filePath.empty() || !_subsetEventManager) return;
@@ -394,10 +273,14 @@ void MainWindow::openBlueConfigThroughDialog( void )
            "soma", &ok2 );
      }
 
-     if ( ok1 && ok2 && !text.isEmpty( ))
+     if(!ok1 || !ok2 || text.isEmpty()) return;
+
+     const auto target = QInputDialog::getText(this, tr("Target"), tr("BlueConfig Target:"), QLineEdit::Normal, "", &ok1);
+
+     if(ok1 && !target.isEmpty())
      {
        _lastOpenedFileNamePath = QFileInfo(filename).path( );
-       openBlueConfig( filename.toStdString(), simType, text.toStdString() );
+       loadData(simil::TBlueConfig, filename.toStdString(), target.toStdString(), simType );
      }
    }
 #endif
@@ -412,7 +295,6 @@ void MainWindow::openCSVFilesThroughDialog( void )
 
   if( !networkFilename.isEmpty( ))
   {
-    simil::TSimulationType simType = simil::TSimSpikes;
 
     const QString activityFilename = QFileDialog::getOpenFileName(
             this, tr( "Open CSV Activity file" ), _lastOpenedFileNamePath,
@@ -422,7 +304,7 @@ void MainWindow::openCSVFilesThroughDialog( void )
     if ( !activityFilename.isEmpty( ))
     {
       _lastOpenedFileNamePath = QFileInfo( networkFilename ).path( );
-      openCSVFile( networkFilename.toStdString( ), simType, activityFilename.toStdString( ) );
+      loadData(simil::TCSV, networkFilename.toStdString(), activityFilename.toStdString(), simil::TSimSpikes);
     }
   }
 }
@@ -1106,7 +988,7 @@ void MainWindow::openH5FilesThroughDialog(void)
 
   if (activityFilename.isEmpty()) return;
 
-  openHDF5File(networkFilename.toStdString(), simil::TSimSpikes, activityFilename.toStdString());
+  loadData(simil::THDF5, networkFilename.toStdString(), activityFilename.toStdString(), simil::TSimSpikes);
 }
 
 void MainWindow::updateUIonOpen(const std::string &eventsFile)
@@ -1125,55 +1007,108 @@ void MainWindow::updateUIonOpen(const std::string &eventsFile)
   _ui->actionShowDataManager->setEnabled(true);
 }
 
-#ifdef SIMIL_WITH_REST_API
-void stackviz::MainWindow::openRestListener( const std::string& networkFile,
-                                             simil::TSimulationType simulationType,
-                                             const std::string& activityFile,
-                                             const std::string& subsetEventFile)
-
+void stackviz::MainWindow::loadData(const simil::TDataType type,
+    const std::string &arg1, const std::string &arg2,
+    const simil::TSimulationType simType, const std::string &subsetEventFile)
 {
-  const auto url = networkFile;
-  const auto port = activityFile;
+  updateGeometry();
+
+  _simulationType = simType;
+  m_subsetEventFile = subsetEventFile;
 
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
-  _simulationType = simulationType;
+  closeLoadingDialog();
 
-  _importer = new simil::LoaderRestData( );
+  m_loaderDialog = new LoadingDialog(this);
+  m_loaderDialog->show();
 
-  simil::Network* netData = _importer->loadNetwork(url,port);
+  m_loader = std::make_shared<LoaderThread>();
+  m_loader->setData(type, arg1, arg2);
 
-  simil::SimulationData* simData = _importer->loadSimulationData(url,port);
+  connect(m_loader.get(), SIGNAL(finished()),            this,           SLOT(onLoadFinished()));
+  connect(m_loader.get(), SIGNAL(progress(int)),         m_loaderDialog, SLOT(setProgress(int)));
+  connect(m_loader.get(), SIGNAL(network(unsigned int)), m_loaderDialog, SLOT(setNetwork(unsigned int)));
+  connect(m_loader.get(), SIGNAL(spikes(unsigned int)),  m_loaderDialog, SLOT(setSpikesValue(unsigned int)));
 
-  // @felix REFACTOR NEEDED: if we continue the network will be empty as the
-  // data has not yet been received and nothing will be shown.
-  std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-  //
-
-  try
-  {
-    simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer();
-    spPlayer->LoadData( netData, simData );
-    _player = spPlayer;
-
-    _subsetEventManager = _player->data()->subsetsEvents();
-  }
-  catch(const std::exception &e)
-  {
-    _player->Clear();
-    _subsetEventManager = nullptr;
-
-    QApplication::restoreOverrideCursor();
-    const auto errorText = QString::fromLocal8Bit(e.what());
-    QMessageBox::critical(this, tr("Error loading REST data"), errorText, QMessageBox::Ok);
-    return;
-  }
-
-  updateUIonOpen(subsetEventFile);
-  QApplication::restoreOverrideCursor();
+  m_loader->start();
 }
 
-#endif
+void stackviz::MainWindow::onLoadFinished()
+{
+  if(m_loader)
+  {
+    const auto errors = m_loader->errors();
+    if(!errors.empty())
+    {
+      closeLoadingDialog();
+      _player->Clear();
+      _subsetEventManager = nullptr;
+      QApplication::restoreOverrideCursor();
+
+      const auto message = QString::fromStdString(errors);
+      QMessageBox::critical(this, tr("Error loading data"), message, QMessageBox::Ok);
+
+      m_loader = nullptr;
+      return;
+    }
+  }
+
+  const auto dataType = m_loader->type();
+
+  switch(dataType)
+  {
+    case simil::TBlueConfig:
+    case simil::TCSV:
+    case simil::THDF5:
+      {
+        const auto spikeData = m_loader->simulationData();
+
+        _player = new simil::SpikesPlayer();
+        _player->LoadData(spikeData);
+
+        m_loader = nullptr;
+      }
+      break;
+    case simil::TREST:
+      {
+        const auto netData = m_loader->network();
+        const auto simData = m_loader->simulationData();
+
+        _player = new simil::SpikesPlayer();
+        _player->LoadData(netData, simData);
+
+        // NOTE: loader doesn't get destroyed because has a loop for getting data.
+      }
+      break;
+    case simil::TDataUndefined:
+    default:
+      {
+        m_loader = nullptr;
+        closeLoadingDialog();
+        QMessageBox::critical(this, tr("Error loading data"), tr("Data type is undefined after loading"), QMessageBox::Ok);
+
+        return;
+      }
+      break;
+  }
+
+  if(m_loaderDialog)
+  {
+    const auto gids = _player->gidsSize();
+    const auto spikes = reinterpret_cast<simil::SpikesPlayer *>(_player)->spikesSize();
+    m_loaderDialog->setNetwork(gids);
+    m_loaderDialog->setSpikesValue(spikes);
+  }
+
+  _subsetEventManager = _player->data()->subsetsEvents();
+
+  updateUIonOpen(m_subsetEventFile);
+
+  closeLoadingDialog();
+
+  QApplication::restoreOverrideCursor();
+}
 
 void stackviz::MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
 {
@@ -1196,4 +1131,14 @@ void stackviz::MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
 #else
   __attribute__((unused)) const auto unused = op; // c++17 [[maybe_unused]]
 #endif
+}
+
+void stackviz::MainWindow::closeLoadingDialog()
+{
+  if(m_loaderDialog)
+  {
+    m_loaderDialog->close();
+    delete m_loaderDialog;
+    m_loaderDialog = nullptr;
+  }
 }

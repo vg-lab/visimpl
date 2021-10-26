@@ -44,7 +44,6 @@
 
 #include <prefr/prefr.h>
 #include <reto/reto.h>
-#include <simil/simil.h>
 
 #include "types.h"
 
@@ -67,9 +66,13 @@
 #endif
 
 class QLabel;
+class LoadingDialog;
+class LoaderThread;
+
 
 namespace visimpl
 {
+
   typedef enum
   {
     CONTINUOUS = 0,
@@ -114,15 +117,8 @@ namespace visimpl
     void createParticleSystem(  );
     void loadData( const std::string& fileName,
                    const simil::TDataType = simil::TDataType::TBlueConfig,
-                   simil::TSimulationType simulationType = simil::TSimSpikes,
+                   simil::TSimulationType simulationType = simil::TSimulationType::TSimSpikes,
                    const std::string& report = std::string( "" ));
-
-#ifdef SIMIL_WITH_REST_API
-    void loadRestData( const std::string& url,
-                   const simil::TDataType ,
-                   simil::TSimulationType simulationType,
-                   const std::string& port);
-#endif
 
     void idleUpdate( bool idleUpdate_ = true );
 
@@ -151,6 +147,8 @@ namespace visimpl
 
     const scoop::ColorPalette& colorPalette( void );
 
+    void closeLoadingDialog();
+
   signals:
 
     void updateSlider( float );
@@ -160,6 +158,8 @@ namespace visimpl
     void attributeStatsComputed( void );
 
     void pickedSingle( unsigned int );
+
+    void dataLoaded();
 
   public slots:
 
@@ -232,6 +232,8 @@ namespace visimpl
     float getSimulationDecayValue( void );
 
     GIDVec getPlanesContainedElements( void ) const;
+
+    void onLoaderFinished();
 
   protected:
     void _resolveFlagsOperations( void );
@@ -344,9 +346,8 @@ namespace visimpl
     simil::TSimulationType _simulationType;
     simil::SpikesPlayer* _player;
 
-#ifdef SIMIL_WITH_REST_API
-    simil::LoaderSimData* _importer;
-#endif
+    std::shared_ptr<LoaderThread> m_loader;
+    LoadingDialog *m_loaderDialog;
 
     reto::ClippingPlane* _clippingPlaneLeft;
     reto::ClippingPlane* _clippingPlaneRight;
