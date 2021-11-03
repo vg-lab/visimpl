@@ -1624,42 +1624,98 @@ namespace visimpl
 
 #endif
 
-  void MainWindow::addGroupControls( const std::string& name,
+  void MainWindow::addGroupControls( VisualGroup *group,
                                      unsigned int currentIndex,
                                      unsigned int size )
   {
-    auto icon = new QLabel;
-    const auto colors = _openGLWidget->colorPalette( ).colors( );
-    QPixmap pixmap{20,20};
-    pixmap.fill(colors[ currentIndex ].toRgb());
-    icon->setPixmap(pixmap);
-
-    QCheckBox* buttonVisibility = new QCheckBox( "active" );
-    buttonVisibility->setChecked( true );
-
-    connect( buttonVisibility, SIGNAL( clicked( ) ), this,
-             SLOT( checkGroupsVisibility( ) ) );
-
     QWidget* container = new QWidget( );
-    QGridLayout* layout = new QGridLayout( );
-    container->setLayout( layout );
+    auto itemLayout = new QHBoxLayout(container);
+    container->setLayout( itemLayout );
+
+    const auto colors = _openGLWidget->colorPalette( ).colors( );
+    currentIndex = currentIndex % colors.size();
+    auto color = colors[currentIndex].toRgb();
+    const auto variations = DomainManager::generateColorPair(color);
+
+    TTransferFunction colorVariation;
+    colorVariation.push_back( std::make_pair( 0.0f, variations.first ));
+    colorVariation.push_back( std::make_pair( 1.0f, variations.second ));
+    group->colorMapping(colorVariation);
+
+    auto tfWidget = new TransferFunctionWidget(container);
+    tfWidget->setColorPoints(group->colorMapping());
+    tfWidget->setSizeFunction(group->sizeFunction());
+    tfWidget->setDialogIcon(QIcon(":/visimpl.png"));
+    tfWidget->setProperty("groupNum", static_cast<unsigned int>(currentIndex));
+
+    itemLayout->addWidget(tfWidget);
+
+    const auto presetName = QString("Group selection %1").arg(currentIndex);
+    QGradientStops stops;
+    stops << qMakePair( 0.0,  variations.first)
+          << qMakePair( 1.0,  variations.second);
+    tfWidget->addPreset(TransferFunctionWidget::Preset(presetName, stops));
+
+    connect( tfWidget, SIGNAL(colorChanged()),
+             this,     SLOT(onGroupColorChanged()));
+    connect( tfWidget, SIGNAL(previewColor()),
+             this,     SLOT(onGroupPreview()));
+
+    QCheckBox* visibilityCheckbox = new QCheckBox( "active" );
+    visibilityCheckbox->setChecked( true );
+
+    connect( visibilityCheckbox, SIGNAL( clicked( ) ), this,
+             SLOT( checkGroupsVisibility( ) ) );
 
     QString numberText = QString( "# " ).append( QString::number( size ) );
 
-    layout->addWidget( icon, 0, 0, 1, 1 );
-    layout->addWidget( new QLabel( name.c_str( ) ), 0, 1, 1, 1 );
-    layout->addWidget( buttonVisibility, 0, 2, 1, 1 );
-    layout->addWidget( new QLabel( numberText ), 0, 3, 1, 1 );
+    auto nameButton = new QPushButton(group->name().c_str());
+    nameButton->setFlat(true);
+    nameButton->setProperty("groupNum", static_cast<unsigned int>(currentIndex));
+
+    connect(nameButton, SIGNAL(clicked()), this, SLOT(onGroupNameClicked()));
+
+    auto layout = new QVBoxLayout();
+    layout->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
+    layout->addWidget( nameButton );
+    layout->addWidget( visibilityCheckbox );
+    layout->addWidget( new QLabel( numberText ) );
+
+    itemLayout->insertLayout(1, layout, 0);
+    itemLayout->setSizeConstraint(QLayout::SizeConstraint::SetMinimumSize);
 
     _groupsVisButtons.push_back(
-      std::make_tuple( container, buttonVisibility ) );
+      std::make_tuple( container, visibilityCheckbox ) );
 
     _groupLayout->addWidget( container );
 
     _buttonClearGroups->setEnabled( true );
   }
 
-  void MainWindow::clearGroups( void )
+  void MainWindow::Stop( bool notify )
+  {
+    if ( !_openGLWidget || !_openGLWidget->player( ) )
+      return;
+
+    if ( _openGLWidget )
+    {
+      _openGLWidget->Stop( );
+      _playButton->setIcon( _playIcon );
+      _startTimeLabel->setText(
+        QString::number( ( double )_openGLWidget->player( )->startTime( ) ) );
+
+      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
+
+      if ( notify )
+      {
+#ifdef VISIMPL_USE_GMRVLEX
+        sendZeroEQPlaybackOperation( zeroeq::gmrv::STOP );
+#endif
+      }
+    }
+  }
+
+void MainWindow::clearGroups( void )
   {
     for ( auto row : _groupsVisButtons )
     {
@@ -1696,10 +1752,10 @@ namespace visimpl
       };
       std::for_each(subset.cbegin(), subset.cend(), filterGIDs);
 
-      addGroupControls( groupName, _domainManager->groups( ).size( ),
-                        filteredGIDs.size( ) );
+      const auto group = _domainManager->addVisualGroup( filteredGIDs, groupName );
 
-      _domainManager->addVisualGroup( filteredGIDs, groupName );
+      addGroupControls( group, _domainManager->groups( ).size( ) - 1,
+                        filteredGIDs.size( ) );
     };
     std::for_each(groups.cbegin(), groups.cend(), addGroup);
 
@@ -1713,10 +1769,9 @@ namespace visimpl
 
   void MainWindow::addGroupFromSelection( void )
   {
-    unsigned int currentIndex = _domainManager->groups( ).size( );
+    const unsigned int currentIndex = _domainManager->groups( ).size( );
 
-    QString groupName( "Group " + QString::number( currentIndex ) );
-
+    QString groupName = QString( "Group " + QString::number( currentIndex ) );
     if ( !_autoNameGroups )
     {
       bool ok;
@@ -1724,15 +1779,14 @@ namespace visimpl
                                          tr( "Please, introduce group name: " ),
                                          QLineEdit::Normal, groupName, &ok );
 
-      if ( !ok )
-        return;
+      if ( !ok ) return;
     }
 
-    addGroupControls( groupName.toStdString( ),
-                      _domainManager->groups( ).size( ),
-                      _domainManager->selection( ).size( ) );
+    const auto group = _domainManager->addVisualGroupFromSelection( groupName.toStdString( ) );
 
-    _domainManager->addVisualGroupFromSelection( groupName.toStdString( ) );
+    addGroupControls( group,
+                      _domainManager->groups( ).size( ) - 1,
+                      _domainManager->selection( ).size( ) );
 
     _openGLWidget->setUpdateGroups( );
     _openGLWidget->update( );
@@ -1831,30 +1885,7 @@ namespace visimpl
     }
   }
 
-  void MainWindow::Stop( bool notify )
-  {
-    if ( !_openGLWidget || !_openGLWidget->player( ) )
-      return;
-
-    if ( _openGLWidget )
-    {
-      _openGLWidget->Stop( );
-      _playButton->setIcon( _playIcon );
-      _startTimeLabel->setText(
-        QString::number( ( double )_openGLWidget->player( )->startTime( ) ) );
-
-      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
-
-      if ( notify )
-      {
-#ifdef VISIMPL_USE_GMRVLEX
-        sendZeroEQPlaybackOperation( zeroeq::gmrv::STOP );
-#endif
-      }
-    }
-  }
-
-  void MainWindow::Repeat( bool notify )
+    void MainWindow::Repeat( bool notify )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
@@ -2007,6 +2038,41 @@ namespace visimpl
     }
   }
 
+  void MainWindow::onGroupColorChanged()
+  {
+    auto tfw = qobject_cast<TransferFunctionWidget *>(sender());
+    if(tfw)
+    {
+      bool ok = false;
+      size_t groupNum = tfw->property("groupNum").toUInt(&ok);
+
+      if(!ok) return;
+      updateGroupColors(groupNum, tfw->getColors(), tfw->getSizeFunction());
+    }
+  }
+
+  void MainWindow::onGroupPreview()
+  {
+    auto tfw = qobject_cast<TransferFunctionWidget *>(sender());
+    if(tfw)
+    {
+      bool ok = false;
+      size_t groupNum = tfw->property("groupNum").toUInt(&ok);
+
+      if(!ok) return;
+      updateGroupColors(groupNum, tfw->getPreviewColors(), tfw->getSizePreview());
+    }
+  }
+
+  void MainWindow::updateGroupColors(size_t idx, const TTransferFunction &t,
+      const TSizeFunction &s)
+  {
+    const auto groups = _domainManager->groups();
+    const auto groupNum = std::min(idx, groups.size() - 1);
+    groups[groupNum]->colorMapping(t);
+    groups[groupNum]->sizeFunction(s);
+  }
+
   void MainWindow::loadData(const simil::TDataType type,
                             const std::string arg_1, const std::string arg_2,
                             const simil::TSimulationType simType, const std::string &subsetEventFile)
@@ -2047,6 +2113,28 @@ namespace visimpl
     _openGLWidget->closeLoadingDialog();
 
     QApplication::restoreOverrideCursor();
+  }
+
+  void MainWindow::onGroupNameClicked()
+  {
+    auto button = qobject_cast<QPushButton *>(sender());
+    if(button)
+    {
+      bool ok = false;
+      size_t groupNum = button->property("groupNum").toUInt(&ok);
+
+      if(!ok) return;
+      auto group = _domainManager->groups().at(groupNum);
+
+      auto groupName = QString::fromStdString(group->name());
+      groupName = QInputDialog::getText( this, tr( "Group Name" ),
+                                         tr( "Please, introduce group name: " ),
+                                         QLineEdit::Normal, groupName, &ok );
+
+      if (!ok) return;
+      group->name(groupName.toStdString());
+      button->setText(groupName);
+    }
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)

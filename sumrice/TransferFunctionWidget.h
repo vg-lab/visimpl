@@ -94,6 +94,12 @@ public:
   void setDialogIcon(const QIcon &icon)
   { if(_dialog) _dialog->setWindowIcon(icon); }
 
+  /** \brief Adds the given preset to the presets list and selects it.
+   * \param[in] p Preset class reference.
+   *
+   */
+  void addPreset(const Preset &p);
+
 protected slots:
   void gradientClicked( void );
   void acceptClicked( void );

@@ -176,10 +176,9 @@ namespace visimpl
 
   void VisualGroup::colorMapping( const TTransferFunction& colors )
    {
-
      prefr::vectortvec4 gcolors;
 
-     for( auto c : colors )
+     auto insertColor = [&gcolors](const TTFColor &c)
      {
        glm::vec4 gColor( c.second.red( ) * invRGBInt,
                          c.second.green( ) * invRGBInt,
@@ -187,53 +186,58 @@ namespace visimpl
                          c.second.alpha( ) * invRGBInt );
 
        gcolors.Insert( c.first, gColor );
-     }
+     };
+     std::for_each(colors.cbegin(), colors.cend(), insertColor);
 
      _color = colors[ 0 ].second;
      _model->color = gcolors;
-
    }
 
   TTransferFunction VisualGroup::colorMapping( void ) const
    {
      TTransferFunction result;
 
-     prefr::vectortvec4 colors = _model->color;
-
      auto timeValue = _model->color.times.begin( );
-     for( auto c : _model->color.values )
+     const auto values = _model->color.values;
+
+     auto mapColor = [&timeValue, &result](const vec4 &c)
      {
        QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
        result.push_back( std::make_pair( *timeValue, color ));
 
        ++timeValue;
-     }
-
+     };
+     std::for_each(values.cbegin(), values.cend(), mapColor);
 
      return result;
    }
 
    void VisualGroup::sizeFunction( const TSizeFunction& sizes )
    {
-
      utils::InterpolationSet< float > newSize;
-     for( auto s : sizes )
-     {
-       newSize.Insert( s.first, s.second );
-     }
-     _model->size = newSize;
 
+     auto insertSize = [&newSize](const Event &e)
+     {
+       newSize.Insert( e.first, e.second );
+     };
+     std::for_each(sizes.cbegin(), sizes.cend(), insertSize);
+
+     _model->size = newSize;
    }
 
    TSizeFunction VisualGroup::sizeFunction( void ) const
    {
      TSizeFunction result;
+
      auto sizeValue = _model->size.values.begin( );
-     for( auto s : _model->size.times)
+     const auto times = _model->size.times;
+
+     auto insertTime = [&sizeValue, &result](const float f)
      {
-       result.push_back( std::make_pair( s, *sizeValue ));
+       result.push_back( std::make_pair( f, *sizeValue ));
        ++sizeValue;
-     }
+     };
+     std::for_each(times.cbegin(), times.cend(), insertTime);
 
      return result;
    }

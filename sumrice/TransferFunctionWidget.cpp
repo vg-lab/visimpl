@@ -62,6 +62,13 @@ QWidget( parent_ )
   this->setLayout( mainLayout );
 }
 
+void TransferFunctionWidget::addPreset(const Preset &p)
+{
+  _presets.push_back(p);
+  _presetsComboBox->addItem(p.name());
+  _presetsComboBox->setCurrentIndex(_presets.size()-1);
+}
+
 void TransferFunctionWidget::InitDialog( void )
 {
   _dialog = new QWidget( );

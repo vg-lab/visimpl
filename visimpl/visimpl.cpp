@@ -242,6 +242,12 @@ int main( int argc, char** argv )
         path = QString::fromLocal8Bit(argv[i]);
       }
 
+      if(!QDir(path).exists() || !QDir(path).isReadable())
+      {
+        std::cerr << "Invalid test file path: " << path.toStdString() << ". Using home directory instead." << std::endl;
+        path = QDir::homePath();
+      }
+
       if(!generateTestFiles(path, networkFile, activityFile))
         usageMessage(argv[0]);
       else

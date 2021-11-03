@@ -1883,7 +1883,7 @@ namespace visimpl
     _eventsActivation.clear( );
 
     const float totalTime = _player->endTime( ) - _player->startTime( );
-    auto &colors = _colorPalette.colors( );
+    const auto &colors = _colorPalette.colors( );
 
     unsigned int row = 0;
     auto insertEvents = [&row, &totalTime, &colors, this](const std::string &eventName)
@@ -1921,7 +1921,7 @@ namespace visimpl
 
       _eventLabelsLayout->addWidget( container, row, 10, 2, 1 );
 
-      auto activity = _subsetEvents->eventActivity( eventName, _deltaEvents, totalTime );
+      const auto activity = _subsetEvents->eventActivity( eventName, _deltaEvents, totalTime );
       _eventsActivation.push_back(activity);
 
       ++row;
@@ -1994,7 +1994,7 @@ namespace visimpl
   {
     if( _player )
     {
-      bool playing = _player->isPlaying( );
+      const bool playing = _player->isPlaying( );
       _player->Stop( );
       if( playing )
         _player->Play( );
@@ -2038,12 +2038,12 @@ namespace visimpl
 
     prefr::vectortvec4 gcolors;
 
-    for( auto c : colors )
+    for( const auto &c : colors )
     {
       glm::vec4 gColor( c.second.red( ) * invRGBInt,
-                       c.second.green( ) * invRGBInt,
-                       c.second.blue( ) * invRGBInt,
-                       c.second.alpha( ) * invRGBInt );
+                        c.second.green( ) * invRGBInt,
+                        c.second.blue( ) * invRGBInt,
+                        c.second.alpha( ) * invRGBInt );
 
       gcolors.Insert( c.first, gColor );
     }
