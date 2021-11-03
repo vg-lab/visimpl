@@ -152,7 +152,7 @@ namespace visimpl
     void configureComponents( void );
     void importVisualGroups( void );
 
-    void addGroupControls( const std::string& name, unsigned int index,
+    void addGroupControls( VisualGroup *group, unsigned int index,
                            unsigned int size );
     void clearGroups( void );
 
@@ -168,6 +168,21 @@ namespace visimpl
     void clippingPlanesReset( void );
 
     void colorSelectionClicked( void );
+
+    /** \brief Updates group selection color.
+     *
+     */
+    void onGroupColorChanged();
+
+    /** \brief Updates group selection color.
+     *
+     */
+    void onGroupPreview();
+
+    /** \brief Shows the dialog to change the group name.
+     *
+     */
+    void onGroupNameClicked();
 
     void selectionManagerChanged( void );
     void setSelection( const GIDUSet& selection_, TSelectionSource source_ = SRC_UNDEFINED );
@@ -190,6 +205,14 @@ namespace visimpl
     void _updateSelectionGUI( void );
 
     bool _showDialog( QColor& current, const QString& message = "" );
+
+    /** \brief Helper to update a group representations colors.
+     * \param[in] idx Index of group in group list.
+     * \param[in] t Transfer function.
+     * \param[in] s Size function.
+     *
+     */
+    void updateGroupColors(size_t idx, const TTransferFunction &t, const TSizeFunction &s);
 
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
