@@ -30,7 +30,6 @@
 #include "VisualGroup.h"
 #include "SelectionManagerWidget.h"
 #include "SubsetImporter.h"
-#include "ui/DataInspector.h"
 
 // Qt
 #include <QMainWindow>
@@ -49,7 +48,7 @@ class QToolBox;
 
 namespace Ui
 {
-class MainWindow;
+  class MainWindow;
 }
 
 namespace visimpl
@@ -141,9 +140,10 @@ namespace visimpl
     void Pause( bool notify = true );
     void Stop( bool notify = true );
     void Repeat( bool notify = true );
-    void PlayAt( bool notify = true );
-    void PlayAt( float, bool notify = true );
-    void PlayAt( int, bool notify = true );
+    void PlayAtPosition( bool notify = true );
+    void PlayAtPosition( int, bool notify = true );
+    void PlayAtPercentage( float, bool notify = true );
+    void PlayAtTime( float, bool notify = true);
     void requestPlayAt( float );
     void PreviousStep( bool notify = true );
     void NextStep( bool notify = true );
@@ -269,9 +269,7 @@ namespace visimpl
     QTabWidget* _modeSelectionWidget;
     QToolBox* _toolBoxOptions;
 
-#ifdef SIMIL_WITH_REST_API
     DataInspector * _objectInspectorGB;
-#endif
 
     QGroupBox* _groupBoxTransferFunction;
     TransferFunctionWidget* _tfWidget;

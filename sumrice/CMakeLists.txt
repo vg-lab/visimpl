@@ -21,6 +21,7 @@ set(SUMRICE_PUBLIC_HEADERS
   CorrelationComputer.h
   LoaderThread.h
   LoadingDialog.h
+  DataInspector.h
 )
 
 set(SUMRICE_HEADERS
@@ -38,6 +39,7 @@ set(SUMRICE_SOURCES
   CorrelationComputer.cpp
   LoaderThread.cpp
   LoadingDialog.cpp
+  DataInspector.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES

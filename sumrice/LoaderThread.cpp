@@ -109,11 +109,23 @@ void LoaderThread::run()
           m_network = m_rest->loadNetwork(m_arg1, m_arg2);
           m_data = m_rest->loadSimulationData(m_arg1, m_arg2);
 
+          unsigned int oldSpikes = 0, oldNetwork = 0;
           for(int i = 0; i < 5; ++i)
           {
             QThread::sleep(1);
-            emit network(m_network->gidsSize());
-            emit spikes(dynamic_cast<simil::SpikeData *>(m_data)->spikes().size());
+            const auto newNetwork = m_network->gidsSize();
+            if(newNetwork != oldNetwork)
+            {
+              oldNetwork = newNetwork;
+              emit network(newNetwork);
+            }
+
+            const auto newSpikes = dynamic_cast<simil::SpikeData *>(m_data)->spikes().size();
+            if(oldSpikes != newSpikes)
+            {
+              oldSpikes = newSpikes;
+              emit spikes(newSpikes);
+            }
           }
           emit progress(50);
 #else

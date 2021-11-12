@@ -46,7 +46,6 @@
 #endif
 
 #include "ui_stackviz.h"
-
 #include "DisplayManagerWidget.h"
 
 namespace Ui
@@ -56,7 +55,6 @@ namespace Ui
 
 namespace stackviz
 {
-
   class MainWindow
   : public QMainWindow
   {
@@ -94,9 +92,10 @@ namespace stackviz
     void Pause( bool notify = true );
     void Stop( bool notify = true );
     void Repeat( bool notify = true);
-    void PlayAt( bool notify = true );
-    void PlayAt( int, bool notify = true );
-    void PlayAt( float, bool notify = true );
+    void PlayAtPosition( bool notify = true );
+    void PlayAtPosition( int, bool notify = true );
+    void PlayAtPercentage( float, bool notify = true );
+    void PlayAtTime( float, bool notify = true);
     void Restart( bool notify = true );
     void GoToEnd( bool notify = true );
 
@@ -121,6 +120,8 @@ namespace stackviz
     void loadComplete( void );
 
     void onLoadFinished();
+
+    void onDataUpdated();
 
   protected:
     void configurePlayer( void );
@@ -201,6 +202,7 @@ namespace stackviz
     std::string m_subsetEventFile;
     std::shared_ptr<LoaderThread> m_loader;
     LoadingDialog *m_loaderDialog;
+    DataInspector * m_dataInspector;
   };
 
 

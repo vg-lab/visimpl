@@ -194,13 +194,15 @@ namespace visimpl
   void SelectionManagerWidget::setGIDs( const TGIDSet& all_,
                                         const TGIDUSet& selected_ )
   {
+    if(all_.size() == _gidsAll.size()) return;
+
     _gidsAll.clear( );
     _gidsAll.insert( all_.begin( ), all_.end( ));
 
     _fillLists( );
 
+    clearSelection();
     setSelected( selected_ );
-
   }
 
   const TGIDUSet& SelectionManagerWidget::selected( void ) const

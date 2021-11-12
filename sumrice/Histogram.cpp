@@ -187,7 +187,8 @@ namespace visimpl
     if( histogramNumber == T_HIST_FOCUS )
       histogram = &_focusHistogram;
 
-    std::vector< unsigned int > globalHistogram( histogram->size( ), 0 );
+    const unsigned int histogramSize = histogram->size();
+    std::vector< unsigned int > globalHistogram( histogramSize, 0 );
 
     float totalTime = _endTime - _startTime ;
 
@@ -232,32 +233,33 @@ namespace visimpl
                       references[ i + 1]->first :
                       _endTime;
 
-      int bin;
       while( spikeIt->first < endTime && spikeIt != _spikes->end( ))
       {
-        float perc =
+        const float percentage =
             std::max( 0.0f,
                       std::min( 1.0f, ( spikeIt->first - _startTime )* invTotalTime ));
-        bin = perc * histogram->size( );
+
+        const unsigned int bin = percentage * (histogramSize - 1);
 
         if( !filter || _filteredGIDs.find( spikeIt->second ) != _filteredGIDs.end( ))
         {
           ( *histogram )[ bin ]++;
         }
+
         ( globalHistogram )[ bin ]++;
         ++spikeIt;
       }
     }
 #endif // VISIMPL_USE_OPENMP
 
-    unsigned int cont = 0;
+    unsigned int count = 0;
     for( auto bin: *histogram )
     {
       if( bin > histogram->_maxValueHistogramLocal )
       {
         histogram->_maxValueHistogramLocal = bin;
       }
-      cont++;
+      count++;
     }
 
     histogram->_maxValueHistogramGlobal = histogram->_maxValueHistogramLocal;
@@ -414,8 +416,7 @@ namespace visimpl
 
   void HistogramWidget::bins( unsigned int binsNumber )
   {
-    if( _bins == binsNumber )
-      return;
+    if( _bins == binsNumber ) return;
 
     _bins = binsNumber;
 
@@ -430,7 +431,7 @@ namespace visimpl
     if( _autoCalculateColors )
       CalculateColors( T_HIST_MAIN );
 
-    unsigned int focusBins = _bins * _zoomFactor;
+    const unsigned int focusBins = _bins * _zoomFactor;
 
     _focusHistogram.clear( );
     _focusHistogram.resize( focusBins, 0 );
@@ -451,9 +452,11 @@ namespace visimpl
 
   void HistogramWidget::zoomFactor( float factor )
   {
+    if(_zoomFactor == factor) return;
+
     _zoomFactor = factor;
 
-    unsigned int focusBins = _bins * _zoomFactor;
+    const unsigned int focusBins = _bins * _zoomFactor;
 
     _focusHistogram.clear( );
     _focusHistogram.resize( focusBins, 0 );
@@ -480,6 +483,8 @@ namespace visimpl
 
   void HistogramWidget::colorScaleLocal( TColorScale scale )
   {
+    if(_colorScaleLocal == scale && _scaleFuncLocal) return;
+
     _prevColorScaleLocal = _colorScaleLocal;
     _colorScaleLocal = scale;
 
@@ -505,6 +510,8 @@ namespace visimpl
 
   void HistogramWidget::colorScaleGlobal( TColorScale scale )
   {
+    if(_colorScaleGlobal == scale && _scaleFuncGlobal) return;
+
     _prevColorScaleGlobal = _colorScaleGlobal;
     _colorScaleGlobal = scale;
 
@@ -546,6 +553,8 @@ namespace visimpl
 
   void HistogramWidget::gridLinesNumber( unsigned int linesNumber )
   {
+    if(_gridLinesNumber == linesNumber) return;
+
     _gridLinesNumber = linesNumber;
 
     _mainHistogram._gridLines.clear( );
@@ -658,8 +667,7 @@ namespace visimpl
     unsigned int position =
         std::max( 0.0f, std::min( 1.0f, percentage)) * _mainHistogram.size( );
 
-    if( position >= _mainHistogram.size( ))
-      position = _mainHistogram.size( ) - 1;
+    position = std::min(position, static_cast<unsigned int>(_mainHistogram.size() - 1));
 
     return _mainHistogram[ position ];
   }
@@ -668,8 +676,7 @@ namespace visimpl
   {
     unsigned int position = percentage * _focusHistogram.size( );
 
-    if( position >= _focusHistogram.size( ))
-      position = _focusHistogram.size( ) - 1;
+    position = std::min(position, static_cast<unsigned int>(_mainHistogram.size() - 1));
 
     return _focusHistogram[ position ];
   }
@@ -814,7 +821,7 @@ namespace visimpl
   void HistogramWidget::paintEvent( QPaintEvent* /*e*/)
   {
     QPainter painter( this );
-    unsigned int currentHeight = height( );
+    const unsigned int currentHeight = height( );
 
     QColor penColor;
 
@@ -927,12 +934,12 @@ namespace visimpl
       localPosition.setY( std::min( height( ), std::max( 0, localPosition.y( ))));
 
       const float percentage = float( localPosition.x( )) / float( width( ));
-
-      int positionX = localPosition.x( );
+      const int positionX = localPosition.x( );
       int margin = 5;
 
-      QString value = QString::number( valueAt( percentage ));
-      const int valueLength = value.length( ) * 10;
+      const auto value = valueAt(percentage);
+      QString valueText = QString::number( value, 'f', 3 );
+      const int valueLength = valueText.length( ) * 10;
       if( width( ) - positionX < valueLength )
         margin = -valueLength;
 
@@ -958,14 +965,14 @@ namespace visimpl
 
       QPoint position ( positionX + margin, height( ) * 0.75f );
 
-      painter.drawText( position, QString::number( valueAt( percentage )));
+      painter.drawText( position, valueText );
 
       if( _paintTimeline )
       {
         position.setY( height( ) * 0.25f );
 
         QString timeText( "t=" );
-        timeText.append( QString::number( timeAt( percentage )));
+        timeText.append( QString::number( timeAt( percentage ), 'f', 3));
         painter.drawText( position, timeText );
       }
 
@@ -994,7 +1001,7 @@ namespace visimpl
 
     if( _player )
     {
-      int lineX = _player->GetRelativeTime( ) * width( );
+      const int lineX = _player->GetRelativeTime( ) * width( );
 
       QLine simMarkerLine( QPoint( lineX, 0), QPoint( lineX, height( )));
 
@@ -1004,9 +1011,9 @@ namespace visimpl
 
       if( _paintTimeline )
       {
-        QString value = QString::number(_player->currentTime( ));
+        const auto value = QString::number(_player->currentTime( ), 'f', 3);
 
-        int valueLength = value.length( ) * _pixelsPerCharacter;
+        const int valueLength = value.length( ) * _pixelsPerCharacter;
         if( width( ) - lineX < valueLength )
           _pixelMargin = -valueLength;
         QPoint position ( lineX + _pixelMargin, height( ) * 0.5f );

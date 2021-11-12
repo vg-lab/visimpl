@@ -99,9 +99,7 @@ namespace visimpl
     , _simConfigurationDock( nullptr )
     , _modeSelectionWidget( nullptr )
     , _toolBoxOptions( nullptr )
-#ifdef SIMIL_WITH_REST_API
     , _objectInspectorGB{nullptr}
-#endif
     , _groupBoxTransferFunction( nullptr )
     , _tfWidget( nullptr )
     , _selectionManager( nullptr )
@@ -281,9 +279,27 @@ namespace visimpl
   void MainWindow::configureComponents( void )
   {
     _domainManager = _openGLWidget->domainManager( );
+
     _selectionManager->setGIDs( _domainManager->gids( ) );
 
     _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
+
+    if(_openGLWidget)
+    {
+      auto player = _openGLWidget->player();
+      if(player)
+      {
+        const auto tBegin = player->startTime();
+        const auto tEnd = player->endTime();
+        const auto tCurrent = player->currentTime();
+
+        _startTimeLabel->setText(QString::number(tCurrent, 'f', 3));
+        _endTimeLabel->setText(QString::number(tEnd, 'f', 3));
+
+        const auto percentage = (tCurrent - tBegin) / (tEnd - tBegin);
+        UpdateSimulationSlider(percentage);
+      }
+    }
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -543,15 +559,14 @@ namespace visimpl
     connect( _openGLWidget, SIGNAL( updateSlider( float ) ), this,
              SLOT( UpdateSimulationSlider( float ) ) );
 
-#ifdef SIMIL_WITH_REST_API
     _objectInspectorGB->setSimPlayer(_openGLWidget->player( ));
     _subsetEvents = _openGLWidget->subsetEventsManager( );
-#endif
+
     _startTimeLabel->setText(
-      QString::number( ( double )_openGLWidget->player( )->startTime( ) ) );
+      QString::number(_openGLWidget->player()->startTime(), 'f', 3));
 
     _endTimeLabel->setText(
-      QString::number( ( double )_openGLWidget->player( )->endTime( ) ) );
+      QString::number(_openGLWidget->player()->endTime(), 'f', 3));
 
     _simSlider->setEnabled(true);
 
@@ -649,7 +664,7 @@ namespace visimpl
 
     connect( _repeatButton, SIGNAL( clicked( ) ), this, SLOT( Repeat( ) ) );
 
-    connect( _simSlider, SIGNAL( sliderPressed( ) ), this, SLOT( PlayAt( ) ) );
+    connect( _simSlider, SIGNAL( sliderPressed( ) ), this, SLOT( PlayAtPosition( ) ) );
 
     connect( _goToButton, SIGNAL( clicked( ) ), this, SLOT( playAtButtonClicked( ) ) );
 
@@ -662,7 +677,7 @@ namespace visimpl
     this->addDockWidget(Qt::BottomDockWidgetArea, _simulationDock );
 
     connect( _summary, SIGNAL( histogramClicked( float ) ), this,
-             SLOT( PlayAt( float ) ) );
+             SLOT( PlayAtPercentage( float ) ) );
   }
 
   void MainWindow::_initSimControlDock( void )
@@ -889,13 +904,11 @@ namespace visimpl
     layoutContainerSelection->addWidget( selFunctionGB );
     layoutContainerSelection->addWidget( gbClippingPlanes );
 
-#ifdef SIMIL_WITH_REST_API
     _objectInspectorGB = new DataInspector( "Object inspector" );
     _objectInspectorGB->addWidget( new QLabel( "GID:" ), 2, 0, 1, 1 );
     _objectInspectorGB->addWidget( _labelGID, 2, 1, 1, 3 );
     _objectInspectorGB->addWidget( new QLabel( "Position: " ), 3, 0, 1, 1 );
     _objectInspectorGB->addWidget( _labelPosition, 3, 1, 1, 3 );
-#endif
 
     QGroupBox* groupBoxGroups = new QGroupBox( "Current visualization groups" );
     _groupLayout = new QVBoxLayout( );
@@ -1008,24 +1021,16 @@ namespace visimpl
     _toolBoxOptions->addItem( containerSelectionTools, tr( "Selection" ) );
 
 
-#ifdef SIMIL_WITH_REST_API
     _toolBoxOptions->addItem( _objectInspectorGB, tr( "Inspector" ));
 
-    connect( _objectInspectorGB, SIGNAL( simDataChanged( void )),
-             _openGLWidget, SLOT( updateData( void )));
+    connect( _objectInspectorGB, SIGNAL( simDataChanged()),
+             _openGLWidget,      SLOT( updateData()));
 
-    connect( _objectInspectorGB, SIGNAL( simDataChanged( void )),
-             _openGLWidget, SLOT( updateData( void )));
+    connect( _objectInspectorGB, SIGNAL( simDataChanged()),
+             _summary,           SLOT( UpdateHistograms()));
 
-    QTimer* timer = new QTimer( this );
-    connect( timer, SIGNAL( timeout ( void )), _objectInspectorGB,
-             SLOT( updateInfo( void ) ) );
-
-    timer->start( 4000 );
-
-    connect( _objectInspectorGB, SIGNAL( simDataChanged( void ) ), _summary,
-             SLOT( UpdateHistograms( void ) ) );
-#endif
+    connect (_objectInspectorGB, SIGNAL( simDataChanged()),
+             this,               SLOT(configureComponents()));
 
     verticalLayout->setAlignment( Qt::AlignTop );
     verticalLayout->addWidget( _modeSelectionWidget );
@@ -1148,13 +1153,11 @@ namespace visimpl
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    _startTimeLabel->setText(
-      QString::number( static_cast<double>(_openGLWidget->currentTime( ) ) ) );
-    // TODO UPDATE ENDTIME
+    _startTimeLabel->setText(QString::number(_openGLWidget->currentTime(), 'f', 3));
+    _endTimeLabel->setText(QString::number(_openGLWidget->player()->endTime(), 'f', 3));
 
-    int total = _simSlider->maximum( ) - _simSlider->minimum( );
-
-    int position = percentage * total;
+    const int total = _simSlider->maximum( ) - _simSlider->minimum( );
+    const int position = (percentage * total) + _simSlider->minimum();
 
     _simSlider->setSliderPosition( position );
 
@@ -1434,7 +1437,7 @@ namespace visimpl
 
       percentage = std::max( 0.0f, std::min( 1.0f, percentage ) );
 
-      PlayAt( percentage, true );
+      PlayAtPercentage( percentage, true );
     }
   }
 
@@ -1702,7 +1705,7 @@ namespace visimpl
       _openGLWidget->Stop( );
       _playButton->setIcon( _playIcon );
       _startTimeLabel->setText(
-        QString::number( ( double )_openGLWidget->player( )->startTime( ) ) );
+        QString::number(_openGLWidget->player()->startTime(),'f',3));
 
       _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
 
@@ -1875,6 +1878,8 @@ void MainWindow::clearGroups( void )
     {
       _openGLWidget->Pause( );
       _playButton->setIcon( _playIcon );
+      _startTimeLabel->setText(
+          QString::number(_openGLWidget->player()->currentTime(), 'f',3));
 
       if ( notify )
       {
@@ -1885,7 +1890,7 @@ void MainWindow::clearGroups( void )
     }
   }
 
-    void MainWindow::Repeat( bool notify )
+  void MainWindow::Repeat( bool notify )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
@@ -1905,38 +1910,76 @@ void MainWindow::clearGroups( void )
     }
   }
 
-  void MainWindow::requestPlayAt( float percentage )
+  void MainWindow::requestPlayAt( float timePos )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    PlayAt( percentage, false );
+    const auto tBegin = _openGLWidget->player()->startTime();
+    const auto tEnd   = _openGLWidget->player()->endTime();
+    const auto newPosition = std::min(tEnd, std::max(tBegin, timePos));
+    const auto isOverflow = timePos != newPosition;
+
+    PlayAtTime( newPosition, isOverflow );
+
+    if(isOverflow)
+      Pause(true);
   }
 
-  void MainWindow::PlayAt( bool notify )
+  void MainWindow::PlayAtPosition( bool notify )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    PlayAt( _simSlider->sliderPosition( ), notify );
+    PlayAtPosition( _simSlider->sliderPosition( ), notify );
   }
 
-  void MainWindow::PlayAt( float percentage, bool notify )
+  void MainWindow::PlayAtPosition( int sliderPosition, bool notify )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    int sliderPosition =
-        percentage * ( _simSlider->maximum( ) - _simSlider->minimum( ) ) +
-        _simSlider->minimum( );
+    const int sMin = _simSlider->minimum();
+    const int sMax = _simSlider->maximum();
+    const float percentage = static_cast<float>(sliderPosition - sMin) * (sMax - sMin);
+
+    PlayAtPercentage(percentage, notify);
+  }
+
+  void MainWindow::PlayAtPercentage( float percentage, bool notify )
+  {
+    if ( !_openGLWidget || !_openGLWidget->player( ) )
+      return;
+
+    const auto tBegin = _openGLWidget->player()->startTime();
+    const auto tEnd = _openGLWidget->player()->endTime();
+    const auto timePos = (percentage * (tEnd - tBegin)) + tBegin;
+
+    PlayAtTime(timePos, notify);
+  }
+
+  void MainWindow::PlayAtTime(float timePos, bool notify)
+  {
+    if(!_openGLWidget || !_openGLWidget->player())
+      return;
+
+    const auto tBegin = _openGLWidget->player()->startTime();
+    const auto tEnd = _openGLWidget->player()->endTime();
+    const auto newPosition = std::max(tBegin, std::min(tEnd, timePos));
+    const auto percentage = (newPosition - tBegin) / (tEnd - tBegin);
+
+    const auto sMin = _simSlider->minimum();
+    const auto sMax = _simSlider->maximum();
+    const int sliderPosition = (percentage * (sMax - sMin)) + sMin;
 
     _simSlider->setSliderPosition( sliderPosition );
 
     _playButton->setIcon( _pauseIcon );
 
-    _openGLWidget->PlayAt( percentage );
-
+    _openGLWidget->PlayAt( newPosition );
     _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
+    _startTimeLabel->setText(
+        QString::number(_openGLWidget->player()->currentTime(), 'f',3));
 
     if ( notify )
     {
@@ -1944,10 +1987,11 @@ void MainWindow::clearGroups( void )
       try
       {
         // Send event
-        auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+        auto player   = _openGLWidget->player();
+        auto eventMgr = player->zeqEvents( );
         if(eventMgr)
         {
-          eventMgr->sendFrame( _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+          eventMgr->sendFrame( player->startTime(), player->endTime(), player->currentTime());
         }
       }
       catch(const std::exception &e)
@@ -1963,53 +2007,8 @@ void MainWindow::clearGroups( void )
       sendZeroEQPlaybackOperation(zeroeq::gmrv::PLAY);
 #endif
     }
+
   }
-
-  void MainWindow::PlayAt( int sliderPosition, bool notify )
-  {
-    if ( !_openGLWidget || !_openGLWidget->player( ) )
-      return;
-
-    int value = _simSlider->value( );
-    float percentage =
-      float( value - _simSlider->minimum( ) ) /
-      float( _simSlider->maximum( ) - _simSlider->minimum( ) );
-
-    _simSlider->setSliderPosition( sliderPosition );
-
-    _playButton->setIcon( _pauseIcon );
-
-    _openGLWidget->PlayAt( percentage );
-
-    _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
-
-    if ( notify )
-    {
-#ifdef SIMIL_USE_ZEROEQ
-      try
-      {
-        // Send event
-        auto eventMgr = _openGLWidget->player( )->zeqEvents( );
-        if(eventMgr)
-        {
-          eventMgr->sendFrame(_simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
-        }
-      }
-      catch(const std::exception &e)
-      {
-        std::cerr << "Exception when sending frame. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
-      }
-      catch(...)
-      {
-        std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__  << std::endl;
-      }
-#endif
-#ifdef VISIMPL_USE_GMRVLEX
-      sendZeroEQPlaybackOperation( zeroeq::gmrv::PLAY);
-#endif
-    }
-  }
-
   void MainWindow::PreviousStep( bool /*notify*/ )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
@@ -2104,10 +2103,30 @@ void MainWindow::clearGroups( void )
 
     _comboAttribSelection->clear();
 
-    if(m_type == simil::TDataType::TBlueConfig)
+    switch(m_type)
     {
-      const QStringList attributes = {"Morphological type", "Functional type"};
-      _comboAttribSelection->addItems( attributes );
+      case simil::TDataType::TBlueConfig:
+        {
+          const QStringList attributes = {"Morphological type", "Functional type"};
+          _comboAttribSelection->addItems( attributes );
+        }
+        break;
+      case simil::TDataType::TREST:
+        {
+#ifdef SIMIL_WITH_REST_API
+          auto timer = new QTimer( this );
+          connect( timer,              SIGNAL( timeout()),
+                   _objectInspectorGB, SLOT( updateInfo()) );
+
+          timer->start( 4000 );
+#endif
+        }
+        break;
+      case simil::TDataType::TCONE:
+      case simil::TDataType::TCSV:
+      case simil::TDataType::THDF5:
+      default:
+        break;
     }
 
     _openGLWidget->closeLoadingDialog();

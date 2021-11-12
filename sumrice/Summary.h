@@ -136,7 +136,7 @@ namespace visimpl
     void generateEventsRep( void );
     void clearEvents( void );
 
-    void bins( int bins_ );
+    void bins( unsigned int bins_ );
     void binsChanged( void );
     void zoomFactorChanged( void );
     void zoomFactor( double zoom );
