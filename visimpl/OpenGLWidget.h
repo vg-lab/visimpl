@@ -208,7 +208,7 @@ namespace visimpl
     void PlayPause( void );
     void Stop( void );
     void Repeat( bool repeat );
-    void PlayAt( float percentage );
+    void PlayAt( float timePos );
     void Restart( void );
     void PreviousStep( void );
     void NextStep( void );
@@ -272,7 +272,7 @@ namespace visimpl
     void _updateAttributes( void );
     void _updateNewData( void );
 
-    void _updateData( void );
+    bool _updateData( void );
 
     void _createEventLabels( void );
     void _updateEventLabelsVisibility( void );

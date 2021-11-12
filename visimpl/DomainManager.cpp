@@ -469,8 +469,6 @@ namespace visimpl
     _particleToGID.reserve(count);
     _gidSource.reserve(count);
 
-    std::cout << "Retrieved " << availableParticles.size( ) << std::endl;
-
     _resetBoundingBox( );
 
     auto gidit = _gids.begin( );

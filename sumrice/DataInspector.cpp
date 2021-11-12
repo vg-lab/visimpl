@@ -78,7 +78,7 @@ void DataInspector::paintEvent( QPaintEvent* event )
 
 void DataInspector::updateInfo( )
 {
-  if ( _simPlayer != nullptr )
+  if ( _simPlayer )
   {
     bool updated = false;
     if ( _simPlayer->gidsSize( ) != _gidsize )
@@ -88,10 +88,8 @@ void DataInspector::updateInfo( )
       _labelGIDs->setText( QString::number( _gidsize ) );
     }
 
-    simil::SpikesPlayer* spkPlay =
-      dynamic_cast< simil::SpikesPlayer* >( _simPlayer );
-
-    if ( spkPlay != nullptr )
+    auto spkPlay = dynamic_cast< simil::SpikesPlayer* >( _simPlayer );
+    if ( spkPlay )
     {
       if ( spkPlay->spikesSize( ) != _spikesize )
       {
@@ -104,6 +102,8 @@ void DataInspector::updateInfo( )
     }
 
     if ( updated )
+    {
       emit simDataChanged( );
+    }
   }
 }

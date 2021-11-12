@@ -50,7 +50,6 @@ set(VISIMPL_SOURCES
   prefr/UpdaterStaticPosition.cpp
 
   render/Plane.cpp
-  ui/DataInspector.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -71,8 +70,6 @@ set(VISIMPL_HEADERS
   prefr/UpdaterStaticPosition.h
 
   render/Plane.h
-
-  ui/DataInspector.h
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

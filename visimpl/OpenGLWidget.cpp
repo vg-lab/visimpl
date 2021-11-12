@@ -719,8 +719,7 @@ namespace visimpl
     const unsigned int maxParticles =
         std::max(100000u, static_cast<unsigned int>( _player->gids( ).size( )));
 
-    _updateData( );
-
+    _updateData();
     _particleSystem = new prefr::ParticleSystem( maxParticles, _camera );
     _flagResetParticles = true;
 
@@ -1149,31 +1148,39 @@ namespace visimpl
     _flagNewData = true;
   }
 
-  void OpenGLWidget::_updateData( void )
+  bool OpenGLWidget::_updateData( void )
   {
     const auto &positions = _player->positions();
+
+    // assumed positions doesn't change so if equal the network didn't change.
+    if(positions.size() == _gidPositions.size()) return false;
 
     _gidPositions.clear();
     _gidPositions.reserve(positions.size());
 
-    auto gidit = _player->gids().begin();
-    for (const auto &pos : positions)
+    auto gidit = _player->gids().cbegin();
+    auto insertElement = [&](const vmml::Vector3f &v)
     {
-      const vec3 position(pos.x() * _scaleFactor.x,
-                          pos.y() * _scaleFactor.y,
-                          pos.z() * _scaleFactor.z);
+      const vec3 position(v.x() * _scaleFactor.x,
+                          v.y() * _scaleFactor.y,
+                          v.z() * _scaleFactor.z);
 
       _gidPositions.insert(std::make_pair(*gidit, position));
       ++gidit;
-    }
+    };
+    std::for_each(positions.cbegin(), positions.cend(), insertElement);
+
+    return true;
   }
 
   void OpenGLWidget::_updateNewData( void )
   {
-    _updateData();
+    _flagNewData = false;
+
+    if(!_updateData()) return;
+
     _domainManager->updateData(_player->gids(), _gidPositions );
     _focusOn( _domainManager->boundingBox( ));
-    _flagNewData = false;
     _flagUpdateRender = true;
   }
 
@@ -1306,7 +1313,6 @@ namespace visimpl
   {
     if( _player->isPlaying( ) || _firstFrame )
     {
-
       _particleSystem->update( renderDelta );
       _firstFrame = false;
     }
@@ -1975,7 +1981,7 @@ namespace visimpl
     }
   }
 
-  void OpenGLWidget::PlayAt( float percentage )
+  void OpenGLWidget::PlayAt( float timePos )
   {
     if( _player )
     {
@@ -1984,8 +1990,8 @@ namespace visimpl
 
       _backtrace = true;
 
-      std::cout << "Play at " << percentage << std::endl;
-      _player->PlayAt( percentage );
+      std::cout << "Play at " << timePos << std::endl;
+      _player->PlayAtTime(timePos);
       _particleSystem->run( true );
     }
   }
