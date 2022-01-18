@@ -51,12 +51,12 @@ namespace visimpl
 
   void SelectionManagerWidget::init( void )
   {
-    QVBoxLayout* layoutTop = new QVBoxLayout( );
+    auto layoutTop = new QVBoxLayout( );
     this->setLayout( layoutTop );
 
     _tabWidget = new QTabWidget( );
     QWidget* containerFoot = new QWidget( );
-    QGridLayout* layoutFoot = new QGridLayout( );
+    auto layoutFoot = new QGridLayout( );
     containerFoot->setLayout( layoutFoot );
 
     layoutTop->addWidget( _tabWidget );
@@ -84,10 +84,9 @@ namespace visimpl
 
   void SelectionManagerWidget::_initTabSelection( void )
   {
+    auto containerSelection = new QWidget( );
 
-    QWidget* containerSelection = new QWidget( );
-
-    QGridLayout* layoutSelection = new QGridLayout( );
+    auto layoutSelection = new QGridLayout( );
     containerSelection->setLayout( layoutSelection );
 
     _labelAvailable = new QLabel( "Available GIDs: 0" );
@@ -132,8 +131,8 @@ namespace visimpl
 
   void SelectionManagerWidget::_initTabExport( void )
   {
-    QWidget* containerExport = new QWidget( );
-    QGridLayout* layoutExport = new QGridLayout( );
+    auto containerExport = new QWidget( );
+    auto layoutExport = new QGridLayout( );
     containerExport->setLayout( layoutExport );
 
     _pathExportDefault = QDir::currentPath();
@@ -151,16 +150,16 @@ namespace visimpl
     _buttonBrowse = new QPushButton( "Browse..." );
     _buttonSave = new QPushButton( "Save" );
 
-    QGroupBox* groupBoxPrefix = new QGroupBox( "Prefix/Suffix" );
-    QGridLayout* layoutPrefix = new QGridLayout( );
+    auto groupBoxPrefix = new QGroupBox( "Prefix/Suffix" );
+    auto layoutPrefix = new QGridLayout( );
     groupBoxPrefix->setLayout( layoutPrefix );
     layoutPrefix->addWidget( new QLabel( "Prefix:" ), 0, 0, 1, 1 );
     layoutPrefix->addWidget( _lineEditPrefix, 0, 1, 1, 1 );
     layoutPrefix->addWidget( new QLabel( "Suffix:" ), 1, 0, 1, 1 );
     layoutPrefix->addWidget( _lineEditSuffix, 1, 1, 1, 1 );
 
-    QGroupBox* groupBoxSeparator = new QGroupBox( "Separator" );
-    QGridLayout* layoutSeparator = new QGridLayout( );
+    auto groupBoxSeparator = new QGroupBox( "Separator" );
+    auto layoutSeparator = new QGridLayout( );
     layoutSeparator->addWidget( _radioNewLine, 0, 0, 1, 2 );
     layoutSeparator->addWidget( _radioSpace, 1, 0, 1, 2 );
     layoutSeparator->addWidget( _radioTab, 2, 0, 1, 2 );
@@ -171,16 +170,12 @@ namespace visimpl
 
     groupBoxSeparator->setLayout( layoutSeparator );
 
-
-
     layoutExport->addWidget( new QLabel( "File path:"), 0, 0, 1, 1 );
     layoutExport->addWidget( _lineEditFilePath, 0, 1, 1, 4 );
     layoutExport->addWidget( _buttonBrowse, 0, 5, 1, 1 );
     layoutExport->addWidget( groupBoxPrefix, 1, 0, 4, 2 );
     layoutExport->addWidget( groupBoxSeparator, 1, 2, 4, 3 );
     layoutExport->addWidget( _buttonSave, 4, 5, 1, 1 );
-
-
 
     connect( _buttonBrowse, SIGNAL( clicked( void )),
              this, SLOT( _buttonBrowseClicked( void )));
@@ -352,11 +347,22 @@ namespace visimpl
                                             const QString& prefix,
                                             const QString& suffix )
   {
-    QFile file;
+    if(prefix.contains(separator) || suffix.contains(separator))
+    {
+      QMessageBox msgBox( this );
+      msgBox.setWindowTitle("Selection save");
+      msgBox.setText( "The prefix and the suffix cannot contain the separator character." );
+      msgBox.setStandardButtons( QMessageBox::Ok );
+      msgBox.exec( );
 
+      return;
+    }
+
+    QFile file;
     if( file.exists( filePath ))
     {
       QMessageBox msgBox( this );
+      msgBox.setWindowTitle("Selection save");
       msgBox.setText( "The selected file already exists." );
       msgBox.setInformativeText( "Do you want to overwrite?" );
       msgBox.setStandardButtons( QMessageBox::Save | QMessageBox::Cancel );
@@ -375,7 +381,7 @@ namespace visimpl
     std::copy( _gidsSelected.begin( ), _gidsSelected.end( ), gids.begin( ));
     std::sort( gids.begin( ), gids.end( ));
 
-    for( auto gid : gids )
+    for( auto &gid : gids )
     {
       outStream << prefix << gid << suffix << separator;
     }

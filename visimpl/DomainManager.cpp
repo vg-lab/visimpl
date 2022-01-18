@@ -422,7 +422,6 @@ namespace visimpl
       group->source( )->active( state );
   }
 
-
   void DomainManager::_updateGroupsModels( void )
   {
     for( auto group : _groups )
@@ -626,7 +625,7 @@ namespace visimpl
   {
     for( auto group : _groups )
     {
-      if( !group->dirty( ))
+      if( !group->dirty( ) || !group->active())
         continue;
 
       if( group->cached( ))

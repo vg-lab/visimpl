@@ -194,6 +194,16 @@ namespace visimpl
      */
     void onDataLoaded();
 
+    /** \brief Loads groups and its properties from a file on disk.
+     *
+     */
+    void loadGroups();
+
+    /** \brief Saves current groups and its properties to a file on disk.
+     *
+     */
+    void saveGroups();
+
   protected:
     void _initSimControlDock( void );
     void _initPlaybackDock( void );
@@ -293,6 +303,8 @@ namespace visimpl
 
     QPushButton* _buttonImportGroups;
     QPushButton* _buttonClearGroups;
+    QPushButton* _buttonLoadGroups;
+    QPushButton* _buttonSaveGroups;
     QPushButton* _buttonAddGroup;
     QPushButton* _buttonClearSelection;
     QLabel* _selectionSizeLabel;

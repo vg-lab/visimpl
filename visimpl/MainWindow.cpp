@@ -59,6 +59,9 @@
 #include <QPushButton>
 #include <QToolBox>
 #include <QtGlobal>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 #include <thread>
 
@@ -115,6 +118,8 @@ namespace visimpl
     , _circuitScaleZ( nullptr )
     , _buttonImportGroups( nullptr )
     , _buttonClearGroups( nullptr )
+    , _buttonLoadGroups{nullptr}
+    , _buttonSaveGroups{nullptr}
     , _buttonAddGroup( nullptr )
     , _buttonClearSelection( nullptr )
     , _selectionSizeLabel( nullptr )
@@ -917,6 +922,11 @@ namespace visimpl
     _buttonImportGroups = new QPushButton( "Import from..." );
     _buttonClearGroups = new QPushButton( "Clear" );
     _buttonClearGroups->setEnabled( false );
+    _buttonLoadGroups = new QPushButton("Load");
+    _buttonLoadGroups->setToolTip(tr("Load Groups from disk"));
+    _buttonSaveGroups = new QPushButton("Save");
+    _buttonSaveGroups->setToolTip(tr("Save Groups to disk"));
+    _buttonSaveGroups->setEnabled(false);
 
     {
       QWidget* groupContainer = new QWidget( );
@@ -934,8 +944,10 @@ namespace visimpl
       groupOuterLayout->setMargin( 0 );
       groupOuterLayout->addWidget( _buttonImportGroups, 0, 0, 1, 1 );
       groupOuterLayout->addWidget( _buttonClearGroups, 0, 1, 1, 1 );
+      groupOuterLayout->addWidget( _buttonLoadGroups, 1, 0, 1, 1 );
+      groupOuterLayout->addWidget( _buttonSaveGroups, 1, 1, 1, 1 );
 
-      groupOuterLayout->addWidget( scrollGroups, 1, 0, 1, 2 );
+      groupOuterLayout->addWidget( scrollGroups, 2, 0, 1, 2 );
 
       groupBoxGroups->setLayout( groupOuterLayout );
     }
@@ -1129,6 +1141,9 @@ namespace visimpl
 
     connect( _buttonClearGroups, SIGNAL( clicked( void ) ), this,
              SLOT( clearGroups( void ) ) );
+
+    connect( _buttonLoadGroups, SIGNAL( clicked(void)), this, SLOT(loadGroups()));
+    connect( _buttonSaveGroups, SIGNAL( clicked(void)), this, SLOT(saveGroups()));
 
     _alphaNormalButton->setChecked( true );
   }
@@ -1665,7 +1680,7 @@ namespace visimpl
              this,     SLOT(onGroupPreview()));
 
     QCheckBox* visibilityCheckbox = new QCheckBox( "active" );
-    visibilityCheckbox->setChecked( true );
+    visibilityCheckbox->setChecked( group->active() );
 
     connect( visibilityCheckbox, SIGNAL( clicked( ) ), this,
              SLOT( checkGroupsVisibility( ) ) );
@@ -1693,6 +1708,7 @@ namespace visimpl
     _groupLayout->addWidget( container );
 
     _buttonClearGroups->setEnabled( true );
+    _buttonSaveGroups->setEnabled(true);
   }
 
   void MainWindow::Stop( bool notify )
@@ -1735,6 +1751,7 @@ void MainWindow::clearGroups( void )
 
     _buttonImportGroups->setEnabled( true );
     _buttonClearGroups->setEnabled( false );
+    _buttonSaveGroups->setEnabled(false);
   }
 
   void MainWindow::importVisualGroups( void )
@@ -2083,6 +2100,7 @@ void MainWindow::clearGroups( void )
       m_type = type;
       m_subsetEventFile = subsetEventFile;
       _openGLWidget->loadData( arg_1, type, simType, arg_2 );
+      _lastOpenedNetworkFileName = QString::fromStdString(arg_1);
     }
     catch(const std::exception &e)
     {
@@ -2154,6 +2172,307 @@ void MainWindow::clearGroups( void )
       group->name(groupName.toStdString());
       button->setText(groupName);
     }
+  }
+
+  void MainWindow::loadGroups()
+  {
+    const auto title = tr("Load Groups");
+
+    if(!_domainManager->groups().empty())
+    {
+      const auto message = tr("Loading groups from disk will erase the "
+                              "current groups. Do you want to continue?");
+
+      QMessageBox msgbox(this);
+      msgbox.setWindowTitle(title);
+      msgbox.setText(message);
+      msgbox.setIcon(QMessageBox::Icon::Question);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Cancel|QMessageBox::Ok);
+      msgbox.setDefaultButton(QMessageBox::Button::Ok);
+
+      if(QMessageBox::Ok != msgbox.exec())
+        return;
+    }
+
+    QFileInfo lastFile{_lastOpenedNetworkFileName};
+    const auto fileName = QFileDialog::getOpenFileName(this, title, lastFile.path(),
+                                                       tr("Json files (*.json)"),
+                                                       nullptr, QFileDialog::ReadOnly|QFileDialog::DontUseNativeDialog);
+    if(fileName.isEmpty()) return;
+
+    QFile file{fileName};
+    if(!file.open(QIODevice::ReadOnly))
+    {
+      const auto message = tr("Couldn't open file %1").arg(fileName);
+
+      QMessageBox msgbox(this);
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Ok);
+      msgbox.exec();
+      return;
+    }
+
+    const auto contents = file.readAll();
+    QJsonParseError jsonError;
+    const auto  jsonDoc = QJsonDocument::fromJson(contents, &jsonError);;
+    if(jsonDoc.isNull() || !jsonDoc.isObject())
+    {
+      const auto message = tr("Couldn't read the contents of %1 or error at parsing.").arg(fileName);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Ok);
+      msgbox.setDetailedText(jsonError.errorString());
+      msgbox.exec();
+      return;
+    }
+
+    const auto jsonObj = jsonDoc.object();
+    if(jsonObj.isEmpty())
+    {
+      const auto message = tr("Error at parsing.").arg(fileName);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Ok);
+      msgbox.exec();
+      return;
+    }
+
+    const QFileInfo currentFile{_lastOpenedNetworkFileName};
+    const QString jsonGroupsFile = jsonObj.value("filename").toString();
+    if(jsonGroupsFile.compare(currentFile.fileName(), Qt::CaseInsensitive) != 0)
+    {
+      const auto message = tr("This groups definitions are from file %1. Current file"
+                              " is %2. Do you want to continue?").arg(jsonGroupsFile).arg(currentFile.fileName());
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Question);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Cancel|QMessageBox::Ok);
+      msgbox.setDefaultButton(QMessageBox::Ok);
+
+      if(QMessageBox::Ok != msgbox.exec())
+        return;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    clearGroups();
+    const auto jsonGroups = jsonObj.value("groups").toArray();
+
+    std::vector<VisualGroup *> groupsList;
+    const auto createGroup = [&groupsList, this](const QJsonValue &v)
+    {
+      const auto o = v.toObject();
+
+      const auto name = o.value("name").toString();
+      const auto overrideGIDS = o.value("override").toBool(false);
+      const auto gidsStrings = o.value("gids").toString().split(",");
+
+      GIDUSet gids;
+      auto addGids = [&gids](const QString s)
+      {
+        if(s.contains(":"))
+        {
+         auto limits = s.split(":");
+         for(unsigned int id = limits.first().toUInt(); id <= limits.last().toUInt(); ++id)
+           gids.insert(id);
+        }
+        else
+        {
+          gids.insert(s.toUInt());
+        }
+      };
+      std::for_each(gidsStrings.cbegin(), gidsStrings.cend(), addGids);
+
+      auto group = _domainManager->addVisualGroup(gids, name.toStdString(), overrideGIDS);
+      auto idx = _domainManager->groups().size()-1;
+      addGroupControls(group, idx, gids.size());
+      const auto active = o.value("active").toBool(true);
+      auto checkbox = std::get< gr_checkbox >(_groupsVisButtons.at(idx));
+      checkbox->setChecked(active);
+
+      _domainManager->setVisualGroupState( idx, active );
+
+      const auto functionPairs = o.value("function").toString().split(";");
+      TTransferFunction function;
+      auto addFunctionPair = [&function](const QString &s)
+      {
+        const auto parts = s.split(",");
+        Q_ASSERT(parts.size() == 2);
+        const auto value = parts.first().toFloat();
+        const auto color = QColor(parts.last());
+        function.emplace_back(value, color);
+      };
+      std::for_each(functionPairs.cbegin(), functionPairs.cend(), addFunctionPair);
+
+      const auto sizePairs = o.value("sizes").toString().split(";");
+      TSizeFunction sizes;
+      auto addSizes = [&sizes](const QString &s)
+      {
+        const auto parts = s.split(",");
+        Q_ASSERT(parts.size() == 2);
+        const auto a = parts.first().toFloat();
+        const auto b = parts.last().toFloat();
+        sizes.emplace_back(a, b);
+      };
+      std::for_each(sizePairs.cbegin(), sizePairs.cend(), addSizes);
+
+      updateGroupColors(idx, function, sizes);
+      auto container = std::get< gr_container >(_groupsVisButtons.at(idx));
+      auto tfw = qobject_cast<TransferFunctionWidget*>(container->layout()->itemAt(0)->widget());
+      if(tfw)
+      {
+        tfw->setColorPoints(function, true);
+        tfw->setSizeFunction(sizes);
+        tfw->colorChanged();
+        tfw->sizeChanged();
+      }
+    };
+    std::for_each(jsonGroups.constBegin(), jsonGroups.constEnd(), createGroup);
+
+    _groupLayout->update();
+    checkGroupsVisibility();
+
+    const auto groups = _domainManager->groups();
+    _buttonClearGroups->setEnabled( !groups.empty() );
+    _buttonSaveGroups->setEnabled( !groups.empty() );
+
+    QApplication::restoreOverrideCursor();
+  }
+
+  void MainWindow::saveGroups()
+  {
+    const auto &groups = _domainManager->groups();
+    if(groups.empty()) return;
+
+    const auto dateTime = QDateTime::currentDateTime();
+    QFileInfo lastFile{_lastOpenedNetworkFileName};
+    QString filename = lastFile.dir().absoluteFilePath(lastFile.baseName() + "_groups_" + dateTime.toString("yyyy-MM-dd-hh-mm") + ".json");
+    filename = QFileDialog::getSaveFileName(this, tr("Save Groups"), filename, tr("Json files (*.json)"), nullptr, QFileDialog::DontUseNativeDialog);
+
+    if(filename.isEmpty()) return;
+
+    QFile wFile{filename};
+    if(!wFile.open(QIODevice::WriteOnly|QIODevice::Text|QIODevice::Truncate))
+    {
+      const auto message = tr("Unable to open file %1 for writing.").arg(filename);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(tr("Save Groups"));
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setDefaultButton(QMessageBox::Ok);
+      msgbox.exec();
+      return;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    QJsonObject obj;
+    obj.insert("filename", QFileInfo{_lastOpenedNetworkFileName}.fileName());
+    obj.insert("date", dateTime.toString());
+
+    QJsonArray groupsObjs;
+
+    auto insertGroup = [&groupsObjs, this](const VisualGroup *g)
+    {
+      QJsonObject groupObj;
+      groupObj.insert("name", QString::fromStdString(g->name()));
+      groupObj.insert("active", g->active());
+
+      QStringList tfList;
+      const auto tf = g->colorMapping();
+      auto addColors = [&tfList](const TTFColor &c)
+      {
+        tfList << QString("%1,%2").arg(c.first).arg(c.second.name(QColor::HexArgb));
+      };
+      std::for_each(tf.cbegin(), tf.cend(), addColors);
+      groupObj.insert("function", tfList.join(";"));
+
+      QStringList sizesList;
+      const auto sizes = g->sizeFunction();
+      auto addSizes = [&sizesList](const TSize &s)
+      {
+        sizesList << QString("%1,%2").arg(s.first).arg(s.second);
+      };
+      std::for_each(sizes.cbegin(), sizes.cend(), addSizes);
+      groupObj.insert("sizes", sizesList.join(";"));
+
+      const auto &gids = g->gids();
+      std::vector<unsigned int> gidsVec;
+      std::for_each(gids.cbegin(), gids.cend(), [&gidsVec](unsigned int v){ gidsVec.push_back(v); });
+      std::sort(gidsVec.begin(), gidsVec.end());
+      QStringList gidsStrings;
+      std::pair<unsigned int, unsigned int> range = std::make_pair(std::numeric_limits<unsigned int>::max() - 1,std::numeric_limits<unsigned int>::max() - 1);
+      auto enterNumber = [&range, &gidsStrings]()
+      {
+          if(range.first == range.second)
+            gidsStrings << QString::number(range.first);
+          else
+            gidsStrings << QString("%1:%2").arg(range.first).arg(range.second);
+      };
+
+      for(auto i = gidsVec.begin(); i != gidsVec.end(); ++i)
+      {
+        auto num = *i;
+        if(num != range.second + 1)
+        {
+          if(range.first != std::numeric_limits<unsigned int>::max() - 1)
+          {
+            enterNumber();
+          }
+          range.first = num;
+        }
+
+        range.second = num;
+      }
+      enterNumber();
+
+      groupObj.insert("gids", gidsStrings.join(","));
+
+      groupsObjs << groupObj;
+    };
+    std::for_each(groups.cbegin(), groups.cend(), insertGroup);
+
+    obj.insert("groups", groupsObjs);
+
+    QJsonDocument doc{obj};
+    const auto temp = doc.toJson().toStdString();
+    wFile.write(doc.toJson());
+
+    QApplication::restoreOverrideCursor();
+
+    if(wFile.error() != QFile::NoError)
+    {
+      const auto message = tr("Error saving file %1.").arg(filename);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(tr("Save Groups"));
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setDetailedText(wFile.errorString());
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setDefaultButton(QMessageBox::Ok);
+      msgbox.exec();
+    }
+
+    wFile.flush();
+    wFile.close();
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
