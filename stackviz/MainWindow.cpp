@@ -60,6 +60,7 @@
 using namespace stackviz;
 
 template<class T> void ignore( const T& ) { }
+constexpr int SLIDER_MAX = 1000;
 
 MainWindow::MainWindow( QWidget* parent_ )
 : QMainWindow( parent_ )
@@ -82,11 +83,14 @@ MainWindow::MainWindow( QWidget* parent_ )
 , _displayManager( nullptr )
 #ifdef VISIMPL_USE_ZEROEQ
 , _zeqConnection{false}
+, _zeqUri("")
+, _subscriber{nullptr}
+, _publisher{nullptr}
 , _thread( nullptr )
 #endif
-#ifdef SIMIL_WITH_REST_API
-, _importer{nullptr}
-#endif
+, m_loader{nullptr}
+, m_loaderDialog{nullptr}
+, m_dataInspector{nullptr}
 {
   _ui->setupUi( this );
 
@@ -102,6 +106,11 @@ MainWindow::MainWindow( QWidget* parent_ )
   // Connect about dialog
   connect( _ui->actionAbout, SIGNAL( triggered( void )),
            this, SLOT( aboutDialog( void )));
+
+  // only used for data refresh in case of REST API. Similar one included
+  // in Summary class, refactor?
+  m_dataInspector = new DataInspector("");
+  m_dataInspector->hide();
 }
 
 void MainWindow::init( const std::string &zeqUri )
@@ -150,9 +159,11 @@ MainWindow::~MainWindow( void )
   delete _ui;
 
 #ifdef VISIMPL_USE_ZEROEQ
-  if(_zeqConnection)
+
+  if( _zeqConnection )
   {
     _zeqConnection = false;
+
     if(_thread)
     {
       _thread->join();
@@ -160,9 +171,24 @@ MainWindow::~MainWindow( void )
       _thread = nullptr;
     }
 
-    if(visimpl::ZeroEQConfig::instance().isConnected())
+    try
     {
-      visimpl::ZeroEQConfig::instance().subscriber()->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
+      if(_subscriber)
+      {
+        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
+        delete _subscriber;
+        _subscriber = nullptr;
+      }
+
+      if(_publisher)
+      {
+        delete _publisher;
+        _publisher = nullptr;
+      }
+    }
+    catch(...)
+    {
+      // Nothing to do on destructor.
     }
   }
 #endif
@@ -171,126 +197,6 @@ MainWindow::~MainWindow( void )
 void MainWindow::showStatusBarMessage ( const QString& message )
 {
   _ui->statusbar->showMessage( message );
-}
-
-void MainWindow::openBlueConfig( const std::string& fileName,
-                                 simil::TSimulationType simulationType,
-                                 const std::string& target,
-                                 const std::string& subsetEventFile )
-{
-  ( void ) target;
-
-  _simulationType = simulationType;
-  QApplication::setOverrideCursor(Qt::WaitCursor);
-
-  switch( _simulationType )
-  {
-    case simil::TSimSpikes:
-    {
-      try
-      {
-        auto spikeData = new simil::SpikeData( fileName, simil::TBlueConfig, target );
-        spikeData->reduceDataToGIDS( );
-
-        auto player = new simil::SpikesPlayer( );
-        player->LoadData( spikeData );
-        _player = player;
-
-        _subsetEventManager = _player->data( )->subsetsEvents( );
-      }
-      catch(const std::exception &e)
-      {
-        _player->Clear();
-        _subsetEventManager = nullptr;
-
-        QApplication::restoreOverrideCursor();
-        const auto errorText = QString::fromLocal8Bit(e.what());
-        QMessageBox::critical(this, tr("Error loading BlueConfig file"), errorText, QMessageBox::Ok);
-        return;
-      }
-      break;
-   }
-   case simil::TSimVoltages:
-  #ifdef SIMIL_USE_BRION
-//       _player = new simil::VoltagesPlayer( fileName, reportLabel, true);
-  #else
-       std::cerr << "SimIL without Brion support." << std::endl;
-       exit( -1 );
-  #endif
-  //     _deltaTime = _player->deltaTime( );
-       break;
-
-   default:
-     VISIMPL_THROW("Cannot load an undefined simulation type.");
-  }
-
-  updateUIonOpen(subsetEventFile);
-
-  QApplication::restoreOverrideCursor();
-}
-
-void MainWindow::openHDF5File( const std::string& networkFile,
-                               simil::TSimulationType simulationType,
-                               const std::string& activityFile,
-                               const std::string& subsetEventFile )
-{
-  QApplication::setOverrideCursor(Qt::WaitCursor);
-
-  _simulationType = simulationType;
-
-  try
-  {
-    simil::SpikesPlayer *player = new simil::SpikesPlayer();
-    player->LoadData(simil::TDataType::THDF5, networkFile, activityFile);
-    _player = player;
-
-    _subsetEventManager = _player->data()->subsetsEvents();
-  }
-  catch(const std::exception &e)
-  {
-    _player->Clear();
-    _subsetEventManager = nullptr;
-
-    QApplication::restoreOverrideCursor();
-    const auto errorText = QString::fromLocal8Bit(e.what());
-    QMessageBox::critical(this, tr("Error loading HDF5 file"), errorText, QMessageBox::Ok);
-    return;
-  }
-
-  updateUIonOpen(subsetEventFile);
-  QApplication::restoreOverrideCursor();
-}
-
-void MainWindow::openCSVFile( const std::string& networkFile,
-                              simil::TSimulationType simulationType,
-                              const std::string& activityFile,
-                              const std::string& subsetEventFile )
-{
-  QApplication::setOverrideCursor(Qt::WaitCursor);
-  _simulationType = simulationType;
-
-  try
-  {
-    simil::SpikesPlayer *player = new simil::SpikesPlayer();
-    _player = player;
-
-    player->LoadData(simil::TDataType::TCSV, networkFile, activityFile);
-
-    _subsetEventManager = _player->data()->subsetsEvents();
-  }
-  catch(const std::exception &e)
-  {
-    _player->Clear();
-    _subsetEventManager = nullptr;
-
-    QApplication::restoreOverrideCursor();
-    const auto errorText = QString::fromLocal8Bit(e.what());
-    QMessageBox::critical(this, tr("Error loading CSV file"), errorText, QMessageBox::Ok);
-    return;
-  }
-
-  updateUIonOpen(subsetEventFile);
-  QApplication::restoreOverrideCursor();
 }
 
 void MainWindow::openSubsetEventFile(const std::string &filePath, bool append)
@@ -375,10 +281,14 @@ void MainWindow::openBlueConfigThroughDialog( void )
            "soma", &ok2 );
      }
 
-     if ( ok1 && ok2 && !text.isEmpty( ))
+     if(!ok1 || !ok2 || text.isEmpty()) return;
+
+     const auto target = QInputDialog::getText(this, tr("Target"), tr("BlueConfig Target:"), QLineEdit::Normal, "", &ok1);
+
+     if(ok1 && !target.isEmpty())
      {
        _lastOpenedFileNamePath = QFileInfo(filename).path( );
-       openBlueConfig( filename.toStdString(), simType, text.toStdString() );
+       loadData(simil::TBlueConfig, filename.toStdString(), target.toStdString(), simType );
      }
    }
 #endif
@@ -393,7 +303,6 @@ void MainWindow::openCSVFilesThroughDialog( void )
 
   if( !networkFilename.isEmpty( ))
   {
-    simil::TSimulationType simType = simil::TSimSpikes;
 
     const QString activityFilename = QFileDialog::getOpenFileName(
             this, tr( "Open CSV Activity file" ), _lastOpenedFileNamePath,
@@ -403,7 +312,7 @@ void MainWindow::openCSVFilesThroughDialog( void )
     if ( !activityFilename.isEmpty( ))
     {
       _lastOpenedFileNamePath = QFileInfo( networkFilename ).path( );
-      openCSVFile( networkFilename.toStdString( ), simType, activityFilename.toStdString( ) );
+      loadData(simil::TCSV, networkFilename.toStdString(), activityFilename.toStdString(), simil::TSimSpikes);
     }
   }
 }
@@ -433,45 +342,39 @@ void MainWindow::openSubsetEventsFileThroughDialog( void )
 void MainWindow::configurePlayer( void )
 {
   _startTimeLabel->setText(
-        QString::number( static_cast<double>(_player->startTime( ))));
+        QString::number(_player->startTime(), 'f', 3));
 
   _endTimeLabel->setText(
-          QString::number( static_cast<double>(_player->endTime( ))));
+          QString::number(_player->endTime(), 'f', 3));
 
-  #ifdef SIMIL_USE_ZEROEQ
+  m_dataInspector->setSimPlayer(_player);
+
+#ifdef SIMIL_USE_ZEROEQ
   try
   {
-    auto &zInstance = visimpl::ZeroEQConfig::instance();
-    if(zInstance.isConnected())
-    {
-      _player->connectZeq( zInstance.subscriber(), zInstance.publisher() );
-    }
-    else
-    {
-      _player->connectZeq(zeroeq::DEFAULT_SESSION);
-    }
+    _player->connectZeq(_zeqUri);
 
-    const auto eventMgr = _player->zeqEvents( );
-    if(eventMgr)
+    const auto eventMgr = _player->zeqEvents();
+    if (eventMgr)
     {
       eventMgr->frameReceived.connect(
-            boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
-
+          boost::bind(&MainWindow::UpdateSimulationSlider, this, _1));
       eventMgr->playbackOpReceived.connect(
-            boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+          boost::bind(&MainWindow::ApplyPlaybackOperation, this, _1));
     }
   }
-  catch(const std::exception &e)
+  catch (const std::exception &e)
   {
-    std::cerr << "Exception when initializing player events. " << e.what() << ". "
-              << " " << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Exception when initializing player events. ";
+    std::cerr << e.what() << std::endl << " " << __FILE__
+              << ":" << __LINE__ << std::endl;
   }
-  catch(...)
+  catch (...)
   {
     std::cerr << "Unknown exception when initializing player events. "
               << __FILE__ << ":" << __LINE__ << std::endl;
   }
-  #endif
+#endif
 }
 
 void MainWindow::togglePlaybackDock(void)
@@ -529,7 +432,7 @@ void MainWindow::initPlaybackDock( )
 
   _simSlider = new CustomSlider( Qt::Horizontal );
   _simSlider->setMinimum( 0 );
-  _simSlider->setMaximum( 1000 );
+  _simSlider->setMaximum( SLIDER_MAX );
   _simSlider->setSizePolicy( QSizePolicy::Preferred,
                              QSizePolicy::Preferred );
 
@@ -583,7 +486,7 @@ void MainWindow::initPlaybackDock( )
            this, SLOT( Repeat( )));
 
   connect( _simSlider, SIGNAL( sliderPressed( )),
-           this, SLOT( PlayAt( )));
+           this, SLOT( PlayAtPosition( )));
 
   connect( _goToButton, SIGNAL( clicked( )),
            this, SLOT( playAtButtonClicked( )));
@@ -615,7 +518,13 @@ void MainWindow::initSummaryWidget( )
            _summary, SLOT( fillPlots( bool )));
 
   connect( _summary, SIGNAL( histogramClicked( float )),
-           this, SLOT( PlayAt( float )));
+           this, SLOT( PlayAtPercentage( float )));
+
+  connect( m_dataInspector, SIGNAL( simDataChanged()),
+           _summary,      SLOT( UpdateHistograms()));
+
+  connect( m_dataInspector, SIGNAL( simDataChanged()),
+           this,            SLOT( onDataUpdated()));
 
 #ifdef VISIMPL_USE_ZEROEQ
   connect( _summary, SIGNAL( histogramClicked( visimpl::HistogramWidget* )),
@@ -667,6 +576,8 @@ void MainWindow::Pause( bool notify )
     _playButton->setIcon( _playIcon );
     _playing = false;
 
+    _startTimeLabel->setText(QString::number(_player->currentTime(), 'f', 3));
+
     if( notify )
     {
 #ifdef VISIMPL_USE_GMRVLEX
@@ -683,7 +594,7 @@ void MainWindow::Stop( bool notify )
     _player->Stop( );
     _playButton->setIcon( _playIcon );
     _startTimeLabel->setText(
-          QString::number( (double)_player ->startTime( )));
+          QString::number( _player ->startTime(), 'f', 3));
     _playing = false;
     if( notify )
     {
@@ -711,37 +622,52 @@ void MainWindow::Repeat( bool notify )
   }
 }
 
-void MainWindow::PlayAt(bool notify)
+void MainWindow::PlayAtPosition(bool notify)
 {
   if (_player)
   {
-    PlayAt(_simSlider->sliderPosition(), notify);
+    PlayAtPosition(_simSlider->sliderPosition(), notify);
   }
 }
 
-void MainWindow::PlayAt(float percentage, bool notify)
+void MainWindow::PlayAtPercentage(float percentage, bool notify)
 {
   if (_player)
   {
-    const int sliderPos = percentage * (_simSlider->maximum() - _simSlider->minimum()) + _simSlider->minimum();
+    const auto tBegin = _player->startTime();
+    const auto tEnd = _player->endTime();
+    const auto timePos = (percentage * (tEnd-tBegin)) + tBegin;
 
-    PlayAt(sliderPos, notify);
+    PlayAtTime(timePos, notify);
   }
 }
 
-void MainWindow::PlayAt( int sliderPosition, bool notify )
+void MainWindow::PlayAtPosition( int sliderPosition, bool notify )
 {
   if( _player )
   {
-    const int value = _simSlider->value( );
-    const float percentage = static_cast<float>( value - _simSlider->minimum( )) /
-                             ( _simSlider->maximum( ) - _simSlider->minimum( ));
-    _simSlider->setSliderPosition( sliderPosition );
+    PlayAtPercentage( static_cast<float>(sliderPosition) / SLIDER_MAX , notify);
+  }
+}
+
+void MainWindow::PlayAtTime(float timePos, bool notify)
+{
+  if(_player)
+  {
+    const auto tBegin = _player->startTime();
+    const auto tEnd = _player->endTime();
+    const auto newTimePos = std::max(tBegin, std::min(tEnd, timePos));
+    const auto percentage = (newTimePos - tBegin) / (tEnd - tBegin);
+
+    _simSlider->setSliderPosition( percentage * SLIDER_MAX );
 
     _playButton->setIcon( _pauseIcon );
 
-    _player->PlayAt( percentage );
     _playing = true;
+
+    _player->PlayAtTime(newTimePos);
+
+    _startTimeLabel->setText(QString::number(_player->currentTime(), 'f', 3));
 
     if( notify )
     {
@@ -751,9 +677,9 @@ void MainWindow::PlayAt( int sliderPosition, bool notify )
         // Send event
         if(_player->zeqEvents())
         {
-          _player ->zeqEvents( )->sendFrame( _simSlider->minimum( ),
-                                             _simSlider->maximum( ),
-                                             sliderPosition );
+          _player ->zeqEvents( )->sendFrame( _player->startTime(),
+                                             _player->endTime(),
+                                             _player->currentTime() );
         }
       }
       catch(const std::exception &e)
@@ -815,17 +741,18 @@ void MainWindow::GoToEnd( bool notify )
   }
 }
 
-void MainWindow::UpdateSimulationSlider(float percentage)
+void MainWindow::UpdateSimulationSlider(float position)
 {
-  const double currentTime = percentage * (_player->endTime() - _player->startTime()) + _player->startTime();
+  // NOTE: this method receives the position in time, not percentage.
+  const auto tBegin = _player->startTime();
+  const auto tEnd = _player->endTime();
+  const auto newPosition = std::min(tEnd, std::max(tBegin, position));
+  const auto isOverflow = newPosition != position;
 
-  _startTimeLabel->setText(QString::number(currentTime));
+  PlayAtTime( newPosition, isOverflow );
 
-  const int total = _simSlider->maximum() - _simSlider->minimum();
-
-  const int position = percentage * total;
-
-  _simSlider->setSliderPosition(position);
+  if(isOverflow)
+    Pause(true);
 
   if (_summary)
     _summary->repaintHistograms();
@@ -840,7 +767,7 @@ void MainWindow::UpdateSimulationSlider(float percentage)
 
 void MainWindow::ApplyPlaybackOperation(unsigned int playbackOp)
 {
-  auto operation = static_cast<zeroeq::gmrv::PlaybackOperation>(playbackOp);
+  const auto operation = static_cast<zeroeq::gmrv::PlaybackOperation>(playbackOp);
 
   switch (operation)
   {
@@ -888,8 +815,7 @@ void MainWindow::HistogramClicked(visimpl::HistogramWidget *histogram)
 
   try
   {
-    auto &zInstance = visimpl::ZeroEQConfig::instance();
-    if(zInstance.isConnected()) zInstance.publisher()->publish(lexis::data::SelectedIDs(selected));
+    _publisher->publish(lexis::data::SelectedIDs(selected));
   }
   catch(std::exception &e)
   {
@@ -911,47 +837,37 @@ void MainWindow::_setZeqUri(const std::string &session )
 
   try
   {
+    _zeqUri = session.empty() ? zeroeq::DEFAULT_SESSION : session;
+
     _zeqConnection = true;
-    const auto zeqSession = session.empty() ? zeroeq::DEFAULT_SESSION : session;
+    _subscriber = new zeroeq::Subscriber(_zeqUri);
+    _publisher = new zeroeq::Publisher(_zeqUri);
 
-    auto &zInstance = visimpl::ZeroEQConfig::instance();
+    _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
+                           [&](const void *data_, const size_t size_)
+                           { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
 
-    if(zeqSession.compare(zeroeq::NULL_SESSION) == 0)
-    {
-      zInstance.connectNullSession();
-    }
-    else
-    {
-      zInstance.connect(session);
-    }
-
-    // @felix Returns false if the publisher is not up, zeroeq promises to connect
-    //        when it becomes active.
-    zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
-                                      [&](const void *data_, const size_t size_)
-                                      { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
+    _thread = new std::thread([&]()
+    { while( _zeqConnection ) try { _subscriber->receive( 10000 ); } catch(...) { return; }});
   }
   catch(const std::exception &e)
   {
-    std::cerr << "Exception initializing ZeroEQ: " << e.what() << ". "
-              << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Exception initializing ZeroEQ. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
     failed = true;
   }
   catch(...)
   {
-    std::cerr << "Unknown exception initializing ZeroEQ. "
-              << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Unknown exception initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
     failed = true;
   }
 
   if(failed)
   {
     _zeqConnection = false;
+    _subscriber = nullptr;
+    _publisher = nullptr;
     _thread = nullptr;
-    visimpl::ZeroEQConfig::instance().disconnect();
   }
-
-  visimpl::ZeroEQConfig::instance().print();
 }
 
 void MainWindow::_onSelectionEvent(lexis::data::ConstSelectedIDsPtr selected)
@@ -977,17 +893,17 @@ void MainWindow::playAtButtonClicked(void)
   bool ok;
   const double result = QInputDialog::getDouble(this, tr("Set simulation time to play:"),
                                                 tr("Simulation time"), static_cast<double>(_player->currentTime()),
-                                                static_cast<double>(_player->data()->startTime()),
-                                                static_cast<double>(_player->data()->endTime()), 3, &ok, Qt::Popup);
+                                                static_cast<double>(_player->startTime()),
+                                                static_cast<double>(_player->endTime()), 3, &ok, Qt::Popup);
 
   if (ok)
   {
-    float percentage = (result - _player->data()->startTime()) /
-                       (_player->data()->endTime() - _player->data()->startTime());
+    float percentage = (result - _player->startTime()) /
+                       (_player->endTime() - _player->startTime());
 
     percentage = std::max(0.0f, std::min(1.0f, percentage));
 
-    PlayAt(percentage, true);
+    PlayAtPercentage(percentage);
   }
 }
 
@@ -1111,16 +1027,12 @@ void MainWindow::openH5FilesThroughDialog(void)
 
   if (activityFilename.isEmpty()) return;
 
-  openHDF5File(networkFilename.toStdString(), simil::TSimSpikes, activityFilename.toStdString());
+  loadData(simil::THDF5, networkFilename.toStdString(), activityFilename.toStdString(), simil::TSimSpikes);
 }
 
 void MainWindow::updateUIonOpen(const std::string &eventsFile)
 {
   configurePlayer( );
-
-#ifdef VISIMPL_USE_ZEROEQ
-  visimpl::ZeroEQConfig::instance().startReceiveLoop();
-#endif
 
   initSummaryWidget( );
 
@@ -1135,55 +1047,115 @@ void MainWindow::updateUIonOpen(const std::string &eventsFile)
   _ui->actionShowDataManager->setEnabled(true);
 }
 
-#ifdef SIMIL_WITH_REST_API
-void stackviz::MainWindow::openRestListener( const std::string& networkFile,
-                                             simil::TSimulationType simulationType,
-                                             const std::string& activityFile,
-                                             const std::string& subsetEventFile)
-
+void stackviz::MainWindow::loadData(const simil::TDataType type,
+    const std::string &arg1, const std::string &arg2,
+    const simil::TSimulationType simType, const std::string &subsetEventFile)
 {
-  const auto url = networkFile;
-  const auto port = activityFile;
+  updateGeometry();
+
+  _simulationType = simType;
+  m_subsetEventFile = subsetEventFile;
 
   QApplication::setOverrideCursor(Qt::WaitCursor);
 
-  _simulationType = simulationType;
+  closeLoadingDialog();
 
-  _importer = new simil::LoaderRestData( );
+  m_loaderDialog = new LoadingDialog(this);
+  m_loaderDialog->show();
 
-  simil::Network* netData = _importer->loadNetwork(url,port);
+  m_loader = std::make_shared<LoaderThread>();
+  m_loader->setData(type, arg1, arg2);
 
-  simil::SimulationData* simData = _importer->loadSimulationData(url,port);
+  connect(m_loader.get(), SIGNAL(finished()),            this,           SLOT(onLoadFinished()));
+  connect(m_loader.get(), SIGNAL(progress(int)),         m_loaderDialog, SLOT(setProgress(int)));
+  connect(m_loader.get(), SIGNAL(network(unsigned int)), m_loaderDialog, SLOT(setNetwork(unsigned int)));
+  connect(m_loader.get(), SIGNAL(spikes(unsigned int)),  m_loaderDialog, SLOT(setSpikesValue(unsigned int)));
 
-  // @felix REFACTOR NEEDED: if we continue the network will be empty as the
-  // data has not yet been received and nothing will be shown.
-  std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-  //
-
-  try
-  {
-    simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer();
-    spPlayer->LoadData( netData, simData );
-    _player = spPlayer;
-
-    _subsetEventManager = _player->data()->subsetsEvents();
-  }
-  catch(const std::exception &e)
-  {
-    _player->Clear();
-    _subsetEventManager = nullptr;
-
-    QApplication::restoreOverrideCursor();
-    const auto errorText = QString::fromLocal8Bit(e.what());
-    QMessageBox::critical(this, tr("Error loading REST data"), errorText, QMessageBox::Ok);
-    return;
-  }
-
-  updateUIonOpen(subsetEventFile);
-  QApplication::restoreOverrideCursor();
+  m_loader->start();
 }
 
+void stackviz::MainWindow::onLoadFinished()
+{
+  if(m_loader)
+  {
+    const auto errors = m_loader->errors();
+    if(!errors.empty())
+    {
+      closeLoadingDialog();
+      _player->Clear();
+      _subsetEventManager = nullptr;
+      QApplication::restoreOverrideCursor();
+
+      const auto message = QString::fromStdString(errors);
+      QMessageBox::critical(this, tr("Error loading data"), message, QMessageBox::Ok);
+
+      m_loader = nullptr;
+      return;
+    }
+  }
+
+  const auto dataType = m_loader->type();
+
+  switch(dataType)
+  {
+    case simil::TBlueConfig:
+    case simil::TCSV:
+    case simil::THDF5:
+      {
+        const auto spikeData = m_loader->simulationData();
+
+        _player = new simil::SpikesPlayer();
+        _player->LoadData(spikeData);
+
+        m_loader = nullptr;
+      }
+      break;
+    case simil::TREST:
+      {
+        const auto netData = m_loader->network();
+        const auto simData = m_loader->simulationData();
+
+        _player = new simil::SpikesPlayer();
+        _player->LoadData(netData, simData);
+
+        // NOTE: loader doesn't get destroyed.
+#ifdef SIMIL_WITH_REST_API
+        auto timer = new QTimer( this );
+        connect( timer,           SIGNAL( timeout()),
+                 m_dataInspector, SLOT( updateInfo()) );
+
+        timer->start( 4000 );
 #endif
+      }
+      break;
+    case simil::TDataUndefined:
+    default:
+      {
+        m_loader = nullptr;
+        closeLoadingDialog();
+        QMessageBox::critical(this, tr("Error loading data"), tr("Data type is undefined after loading"), QMessageBox::Ok);
+
+        return;
+      }
+      break;
+  }
+
+  if(m_loaderDialog)
+  {
+    const auto gids = _player->gidsSize();
+    const auto spikes = reinterpret_cast<simil::SpikesPlayer *>(_player)->spikesSize();
+    m_loaderDialog->setNetwork(gids);
+    m_loaderDialog->setSpikesValue(spikes);
+  }
+
+  _subsetEventManager = _player->data()->subsetsEvents();
+
+  updateUIonOpen(m_subsetEventFile);
+
+  closeLoadingDialog();
+
+  QApplication::restoreOverrideCursor();
+}
 
 void stackviz::MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
 {
@@ -1208,4 +1180,30 @@ void stackviz::MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
 #else
   ignore(op); // c++17 [[maybe_unused]]
 #endif
+}
+
+void stackviz::MainWindow::onDataUpdated()
+{
+  const float tBegin = _player->startTime();
+  const float tEnd = _player->endTime();
+  const float tCurrent = _player->currentTime();
+
+  if(tEnd > tBegin)
+  {
+    _startTimeLabel->setText(QString::number(tCurrent, 'f', 3));
+    _endTimeLabel->setText(QString::number(tEnd, 'f', 3));
+
+    const float percentage = static_cast<float>(tCurrent - tBegin) / (tEnd - tBegin);
+    _simSlider->setValue( percentage * SLIDER_MAX );
+  }
+}
+
+void stackviz::MainWindow::closeLoadingDialog()
+{
+  if(m_loaderDialog)
+  {
+    m_loaderDialog->close();
+    delete m_loaderDialog;
+    m_loaderDialog = nullptr;
+  }
 }

@@ -64,7 +64,8 @@ int main( int argc, char** argv )
   std::string target;
   std::string correlations;
 
-  simil::TDataType dataType = simil::TBlueConfig;
+  simil::TDataType dataType = simil::TDataUndefined;
+
   // @felix This shouldn't be constexpr? Could change to voltages in the future?
   constexpr simil::TSimulationType simType = simil::TSimSpikes;
 
@@ -141,10 +142,8 @@ int main( int argc, char** argv )
     {
       if( i + 2 < argc )
       {
-        ++i;
-        networkFile = std::string( argv[ i ]);
-        ++i;
-        activityFile = std::string( argv[ i ]);
+        networkFile = std::string( argv[ ++i ]);
+        activityFile = std::string( argv[ ++i ]);
         dataType = simil::THDF5;
         continue;
       }
@@ -156,10 +155,8 @@ int main( int argc, char** argv )
     {
       if( i + 2 < argc )
       {
-        ++i;
-        networkFile = std::string( argv[ i ]);
-        ++i;
-        activityFile = std::string( argv[ i ]);
+        networkFile = std::string( argv[ ++i ]);
+        activityFile = std::string( argv[ ++i ]);
         dataType = simil::TCSV;
         continue;
       }
@@ -170,10 +167,8 @@ int main( int argc, char** argv )
 #ifdef SIMIL_WITH_REST_API
       if( i + 2 < argc )
       {
-        ++i;
-        networkFile = std::string( argv[ i ]);
-        ++i;
-        activityFile = std::string( argv[ i ]);
+        networkFile = std::string( argv[ ++i ]);
+        activityFile = std::string( argv[ ++i ]);
         dataType = simil::TREST;
         continue;
       }
@@ -187,7 +182,7 @@ int main( int argc, char** argv )
     {
       if(++i < argc )
       {
-        target = argv[ i ];
+        activityFile = argv[ i ];
         continue;
       }
       else
@@ -269,37 +264,23 @@ int main( int argc, char** argv )
   else if ( fullscreen )
     mainWindow.showFullScreen( );
   else
-    mainWindow.show( );
+    mainWindow.showNormal( );
 
-  if( !networkFile.empty( ))
-  switch( dataType )
+  if (dataType != simil::TDataType::TDataUndefined)
   {
-    case simil::TDataType::TBlueConfig:
-      mainWindow.openBlueConfig( networkFile, simType, target,
-                                 subsetEventFile );
-      break;
-    case simil::TDataType::THDF5:
-      mainWindow.openHDF5File( networkFile, simType, activityFile,
-                               subsetEventFile );
-      if( !correlations.empty( ))
+    mainWindow.loadData(dataType, networkFile, activityFile, simType);
+
+    if (dataType == simil::TDataType::THDF5)
+    {
+      if (!correlations.empty())
       {
-        QString correls( correlations.c_str( ));
-        auto co = correls.split( ";" );
-        for( auto c : co )
-          mainWindow.addCorrelation( c.toStdString( ));
+        QString correls(correlations.c_str());
+        auto co = correls.split(";");
+        for (auto c : co)
+          mainWindow.addCorrelation(c.toStdString());
       }
-      mainWindow.calculateCorrelations( );
-      break;
-    case simil::TDataType::TCSV:
-      mainWindow.openCSVFile( networkFile, simType, activityFile, subsetEventFile );
-      break;
-#ifdef SIMIL_WITH_REST_API
-    case simil::TDataType::TREST:
-      mainWindow.openRestListener( networkFile, simType, activityFile, subsetEventFile);
-      break;
-#endif
-    default:
-      break;
+      mainWindow.calculateCorrelations();
+    }
   }
 
   return application.exec();

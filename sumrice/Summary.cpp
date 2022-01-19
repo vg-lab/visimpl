@@ -724,11 +724,13 @@ namespace visimpl
 
   void Summary::UpdateHistograms( void )
   {
-      for( auto histogram : _histogramWidgets )
-      {
-        histogram->Spikes(*_spikeReport);
-        histogram->Update();
-      }
+    auto updateHistogram = [&](HistogramWidget *h)
+    {
+      h->Spikes(*_spikeReport);
+      h->Update();
+      h->update();
+    };
+    std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), updateHistogram);
   }
 
   void Summary::insertSubset( const Selection& selection )
@@ -1082,8 +1084,10 @@ namespace visimpl
     bins( binsNumber );
   }
 
-  void Summary::bins( int bins_ )
+  void Summary::bins( unsigned int bins_ )
   {
+    if(_bins == bins_) return;
+
     _bins = bins_;
 
 #ifdef VISIMPL_USE_OPENMP
@@ -1115,6 +1119,8 @@ namespace visimpl
 
   void Summary::zoomFactor( double zoom )
   {
+    if(_zoomFactor == zoom) return;
+
     _zoomFactor = zoom;
 
 #ifdef VISIMPL_USE_OPENMP

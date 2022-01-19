@@ -129,6 +129,12 @@ namespace visimpl
     void highlightElements( const std::unordered_set< unsigned int >& highlighted );
     void clearHighlighting( void );
 
+    /** \brief Helper method to generate que QColor pair from a given color.
+     * \param[inout] c scoop::Color object reference.
+     *
+     */
+    static std::pair<QColor, QColor> generateColorPair(scoop::Color &c);
+
   protected:
 
     typedef std::vector< std::tuple< uint32_t, float >> TModifiedNeurons;

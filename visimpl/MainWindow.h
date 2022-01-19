@@ -30,7 +30,6 @@
 #include "VisualGroup.h"
 #include "SelectionManagerWidget.h"
 #include "SubsetImporter.h"
-#include "ui/DataInspector.h"
 
 // Qt
 #include <QMainWindow>
@@ -52,7 +51,7 @@ class QToolBox;
 
 namespace Ui
 {
-class MainWindow;
+  class MainWindow;
 }
 
 namespace visimpl
@@ -80,26 +79,11 @@ namespace visimpl
     void init( const std::string& zeqUri = std::string() );
     void showStatusBarMessage ( const QString& message );
 
-    void openBlueConfig( const std::string& fileName,
-                         simil::TSimulationType simulationType,
-                         const std::string& report,
-                         const std::string& subsetEventFile = "");
-
-    void openHDF5File( const std::string& networkFile,
-                       simil::TSimulationType simulationType,
-                       const std::string& activityFile = "",
-                       const std::string& subsetEventFile = "" );
-
-    void openCSVFile( const std::string& networkFile,
-                      simil::TSimulationType simulationType,
-                      const std::string& activityFile = "",
-                      const std::string& subsetEventFile = "" );
-#ifdef SIMIL_WITH_REST_API
-    void openRestListener( const std::string& url,
-                      simil::TSimulationType simulationType,
-                      const std::string& port = "",
-                      const std::string& subsetEventFile = "" );
-#endif
+    void loadData(const simil::TDataType type,
+                  const std::string arg_1,
+                  const std::string arg_2,
+                  const simil::TSimulationType simType = simil::TSimulationType::TSimSpikes,
+                  const std::string &subsetEventFile = std::string());
 
   public slots:
 
@@ -162,9 +146,10 @@ namespace visimpl
     void Pause( bool notify = true );
     void Stop( bool notify = true );
     void Repeat( bool notify = true );
-    void PlayAt( bool notify = true );
-    void PlayAt( float, bool notify = true );
-    void PlayAt( int, bool notify = true );
+    void PlayAtPosition( bool notify = true );
+    void PlayAtPosition( int, bool notify = true );
+    void PlayAtPercentage( float, bool notify = true );
+    void PlayAtTime( float, bool notify = true);
     void requestPlayAt( float );
     void PreviousStep( bool notify = true );
     void NextStep( bool notify = true );
@@ -173,7 +158,7 @@ namespace visimpl
     void configureComponents( void );
     void importVisualGroups( void );
 
-    void addGroupControls( const std::string& name, unsigned int index,
+    void addGroupControls( VisualGroup *group, unsigned int index,
                            unsigned int size );
     void clearGroups( void );
 
@@ -190,10 +175,40 @@ namespace visimpl
 
     void colorSelectionClicked( void );
 
+    /** \brief Updates group selection color.
+     *
+     */
+    void onGroupColorChanged();
+
+    /** \brief Updates group selection color.
+     *
+     */
+    void onGroupPreview();
+
+    /** \brief Shows the dialog to change the group name.
+     *
+     */
+    void onGroupNameClicked();
+
     void selectionManagerChanged( void );
     void setSelection( const GIDUSet& selection_, TSelectionSource source_ = SRC_UNDEFINED );
     void clearSelection( void );
     void selectionFromPlanes( void );
+
+    /** \brief Executed when OpenGlWidget reports finished loading data.
+     *
+     */
+    void onDataLoaded();
+
+    /** \brief Loads groups and its properties from a file on disk.
+     *
+     */
+    void loadGroups();
+
+    /** \brief Saves current groups and its properties to a file on disk.
+     *
+     */
+    void saveGroups();
 
   protected:
     void _initSimControlDock( void );
@@ -207,6 +222,14 @@ namespace visimpl
 
     bool _showDialog( QColor& current, const QString& message = "" );
 
+    /** \brief Helper to update a group representations colors.
+     * \param[in] idx Index of group in group list.
+     * \param[in] t Transfer function.
+     * \param[in] s Size function.
+     *
+     */
+    void updateGroupColors(size_t idx, const TTransferFunction &t, const TSizeFunction &s);
+
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
 
@@ -218,7 +241,13 @@ namespace visimpl
 
   protected:
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
-    void initializeZeroEQ(const std::string &session = std::string());
+    void _setZeqUri( const std::string& );
+    bool _zeqConnection;
+
+    std::string _zeqUri;
+    zeroeq::Subscriber* _subscriber;
+
+    std::thread* _thread;
 
   #endif // VISIMPL_USE_ZEROEQ
 
@@ -256,9 +285,7 @@ namespace visimpl
     QTabWidget* _modeSelectionWidget;
     QToolBox* _toolBoxOptions;
 
-#ifdef SIMIL_WITH_REST_API
     DataInspector * _objectInspectorGB;
-#endif
 
     QGroupBox* _groupBoxTransferFunction;
     TransferFunctionWidget* _tfWidget;
@@ -282,6 +309,8 @@ namespace visimpl
 
     QPushButton* _buttonImportGroups;
     QPushButton* _buttonClearGroups;
+    QPushButton* _buttonLoadGroups;
+    QPushButton* _buttonSaveGroups;
     QPushButton* _buttonAddGroup;
     QPushButton* _buttonClearSelection;
     QLabel* _selectionSizeLabel;
@@ -309,5 +338,7 @@ namespace visimpl
     QPushButton* _buttonSelectionFromClippingPlanes;
 
     StackViz *m_stackviz;
+    simil::TDataType m_type;
+    std::string m_subsetEventFile;
   };
 } // namespace visimpl

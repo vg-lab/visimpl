@@ -322,31 +322,11 @@ namespace visimpl
 
     auto colors = palette.colors( );
 
-    constexpr float brightFactor = 0.4f;
-    constexpr float darkFactor = 1.0f - brightFactor;
-
     _paletteColors.clear( );
 
     for( auto color: colors )
     {
-      glm::vec4 baseColor( color.red( ) * invRGBInt,
-                           color.green( ) * invRGBInt,
-                           color.blue( ) * invRGBInt, 0.6f );
-
-      color = QColor( baseColor.r * 255,
-                      baseColor.g * 255,
-                      baseColor.b * 255,
-                      baseColor.a * 255 );
-
-      glm::vec4 darkColor =
-          ( baseColor * brightFactor ) + ( glm::vec4( 0.1f, 0.1f, 0.1f, 0.4f ) * darkFactor );
-
-      QColor darkqColor = QColor( darkColor.r * 255,
-                                  darkColor.g * 255,
-                                  darkColor.b * 255,
-                                  darkColor.a * 255 );
-
-      _paletteColors.emplace_back( std::make_pair( color, darkqColor ));
+      _paletteColors.emplace_back( generateColorPair(color) );
     }
   }
 
@@ -442,7 +422,6 @@ namespace visimpl
       group->source( )->active( state );
   }
 
-
   void DomainManager::_updateGroupsModels( void )
   {
     for( auto group : _groups )
@@ -488,8 +467,6 @@ namespace visimpl
     _gidToParticle.reserve(count);
     _particleToGID.reserve(count);
     _gidSource.reserve(count);
-
-    std::cout << "Retrieved " << availableParticles.size( ) << std::endl;
 
     _resetBoundingBox( );
 
@@ -648,7 +625,7 @@ namespace visimpl
   {
     for( auto group : _groups )
     {
-      if( !group->dirty( ))
+      if( !group->dirty( ) || !group->active())
         continue;
 
       if( group->cached( ))
@@ -1015,7 +992,34 @@ namespace visimpl
     return _namesTypesFunction;
   }
 
+  std::pair<QColor, QColor> DomainManager::generateColorPair(
+      scoop::Color &color)
+  {
+    constexpr float brightFactor = 0.4f;
+    constexpr float darkFactor = 1.0f - brightFactor;
+
+    const glm::vec4 baseColor( color.red( ) * invRGBInt,
+                               color.green( ) * invRGBInt,
+                               color.blue( ) * invRGBInt, 0.6f );
+
+    color = QColor( baseColor.r * 255,
+                    baseColor.g * 255,
+                    baseColor.b * 255,
+                    baseColor.a * 255 );
+
+    const glm::vec4 darkColor =
+        ( baseColor * brightFactor ) + ( glm::vec4( 0.1f, 0.1f, 0.1f, 0.4f ) * darkFactor );
+
+    const QColor darkqColor = QColor( darkColor.r * 255,
+                                      darkColor.g * 255,
+                                      darkColor.b * 255,
+                                      darkColor.a * 255 );
+
+    return std::make_pair( color, darkqColor );
+  }
+
 #ifdef SIMIL_USE_BRION
+
   tNeuronAttribs DomainManager::_loadNeuronTypes( const brion::BlueConfig& blueConfig )
   {
     tNeuronAttribs result;

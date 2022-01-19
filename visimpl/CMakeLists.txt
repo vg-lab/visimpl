@@ -21,13 +21,11 @@ configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.h
 configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.cpp
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp @ONLY)
 
-
 set(UIDIR ${PROJECT_SOURCE_DIR}/ui)
 set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 
 #set(CMAKE_AUTOMOC ON)
 #set(CMAKE_AUTOUIC ON)
-
 
 set(VISIMPL_SOURCES
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
@@ -52,7 +50,6 @@ set(VISIMPL_SOURCES
   prefr/UpdaterStaticPosition.cpp
 
   render/Plane.cpp
-  ui/DataInspector.cpp
   
   stackviz/StackViz.cpp
   stackviz/DisplayManagerWidget.cpp
@@ -76,8 +73,6 @@ set(VISIMPL_HEADERS
   prefr/UpdaterStaticPosition.h
 
   render/Plane.h
-
-  ui/DataInspector.h
   
   stackviz/StackViz.h
   stackviz/DisplayManagerWidget.h
@@ -143,6 +138,5 @@ endif()
 if (UNIX AND NOT APPLE)
   set(VISIMPL_ICON visimpl.png )
 endif()
-
 
 common_application( visimpl GUI ${COMMON_APP_ARGS})

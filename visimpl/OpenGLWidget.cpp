@@ -33,6 +33,7 @@
 #include <QGraphicsOpacityEffect>
 #include <QLabel>
 #include <QDir>
+#include <QMessageBox>
 
 // C++
 #include <sstream>
@@ -76,8 +77,16 @@ namespace visimpl
   constexpr float invRGBInt = 1.0f / 255;
 
   OpenGLWidget::OpenGLWidget( QWidget* parent_,
-                              Qt::WindowFlags windowsFlags_)
+                              Qt::WindowFlags windowsFlags_,
+                              const std::string&
+  #ifdef VISIMPL_USE_ZEROEQ
+                              zeqUri
+  #endif
+    )
   : QOpenGLWidget( parent_, windowsFlags_ )
+  #ifdef VISIMPL_USE_ZEROEQ
+  , _zeqUri( zeqUri )
+  #endif
   , _fpsLabel( nullptr )
   , _labelCurrentTime( nullptr )
   , _showFps( false )
@@ -110,9 +119,8 @@ namespace visimpl
   , _pickRenderer( nullptr )
   , _simulationType( simil::TSimulationType::TSimNetwork )
   , _player( nullptr )
-#ifdef SIMIL_WITH_REST_API
-  , _importer( nullptr )
-#endif
+  , m_loader{nullptr}
+  , m_loaderDialog{nullptr}
   , _clippingPlaneLeft( nullptr )
   , _clippingPlaneRight( nullptr )
   , _planeHeight( 1 )
@@ -215,28 +223,29 @@ namespace visimpl
     this->setFocusPolicy( Qt::WheelFocus );
 
 #ifdef VISIMPL_USE_ZEROEQ
-    try
+    if ( !_zeqUri.empty( ) )
     {
-      auto &zInstance = ZeroEQConfig::instance();
-      if(zInstance.isConnected())
+      bool failed = false;
+      try
       {
-        // NOTE: may not be null_session, but avoid the camera creating a thread.
-        _camera = new Camera(zeroeq::NULL_SESSION, zInstance.subscriber());
+        _camera = new Camera( _zeqUri );
       }
-      else
+      catch(std::exception &e)
       {
-        _camera = new Camera(zeroeq::DEFAULT_SESSION);
+        std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
+        failed = true;
       }
-    }
-    catch(std::exception &e)
-    {
-      std::cerr << "Exception initializing camera. " << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
-      _camera = nullptr;
-    }
-    catch(...)
-    {
-      std::cerr << "Unknown exception when initializing camera. " << __FILE__ << ":" << __LINE__ << std::endl;
-      _camera = nullptr;
+      catch(...)
+      {
+        std::cerr << "Unknown exception catched when initializing camera. " << __FILE__ << ":" << __LINE__ << std::endl;
+        failed = true;
+      }
+
+      if(failed)
+      {
+        _camera = nullptr;
+        _zeqUri.clear();
+      }
     }
 #endif
 
@@ -265,10 +274,9 @@ namespace visimpl
 
     if( _player )
       delete _player;
-#ifdef SIMIL_WITH_REST_API
-    if(_importer)
-      delete _importer;
-#endif
+
+    m_loader = nullptr;
+    closeLoadingDialog();
   }
 
   void OpenGLWidget::loadData( const std::string& fileName,
@@ -276,30 +284,97 @@ namespace visimpl
                                simil::TSimulationType simulationType,
                                const std::string& report)
   {
-    makeCurrent( );
+    m_loader = nullptr;
+    closeLoadingDialog();
 
     _simulationType = simulationType;
 
+    m_loaderDialog = new LoadingDialog(this);
+    m_loaderDialog->show();
+
+    QApplication::processEvents();
+
+    m_loader = std::make_shared<LoaderThread>();
+    m_loader->setData(fileType, fileName, report);
+
+    connect(m_loader.get(), SIGNAL(finished()),            this,           SLOT(onLoaderFinished()));
+    connect(m_loader.get(), SIGNAL(progress(int)),         m_loaderDialog, SLOT(setProgress(int)));
+    connect(m_loader.get(), SIGNAL(network(unsigned int)), m_loaderDialog, SLOT(setNetwork(unsigned int)));
+    connect(m_loader.get(), SIGNAL(spikes(unsigned int)),  m_loaderDialog, SLOT(setSpikesValue(unsigned int)));
+
+    m_loader->start();
+  }
+
+  void OpenGLWidget::onLoaderFinished()
+  {
+    makeCurrent( );
+
     _deltaTime = 0.5f;
 
-    try
+    if(m_loader)
     {
-      auto spikeData = new simil::SpikeData( fileName, fileType, report );
-      spikeData->reduceDataToGIDS( );
+      const auto error = m_loader->errors();
+      if(!error.empty())
+      {
+        closeLoadingDialog();
+        QApplication::restoreOverrideCursor();
 
-      _player = new simil::SpikesPlayer( );
-      _player->LoadData( spikeData );
+        const auto message = QString::fromStdString(error);
+        QMessageBox::critical(this, tr("Error loading data"), message, QMessageBox::Ok);
+
+        m_loader = nullptr;
+        return;
+      }
     }
-    catch(const std::exception &e)
+
+    const auto dataType = m_loader->type();
+
+    switch(dataType)
     {
-      std::cerr << "ERROR: " << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
-      throw;
+      case simil::TBlueConfig:
+      case simil::TCSV:
+      case simil::THDF5:
+        {
+          const auto spikeData = m_loader->simulationData();
+
+          _player = new simil::SpikesPlayer();
+          _player->LoadData(spikeData);
+
+          m_loader = nullptr;
+        }
+        break;
+      case simil::TREST:
+        {
+          const auto netData = m_loader->network();
+          const auto simData = m_loader->simulationData();
+
+          _player = new simil::SpikesPlayer();
+          _player->LoadData(netData, simData);
+
+          // NOTE: loader doesn't get destroyed because has a loop for getting data.
+        }
+        break;
+      case simil::TDataUndefined:
+      default:
+        {
+          m_loader = nullptr;
+          closeLoadingDialog();
+          QMessageBox::critical(this, tr("Error loading data"), tr("Data type is undefined after loading"), QMessageBox::Ok);
+
+          return;
+        }
+        break;
+    }
+
+    if(m_loaderDialog)
+    {
+      m_loaderDialog->setNetwork(_player->gidsSize());
+      m_loaderDialog->setSpikesValue(_player->spikesSize());
+      m_loaderDialog->repaint();
     }
 
     InitialConfig config;
-    float scale = 1.0f;
-
-    switch (fileType)
+    switch (dataType)
     {
       case simil::TBlueConfig:
         config = _initialConfigSimBlueConfig;
@@ -317,10 +392,11 @@ namespace visimpl
         break;
     }
 
-    scale = std::get< T_SCALE >( config );
-
     if( !_scaleFactorExternal )
+    {
+      const auto scale = std::get< T_SCALE >( config );
       _scaleFactor = vec3( scale, scale, scale );
+    }
 
     std::cout << "Using scale factor of " << _scaleFactor.x
               << ", " << _scaleFactor.y
@@ -333,83 +409,30 @@ namespace visimpl
     simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
     changeSimulationDecayValue( std::get< T_DECAY >( config ) );
 
-    connectPlayerZeroEQ();
-
-    this->_paint = true;
-    update( );
-  }
-
-#ifdef SIMIL_WITH_REST_API
-  void OpenGLWidget::loadRestData( const std::string& url,
-                               const simil::TDataType ,
-                               simil::TSimulationType simulationType,
-                               const std::string& port)
+#ifdef VISIMPL_USE_ZEROEQ
+  if( !_zeqUri.empty( ))
   {
-
-    makeCurrent( );
-
-    InitialConfig config;
-    float scale = 1.0f;
-
-    config = _initialConfigSimREST;
-
-    _simulationType = simulationType;
-
-    _deltaTime = std::get< T_DELTATIME >( config );
-
-    _importer = new simil::LoaderRestData( );
-    static_cast<simil::LoaderRestData*>(_importer)->deltaTime(_deltaTime);
-
-    std::cout << "--------------------------------------" << std::endl;
-    std::cout << "Network" << std::endl;
-    std::cout << "--------------------------------------" << std::endl;
-
-    simil::Network* netData = _importer->loadNetwork(url,port);
-
-    simil::SimulationData* simData = _importer->loadSimulationData(url,port);
-
-    // @felix REFACTOR NEEDED: if we continue the network will be empty as the
-    // data has not yet been received and nothing will be shown.
-    std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-    //
-
-    std::cout << "Loaded GIDS: " << netData->gids( ).size( ) << std::endl;
-    std::cout << "Loaded positions: " << netData->positions( ).size( )
-              << std::endl;
-
-    std::cout << "--------------------------------------" << std::endl;
-    std::cout << "Spikes" << std::endl;
-    std::cout << "--------------------------------------" << std::endl;
-
-    simil::SpikesPlayer* spPlayer = new simil::SpikesPlayer();
-    spPlayer->LoadData( netData, simData );
-    _player = spPlayer;
-    //_player->deltaTime( _deltaTime );
-
-    scale = std::get< T_SCALE >( config );
-
-    if( !_scaleFactorExternal )
-      _scaleFactor = vec3( scale, scale, scale );
-
-    std::cout << "Using scale factor of " << _scaleFactor.x
-              << ", " << _scaleFactor.y
-              << ", " << _scaleFactor.z
-              << std::endl;
-
-    createParticleSystem( );
-
-    simulationDeltaTime( std::get< T_DELTATIME >( config ) );
-    simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
-    changeSimulationDecayValue( std::get< T_DECAY >( config ) );
-
-    subsetEventsManager(netData->subsetsEvents());
-
-    connectPlayerZeroEQ();
-
-    this->_paint = true;
-    update( );
+    try
+    {
+      _player->connectZeq( _zeqUri );
+    }
+    catch(std::exception &e)
+    {
+      std::cerr << "Exception when initializing ZeroEQ. ";
+      std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
+    }
   }
 #endif
+
+    this->_paint = true;
+    update( );
+
+    emit dataLoaded();
+  }
 
   void OpenGLWidget::initializeGL( void )
   {
@@ -702,8 +725,7 @@ namespace visimpl
     const unsigned int maxParticles =
         std::max(100000u, static_cast<unsigned int>( _player->gids( ).size( )));
 
-    _updateData( );
-
+    _updateData();
     _particleSystem = new prefr::ParticleSystem( maxParticles, _camera );
     _flagResetParticles = true;
 
@@ -993,7 +1015,7 @@ namespace visimpl
 
       if( _idleUpdate && _player)
         update( );
-    }
+  }
 
   void OpenGLWidget::setSelectedGIDs( const std::unordered_set< uint32_t >& gids )
   {
@@ -1132,31 +1154,39 @@ namespace visimpl
     _flagNewData = true;
   }
 
-  void OpenGLWidget::_updateData( void )
+  bool OpenGLWidget::_updateData( void )
   {
     const auto &positions = _player->positions();
+
+    // assumed positions doesn't change so if equal the network didn't change.
+    if(positions.size() == _gidPositions.size()) return false;
 
     _gidPositions.clear();
     _gidPositions.reserve(positions.size());
 
-    auto gidit = _player->gids().begin();
-    for (const auto &pos : positions)
+    auto gidit = _player->gids().cbegin();
+    auto insertElement = [&](const vmml::Vector3f &v)
     {
-      const vec3 position(pos.x() * _scaleFactor.x,
-                          pos.y() * _scaleFactor.y,
-                          pos.z() * _scaleFactor.z);
+      const vec3 position(v.x() * _scaleFactor.x,
+                          v.y() * _scaleFactor.y,
+                          v.z() * _scaleFactor.z);
 
       _gidPositions.insert(std::make_pair(*gidit, position));
       ++gidit;
-    }
+    };
+    std::for_each(positions.cbegin(), positions.cend(), insertElement);
+
+    return true;
   }
 
   void OpenGLWidget::_updateNewData( void )
   {
-    _updateData();
+    _flagNewData = false;
+
+    if(!_updateData()) return;
+
     _domainManager->updateData(_player->gids(), _gidPositions );
     _focusOn( _domainManager->boundingBox( ));
-    _flagNewData = false;
     _flagUpdateRender = true;
   }
 
@@ -1289,7 +1319,6 @@ namespace visimpl
   {
     if( _player->isPlaying( ) || _firstFrame )
     {
-
       _particleSystem->update( renderDelta );
       _firstFrame = false;
     }
@@ -1866,7 +1895,7 @@ namespace visimpl
     _eventsActivation.clear( );
 
     const float totalTime = _player->endTime( ) - _player->startTime( );
-    auto &colors = _colorPalette.colors( );
+    const auto &colors = _colorPalette.colors( );
 
     unsigned int row = 0;
     auto insertEvents = [&row, &totalTime, &colors, this](const std::string &eventName)
@@ -1904,7 +1933,7 @@ namespace visimpl
 
       _eventLabelsLayout->addWidget( container, row, 10, 2, 1 );
 
-      auto activity = _subsetEvents->eventActivity( eventName, _deltaEvents, totalTime );
+      const auto activity = _subsetEvents->eventActivity( eventName, _deltaEvents, totalTime );
       _eventsActivation.push_back(activity);
 
       ++row;
@@ -1958,7 +1987,7 @@ namespace visimpl
     }
   }
 
-  void OpenGLWidget::PlayAt( float percentage )
+  void OpenGLWidget::PlayAt( float timePos )
   {
     if( _player )
     {
@@ -1967,8 +1996,8 @@ namespace visimpl
 
       _backtrace = true;
 
-      std::cout << "Play at " << percentage << std::endl;
-      _player->PlayAt( percentage );
+      std::cout << "Play at " << timePos << std::endl;
+      _player->PlayAtTime(timePos);
       _particleSystem->run( true );
     }
   }
@@ -1977,7 +2006,7 @@ namespace visimpl
   {
     if( _player )
     {
-      bool playing = _player->isPlaying( );
+      const bool playing = _player->isPlaying( );
       _player->Stop( );
       if( playing )
         _player->Play( );
@@ -2021,12 +2050,12 @@ namespace visimpl
 
     prefr::vectortvec4 gcolors;
 
-    for( auto c : colors )
+    for( const auto &c : colors )
     {
       glm::vec4 gColor( c.second.red( ) * invRGBInt,
-                       c.second.green( ) * invRGBInt,
-                       c.second.blue( ) * invRGBInt,
-                       c.second.alpha( ) * invRGBInt );
+                        c.second.green( ) * invRGBInt,
+                        c.second.blue( ) * invRGBInt,
+                        c.second.alpha( ) * invRGBInt );
 
       gcolors.Insert( c.first, gColor );
     }
@@ -2148,33 +2177,14 @@ namespace visimpl
     return _domainManager->decay( );
   }
 
-  void OpenGLWidget::connectPlayerZeroEQ()
+  void OpenGLWidget::closeLoadingDialog()
   {
-#ifdef VISIMPL_USE_ZEROEQ
-    try
+    if(m_loaderDialog)
     {
-      auto &zInstance = ZeroEQConfig::instance();
-      if(zInstance.isConnected())
-      {
-        _player->connectZeq(zInstance.subscriber(), zInstance.publisher());
-      }
-      else
-      {
-        _player->connectZeq(zeroeq::DEFAULT_SESSION);
-      }
-
-      zInstance.startReceiveLoop();
+      m_loaderDialog->close();
+      delete m_loaderDialog;
+      m_loaderDialog = nullptr;
     }
-    catch(std::exception &e)
-    {
-      std::cerr << "Exception when initializing ZeroEQ. ";
-      std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
-    }
-    catch(...)
-    {
-      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-    }
-#endif
   }
 
 } // namespace visimpl

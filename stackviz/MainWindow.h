@@ -46,7 +46,6 @@
 #endif
 
 #include "ui_stackviz.h"
-
 #include "DisplayManagerWidget.h"
 
 namespace Ui
@@ -68,27 +67,11 @@ namespace stackviz
     void init( const std::string& zeqUri = std::string() );
     void showStatusBarMessage ( const QString& message );
 
-    void openBlueConfig( const std::string& fileName,
-                         simil::TSimulationType simulationType,
-                         const std::string& report,
-                         const std::string& subsetEventFile = "" );
-
-    void openHDF5File( const std::string& networkFile,
-                       simil::TSimulationType simulationType,
-                       const std::string& activityFile = "",
-                       const std::string& subsetEventFile = "" );
-
-    void openCSVFile( const std::string& networkFile,
-                      simil::TSimulationType simulationType,
-                      const std::string& activityFile = "",
-                      const std::string& subsetEventFile = "" );
-
-#ifdef SIMIL_WITH_REST_API
-    void openRestListener( const std::string& networkFile,
-                           simil::TSimulationType simulationType,
-                           const std::string& activityFile = "",
-                           const std::string& subsetEventFile = "");
-#endif
+    void loadData(const simil::TDataType type,
+                  const std::string &arg1,
+                  const std::string &arg2,
+                  const simil::TSimulationType simType = simil::TSimulationType::TSimSpikes,
+                  const std::string &subsetEventFile = "");
 
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
@@ -109,9 +92,10 @@ namespace stackviz
     void Pause( bool notify = true );
     void Stop( bool notify = true );
     void Repeat( bool notify = true);
-    void PlayAt( bool notify = true );
-    void PlayAt( int, bool notify = true );
-    void PlayAt( float, bool notify = true );
+    void PlayAtPosition( bool notify = true );
+    void PlayAtPosition( int, bool notify = true );
+    void PlayAtPercentage( float, bool notify = true );
+    void PlayAtTime( float, bool notify = true);
     void Restart( bool notify = true );
     void GoToEnd( bool notify = true );
 
@@ -135,13 +119,15 @@ namespace stackviz
 
     void loadComplete( void );
 
+    void onLoadFinished();
+
+    void onDataUpdated();
 
   protected:
     void configurePlayer( void );
 
     void initSummaryWidget( void );
     void initPlaybackDock( void );
-
 
   #ifdef VISIMPL_USE_ZEROEQ
 
@@ -182,13 +168,11 @@ namespace stackviz
 
   #ifdef VISIMPL_USE_ZEROEQ
     bool _zeqConnection;
+    std::string _zeqUri;
+    zeroeq::Subscriber* _subscriber;
+    zeroeq::Publisher* _publisher;
     std::thread* _thread;
   #endif
-
-  #ifdef SIMIL_WITH_REST_API
-    simil::LoaderSimData* _importer;
-  #endif
-
 
   private:
     /** \brief Helper method to update the UI after a dataset has been loaded.
@@ -203,7 +187,17 @@ namespace stackviz
      */
     void sendZeroEQPlaybackOperation(const unsigned int op);
 
+    /* \brief Helper method to close the loading dialog.
+     *
+     */
+    void closeLoadingDialog();
+
     std::vector< std::string > _correlations;
+
+    std::string m_subsetEventFile;
+    std::shared_ptr<LoaderThread> m_loader;
+    LoadingDialog *m_loaderDialog;
+    DataInspector * m_dataInspector;
   };
 
 

@@ -161,9 +161,6 @@ namespace visimpl
 
     TNeuronCorrelationUMap values;
   };
-
 }
-
-
 
 #endif /* __VISIMPL_TYPES_H__ */

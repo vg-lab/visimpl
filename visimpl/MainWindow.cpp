@@ -59,6 +59,9 @@
 #include <QPushButton>
 #include <QToolBox>
 #include <QtGlobal>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include "stackviz/StackViz.h"
 
 #include <thread>
@@ -79,6 +82,11 @@ namespace visimpl
 
   MainWindow::MainWindow( QWidget* parent_, bool updateOnIdle )
     : QMainWindow( parent_ )
+#ifdef VISIMPL_USE_GMRVLEX
+    , _zeqConnection( false )
+    , _subscriber( nullptr )
+    , _thread( nullptr )
+#endif
     , _ui( new Ui::MainWindow )
     , _lastOpenedNetworkFileName( "" )
     , _playIcon(":/icons/play.svg")
@@ -97,9 +105,7 @@ namespace visimpl
     , _simConfigurationDock( nullptr )
     , _modeSelectionWidget( nullptr )
     , _toolBoxOptions( nullptr )
-#ifdef SIMIL_WITH_REST_API
     , _objectInspectorGB{nullptr}
-#endif
     , _groupBoxTransferFunction( nullptr )
     , _tfWidget( nullptr )
     , _selectionManager( nullptr )
@@ -115,6 +121,8 @@ namespace visimpl
     , _circuitScaleZ( nullptr )
     , _buttonImportGroups( nullptr )
     , _buttonClearGroups( nullptr )
+    , _buttonLoadGroups{nullptr}
+    , _buttonSaveGroups{nullptr}
     , _buttonAddGroup( nullptr )
     , _buttonClearSelection( nullptr )
     , _selectionSizeLabel( nullptr )
@@ -135,6 +143,7 @@ namespace visimpl
     , _frameClippingColor( nullptr )
     , _buttonSelectionFromClippingPlanes( nullptr )
     , m_stackviz{nullptr}
+    , m_type{simil::TDataType::TDataUndefined}
   {
     _ui->setupUi( this );
 
@@ -150,14 +159,10 @@ namespace visimpl
 #endif
   }
 
-  void MainWindow::init( const std::string& session )
+  void MainWindow::init( const std::string& zeqUri )
   {
-#ifdef VISIMPL_USE_ZEROEQ
-    initializeZeroEQ(session);
-#else
-    ignore(session);
-#endif
-    _openGLWidget = new OpenGLWidget( nullptr, Qt::WindowFlags());
+    _openGLWidget = new OpenGLWidget( this, Qt::WindowFlags(), zeqUri );
+    connect(_openGLWidget, SIGNAL(dataLoaded()), this, SLOT(onDataLoaded()));
 
     this->setCentralWidget( _openGLWidget );
 
@@ -196,7 +201,6 @@ namespace visimpl
     connect( _ui->actionQuit, SIGNAL( triggered( void ) ), this,
              SLOT( close( ) ) );
 
-    // Connect about dialog
     connect( _ui->actionAbout, SIGNAL( triggered( void ) ), this,
              SLOT( dialogAbout( void ) ) );
 
@@ -252,14 +256,25 @@ namespace visimpl
   {
 #ifdef VISIMPL_USE_ZEROEQ
 
-    if(ZeroEQConfig::instance().isConnected())
+    if( _zeqConnection )
     {
-      ZeroEQConfig::instance().subscriber()->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
+      _zeqConnection = false;
+      _thread->join();
+
+      delete _thread;
+
+      if(_subscriber)
+      {
+        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
+        delete _subscriber;
+        _subscriber = nullptr;
+      }
     }
 
 #endif
 
     delete _ui;
+
     if(m_stackviz) m_stackviz->deleteLater();
   }
 
@@ -271,44 +286,29 @@ namespace visimpl
   void MainWindow::configureComponents( void )
   {
     _domainManager = _openGLWidget->domainManager( );
+
     _selectionManager->setGIDs( _domainManager->gids( ) );
 
     _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
 
     if(m_stackviz) m_stackviz->init(_openGLWidget->player( ));
-  }
 
-  void MainWindow::openBlueConfig( const std::string& fileName,
-                                   simil::TSimulationType simulationType,
-                                   const std::string& reportLabel,
-                                   const std::string& subsetEventFile )
-  {
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    try
+    if(_openGLWidget)
     {
-      _openGLWidget->loadData( fileName, simil::TDataType::TBlueConfig,
-                               simulationType, reportLabel );
+      auto player = _openGLWidget->player();
+      if(player)
+      {
+        const auto tBegin = player->startTime();
+        const auto tEnd = player->endTime();
+        const auto tCurrent = player->currentTime();
+
+        _startTimeLabel->setText(QString::number(tCurrent, 'f', 3));
+        _endTimeLabel->setText(QString::number(tEnd, 'f', 3));
+
+        const auto percentage = (tCurrent - tBegin) / (tEnd - tBegin);
+        UpdateSimulationSlider(percentage);
+      }
     }
-    catch(const std::exception &e)
-    {
-      QApplication::restoreOverrideCursor();
-      const auto errorText = QString::fromLocal8Bit(e.what());
-      QMessageBox::critical(this, tr("Error loading BlueConfig file"), errorText, QMessageBox::Ok);
-      return;
-    }
-
-    configureComponents( );
-
-    openSubsetEventFile( subsetEventFile, false );
-
-    _configurePlayer( );
-
-    QStringList attributes = {"Morphological type", "Functional type"};
-
-    _comboAttribSelection->addItems( attributes );
-
-    QApplication::restoreOverrideCursor();
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -320,11 +320,10 @@ namespace visimpl
       tr( "BlueConfig ( BlueConfig CircuitConfig);; All files (*)" ), nullptr,
       QFileDialog::DontUseNativeDialog );
 
-    if ( path != QString( "" ) )
+    if ( !path.isEmpty() )
     {
       bool ok;
 
-      simil::TSimulationType simType = simil::TSimSpikes;
       QString text = QInputDialog::getText( this, tr( "Please type a target" ),
                                             tr( "Target name:" ),
                                             QLineEdit::Normal, "Mosaic", &ok );
@@ -335,9 +334,13 @@ namespace visimpl
         _lastOpenedNetworkFileName = QFileInfo( path ).path( );
         std::string fileName = path.toStdString( );
 
-        openBlueConfig( fileName, simType, reportLabel );
+        loadData(simil::TBlueConfig, fileName, reportLabel, simil::TSimSpikes);
       }
     }
+#else
+    const QString title = tr("Open BlueConfig");
+    const QString message = tr("BlueConfig loading is not supported in this version.");
+    QMessageBox::critical(this, title, message, QMessageBox::Button::Ok);
 #endif
   }
 
@@ -348,10 +351,8 @@ namespace visimpl
       _lastOpenedNetworkFileName, tr( "CSV (*.csv);; All files (*)" ), nullptr,
       QFileDialog::DontUseNativeDialog );
 
-    if ( pathNetwork != QString( "" ) )
+    if ( !pathNetwork.isEmpty() )
     {
-      simil::TSimulationType simType = simil::TSimSpikes;
-
       QString pathActivity = QFileDialog::getOpenFileName(
         this, tr( "Open CSV Activity file" ), _lastOpenedNetworkFileName,
         tr( "CSV (*.csv);; All files (*)" ), nullptr,
@@ -364,83 +365,10 @@ namespace visimpl
         std::string networkFile = pathNetwork.toStdString( );
         std::string activityFile = pathActivity.toStdString( );
 
-        openCSVFile( networkFile, simType, activityFile );
+        loadData(simil::TCSV, networkFile, activityFile, simil::TSimSpikes);
       }
     }
   }
-
-  void MainWindow::openHDF5File( const std::string& networkFile,
-                                 simil::TSimulationType simulationType,
-                                 const std::string& activityFile,
-                                 const std::string& subsetEventFile )
-  {
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    try
-    {
-      _openGLWidget->loadData( networkFile, simil::TDataType::THDF5,
-                               simulationType, activityFile );
-    }
-    catch(const std::exception &e)
-    {
-      QApplication::restoreOverrideCursor();
-      const auto errorText = QString::fromLocal8Bit(e.what());
-      QMessageBox::critical(this, tr("Error loading HDF5 file"), errorText, QMessageBox::Ok);
-      return;
-    }
-
-    configureComponents( );
-
-    openSubsetEventFile( subsetEventFile, false );
-
-    _configurePlayer( );
-
-    QApplication::restoreOverrideCursor();
-  }
-
-  void MainWindow::openCSVFile( const std::string& networkFile,
-                                simil::TSimulationType simulationType,
-                                const std::string& activityFile,
-                                const std::string& subsetEventFile )
-  {
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    try
-    {
-      _openGLWidget->loadData( networkFile, simil::TDataType::TCSV,
-                               simulationType, activityFile );
-    }
-    catch(const std::exception &e)
-    {
-      QApplication::restoreOverrideCursor();
-      const auto errorText = QString::fromLocal8Bit(e.what());
-      QMessageBox::critical(this, tr("Error loading CSV file"), errorText, QMessageBox::Ok);
-      return;
-    }
-
-    configureComponents( );
-
-    openSubsetEventFile( subsetEventFile, false );
-
-    _configurePlayer( );
-
-    QApplication::restoreOverrideCursor();
-  }
-
-#ifdef SIMIL_WITH_REST_API
-  void MainWindow::openRestListener( const std::string& url,
-                                     simil::TSimulationType simulationType,
-                                     const std::string& port,
-                                     const std::string& )
-  {
-    _openGLWidget->loadRestData( url, simil::TDataType::TREST, simulationType,
-                                 port );
-
-    configureComponents( );
-
-    _configurePlayer( );
-  }
-#endif
 
   void MainWindow::openHDF5ThroughDialog( void )
   {
@@ -462,7 +390,7 @@ namespace visimpl
 
     const auto activityFile = path.toStdString( );
 
-    openHDF5File( networkFile, simil::TSimSpikes, activityFile );
+    loadData(simil::THDF5, networkFile, activityFile, simil::TSimSpikes);
   }
 
   void MainWindow::openSubsetEventFile( const std::string& filePath,
@@ -640,15 +568,14 @@ namespace visimpl
     connect( _openGLWidget, SIGNAL( updateSlider( float ) ), this,
              SLOT( UpdateSimulationSlider( float ) ) );
 
-#ifdef SIMIL_WITH_REST_API
     _objectInspectorGB->setSimPlayer(_openGLWidget->player( ));
     _subsetEvents = _openGLWidget->subsetEventsManager( );
-#endif
+
     _startTimeLabel->setText(
-      QString::number( ( double )_openGLWidget->player( )->startTime( ) ) );
+      QString::number(_openGLWidget->player()->startTime(), 'f', 3));
 
     _endTimeLabel->setText(
-      QString::number( ( double )_openGLWidget->player( )->endTime( ) ) );
+      QString::number(_openGLWidget->player()->endTime(), 'f', 3));
 
     _simSlider->setEnabled(true);
 
@@ -746,7 +673,7 @@ namespace visimpl
 
     connect( _repeatButton, SIGNAL( clicked( ) ), this, SLOT( Repeat( ) ) );
 
-    connect( _simSlider, SIGNAL( sliderPressed( ) ), this, SLOT( PlayAt( ) ) );
+    connect( _simSlider, SIGNAL( sliderPressed( ) ), this, SLOT( PlayAtPosition( ) ) );
 
     connect( _goToButton, SIGNAL( clicked( ) ), this, SLOT( playAtButtonClicked( ) ) );
 
@@ -759,7 +686,7 @@ namespace visimpl
     this->addDockWidget(Qt::BottomDockWidgetArea, _simulationDock );
 
     connect( _summary, SIGNAL( histogramClicked( float ) ), this,
-             SLOT( PlayAt( float ) ) );
+             SLOT( PlayAtPercentage( float ) ) );
   }
 
   void MainWindow::_initSimControlDock( void )
@@ -986,13 +913,11 @@ namespace visimpl
     layoutContainerSelection->addWidget( selFunctionGB );
     layoutContainerSelection->addWidget( gbClippingPlanes );
 
-#ifdef SIMIL_WITH_REST_API
     _objectInspectorGB = new DataInspector( "Object inspector" );
     _objectInspectorGB->addWidget( new QLabel( "GID:" ), 2, 0, 1, 1 );
     _objectInspectorGB->addWidget( _labelGID, 2, 1, 1, 3 );
     _objectInspectorGB->addWidget( new QLabel( "Position: " ), 3, 0, 1, 1 );
     _objectInspectorGB->addWidget( _labelPosition, 3, 1, 1, 3 );
-#endif
 
     QGroupBox* groupBoxGroups = new QGroupBox( "Current visualization groups" );
     _groupLayout = new QVBoxLayout( );
@@ -1001,6 +926,11 @@ namespace visimpl
     _buttonImportGroups = new QPushButton( "Import from..." );
     _buttonClearGroups = new QPushButton( "Clear" );
     _buttonClearGroups->setEnabled( false );
+    _buttonLoadGroups = new QPushButton("Load");
+    _buttonLoadGroups->setToolTip(tr("Load Groups from disk"));
+    _buttonSaveGroups = new QPushButton("Save");
+    _buttonSaveGroups->setToolTip(tr("Save Groups to disk"));
+    _buttonSaveGroups->setEnabled(false);
 
     {
       QWidget* groupContainer = new QWidget( );
@@ -1018,8 +948,10 @@ namespace visimpl
       groupOuterLayout->setMargin( 0 );
       groupOuterLayout->addWidget( _buttonImportGroups, 0, 0, 1, 1 );
       groupOuterLayout->addWidget( _buttonClearGroups, 0, 1, 1, 1 );
+      groupOuterLayout->addWidget( _buttonLoadGroups, 1, 0, 1, 1 );
+      groupOuterLayout->addWidget( _buttonSaveGroups, 1, 1, 1, 1 );
 
-      groupOuterLayout->addWidget( scrollGroups, 1, 0, 1, 2 );
+      groupOuterLayout->addWidget( scrollGroups, 2, 0, 1, 2 );
 
       groupBoxGroups->setLayout( groupOuterLayout );
     }
@@ -1105,24 +1037,16 @@ namespace visimpl
     _toolBoxOptions->addItem( containerSelectionTools, tr( "Selection" ) );
 
 
-#ifdef SIMIL_WITH_REST_API
     _toolBoxOptions->addItem( _objectInspectorGB, tr( "Inspector" ));
 
-    connect( _objectInspectorGB, SIGNAL( simDataChanged( void )),
-             _openGLWidget, SLOT( updateData( void )));
+    connect( _objectInspectorGB, SIGNAL( simDataChanged()),
+             _openGLWidget,      SLOT( updateData()));
 
-    connect( _objectInspectorGB, SIGNAL( simDataChanged( void )),
-             _openGLWidget, SLOT( updateData( void )));
+    connect( _objectInspectorGB, SIGNAL( simDataChanged()),
+             _summary,           SLOT( UpdateHistograms()));
 
-    QTimer* timer = new QTimer( this );
-    connect( timer, SIGNAL( timeout ( void )), _objectInspectorGB,
-             SLOT( updateInfo( void ) ) );
-
-    timer->start( 4000 );
-
-    connect( _objectInspectorGB, SIGNAL( simDataChanged( void ) ), _summary,
-             SLOT( UpdateHistograms( void ) ) );
-#endif
+    connect (_objectInspectorGB, SIGNAL( simDataChanged()),
+             this,               SLOT(configureComponents()));
 
     verticalLayout->setAlignment( Qt::AlignTop );
     verticalLayout->addWidget( _modeSelectionWidget );
@@ -1222,6 +1146,9 @@ namespace visimpl
     connect( _buttonClearGroups, SIGNAL( clicked( void ) ), this,
              SLOT( clearGroups( void ) ) );
 
+    connect( _buttonLoadGroups, SIGNAL( clicked(void)), this, SLOT(loadGroups()));
+    connect( _buttonSaveGroups, SIGNAL( clicked(void)), this, SLOT(saveGroups()));
+
     _alphaNormalButton->setChecked( true );
   }
 
@@ -1245,13 +1172,11 @@ namespace visimpl
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    _startTimeLabel->setText(
-      QString::number( static_cast<double>(_openGLWidget->currentTime( ) ) ) );
-    // TODO UPDATE ENDTIME
+    _startTimeLabel->setText(QString::number(_openGLWidget->currentTime(), 'f', 3));
+    _endTimeLabel->setText(QString::number(_openGLWidget->player()->endTime(), 'f', 3));
 
-    int total = _simSlider->maximum( ) - _simSlider->minimum( );
-
-    int position = percentage * total;
+    const int total = _simSlider->maximum( ) - _simSlider->minimum( );
+    const int position = (percentage * total) + _simSlider->minimum();
 
     _simSlider->setSliderPosition( position );
 
@@ -1533,7 +1458,7 @@ namespace visimpl
 
       percentage = std::max( 0.0f, std::min( 1.0f, percentage ) );
 
-      PlayAt( percentage, true );
+      PlayAtPercentage( percentage, true );
     }
   }
 
@@ -1669,49 +1594,6 @@ namespace visimpl
 
 #endif
 
-  void MainWindow::initializeZeroEQ(const std::string &session)
-  {
-    bool failed = false;
-
-    try
-    {
-      const auto zeqSession = session.empty() ? zeroeq::DEFAULT_SESSION : session;
-
-      auto &zInstance = ZeroEQConfig::instance();
-      if(zeqSession.compare(zeroeq::NULL_SESSION) == 0)
-      {
-        zInstance.connectNullSession();
-      }
-      else
-      {
-        zInstance.connect(session);
-      }
-
-      zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
-                                        [&]( const void* data_, unsigned long long size_ )
-                                        { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
-    }
-    catch(std::exception &e)
-    {
-      std::cerr << "Exception when initializing ZeroEQ. " << e.what() << ". "
-                << __FILE__ << ":" << __LINE__ << std::endl;
-      failed = true;
-    }
-    catch(...)
-    {
-      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-      failed = true;
-    }
-
-    if(failed)
-    {
-      ZeroEQConfig::instance().disconnect();
-    }
-
-    // NOTE: ZeroEQ loop will be started in OpenGLWidget after loading data.
-    visimpl::ZeroEQConfig::instance().print();
-  }
-
   void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
   {
     if ( _openGLWidget )
@@ -1726,42 +1608,99 @@ namespace visimpl
 
 #endif
 
-  void MainWindow::addGroupControls( const std::string& name,
+  void MainWindow::addGroupControls( VisualGroup *group,
                                      unsigned int currentIndex,
                                      unsigned int size )
   {
-    auto icon = new QLabel;
-    const auto colors = _openGLWidget->colorPalette( ).colors( );
-    QPixmap pixmap{20,20};
-    pixmap.fill(colors[ currentIndex ].toRgb());
-    icon->setPixmap(pixmap);
-
-    QCheckBox* buttonVisibility = new QCheckBox( "active" );
-    buttonVisibility->setChecked( true );
-
-    connect( buttonVisibility, SIGNAL( clicked( ) ), this,
-             SLOT( checkGroupsVisibility( ) ) );
-
     QWidget* container = new QWidget( );
-    QGridLayout* layout = new QGridLayout( );
-    container->setLayout( layout );
+    auto itemLayout = new QHBoxLayout(container);
+    container->setLayout( itemLayout );
+
+    const auto colors = _openGLWidget->colorPalette( ).colors( );
+    currentIndex = currentIndex % colors.size();
+    auto color = colors[currentIndex].toRgb();
+    const auto variations = DomainManager::generateColorPair(color);
+
+    TTransferFunction colorVariation;
+    colorVariation.push_back( std::make_pair( 0.0f, variations.first ));
+    colorVariation.push_back( std::make_pair( 1.0f, variations.second ));
+    group->colorMapping(colorVariation);
+
+    auto tfWidget = new TransferFunctionWidget(container);
+    tfWidget->setColorPoints(group->colorMapping());
+    tfWidget->setSizeFunction(group->sizeFunction());
+    tfWidget->setDialogIcon(QIcon(":/visimpl.png"));
+    tfWidget->setProperty("groupNum", static_cast<unsigned int>(currentIndex));
+
+    itemLayout->addWidget(tfWidget);
+
+    const auto presetName = QString("Group selection %1").arg(currentIndex);
+    QGradientStops stops;
+    stops << qMakePair( 0.0,  variations.first)
+          << qMakePair( 1.0,  variations.second);
+    tfWidget->addPreset(TransferFunctionWidget::Preset(presetName, stops));
+
+    connect( tfWidget, SIGNAL(colorChanged()),
+             this,     SLOT(onGroupColorChanged()));
+    connect( tfWidget, SIGNAL(previewColor()),
+             this,     SLOT(onGroupPreview()));
+
+    QCheckBox* visibilityCheckbox = new QCheckBox( "active" );
+    visibilityCheckbox->setChecked( group->active() );
+
+    connect( visibilityCheckbox, SIGNAL( clicked( ) ), this,
+             SLOT( checkGroupsVisibility( ) ) );
 
     QString numberText = QString( "# " ).append( QString::number( size ) );
 
-    layout->addWidget( icon, 0, 0, 1, 1 );
-    layout->addWidget( new QLabel( name.c_str( ) ), 0, 1, 1, 1 );
-    layout->addWidget( buttonVisibility, 0, 2, 1, 1 );
-    layout->addWidget( new QLabel( numberText ), 0, 3, 1, 1 );
+    auto nameButton = new QPushButton(group->name().c_str());
+    nameButton->setFlat(true);
+    nameButton->setProperty("groupNum", static_cast<unsigned int>(currentIndex));
+
+    connect(nameButton, SIGNAL(clicked()), this, SLOT(onGroupNameClicked()));
+
+    auto layout = new QVBoxLayout();
+    layout->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
+    layout->addWidget( nameButton );
+    layout->addWidget( visibilityCheckbox );
+    layout->addWidget( new QLabel( numberText ) );
+
+    itemLayout->insertLayout(1, layout, 0);
+    itemLayout->setSizeConstraint(QLayout::SizeConstraint::SetMinimumSize);
 
     _groupsVisButtons.push_back(
-      std::make_tuple( container, buttonVisibility ) );
+      std::make_tuple( container, visibilityCheckbox ) );
 
     _groupLayout->addWidget( container );
 
     _buttonClearGroups->setEnabled( true );
+    _buttonSaveGroups->setEnabled(true);
   }
 
-  void MainWindow::clearGroups( void )
+  void MainWindow::Stop( bool notify )
+  {
+    if ( !_openGLWidget || !_openGLWidget->player( ) )
+      return;
+
+    if ( _openGLWidget )
+    {
+      _openGLWidget->Stop( );
+      _playButton->setIcon( _playIcon );
+      _startTimeLabel->setText(
+        QString::number(_openGLWidget->player()->startTime(),'f',3));
+
+      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
+
+      if ( notify )
+      {
+#ifdef VISIMPL_USE_GMRVLEX
+        sendZeroEQPlaybackOperation( zeroeq::gmrv::STOP );
+#endif
+      }
+    }
+  }
+
+void MainWindow::clearGroups( void )
   {
     for ( auto row : _groupsVisButtons )
     {
@@ -1778,6 +1717,7 @@ namespace visimpl
 
     _buttonImportGroups->setEnabled( true );
     _buttonClearGroups->setEnabled( false );
+    _buttonSaveGroups->setEnabled(false);
   }
 
   void MainWindow::importVisualGroups( void )
@@ -1798,10 +1738,10 @@ namespace visimpl
       };
       std::for_each(subset.cbegin(), subset.cend(), filterGIDs);
 
-      addGroupControls( groupName, _domainManager->groups( ).size( ),
-                        filteredGIDs.size( ) );
+      const auto group = _domainManager->addVisualGroup( filteredGIDs, groupName );
 
-      _domainManager->addVisualGroup( filteredGIDs, groupName );
+      addGroupControls( group, _domainManager->groups( ).size( ) - 1,
+                        filteredGIDs.size( ) );
     };
     std::for_each(groups.cbegin(), groups.cend(), addGroup);
 
@@ -1815,10 +1755,9 @@ namespace visimpl
 
   void MainWindow::addGroupFromSelection( void )
   {
-    unsigned int currentIndex = _domainManager->groups( ).size( );
+    const unsigned int currentIndex = _domainManager->groups( ).size( );
 
-    QString groupName( "Group " + QString::number( currentIndex ) );
-
+    QString groupName = QString( "Group " + QString::number( currentIndex ) );
     if ( !_autoNameGroups )
     {
       bool ok;
@@ -1826,15 +1765,14 @@ namespace visimpl
                                          tr( "Please, introduce group name: " ),
                                          QLineEdit::Normal, groupName, &ok );
 
-      if ( !ok )
-        return;
+      if ( !ok ) return;
     }
 
-    addGroupControls( groupName.toStdString( ),
-                      _domainManager->groups( ).size( ),
-                      _domainManager->selection( ).size( ) );
+    const auto group = _domainManager->addVisualGroupFromSelection( groupName.toStdString( ) );
 
-    _domainManager->addVisualGroupFromSelection( groupName.toStdString( ) );
+    addGroupControls( group,
+                      _domainManager->groups( ).size( ) - 1,
+                      _domainManager->selection( ).size( ) );
 
     _openGLWidget->setUpdateGroups( );
     _openGLWidget->update( );
@@ -1923,34 +1861,13 @@ namespace visimpl
     {
       _openGLWidget->Pause( );
       _playButton->setIcon( _playIcon );
+      _startTimeLabel->setText(
+          QString::number(_openGLWidget->player()->currentTime(), 'f',3));
 
       if ( notify )
       {
 #ifdef VISIMPL_USE_GMRVLEX
         sendZeroEQPlaybackOperation( zeroeq::gmrv::PAUSE );
-#endif
-      }
-    }
-  }
-
-  void MainWindow::Stop( bool notify )
-  {
-    if ( !_openGLWidget || !_openGLWidget->player( ) )
-      return;
-
-    if ( _openGLWidget )
-    {
-      _openGLWidget->Stop( );
-      _playButton->setIcon( _playIcon );
-      _startTimeLabel->setText(
-        QString::number( ( double )_openGLWidget->player( )->startTime( ) ) );
-
-      _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
-
-      if ( notify )
-      {
-#ifdef VISIMPL_USE_GMRVLEX
-        sendZeroEQPlaybackOperation( zeroeq::gmrv::STOP );
 #endif
       }
     }
@@ -1976,38 +1893,76 @@ namespace visimpl
     }
   }
 
-  void MainWindow::requestPlayAt( float percentage )
+  void MainWindow::requestPlayAt( float timePos )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    PlayAt( percentage, false );
+    const auto tBegin = _openGLWidget->player()->startTime();
+    const auto tEnd   = _openGLWidget->player()->endTime();
+    const auto newPosition = std::min(tEnd, std::max(tBegin, timePos));
+    const auto isOverflow = timePos != newPosition;
+
+    PlayAtTime( newPosition, isOverflow );
+
+    if(isOverflow)
+      Pause(true);
   }
 
-  void MainWindow::PlayAt( bool notify )
+  void MainWindow::PlayAtPosition( bool notify )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    PlayAt( _simSlider->sliderPosition( ), notify );
+    PlayAtPosition( _simSlider->sliderPosition( ), notify );
   }
 
-  void MainWindow::PlayAt( float percentage, bool notify )
+  void MainWindow::PlayAtPosition( int sliderPosition, bool notify )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    int sliderPosition =
-        percentage * ( _simSlider->maximum( ) - _simSlider->minimum( ) ) +
-        _simSlider->minimum( );
+    const int sMin = _simSlider->minimum();
+    const int sMax = _simSlider->maximum();
+    const float percentage = static_cast<float>(sliderPosition - sMin) * (sMax - sMin);
+
+    PlayAtPercentage(percentage, notify);
+  }
+
+  void MainWindow::PlayAtPercentage( float percentage, bool notify )
+  {
+    if ( !_openGLWidget || !_openGLWidget->player( ) )
+      return;
+
+    const auto tBegin = _openGLWidget->player()->startTime();
+    const auto tEnd = _openGLWidget->player()->endTime();
+    const auto timePos = (percentage * (tEnd - tBegin)) + tBegin;
+
+    PlayAtTime(timePos, notify);
+  }
+
+  void MainWindow::PlayAtTime(float timePos, bool notify)
+  {
+    if(!_openGLWidget || !_openGLWidget->player())
+      return;
+
+    const auto tBegin = _openGLWidget->player()->startTime();
+    const auto tEnd = _openGLWidget->player()->endTime();
+    const auto newPosition = std::max(tBegin, std::min(tEnd, timePos));
+    const auto percentage = (newPosition - tBegin) / (tEnd - tBegin);
+
+    const auto sMin = _simSlider->minimum();
+    const auto sMax = _simSlider->maximum();
+    const int sliderPosition = (percentage * (sMax - sMin)) + sMin;
 
     _simSlider->setSliderPosition( sliderPosition );
 
     _playButton->setIcon( _pauseIcon );
 
-    _openGLWidget->PlayAt( percentage );
-
+    _openGLWidget->PlayAt( newPosition );
     _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
+    _startTimeLabel->setText(
+        QString::number(_openGLWidget->player()->currentTime(), 'f',3));
 
     if ( notify )
     {
@@ -2015,10 +1970,11 @@ namespace visimpl
       try
       {
         // Send event
-        auto eventMgr = _openGLWidget->player( )->zeqEvents( );
+        auto player   = _openGLWidget->player();
+        auto eventMgr = player->zeqEvents( );
         if(eventMgr)
         {
-          eventMgr->sendFrame( _simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
+          eventMgr->sendFrame( player->startTime(), player->endTime(), player->currentTime());
         }
       }
       catch(const std::exception &e)
@@ -2034,53 +1990,8 @@ namespace visimpl
       sendZeroEQPlaybackOperation(zeroeq::gmrv::PLAY);
 #endif
     }
+
   }
-
-  void MainWindow::PlayAt( int sliderPosition, bool notify )
-  {
-    if ( !_openGLWidget || !_openGLWidget->player( ) )
-      return;
-
-    int value = _simSlider->value( );
-    float percentage =
-      float( value - _simSlider->minimum( ) ) /
-      float( _simSlider->maximum( ) - _simSlider->minimum( ) );
-
-    _simSlider->setSliderPosition( sliderPosition );
-
-    _playButton->setIcon( _pauseIcon );
-
-    _openGLWidget->PlayAt( percentage );
-
-    _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
-
-    if ( notify )
-    {
-#ifdef SIMIL_USE_ZEROEQ
-      try
-      {
-        // Send event
-        auto eventMgr = _openGLWidget->player( )->zeqEvents( );
-        if(eventMgr)
-        {
-          eventMgr->sendFrame(_simSlider->minimum( ), _simSlider->maximum( ), sliderPosition );
-        }
-      }
-      catch(const std::exception &e)
-      {
-        std::cerr << "Exception when sending frame. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
-      }
-      catch(...)
-      {
-        std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__  << std::endl;
-      }
-#endif
-#ifdef VISIMPL_USE_GMRVLEX
-      sendZeroEQPlaybackOperation( zeroeq::gmrv::PLAY);
-#endif
-    }
-  }
-
   void MainWindow::PreviousStep( bool /*notify*/ )
   {
     if ( !_openGLWidget || !_openGLWidget->player( ) )
@@ -2124,6 +2035,427 @@ namespace visimpl
       m_stackviz->init(_openGLWidget->player( ));
     }
     m_stackviz->show();
+  }
+
+  void MainWindow::onGroupColorChanged()
+  {
+    auto tfw = qobject_cast<TransferFunctionWidget *>(sender());
+    if(tfw)
+    {
+      bool ok = false;
+      size_t groupNum = tfw->property("groupNum").toUInt(&ok);
+
+      if(!ok) return;
+      updateGroupColors(groupNum, tfw->getColors(), tfw->getSizeFunction());
+    }
+  }
+
+  void MainWindow::onGroupPreview()
+  {
+    auto tfw = qobject_cast<TransferFunctionWidget *>(sender());
+    if(tfw)
+    {
+      bool ok = false;
+      size_t groupNum = tfw->property("groupNum").toUInt(&ok);
+
+      if(!ok) return;
+      updateGroupColors(groupNum, tfw->getPreviewColors(), tfw->getSizePreview());
+    }
+  }
+
+  void MainWindow::updateGroupColors(size_t idx, const TTransferFunction &t,
+      const TSizeFunction &s)
+  {
+    const auto groups = _domainManager->groups();
+    const auto groupNum = std::min(idx, groups.size() - 1);
+    groups[groupNum]->colorMapping(t);
+    groups[groupNum]->sizeFunction(s);
+  }
+
+  void MainWindow::loadData(const simil::TDataType type,
+                            const std::string arg_1, const std::string arg_2,
+                            const simil::TSimulationType simType, const std::string &subsetEventFile)
+  {
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    try
+    {
+      m_type = type;
+      m_subsetEventFile = subsetEventFile;
+      _openGLWidget->loadData( arg_1, type, simType, arg_2 );
+      _lastOpenedNetworkFileName = QString::fromStdString(arg_1);
+    }
+    catch(const std::exception &e)
+    {
+      QApplication::restoreOverrideCursor();
+      const auto errorText = QString::fromLocal8Bit(e.what());
+      QMessageBox::critical(this, tr("Error loading data"), errorText, QMessageBox::Ok);
+      return;
+    }
+  }
+
+  void MainWindow::onDataLoaded()
+  {
+    configureComponents( );
+
+    openSubsetEventFile( m_subsetEventFile, false );
+
+    _configurePlayer( );
+
+    _comboAttribSelection->clear();
+
+    switch(m_type)
+    {
+      case simil::TDataType::TBlueConfig:
+        {
+          const QStringList attributes = {"Morphological type", "Functional type"};
+          _comboAttribSelection->addItems( attributes );
+        }
+        break;
+      case simil::TDataType::TREST:
+        {
+#ifdef SIMIL_WITH_REST_API
+          auto timer = new QTimer( this );
+          connect( timer,              SIGNAL( timeout()),
+                   _objectInspectorGB, SLOT( updateInfo()) );
+
+          timer->start( 4000 );
+#endif
+        }
+        break;
+      case simil::TDataType::TCONE:
+      case simil::TDataType::TCSV:
+      case simil::TDataType::THDF5:
+      default:
+        break;
+    }
+
+    _openGLWidget->closeLoadingDialog();
+
+    QApplication::restoreOverrideCursor();
+  }
+
+  void MainWindow::onGroupNameClicked()
+  {
+    auto button = qobject_cast<QPushButton *>(sender());
+    if(button)
+    {
+      bool ok = false;
+      size_t groupNum = button->property("groupNum").toUInt(&ok);
+
+      if(!ok) return;
+      auto group = _domainManager->groups().at(groupNum);
+
+      auto groupName = QString::fromStdString(group->name());
+      groupName = QInputDialog::getText( this, tr( "Group Name" ),
+                                         tr( "Please, introduce group name: " ),
+                                         QLineEdit::Normal, groupName, &ok );
+
+      if (!ok) return;
+      group->name(groupName.toStdString());
+      button->setText(groupName);
+    }
+  }
+
+  void MainWindow::loadGroups()
+  {
+    const auto title = tr("Load Groups");
+
+    if(!_domainManager->groups().empty())
+    {
+      const auto message = tr("Loading groups from disk will erase the "
+                              "current groups. Do you want to continue?");
+
+      QMessageBox msgbox(this);
+      msgbox.setWindowTitle(title);
+      msgbox.setText(message);
+      msgbox.setIcon(QMessageBox::Icon::Question);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Cancel|QMessageBox::Ok);
+      msgbox.setDefaultButton(QMessageBox::Button::Ok);
+
+      if(QMessageBox::Ok != msgbox.exec())
+        return;
+    }
+
+    QFileInfo lastFile{_lastOpenedNetworkFileName};
+    const auto fileName = QFileDialog::getOpenFileName(this, title, lastFile.path(),
+                                                       tr("Json files (*.json)"),
+                                                       nullptr, QFileDialog::ReadOnly|QFileDialog::DontUseNativeDialog);
+    if(fileName.isEmpty()) return;
+
+    QFile file{fileName};
+    if(!file.open(QIODevice::ReadOnly))
+    {
+      const auto message = tr("Couldn't open file %1").arg(fileName);
+
+      QMessageBox msgbox(this);
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Ok);
+      msgbox.exec();
+      return;
+    }
+
+    const auto contents = file.readAll();
+    QJsonParseError jsonError;
+    const auto  jsonDoc = QJsonDocument::fromJson(contents, &jsonError);;
+    if(jsonDoc.isNull() || !jsonDoc.isObject())
+    {
+      const auto message = tr("Couldn't read the contents of %1 or error at parsing.").arg(fileName);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Ok);
+      msgbox.setDetailedText(jsonError.errorString());
+      msgbox.exec();
+      return;
+    }
+
+    const auto jsonObj = jsonDoc.object();
+    if(jsonObj.isEmpty())
+    {
+      const auto message = tr("Error at parsing.").arg(fileName);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Ok);
+      msgbox.exec();
+      return;
+    }
+
+    const QFileInfo currentFile{_lastOpenedNetworkFileName};
+    const QString jsonGroupsFile = jsonObj.value("filename").toString();
+    if(jsonGroupsFile.compare(currentFile.fileName(), Qt::CaseInsensitive) != 0)
+    {
+      const auto message = tr("This groups definitions are from file %1. Current file"
+                              " is %2. Do you want to continue?").arg(jsonGroupsFile).arg(currentFile.fileName());
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Question);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Cancel|QMessageBox::Ok);
+      msgbox.setDefaultButton(QMessageBox::Ok);
+
+      if(QMessageBox::Ok != msgbox.exec())
+        return;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    clearGroups();
+    const auto jsonGroups = jsonObj.value("groups").toArray();
+
+    std::vector<VisualGroup *> groupsList;
+    const auto createGroup = [&groupsList, this](const QJsonValue &v)
+    {
+      const auto o = v.toObject();
+
+      const auto name = o.value("name").toString();
+      const auto overrideGIDS = o.value("override").toBool(false);
+      const auto gidsStrings = o.value("gids").toString().split(",");
+
+      GIDUSet gids;
+      auto addGids = [&gids](const QString s)
+      {
+        if(s.contains(":"))
+        {
+         auto limits = s.split(":");
+         for(unsigned int id = limits.first().toUInt(); id <= limits.last().toUInt(); ++id)
+           gids.insert(id);
+        }
+        else
+        {
+          gids.insert(s.toUInt());
+        }
+      };
+      std::for_each(gidsStrings.cbegin(), gidsStrings.cend(), addGids);
+
+      auto group = _domainManager->addVisualGroup(gids, name.toStdString(), overrideGIDS);
+      auto idx = _domainManager->groups().size()-1;
+      addGroupControls(group, idx, gids.size());
+      const auto active = o.value("active").toBool(true);
+      auto checkbox = std::get< gr_checkbox >(_groupsVisButtons.at(idx));
+      checkbox->setChecked(active);
+
+      _domainManager->setVisualGroupState( idx, active );
+
+      const auto functionPairs = o.value("function").toString().split(";");
+      TTransferFunction function;
+      auto addFunctionPair = [&function](const QString &s)
+      {
+        const auto parts = s.split(",");
+        Q_ASSERT(parts.size() == 2);
+        const auto value = parts.first().toFloat();
+        const auto color = QColor(parts.last());
+        function.emplace_back(value, color);
+      };
+      std::for_each(functionPairs.cbegin(), functionPairs.cend(), addFunctionPair);
+
+      const auto sizePairs = o.value("sizes").toString().split(";");
+      TSizeFunction sizes;
+      auto addSizes = [&sizes](const QString &s)
+      {
+        const auto parts = s.split(",");
+        Q_ASSERT(parts.size() == 2);
+        const auto a = parts.first().toFloat();
+        const auto b = parts.last().toFloat();
+        sizes.emplace_back(a, b);
+      };
+      std::for_each(sizePairs.cbegin(), sizePairs.cend(), addSizes);
+
+      updateGroupColors(idx, function, sizes);
+      auto container = std::get< gr_container >(_groupsVisButtons.at(idx));
+      auto tfw = qobject_cast<TransferFunctionWidget*>(container->layout()->itemAt(0)->widget());
+      if(tfw)
+      {
+        tfw->setColorPoints(function, true);
+        tfw->setSizeFunction(sizes);
+        tfw->colorChanged();
+        tfw->sizeChanged();
+      }
+    };
+    std::for_each(jsonGroups.constBegin(), jsonGroups.constEnd(), createGroup);
+
+    _groupLayout->update();
+    checkGroupsVisibility();
+
+    const auto groups = _domainManager->groups();
+    _buttonClearGroups->setEnabled( !groups.empty() );
+    _buttonSaveGroups->setEnabled( !groups.empty() );
+
+    QApplication::restoreOverrideCursor();
+  }
+
+  void MainWindow::saveGroups()
+  {
+    const auto &groups = _domainManager->groups();
+    if(groups.empty()) return;
+
+    const auto dateTime = QDateTime::currentDateTime();
+    QFileInfo lastFile{_lastOpenedNetworkFileName};
+    QString filename = lastFile.dir().absoluteFilePath(lastFile.baseName() + "_groups_" + dateTime.toString("yyyy-MM-dd-hh-mm") + ".json");
+    filename = QFileDialog::getSaveFileName(this, tr("Save Groups"), filename, tr("Json files (*.json)"), nullptr, QFileDialog::DontUseNativeDialog);
+
+    if(filename.isEmpty()) return;
+
+    QFile wFile{filename};
+    if(!wFile.open(QIODevice::WriteOnly|QIODevice::Text|QIODevice::Truncate))
+    {
+      const auto message = tr("Unable to open file %1 for writing.").arg(filename);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(tr("Save Groups"));
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setDefaultButton(QMessageBox::Ok);
+      msgbox.exec();
+      return;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    QJsonObject obj;
+    obj.insert("filename", QFileInfo{_lastOpenedNetworkFileName}.fileName());
+    obj.insert("date", dateTime.toString());
+
+    QJsonArray groupsObjs;
+
+    auto insertGroup = [&groupsObjs, this](const VisualGroup *g)
+    {
+      QJsonObject groupObj;
+      groupObj.insert("name", QString::fromStdString(g->name()));
+      groupObj.insert("active", g->active());
+
+      QStringList tfList;
+      const auto tf = g->colorMapping();
+      auto addColors = [&tfList](const TTFColor &c)
+      {
+        tfList << QString("%1,%2").arg(c.first).arg(c.second.name(QColor::HexArgb));
+      };
+      std::for_each(tf.cbegin(), tf.cend(), addColors);
+      groupObj.insert("function", tfList.join(";"));
+
+      QStringList sizesList;
+      const auto sizes = g->sizeFunction();
+      auto addSizes = [&sizesList](const TSize &s)
+      {
+        sizesList << QString("%1,%2").arg(s.first).arg(s.second);
+      };
+      std::for_each(sizes.cbegin(), sizes.cend(), addSizes);
+      groupObj.insert("sizes", sizesList.join(";"));
+
+      const auto &gids = g->gids();
+      std::vector<unsigned int> gidsVec;
+      std::for_each(gids.cbegin(), gids.cend(), [&gidsVec](unsigned int v){ gidsVec.push_back(v); });
+      std::sort(gidsVec.begin(), gidsVec.end());
+      QStringList gidsStrings;
+      std::pair<unsigned int, unsigned int> range = std::make_pair(std::numeric_limits<unsigned int>::max() - 1,std::numeric_limits<unsigned int>::max() - 1);
+      auto enterNumber = [&range, &gidsStrings]()
+      {
+          if(range.first == range.second)
+            gidsStrings << QString::number(range.first);
+          else
+            gidsStrings << QString("%1:%2").arg(range.first).arg(range.second);
+      };
+
+      for(auto i = gidsVec.begin(); i != gidsVec.end(); ++i)
+      {
+        auto num = *i;
+        if(num != range.second + 1)
+        {
+          if(range.first != std::numeric_limits<unsigned int>::max() - 1)
+          {
+            enterNumber();
+          }
+          range.first = num;
+        }
+
+        range.second = num;
+      }
+      enterNumber();
+
+      groupObj.insert("gids", gidsStrings.join(","));
+
+      groupsObjs << groupObj;
+    };
+    std::for_each(groups.cbegin(), groups.cend(), insertGroup);
+
+    obj.insert("groups", groupsObjs);
+
+    QJsonDocument doc{obj};
+    const auto temp = doc.toJson().toStdString();
+    wFile.write(doc.toJson());
+
+    QApplication::restoreOverrideCursor();
+
+    if(wFile.error() != QFile::NoError)
+    {
+      const auto message = tr("Error saving file %1.").arg(filename);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(tr("Save Groups"));
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setDetailedText(wFile.errorString());
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setDefaultButton(QMessageBox::Ok);
+      msgbox.exec();
+    }
+
+    wFile.flush();
+    wFile.close();
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)

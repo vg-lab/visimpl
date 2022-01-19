@@ -44,7 +44,6 @@
 
 #include <prefr/prefr.h>
 #include <reto/reto.h>
-#include <simil/simil.h>
 
 #include "types.h"
 
@@ -59,9 +58,13 @@
 #include <scoop/scoop.h>
 
 class QLabel;
+class LoadingDialog;
+class LoaderThread;
+
 
 namespace visimpl
 {
+
   typedef enum
   {
     CONTINUOUS = 0,
@@ -98,21 +101,16 @@ namespace visimpl
       EventLabel():upperWidget{nullptr}, colorLabel{nullptr}, label{nullptr}{};
     };
 
-    OpenGLWidget(QWidget* parent = nullptr, Qt::WindowFlags windowFlags = Qt::WindowFlags());
+    OpenGLWidget( QWidget* parent = nullptr,
+                  Qt::WindowFlags windowFlags = Qt::WindowFlags(),
+                  const std::string& zeqUri = "" );
     virtual ~OpenGLWidget();
 
     void createParticleSystem(  );
     void loadData( const std::string& fileName,
                    const simil::TDataType = simil::TDataType::TBlueConfig,
-                   simil::TSimulationType simulationType = simil::TSimSpikes,
+                   simil::TSimulationType simulationType = simil::TSimulationType::TSimSpikes,
                    const std::string& report = std::string( "" ));
-
-#ifdef SIMIL_WITH_REST_API
-    void loadRestData( const std::string& url,
-                   const simil::TDataType ,
-                   simil::TSimulationType simulationType,
-                   const std::string& port);
-#endif
 
     void idleUpdate( bool idleUpdate_ = true );
 
@@ -141,6 +139,8 @@ namespace visimpl
 
     const scoop::ColorPalette& colorPalette( void );
 
+    void closeLoadingDialog();
+
   signals:
 
     void updateSlider( float );
@@ -150,6 +150,8 @@ namespace visimpl
     void attributeStatsComputed( void );
 
     void pickedSingle( unsigned int );
+
+    void dataLoaded();
 
   public slots:
 
@@ -198,7 +200,7 @@ namespace visimpl
     void PlayPause( void );
     void Stop( void );
     void Repeat( bool repeat );
-    void PlayAt( float percentage );
+    void PlayAt( float timePos );
     void Restart( void );
     void PreviousStep( void );
     void NextStep( void );
@@ -222,6 +224,8 @@ namespace visimpl
     float getSimulationDecayValue( void );
 
     GIDVec getPlanesContainedElements( void ) const;
+
+    void onLoaderFinished();
 
   protected:
     void _resolveFlagsOperations( void );
@@ -260,7 +264,7 @@ namespace visimpl
     void _updateAttributes( void );
     void _updateNewData( void );
 
-    void _updateData( void );
+    bool _updateData( void );
 
     void _createEventLabels( void );
     void _updateEventLabelsVisibility( void );
@@ -285,6 +289,12 @@ namespace visimpl
     std::unordered_set< uint32_t > _selectedGIDs;
 
     std::queue< std::pair< unsigned int, bool >> _pendingGroupStateChanges;
+
+#ifdef VISIMPL_USE_ZEROEQ
+
+  std::string _zeqUri;
+
+#endif
 
     QLabel* _fpsLabel;
     QLabel* _labelCurrentTime;
@@ -333,9 +343,8 @@ namespace visimpl
     simil::TSimulationType _simulationType;
     simil::SpikesPlayer* _player;
 
-#ifdef SIMIL_WITH_REST_API
-    simil::LoaderSimData* _importer;
-#endif
+    std::shared_ptr<LoaderThread> m_loader;
+    LoadingDialog *m_loaderDialog;
 
     reto::ClippingPlane* _clippingPlaneLeft;
     reto::ClippingPlane* _clippingPlaneRight;
