@@ -14,7 +14,7 @@ set( visimpl_VERSION_ABI 6 )
 
 SET( VISIMPL_LICENSE "GPL")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -71,6 +71,8 @@ common_find_package( ReTo REQUIRED )
 common_find_package( SimIL REQUIRED )
 common_find_package( prefr REQUIRED )
 common_find_package( scoop REQUIRED )
+common_find_package( acuterecorder REQUIRED )
+
 if ( VISIMPL_WITH_OPENMP )
   common_find_package( OpenMP )
 endif()
@@ -88,6 +90,7 @@ list( APPEND VISIMPL_DEPENDENT_LIBRARIES
   Qt5Widgets
   Qt5OpenGL
   Boost
+  acuterecorder
 )
 
 if( OPENMP_FOUND )

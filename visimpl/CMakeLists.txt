@@ -83,6 +83,7 @@ set(VISIMPL_LINK_LIBRARIES
   prefr
   sumrice
   scoop
+  acuterecorder
 )
 
 if(WIN32)

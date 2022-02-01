@@ -31,14 +31,22 @@
 #endif
 #ifdef VISIMPL_USE_SCOOP
 #include <scoop/version.h>
+
 #endif
 #ifdef VISIMPL_USE_SIMIL
+
 #include <simil/version.h>
+
 #endif
 #ifdef VISIMPL_USE_PREFR
+
 #include <prefr/version.h>
+
 #endif
+
 #include <visimpl/version.h>
+
+#include <acuterecorder/acuterecorder.h>
 
 #include "MainWindow.h"
 
@@ -140,6 +148,7 @@ namespace visimpl
     , _frameClippingColor( nullptr )
     , _buttonSelectionFromClippingPlanes( nullptr )
     , m_type{simil::TDataType::TDataUndefined}
+    , _recorder( nullptr )
   {
     _ui->setupUi( this );
 
@@ -203,8 +212,11 @@ namespace visimpl
     connect( _ui->actionHome, SIGNAL( triggered( void ) ), _openGLWidget,
              SLOT( home( void ) ) );
 
-    connect( _openGLWidget, SIGNAL( stepCompleted( void ) ), this,
-             SLOT( completedStep( void ) ) );
+    connect( _ui->actionRecorder , SIGNAL( triggered( void )) , this ,
+             SLOT( openRecorder( void )));
+
+    connect( _openGLWidget , SIGNAL( stepCompleted( void )) , this ,
+             SLOT( completedStep( void )));
 
     connect( _openGLWidget, SIGNAL( pickedSingle( unsigned int ) ), this,
              SLOT( updateSelectedStatsPickingSingle( unsigned int ) ) );
@@ -445,14 +457,45 @@ namespace visimpl
     if ( !filePath.isEmpty( ) )
     {
       QFileInfo eventsFile{ filePath };
-      if(eventsFile.exists())
+      if ( eventsFile.exists( ))
       {
-        _lastOpenedSubsetsFileName = eventsFile.path();
+        _lastOpenedSubsetsFileName = eventsFile.path( );
 
-        openSubsetEventFile( filePath.toStdString( ), false );
+        openSubsetEventFile( filePath.toStdString( ) , false );
       }
     }
   }
+
+  void MainWindow::openRecorder( void )
+  {
+
+    // The button stops the recorder if found.
+    if( _recorder != nullptr )
+    {
+      _recorder->stop();
+
+      // Recorder will be deleted after finishing.
+      _recorder = nullptr;
+      _ui->actionRecorder->setChecked( false );
+      return;
+    }
+
+    RSWParameters params;
+    params.widgetsToRecord.emplace_back( "Viewport" , _openGLWidget );
+    params.widgetsToRecord.emplace_back( "Main Widget" , this );
+    auto dialog = new RecorderDialog( nullptr , params, true );
+    if ( dialog->exec( ))
+    {
+      QMessageBox::about( this , tr( "Recorder" ) , "Recorder test" );
+
+      _recorder = dialog->getRecorder();
+      connect( _recorder, SIGNAL( finished( )) ,
+               _recorder, SLOT(deleteLater( )));
+      _ui->actionRecorder->setChecked( true );
+    }
+    dialog->deleteLater( );
+  }
+
 
   void MainWindow::closeData( void )
   {

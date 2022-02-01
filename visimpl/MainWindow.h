@@ -19,7 +19,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
- 
+
 #ifdef WIN32
 #include <winsock2.h>
 #endif
@@ -36,6 +36,8 @@
 
 // Sumrice
 #include <sumrice/sumrice.h>
+
+class Recorder;
 
 class QDockWidget;
 class QPushButton;
@@ -89,6 +91,8 @@ namespace visimpl
 
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
+
+    void openRecorder( void );
 
     void closeData( void );
 
@@ -333,5 +337,9 @@ namespace visimpl
 
     std::string m_subsetEventFile;
     simil::TDataType m_type;
+
+    // Recorder
+    Recorder* _recorder;
+
   };
 } // namespace visimpl

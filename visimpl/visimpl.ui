@@ -53,6 +53,7 @@
     </property>
     <addaction name="actionHome"/>
     <addaction name="actionBackgroundColor"/>
+    <addaction name="actionRecorder"/>
     <addaction name="separator"/>
     <addaction name="actionTogglePlaybackDock"/>
     <addaction name="actionToggleSimConfigDock"/>
@@ -89,6 +90,7 @@
    <addaction name="separator"/>
    <addaction name="actionHome"/>
    <addaction name="actionBackgroundColor"/>
+   <addaction name="actionRecorder"/>
    <addaction name="separator"/>
    <addaction name="actionTogglePlaybackDock"/>
    <addaction name="actionToggleSimConfigDock"/>
@@ -132,6 +134,21 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+B</string>
+   </property>
+  </action>
+  <action name="actionRecorder">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/colorpicker.svg</normaloff>:/icons/colorpicker.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Recorder</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
   <action name="actionOpenBlueConfig">
