@@ -486,8 +486,6 @@ namespace visimpl
     auto dialog = new RecorderDialog( nullptr , params, true );
     if ( dialog->exec( ))
     {
-      QMessageBox::about( this , tr( "Recorder" ) , "Recorder test" );
-
       _recorder = dialog->getRecorder();
       connect( _recorder, SIGNAL( finished( )) ,
                _recorder, SLOT(deleteLater( )));
