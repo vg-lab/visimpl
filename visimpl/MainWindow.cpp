@@ -483,13 +483,19 @@ namespace visimpl
     RSWParameters params;
     params.widgetsToRecord.emplace_back( "Viewport" , _openGLWidget );
     params.widgetsToRecord.emplace_back( "Main Widget" , this );
+    params.showWorker = false;
+    params.showWidgetSourceMode = false;
+
     auto dialog = new RecorderDialog( nullptr , params, true );
-    if ( dialog->exec( ))
+    if ( dialog->exec( ) == QDialog::Accepted)
     {
       _recorder = dialog->getRecorder();
       connect( _recorder, SIGNAL( finished( )) ,
                _recorder, SLOT(deleteLater( )));
       _ui->actionRecorder->setChecked( true );
+    } else
+    {
+      _ui->actionRecorder->setChecked( false );
     }
     dialog->deleteLater( );
   }
