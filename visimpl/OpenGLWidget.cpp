@@ -103,7 +103,7 @@ namespace visimpl
   , _translation( false )
   , _idleUpdate( true )
   , _paint( false )
-  , _currentClearColor( 20, 20, 20, 0 )
+  , _currentClearColor( 20, 20, 20, 255 )
   , _particleRadiusThreshold( 0.8 )
   , _currentShader( T_SHADER_UNDEFINED )
   , _shaderParticlesCurrent( nullptr )
@@ -248,6 +248,9 @@ namespace visimpl
 
     // This is needed to get key events
     this->setFocusPolicy( Qt::WheelFocus );
+
+    setAutoFillBackground(true);
+    setPalette(QPalette(QPalette::Window, Qt::black));
   }
 
   OpenGLWidget::~OpenGLWidget( void )
