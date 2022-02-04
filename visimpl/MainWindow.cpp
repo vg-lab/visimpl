@@ -483,6 +483,7 @@ namespace visimpl
     RSWParameters params;
     params.widgetsToRecord.emplace_back( "Viewport" , _openGLWidget );
     params.widgetsToRecord.emplace_back( "Main Widget" , this );
+    params.includeScreens = false;
     params.showWorker = false;
     params.showWidgetSourceMode = false;
 
