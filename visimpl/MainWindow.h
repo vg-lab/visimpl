@@ -208,6 +208,8 @@ namespace visimpl
      */
     void saveGroups();
 
+    void finishRecording();
+
   protected:
     void _initSimControlDock( void );
     void _initPlaybackDock( void );

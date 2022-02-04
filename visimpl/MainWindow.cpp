@@ -472,6 +472,7 @@ namespace visimpl
     // The button stops the recorder if found.
     if( _recorder != nullptr )
     {
+      _ui->actionRecorder->setDisabled( true );
       _recorder->stop();
 
       // Recorder will be deleted after finishing.
@@ -486,13 +487,21 @@ namespace visimpl
     params.includeScreens = false;
     params.showWorker = false;
     params.showWidgetSourceMode = false;
+    params.defaultFPS = static_cast<int>(1.0 / _deltaTimeBox->value( ));
+    params.showFPS = false;
+    params.showSourceParameters = false;
 
-    auto dialog = new RecorderDialog( nullptr , params, true );
+    auto dialog = new RecorderDialog( nullptr , params , false );
+    dialog->setFixedSize(1200, 800);
     if ( dialog->exec( ) == QDialog::Accepted)
     {
-      _recorder = dialog->getRecorder();
-      connect( _recorder, SIGNAL( finished( )) ,
-               _recorder, SLOT(deleteLater( )));
+      _recorder = dialog->getRecorder( );
+      connect( _recorder , SIGNAL( finished( )) ,
+               _recorder , SLOT( deleteLater( )));
+      connect( _recorder , SIGNAL( finished( )) ,
+               this , SLOT( finishRecording( )));
+      connect( _openGLWidget , SIGNAL( frameSwapped( )) ,
+               _recorder , SLOT( takeFrame( )));
       _ui->actionRecorder->setChecked( true );
     } else
     {
@@ -2521,6 +2530,12 @@ void MainWindow::clearGroups( void )
 
     wFile.flush();
     wFile.close();
+  }
+
+
+  void MainWindow::finishRecording( )
+  {
+    _ui->actionRecorder->setEnabled( true );
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
