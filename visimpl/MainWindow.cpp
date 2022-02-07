@@ -485,10 +485,10 @@ namespace visimpl
     params.widgetsToRecord.emplace_back( "Viewport" , _openGLWidget );
     params.widgetsToRecord.emplace_back( "Main Widget" , this );
     params.defaultFPS = static_cast<int>(1.0 / _deltaTimeBox->value( ));
+    params.includeScreens = false;
 
     if(!_ui->actionAdvancedRecorderOptions->isChecked())
     {
-      params.includeScreens = false;
       params.showWorker = false;
       params.showWidgetSourceMode = false;
       params.showFPS = false;
@@ -496,8 +496,8 @@ namespace visimpl
     }
 
     auto dialog = new RecorderDialog( nullptr , params , false );
-    dialog->setWindowIcon(QIcon(":/visimpl.png"));
-    dialog->setFixedSize(1200, 800);
+    dialog->setWindowIcon( QIcon( ":/visimpl.png" ));
+    dialog->setFixedSize( 800 , 600 );
     if ( dialog->exec( ) == QDialog::Accepted)
     {
       _recorder = dialog->getRecorder( );
