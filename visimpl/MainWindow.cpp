@@ -484,12 +484,16 @@ namespace visimpl
     RSWParameters params;
     params.widgetsToRecord.emplace_back( "Viewport" , _openGLWidget );
     params.widgetsToRecord.emplace_back( "Main Widget" , this );
-    params.includeScreens = false;
-    params.showWorker = false;
-    params.showWidgetSourceMode = false;
     params.defaultFPS = static_cast<int>(1.0 / _deltaTimeBox->value( ));
-    params.showFPS = false;
-    params.showSourceParameters = false;
+
+    if(!_ui->actionAdvancedRecorderOptions->isChecked())
+    {
+      params.includeScreens = false;
+      params.showWorker = false;
+      params.showWidgetSourceMode = false;
+      params.showFPS = false;
+      params.showSourceParameters = false;
+    }
 
     auto dialog = new RecorderDialog( nullptr , params , false );
     dialog->setWindowIcon(QIcon(":/visimpl.png"));

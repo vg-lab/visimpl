@@ -64,6 +64,8 @@
     <addaction name="separator"/>
     <addaction name="actionUpdateOnIdle"/>
     <addaction name="actionShowFPSOnIdleUpdate"/>
+    <addaction name="separator"/>
+    <addaction name="actionAdvancedRecorderOptions"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
@@ -202,6 +204,17 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionAdvancedRecorderOptions">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Advanced recorder options</string>
+   </property>
+   <property name="toolTip">
+    <string>Enable advanced recorder options</string>
    </property>
   </action>
   <action name="actionToggleSimConfigDock">
