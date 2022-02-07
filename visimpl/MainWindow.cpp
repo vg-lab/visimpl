@@ -492,6 +492,7 @@ namespace visimpl
     params.showSourceParameters = false;
 
     auto dialog = new RecorderDialog( nullptr , params , false );
+    dialog->setWindowIcon(QIcon(":/visimpl.png"));
     dialog->setFixedSize(1200, 800);
     if ( dialog->exec( ) == QDialog::Accepted)
     {
