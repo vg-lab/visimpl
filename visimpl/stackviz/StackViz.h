@@ -51,13 +51,31 @@ namespace visimpl
 
   public:
     explicit StackViz( QWidget* parent = nullptr );
-    ~StackViz( void );
+    virtual ~StackViz( void );
 
     void init( simil::SimulationPlayer* p );
     void showStatusBarMessage ( const QString& message );
 
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
+
+    /** \brief Adds an histogram for the given ids.
+     * \param[in] selection Selected indexes.
+     */
+    void addSelection(const visimpl::Selection &selection);
+
+    /** \brief Removes the histogram with the given index (removing a selection):
+     *  \param[in] idx Histogram index.
+     *
+     */
+    void removeSubset(const unsigned int idx);
+
+    /** \brief Changes the name of the histogram.
+     * \param[in] idx Histogram index.
+     * \param[in] name New name.
+     *
+     */
+    void changeHistogramName(const unsigned idx, const QString &name);
 
   public slots:
 
@@ -77,17 +95,11 @@ namespace visimpl
 
     void loadComplete( void );
 
-
   protected:
+
     virtual void closeEvent(QCloseEvent *e);
+
     void initSummaryWidget( void );
-
-
-  #ifdef VISIMPL_USE_ZEROEQ
-    // TODO: pass from visimpl
-    void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected );
-
-  #endif
 
     Ui::StackVizGui* _ui;
 

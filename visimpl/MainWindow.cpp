@@ -82,11 +82,6 @@ namespace visimpl
 
   MainWindow::MainWindow( QWidget* parent_, bool updateOnIdle )
     : QMainWindow( parent_ )
-#ifdef VISIMPL_USE_GMRVLEX
-    , _zeqConnection( false )
-    , _subscriber( nullptr )
-    , _thread( nullptr )
-#endif
     , _ui( new Ui::MainWindow )
     , _lastOpenedNetworkFileName( "" )
     , _playIcon(":/icons/play.svg")
@@ -165,6 +160,22 @@ namespace visimpl
     connect(_openGLWidget, SIGNAL(dataLoaded()), this, SLOT(onDataLoaded()));
 
     this->setCentralWidget( _openGLWidget );
+
+#ifdef VISIMPL_USE_ZEROEQ
+
+    auto &zInstance = ZeroEQConfig::instance();
+    if(!zInstance.isConnected())
+    {
+      zInstance.connect(zeqUri);
+    }
+
+    zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
+                                      [&](const void* data_, unsigned long long size_)
+                                      { _onSelectionEvent(lexis::data::SelectedIDs::create(data_,  size_));});
+
+    // receive loop will be started by OpenGLWidget after loading data.
+
+#endif
 
     _openGLWidget->idleUpdate( _ui->actionUpdateOnIdle->isChecked( ) );
 
@@ -256,26 +267,19 @@ namespace visimpl
   {
 #ifdef VISIMPL_USE_ZEROEQ
 
-    if( _zeqConnection )
-    {
-      _zeqConnection = false;
-      _thread->join();
-
-      delete _thread;
-
-      if(_subscriber)
-      {
-        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
-        delete _subscriber;
-        _subscriber = nullptr;
-      }
-    }
+    auto &instance = ZeroEQConfig::instance();
+    if(instance.isConnected())
+      instance.disconnect();
 
 #endif
+    if(m_stackviz)
+    {
+      m_stackviz->close();
+      m_stackviz->deleteLater();
+    }
 
     delete _ui;
 
-    if(m_stackviz) m_stackviz->deleteLater();
   }
 
   void MainWindow::showStatusBarMessage( const QString& message )
@@ -1711,6 +1715,11 @@ void MainWindow::clearGroups( void )
       delete container;
 
       _domainManager->removeVisualGroup( 0 );
+
+      if(m_stackviz)
+      {
+        m_stackviz->removeSubset(0);
+      }
     }
 
     _groupsVisButtons.clear( );
@@ -1776,6 +1785,15 @@ void MainWindow::clearGroups( void )
 
     _openGLWidget->setUpdateGroups( );
     _openGLWidget->update( );
+
+    if(m_stackviz)
+    {
+      visimpl::Selection selection;
+      selection.gids = _domainManager->selection();
+      selection.name = groupName.toStdString();
+
+      m_stackviz->addSelection(selection);
+    }
   }
 
   void MainWindow::checkGroupsVisibility( void )
@@ -2034,6 +2052,17 @@ void MainWindow::clearGroups( void )
     {
       m_stackviz->init(_openGLWidget->player( ));
     }
+
+    for(size_t i = 0; i < _domainManager->groups().size(); ++i)
+    {
+      const auto vs = _domainManager->groups().at(i);
+      const auto ids = vs->gids();
+      visimpl::Selection selection;
+      selection.gids = ids;
+      selection.name = vs->name();
+
+      m_stackviz->addSelection(selection);
+    }
     m_stackviz->show();
   }
 
@@ -2154,6 +2183,11 @@ void MainWindow::clearGroups( void )
       if (!ok) return;
       group->name(groupName.toStdString());
       button->setText(groupName);
+
+      if(m_stackviz)
+      {
+        m_stackviz->changeHistogramName(groupNum, groupName);
+      }
     }
   }
 

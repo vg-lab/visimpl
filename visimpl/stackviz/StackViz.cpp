@@ -231,27 +231,31 @@ void StackViz::HistogramClicked(visimpl::HistogramWidget *histogram)
 
   std::vector<uint32_t> selected(selection->begin(), selection->end());
 
-  // TODO: pass selected to visimpl
+#ifdef VISIMPL_USE_ZEROEQ
+
+  auto &zInstance = ZeroEQConfig::instance();
+  if(zInstance.isConnected()) zInstance.publisher()->publish(lexis::data::SelectedIDs(selected));
+
+#endif
 }
 
-#ifdef VISIMPL_USE_ZEROEQ
-// TODO: get selected from visimpl.
-void StackViz::_onSelectionEvent(lexis::data::ConstSelectedIDsPtr selected)
+void StackViz::addSelection(const visimpl::Selection &selection)
 {
-  std::vector<uint32_t> ids = selected->getIdsVector();
-
-  visimpl::GIDUSet selectedSet(ids.begin(), ids.end());
-
   if (_summary)
   {
-    visimpl::Selection selection;
-
-    selection.gids = selectedSet;
-
-    _summary->AddNewHistogram(selection, true);
+     _summary->AddNewHistogram(selection);
   }
 }
-#endif
+
+void StackViz::removeSubset(const unsigned int i)
+{
+  // Histogram 0 is always gonna be present. Selections are 1-N.
+  const auto idx = i+1;
+  if(_summary && idx < _summary->histogramsNumber())
+  {
+    _summary->removeSubset(idx);
+  }
+}
 
 void StackViz::loadComplete(void)
 {
@@ -294,6 +298,15 @@ void StackViz::calculateCorrelations(void)
     _summary->AddNewHistogram( selection );
   };
   std::for_each(names.cbegin(), names.cend(), addHistogram);
+}
+
+void visimpl::StackViz::changeHistogramName(const unsigned idx, const QString &name)
+{
+  if(_summary)
+  {
+    _summary->changeHistogramName(idx + 1, name);
+
+  }
 }
 
 void StackViz::updateUIonOpen(const std::string &eventsFile)

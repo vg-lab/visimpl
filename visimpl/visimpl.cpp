@@ -108,11 +108,11 @@ int main( int argc, char** argv )
     if( std::strcmp( argv[ i ], "-zeq" ) == 0 )
     {
 #ifdef VISIMPL_USE_ZEROEQ
-      if(zNull)
-      {
-        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
-        usageMessage(argv[0]);
-      }
+//      if(zNull)
+//      {
+//        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
+//        usageMessage(argv[0]);
+//      }
 
       if( ++i < argc )
       {
@@ -127,22 +127,22 @@ int main( int argc, char** argv )
 #endif
     }
 
-    if( std::strcmp( argv[ i ], "-znull" ) == 0 )
-    {
-#ifdef VISIMPL_USE_ZEROEQ
-      if(!zeqUri.empty())
-      {
-        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
-        usageMessage(argv[0]);
-      }
-
-       zNull = true;
-       continue;
-#else
-      std::cerr << "Zeq not supported " << std::endl;
-      return -1;
-#endif
-    }
+//    if( std::strcmp( argv[ i ], "-znull" ) == 0 )
+//    {
+//#ifdef VISIMPL_USE_ZEROEQ
+//      if(!zeqUri.empty())
+//      {
+//        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
+//        usageMessage(argv[0]);
+//      }
+//
+//       zNull = true;
+//       continue;
+//#else
+//      std::cerr << "Zeq not supported " << std::endl;
+//      return -1;
+//#endif
+//    }
 
     if( std::strcmp( argv[ i ], "-bc" ) == 0 )
     {
@@ -380,8 +380,8 @@ void usageMessage( char* progName )
 #ifdef VISIMPL_USE_ZEROEQ
             << "\t[ -zeq <session_name*> ]"
             << std::endl
-            << "\t[ -znull ]"
-            << std::endl
+//            << "\t[ -znull ]"
+//            << std::endl
 #endif
             << "\t[ -ws | --window-size ] <width> <height> ]"
             << std::endl

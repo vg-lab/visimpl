@@ -228,7 +228,13 @@ namespace visimpl
       bool failed = false;
       try
       {
-        _camera = new Camera( _zeqUri );
+        auto &instance = ZeroEQConfig::instance();
+        if(!instance.isConnected())
+        {
+          instance.connect(_zeqUri);
+        }
+
+        _camera = new Camera( _zeqUri, instance.subscriber() );
       }
       catch(std::exception &e)
       {
@@ -414,7 +420,14 @@ namespace visimpl
   {
     try
     {
-      _player->connectZeq( _zeqUri );
+      auto &instance = ZeroEQConfig::instance();
+      if(!instance.isConnected())
+      {
+        instance.connect(_zeqUri);
+      }
+
+      _player->connectZeq(instance.subscriber(), instance.publisher());
+      instance.startReceiveLoop();
     }
     catch(std::exception &e)
     {

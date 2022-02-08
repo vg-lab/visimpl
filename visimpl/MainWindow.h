@@ -241,13 +241,6 @@ namespace visimpl
 
   protected:
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
-    void _setZeqUri( const std::string& );
-    bool _zeqConnection;
-
-    std::string _zeqUri;
-    zeroeq::Subscriber* _subscriber;
-
-    std::thread* _thread;
 
   #endif // VISIMPL_USE_ZEROEQ
 
