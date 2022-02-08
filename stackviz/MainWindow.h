@@ -132,7 +132,6 @@ namespace stackviz
   #ifdef VISIMPL_USE_ZEROEQ
 
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected );
-    void _setZeqUri( const std::string &session );
 
   #endif
 
@@ -165,14 +164,6 @@ namespace stackviz
     QLabel* _endTimeLabel;
 
     DisplayManagerWidget* _displayManager;
-
-  #ifdef VISIMPL_USE_ZEROEQ
-    bool _zeqConnection;
-    std::string _zeqUri;
-    zeroeq::Subscriber* _subscriber;
-    zeroeq::Publisher* _publisher;
-    std::thread* _thread;
-  #endif
 
   private:
     /** \brief Helper method to update the UI after a dataset has been loaded.

@@ -56,6 +56,7 @@
 #include <thread>
 
 #include <sumrice/sumrice.h>
+#include <sumrice/Utils.h>
 
 using namespace stackviz;
 
@@ -81,13 +82,6 @@ MainWindow::MainWindow( QWidget* parent_ )
 , _startTimeLabel( nullptr )
 , _endTimeLabel( nullptr )
 , _displayManager( nullptr )
-#ifdef VISIMPL_USE_ZEROEQ
-, _zeqConnection{false}
-, _zeqUri("")
-, _subscriber{nullptr}
-, _publisher{nullptr}
-, _thread( nullptr )
-#endif
 , m_loader{nullptr}
 , m_loaderDialog{nullptr}
 , m_dataInspector{nullptr}
@@ -113,8 +107,27 @@ MainWindow::MainWindow( QWidget* parent_ )
   m_dataInspector->hide();
 }
 
-void MainWindow::init( const std::string &zeqUri )
+void MainWindow::init( const std::string &session )
 {
+#ifdef VISIMPL_USE_ZEROEQ
+
+  const auto session_ = session.empty() ? zeroeq::DEFAULT_SESSION : session;
+
+  auto &zInstance = visimpl::ZeroEQConfig::instance();
+  if(!zInstance.isConnected())
+  {
+    zInstance.connect(session_);
+  }
+
+  if(zInstance.isConnected())
+  {
+    zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
+                                      [&](const void* data_, unsigned long long size_)
+                                      { _onSelectionEvent(lexis::data::SelectedIDs::create(data_,  size_));});
+  }
+
+#endif
+
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( void )),
            this, SLOT( openBlueConfigThroughDialog( void )));
 
@@ -140,12 +153,14 @@ void MainWindow::init( const std::string &zeqUri )
 
 #ifdef VISIMPL_USE_ZEROEQ
 
-  _setZeqUri( zeqUri );
+  if(zInstance.isConnected())
+    zInstance.startReceiveLoop();
+
   _ui->actionTogglePlaybackDock->setChecked( true );
 
 #else
   // to avoid compilation warnings about unused parameter.
-  ignore(zeqUri);
+  ignore(session);
 #endif
 
   _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
@@ -160,37 +175,12 @@ MainWindow::~MainWindow( void )
 
 #ifdef VISIMPL_USE_ZEROEQ
 
-  if( _zeqConnection )
+  auto &zInstance = visimpl::ZeroEQConfig::instance();
+  if(zInstance.isConnected())
   {
-    _zeqConnection = false;
-
-    if(_thread)
-    {
-      _thread->join();
-      delete _thread;
-      _thread = nullptr;
-    }
-
-    try
-    {
-      if(_subscriber)
-      {
-        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
-        delete _subscriber;
-        _subscriber = nullptr;
-      }
-
-      if(_publisher)
-      {
-        delete _publisher;
-        _publisher = nullptr;
-      }
-    }
-    catch(...)
-    {
-      // Nothing to do on destructor.
-    }
+    zInstance.disconnect();
   }
+
 #endif
 }
 
@@ -352,15 +342,19 @@ void MainWindow::configurePlayer( void )
 #ifdef SIMIL_USE_ZEROEQ
   try
   {
-    _player->connectZeq(_zeqUri);
-
-    const auto eventMgr = _player->zeqEvents();
-    if (eventMgr)
+    auto &zInstance = visimpl::ZeroEQConfig::instance();
+    if(zInstance.isConnected())
     {
-      eventMgr->frameReceived.connect(
-          boost::bind(&MainWindow::UpdateSimulationSlider, this, _1));
-      eventMgr->playbackOpReceived.connect(
-          boost::bind(&MainWindow::ApplyPlaybackOperation, this, _1));
+      _player->connectZeq(zInstance.subscriber(), zInstance.publisher());
+
+      const auto eventMgr = _player->zeqEvents();
+      if (eventMgr)
+      {
+        eventMgr->frameReceived.connect(
+            boost::bind(&MainWindow::UpdateSimulationSlider, this, _1));
+        eventMgr->playbackOpReceived.connect(
+            boost::bind(&MainWindow::ApplyPlaybackOperation, this, _1));
+      }
     }
   }
   catch (const std::exception &e)
@@ -815,7 +809,11 @@ void MainWindow::HistogramClicked(visimpl::HistogramWidget *histogram)
 
   try
   {
-    _publisher->publish(lexis::data::SelectedIDs(selected));
+    auto &zInstance = visimpl::ZeroEQConfig::instance();
+    if(zInstance.isConnected())
+    {
+      zInstance.publisher()->publish(lexis::data::SelectedIDs(selected));
+    }
   }
   catch(std::exception &e)
   {
@@ -831,45 +829,6 @@ void MainWindow::HistogramClicked(visimpl::HistogramWidget *histogram)
 
 #endif
 
-void MainWindow::_setZeqUri(const std::string &session )
-{
-  bool failed = false;
-
-  try
-  {
-    _zeqUri = session.empty() ? zeroeq::DEFAULT_SESSION : session;
-
-    _zeqConnection = true;
-    _subscriber = new zeroeq::Subscriber(_zeqUri);
-    _publisher = new zeroeq::Publisher(_zeqUri);
-
-    _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
-                           [&](const void *data_, const size_t size_)
-                           { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
-
-    _thread = new std::thread([&]()
-    { while( _zeqConnection ) try { _subscriber->receive( 10000 ); } catch(...) { return; }});
-  }
-  catch(const std::exception &e)
-  {
-    std::cerr << "Exception initializing ZeroEQ. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
-    failed = true;
-  }
-  catch(...)
-  {
-    std::cerr << "Unknown exception initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-    failed = true;
-  }
-
-  if(failed)
-  {
-    _zeqConnection = false;
-    _subscriber = nullptr;
-    _publisher = nullptr;
-    _thread = nullptr;
-  }
-}
-
 void MainWindow::_onSelectionEvent(lexis::data::ConstSelectedIDsPtr selected)
 {
   std::vector<uint32_t> ids = selected->getIdsVector();
@@ -881,6 +840,7 @@ void MainWindow::_onSelectionEvent(lexis::data::ConstSelectedIDsPtr selected)
     visimpl::Selection selection;
 
     selection.gids = selectedSet;
+    selection.name = std::string("Selection ") + std::to_string(_summary->histogramsNumber());
 
     _summary->AddNewHistogram(selection, true);
   }
