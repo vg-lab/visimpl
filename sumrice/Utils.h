@@ -99,6 +99,17 @@ namespace visimpl
        */
       void startReceiveLoop();
 
+      /** \brief Stops the event receive loop.
+       *
+       */
+      void stopReceiveLoop();
+
+      /** \brief Returns if the receiving loop is running.
+       *
+       */
+      bool isListening() const
+      { return m_run; }
+
       ZeroEQConfig(ZeroEQConfig const&)   = delete;
       void operator=(ZeroEQConfig const&) = delete;
 

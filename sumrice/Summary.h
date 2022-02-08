@@ -122,6 +122,13 @@ namespace visimpl
 
     void repaintHistograms( void );
 
+    /** \brief Changes the name of the histogram.
+     * \param[in] idx Histogram index [1-N].
+     * \param[in] name Histogram name.
+     *
+     */
+    void changeHistogramName(unsigned int idx, const QString &name);
+
   signals:
 
     void histogramClicked( float );

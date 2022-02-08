@@ -675,8 +675,6 @@ namespace visimpl
 
     if( _stackType == TStackType::T_STACK_EXPANDABLE )
     {
-
-      std::cout << "Adding new selection " << selection.name << " with size " << selected.size() << std::endl;
   #ifdef VISIMPL_USE_ZEROEQ
 
       if( deferred )
@@ -699,8 +697,15 @@ namespace visimpl
       auto selection = _pendingSelections.front();
       _pendingSelections.pop_front();
 
-      QString labelText =
-          QString( "Selection-").append( QString::number( selection.id ));
+      QString labelText = "Selection ";
+      if(selection.id != 0)
+      {
+        labelText += QString::number(selection.id);
+      }
+      else
+      {
+        labelText += QString::number(histogramsNumber());
+      }
 
       bool ok = true;
       if ( !_autoNameSelection )
@@ -1742,4 +1747,15 @@ namespace visimpl
       std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), setPaintRegion);
     }
   }
+
+  void Summary::changeHistogramName(unsigned int idx, const QString &name)
+  {
+    if(idx < _histogramRows.size())
+    {
+      auto row = _histogramRows.at(idx);
+      row.label->setText(name);
+      row.histogram->name(name.toStdString());
+    }
+  }
+
 }

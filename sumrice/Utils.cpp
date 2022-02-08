@@ -90,6 +90,8 @@ void visimpl::ZeroEQConfig::connect(const std::string &s)
     disconnect();
     throw;
   }
+
+  print();
 }
 
 //----------------------------------------------------------------------------
@@ -135,6 +137,8 @@ void visimpl::ZeroEQConfig::connect(const std::string &h, const uint16_t p, bool
     disconnect();
     throw;
   }
+
+  print();
 }
 
 //----------------------------------------------------------------------------
@@ -149,7 +153,10 @@ void visimpl::ZeroEQConfig::print() const
   }
   else
   {
-    std::cout << "publisher uri: " << m_host << ":" << m_port << " - subscriber to session: " << m_session << " - "
+    std::string session = m_session == zeroeq::NULL_SESSION ? "NULL_SESSION" : m_session;
+    session = m_session == zeroeq::DEFAULT_SESSION ? "DEFAULT_SESSION" : session;
+
+    std::cout << "publisher uri: " << m_host << ":" << m_port << " - subscriber to session: " << session << " - "
               << "receiver loop: " << (m_run ? "":"not ") << "running." << std::endl;
   }
 }
@@ -162,12 +169,7 @@ void visimpl::ZeroEQConfig::disconnect()
   m_session.clear();
   m_host.clear();
   m_port = 0;
-  if(m_run)
-  {
-    m_run = false;
-    if(m_thread) m_thread->join();
-  }
-  m_thread = nullptr;
+  stopReceiveLoop();
 }
 
 //----------------------------------------------------------------------------
@@ -245,6 +247,8 @@ void visimpl::ZeroEQConfig::connectNullSession()
     disconnect();
     throw;
   }
+
+  print();
 }
 
 //----------------------------------------------------------------------------
@@ -265,14 +269,32 @@ void visimpl::ZeroEQConfig::startReceiveLoop()
               m_subscriber->receive( 10000 );
             }
           }
+          // exception in zmq_poll
           catch(const std::exception &e)
           {
-            // exception in zmq_poll
+            std::cout << "ZeroEQConfig STOPS LISTENING TREAD because exception: " << e.what() << std::endl;
+            m_run = false;
+          }
+          catch(...)
+          {
+            std::cout << "ZeroEQConfig STOPS LISTENING TREAD because unknown exception." << std::endl;
             m_run = false;
           }
         }
       });
   }
+}
+
+//----------------------------------------------------------------------------
+void visimpl::ZeroEQConfig::stopReceiveLoop()
+{
+  if(m_run)
+  {
+    m_run = false;
+    if(m_thread) m_thread->join();
+
+  }
+  m_thread = nullptr;
 }
 
 #endif

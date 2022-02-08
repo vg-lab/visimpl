@@ -68,6 +68,7 @@ namespace visimpl
   , _autoBuildHistogram( true )
   , _autoCalculateColors( true )
   {
+    setMinimumHeight(150);
   }
 
   HistogramWidget::HistogramWidget( const simil::Spikes& spikes,
