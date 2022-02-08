@@ -309,6 +309,15 @@ void visimpl::StackViz::changeHistogramName(const unsigned idx, const QString &n
   }
 }
 
+void visimpl::StackViz::setHistogramVisible(const unsigned idx, const bool state)
+{
+  if(_summary)
+  {
+    _summary->changeHistogramVisibility(idx + 1, state);
+
+  }
+}
+
 void StackViz::updateUIonOpen(const std::string &eventsFile)
 {
   initSummaryWidget( );

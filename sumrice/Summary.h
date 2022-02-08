@@ -129,6 +129,13 @@ namespace visimpl
      */
     void changeHistogramName(unsigned int idx, const QString &name);
 
+    /** \brief Shows/hides a histogram.
+     * \param[in] idx Histogram index [1-N]
+     * \param[in] state True to make visible and false to hide.
+     *
+     */
+    void changeHistogramVisibility(unsigned int idx, const bool state);
+
   signals:
 
     void histogramClicked( float );

@@ -77,6 +77,13 @@ namespace visimpl
      */
     void changeHistogramName(const unsigned idx, const QString &name);
 
+    /** \brief Shows/hides the given histogram.
+     * \param[in] idx Histogram index.
+     * \param[in] state True to make visible and false to hide it.
+     *
+     */
+    void setHistogramVisible(const unsigned idx, const bool state);
+
   public slots:
 
     void openSubsetEventsFileThroughDialog( void );

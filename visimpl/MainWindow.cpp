@@ -1806,7 +1806,13 @@ void MainWindow::clearGroups( void )
 
       if ( checkBox->isChecked( ) != ( *group )->active( ) )
       {
-        _domainManager->setVisualGroupState( counter, checkBox->isChecked( ) );
+        const auto state = checkBox->isChecked();
+        _domainManager->setVisualGroupState( counter, state );
+
+        if(m_stackviz)
+        {
+          m_stackviz->setHistogramVisible(counter, state);
+        }
       }
 
       ++group;

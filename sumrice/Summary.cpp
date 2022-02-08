@@ -1758,4 +1758,17 @@ namespace visimpl
     }
   }
 
+  void Summary::changeHistogramVisibility(unsigned int idx, const bool state)
+  {
+    if(idx < _histogramRows.size())
+    {
+      auto row = _histogramRows.at(idx);
+      row.label->setVisible(state);
+
+      auto histogram = _histogramWidgets.at(idx);
+      histogram->setVisible(state);
+    }
+
+  }
+
 }
