@@ -110,7 +110,6 @@ MainWindow::MainWindow( QWidget* parent_ )
 void MainWindow::init( const std::string &session )
 {
 #ifdef VISIMPL_USE_ZEROEQ
-
   const auto session_ = session.empty() ? zeroeq::DEFAULT_SESSION : session;
 
   auto &zInstance = visimpl::ZeroEQConfig::instance();
@@ -125,7 +124,6 @@ void MainWindow::init( const std::string &session )
                                       [&](const void* data_, unsigned long long size_)
                                       { _onSelectionEvent(lexis::data::SelectedIDs::create(data_,  size_));});
   }
-
 #endif
 
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( void )),
@@ -152,7 +150,6 @@ void MainWindow::init( const std::string &session )
            this, SLOT( showDisplayManagerWidget( void )));
 
 #ifdef VISIMPL_USE_ZEROEQ
-
   if(zInstance.isConnected())
     zInstance.startReceiveLoop();
 
@@ -831,12 +828,12 @@ void MainWindow::HistogramClicked(visimpl::HistogramWidget *histogram)
 
 void MainWindow::_onSelectionEvent(lexis::data::ConstSelectedIDsPtr selected)
 {
-  std::vector<uint32_t> ids = selected->getIdsVector();
-
-  visimpl::GIDUSet selectedSet(ids.begin(), ids.end());
-
   if (_summary && _ui->actionAddZeroEQhistograms->isChecked())
   {
+    std::vector<uint32_t> ids = selected->getIdsVector();
+
+    visimpl::GIDUSet selectedSet(ids.begin(), ids.end());
+
     visimpl::Selection selection;
 
     selection.gids = selectedSet;

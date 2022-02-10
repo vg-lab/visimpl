@@ -222,6 +222,7 @@ void StackViz::initSummaryWidget( )
 
 void StackViz::HistogramClicked(visimpl::HistogramWidget *histogram)
 {
+#ifdef VISIMPL_USE_ZEROEQ
   const visimpl::GIDUSet *selection;
 
   if (histogram->filteredGIDs().size() == 0)
@@ -249,6 +250,7 @@ void StackViz::HistogramClicked(visimpl::HistogramWidget *histogram)
     std::cerr << "Unknown exception sending histogram id event."
               << __FILE__ << ":" << __LINE__ << std::endl;
   }
+#endif
 }
 
 void StackViz::addSelection(const visimpl::Selection &selection)
