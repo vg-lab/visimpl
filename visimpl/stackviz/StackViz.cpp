@@ -37,6 +37,8 @@
 
 #include <sumrice/sumrice.h>
 
+template<class T> void ignore( const T& ) { }
+
 using namespace visimpl;
 
 StackViz::StackViz( QWidget* parent_ )
@@ -250,6 +252,8 @@ void StackViz::HistogramClicked(visimpl::HistogramWidget *histogram)
     std::cerr << "Unknown exception sending histogram id event."
               << __FILE__ << ":" << __LINE__ << std::endl;
   }
+#else
+  ignore(histogram);
 #endif
 }
 
