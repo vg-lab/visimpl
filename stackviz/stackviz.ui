@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -54,6 +54,7 @@
     <addaction name="separator"/>
     <addaction name="actionAutoNamingSelections"/>
     <addaction name="actionFill_Plots"/>
+    <addaction name="actionAddZeroEQhistograms"/>
    </widget>
    <widget class="QMenu" name="menuPlayback">
     <property name="title">
@@ -263,6 +264,14 @@
    </property>
    <property name="toolTip">
     <string>Open HDF5 network and activity files...</string>
+   </property>
+  </action>
+  <action name="actionAddZeroEQhistograms">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Add ZeroEQ selections as histograms</string>
    </property>
   </action>
  </widget>

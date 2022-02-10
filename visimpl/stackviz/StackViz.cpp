@@ -231,12 +231,24 @@ void StackViz::HistogramClicked(visimpl::HistogramWidget *histogram)
 
   std::vector<uint32_t> selected(selection->begin(), selection->end());
 
-#ifdef VISIMPL_USE_ZEROEQ
-
-  auto &zInstance = ZeroEQConfig::instance();
-  if(zInstance.isConnected()) zInstance.publisher()->publish(lexis::data::SelectedIDs(selected));
-
-#endif
+  try
+  {
+    auto &zInstance = visimpl::ZeroEQConfig::instance();
+    if(zInstance.isConnected())
+    {
+      zInstance.publisher()->publish(lexis::data::SelectedIDs(selected));
+    }
+  }
+  catch(std::exception &e)
+  {
+    std::cerr << "Exception sending histogram id event. " << e.what() << ". "
+              << __FILE__ << ":" << __LINE__ << std::endl;
+  }
+  catch(...)
+  {
+    std::cerr << "Unknown exception sending histogram id event."
+              << __FILE__ << ":" << __LINE__ << std::endl;
+  }
 }
 
 void StackViz::addSelection(const visimpl::Selection &selection)

@@ -835,7 +835,7 @@ void MainWindow::_onSelectionEvent(lexis::data::ConstSelectedIDsPtr selected)
 
   visimpl::GIDUSet selectedSet(ids.begin(), ids.end());
 
-  if (_summary)
+  if (_summary && _ui->actionAddZeroEQhistograms->isChecked())
   {
     visimpl::Selection selection;
 

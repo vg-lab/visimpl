@@ -63,6 +63,7 @@
     <addaction name="separator"/>
     <addaction name="actionUpdateOnIdle"/>
     <addaction name="actionShowFPSOnIdleUpdate"/>
+    <addaction name="actionAddZeroEQhistograms"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
@@ -372,6 +373,14 @@
    </property>
    <property name="toolTip">
     <string>Open StackViz</string>
+   </property>
+  </action>
+  <action name="actionAddZeroEQhistograms">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Add ZeroEQ selections as visual groups</string>
    </property>
   </action>
  </widget>

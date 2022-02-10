@@ -1607,6 +1607,11 @@ namespace visimpl
       visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ) );
 
       setSelection( selectedSet, SRC_EXTERNAL );
+
+      if(_ui->actionAddZeroEQhistograms->isChecked())
+      {
+        addGroupFromSelection();
+      }
     }
   }
 
