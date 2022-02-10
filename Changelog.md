@@ -1,5 +1,9 @@
 # ViSimpl
 
+## 1.4.0
+
+* Added a recorder option, which allows users to record the application.
+
 ## 1.1.0
 
 * StackViz & ViSimpl HDF5 sets and events file loading.
