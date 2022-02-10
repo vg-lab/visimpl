@@ -1663,9 +1663,19 @@ namespace visimpl
 
     connect(nameButton, SIGNAL(clicked()), this, SLOT(onGroupNameClicked()));
 
+    auto deleteButton = new QPushButton(QIcon(":/icons/close.svg"), "");
+    deleteButton->setProperty("groupPtr", reinterpret_cast<unsigned long long>(group));
+
+    connect(deleteButton, SIGNAL(clicked()), this, SLOT(onGroupDeleteClicked()));
+
+    auto firstLayout = new QHBoxLayout();
+    firstLayout->setMargin(0);
+    firstLayout->addWidget(nameButton, 1);
+    firstLayout->addWidget(deleteButton, 0);
+
     auto layout = new QVBoxLayout();
     layout->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
-    layout->addWidget( nameButton );
+    layout->addLayout(firstLayout);
     layout->addWidget( visibilityCheckbox );
     layout->addWidget( new QLabel( numberText ) );
 
@@ -1706,27 +1716,8 @@ namespace visimpl
 
 void MainWindow::clearGroups( void )
   {
-    for ( auto row : _groupsVisButtons )
-    {
-      auto container = std::get< gr_container >( row );
-
-      _groupLayout->removeWidget( container );
-
-      delete container;
-
-      _domainManager->removeVisualGroup( 0 );
-
-      if(m_stackviz)
-      {
-        m_stackviz->removeSubset(0);
-      }
-    }
-
-    _groupsVisButtons.clear( );
-
-    _buttonImportGroups->setEnabled( true );
-    _buttonClearGroups->setEnabled( false );
-    _buttonSaveGroups->setEnabled(false);
+    while(!_groupsVisButtons.empty())
+      removeVisualGroup(0);
   }
 
   void MainWindow::importVisualGroups( void )
@@ -2328,6 +2319,16 @@ void MainWindow::clearGroups( void )
       auto checkbox = std::get< gr_checkbox >(_groupsVisButtons.at(idx));
       checkbox->setChecked(active);
 
+      if(m_stackviz)
+      {
+        visimpl::Selection selection;
+        selection.gids = gids;
+        selection.name = name.toStdString();
+
+        m_stackviz->addSelection(selection);
+      }
+
+
       _domainManager->setVisualGroupState( idx, active );
 
       const auto functionPairs = o.value("function").toString().split(";");
@@ -2496,6 +2497,50 @@ void MainWindow::clearGroups( void )
 
     wFile.flush();
     wFile.close();
+  }
+
+  void MainWindow::onGroupDeleteClicked()
+  {
+    auto button = qobject_cast<QPushButton *>(sender());
+    if(button)
+    {
+      auto groupPtr = reinterpret_cast<VisualGroup *>(button->property("groupPtr").toULongLong());
+      auto groups = _domainManager->groups();
+      for(size_t i = 0; i < groups.size(); ++i)
+      {
+        if(groupPtr == groups.at(i))
+        {
+          removeVisualGroup(i);
+          return;
+        }
+      }
+    }
+  }
+
+  void MainWindow::removeVisualGroup(const unsigned int idx)
+  {
+    auto row = _groupsVisButtons.at(idx);
+    auto container = std::get< gr_container >( row );
+
+    _groupLayout->removeWidget( container );
+
+    delete container;
+
+    _domainManager->removeVisualGroup( idx );
+
+    if(m_stackviz)
+    {
+      m_stackviz->removeSubset(idx);
+    }
+
+    _groupsVisButtons.erase(_groupsVisButtons.begin() + idx);
+
+    const bool enabled = !_groupsVisButtons.empty();
+    _buttonImportGroups->setEnabled( enabled );
+    _buttonClearGroups->setEnabled( enabled );
+    _buttonSaveGroups->setEnabled( enabled);
+
+    _openGLWidget->setUpdateGroups( );
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)

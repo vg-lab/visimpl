@@ -190,6 +190,17 @@ namespace visimpl
      */
     void onGroupNameClicked();
 
+    /** \brief Removes the group.
+     *
+     */
+    void onGroupDeleteClicked();
+
+    /** \brief Removes the visual group with the given index.
+     * param[in] idx Index of visual group in domain manager.
+     *
+     */
+    void removeVisualGroup(const unsigned int idx);
+
     void selectionManagerChanged( void );
     void setSelection( const GIDUSet& selection_, TSelectionSource source_ = SRC_UNDEFINED );
     void clearSelection( void );
