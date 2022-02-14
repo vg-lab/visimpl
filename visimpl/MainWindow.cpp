@@ -484,14 +484,14 @@ namespace visimpl
     RSWParameters params;
     params.widgetsToRecord.emplace_back( "Viewport" , _openGLWidget );
     params.widgetsToRecord.emplace_back( "Main Widget" , this );
-    params.defaultFPS = static_cast<int>(1.0 / _deltaTimeBox->value( ));
+    params.defaultFPS = 30;
     params.includeScreens = false;
+    params.stabilizeFramerate = true;
 
     if(!_ui->actionAdvancedRecorderOptions->isChecked())
     {
       params.showWorker = false;
       params.showWidgetSourceMode = false;
-      params.showFPS = false;
       params.showSourceParameters = false;
     }
 
