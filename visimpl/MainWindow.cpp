@@ -98,9 +98,11 @@ namespace visimpl
     , _repeatButton( nullptr )
     , _goToButton( nullptr )
     , _simConfigurationDock( nullptr )
+    , _stackVizDock( nullptr )
+    , _stackViz( nullptr )
     , _modeSelectionWidget( nullptr )
     , _toolBoxOptions( nullptr )
-    , _objectInspectorGB{nullptr}
+    , _objectInspectorGB{ nullptr }
     , _groupBoxTransferFunction( nullptr )
     , _tfWidget( nullptr )
     , _selectionManager( nullptr )
@@ -137,8 +139,7 @@ namespace visimpl
     , _spinBoxClippingDist( nullptr )
     , _frameClippingColor( nullptr )
     , _buttonSelectionFromClippingPlanes( nullptr )
-    , m_stackviz{nullptr}
-    , m_type{simil::TDataType::TDataUndefined}
+    , m_type{ simil::TDataType::TDataUndefined }
   {
     _ui->setupUi( this );
 
@@ -231,8 +232,6 @@ namespace visimpl
              SLOT( PlayPause( ) ) );
     addAction( actionTogglePause );
 
-    connect( _ui->actionStackViz, SIGNAL(triggered()), this, SLOT(onStackVizActionTriggered()));
-
 #ifdef VISIMPL_USE_ZEROEQ
     _ui->actionShowInactive->setEnabled( true );
     _ui->actionShowInactive->setChecked( true );
@@ -245,6 +244,7 @@ namespace visimpl
 
     _initPlaybackDock( );
     _initSimControlDock( );
+    _initStackVizDock( );
 
     connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool ) ),
              _ui->actionTogglePlaybackDock, SLOT( setChecked( bool ) ) );
@@ -272,12 +272,6 @@ namespace visimpl
       instance.disconnect();
 
 #endif
-    if(m_stackviz)
-    {
-      m_stackviz->close();
-      m_stackviz->deleteLater();
-    }
-
     delete _ui;
 
   }
@@ -295,7 +289,7 @@ namespace visimpl
 
     _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
 
-    if(m_stackviz) m_stackviz->init(_openGLWidget->player( ));
+    _stackViz->init( _openGLWidget->player( ));
 
     if(_openGLWidget)
     {
@@ -614,11 +608,64 @@ namespace visimpl
     _initSummaryWidget( );
   }
 
+  void MainWindow::_initStackVizDock( void )
+  {
+    _stackVizDock = new QDockWidget( );
+    _stackVizDock->setMinimumHeight( 100 );
+    _stackVizDock->setSizePolicy( QSizePolicy::MinimumExpanding ,
+                                    QSizePolicy::MinimumExpanding );
+
+    _stackViz = new StackViz( this );
+    if ( _openGLWidget && _openGLWidget->player( ))
+    {
+      _stackViz->init( _openGLWidget->player( ));
+    }
+
+    _stackVizDock->setWidget( _stackViz );
+    this->addDockWidget( Qt::LeftDockWidgetArea , _stackVizDock );
+
+    connect(
+      _ui->actionOpenSubsetEventsFile , SIGNAL( triggered( bool )) ,
+      _stackViz , SLOT( openSubsetEventsFileThroughDialog( ))
+    );
+
+    connect(
+      _ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
+      _stackViz , SLOT( showDisplayManagerWidget( ))
+    );
+
+    connect(
+      _ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
+      _stackViz , SLOT( showDisplayManagerWidget( ))
+    );
+
+    connect(
+      _ui->actionStackVizAutoNamingSelections , SIGNAL( triggered( )) ,
+      _stackViz , SLOT( toggleAutoNameSelections( ))
+    );
+
+    connect(
+      _ui->actionStackVizFillPlots , SIGNAL( triggered( bool )) ,
+      _stackViz , SLOT( fillPlots( bool ))
+    );
+
+    connect(
+      _ui->actionStackVizFocusOnPlayhead , SIGNAL( triggered( )) ,
+      _stackViz , SLOT( focusPlayback( ))
+    );
+
+    connect(
+      _ui->actionStackVizFollowPlayHead , SIGNAL( triggered( bool )) ,
+      _stackViz , SLOT( followPlayhead( bool ))
+    );
+
+  }
+
   void MainWindow::_initPlaybackDock( void )
   {
     _simulationDock = new QDockWidget( );
     _simulationDock->setMinimumHeight( 100 );
-    _simulationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
+    _simulationDock->setSizePolicy( QSizePolicy::MinimumExpanding ,
                                     QSizePolicy::MinimumExpanding );
 
     unsigned int totalHSpan = 20;
@@ -1187,7 +1234,7 @@ namespace visimpl
     if ( _summary )
       _summary->repaintHistograms( );
 
-    if(m_stackviz) m_stackviz->updateHistograms();
+    _stackViz->updateHistograms( );
   }
 
   void MainWindow::UpdateSimulationColorMapping( void )
@@ -1766,30 +1813,31 @@ void MainWindow::clearGroups( void )
     if ( !_autoNameGroups )
     {
       bool ok;
-      groupName = QInputDialog::getText( this, tr( "Group Name" ),
-                                         tr( "Please, introduce group name: " ),
-                                         QLineEdit::Normal, groupName, &ok );
+      groupName = QInputDialog::getText( this , tr( "Group Name" ) ,
+                                         tr(
+                                           "Please, introduce group name: " ) ,
+                                         QLineEdit::Normal , groupName , &ok );
 
       if ( !ok ) return;
     }
 
-    const auto group = _domainManager->addVisualGroupFromSelection( groupName.toStdString( ) );
+    const auto group = _domainManager->addVisualGroupFromSelection(
+      groupName.toStdString( ));
 
-    addGroupControls( group,
-                      _domainManager->groups( ).size( ) - 1,
-                      _domainManager->selection( ).size( ) );
+    addGroupControls( group ,
+                      _domainManager->groups( ).size( ) - 1 ,
+                      _domainManager->selection( ).size( ));
 
     _openGLWidget->setUpdateGroups( );
     _openGLWidget->update( );
 
-    if(m_stackviz)
-    {
-      visimpl::Selection selection;
-      selection.gids = _domainManager->selection();
-      selection.name = groupName.toStdString();
 
-      m_stackviz->addSelection(selection);
-    }
+    visimpl::Selection selection;
+    selection.gids = _domainManager->selection( );
+    selection.name = groupName.toStdString( );
+
+    _stackViz->addSelection( selection );
+
   }
 
   void MainWindow::checkGroupsVisibility( void )
@@ -1802,13 +1850,9 @@ void MainWindow::clearGroups( void )
 
       if ( checkBox->isChecked( ) != ( *group )->active( ) )
       {
-        const auto state = checkBox->isChecked();
-        _domainManager->setVisualGroupState( counter, state );
-
-        if(m_stackviz)
-        {
-          m_stackviz->setHistogramVisible(counter, state);
-        }
+        const auto state = checkBox->isChecked( );
+        _domainManager->setVisualGroupState( counter , state );
+        _stackViz->setHistogramVisible( counter , state );
       }
 
       ++group;
@@ -2040,34 +2084,6 @@ void MainWindow::clearGroups( void )
     }
   }
 
-  void MainWindow::onStackVizActionTriggered()
-  {
-    if(m_stackviz)
-    {
-      m_stackviz->show();
-      m_stackviz->setFocus();
-      return;
-    }
-
-    m_stackviz = new StackViz(this);
-    if(_openGLWidget && _openGLWidget->player( ))
-    {
-      m_stackviz->init(_openGLWidget->player( ));
-    }
-
-    for(size_t i = 0; i < _domainManager->groups().size(); ++i)
-    {
-      const auto vs = _domainManager->groups().at(i);
-      const auto ids = vs->gids();
-      visimpl::Selection selection;
-      selection.gids = ids;
-      selection.name = vs->name();
-
-      m_stackviz->addSelection(selection);
-    }
-    m_stackviz->show();
-  }
-
   void MainWindow::onGroupColorChanged()
   {
     auto tfw = qobject_cast<TransferFunctionWidget *>(sender());
@@ -2186,10 +2202,7 @@ void MainWindow::clearGroups( void )
       group->name(groupName.toStdString());
       button->setText(groupName);
 
-      if(m_stackviz)
-      {
-        m_stackviz->changeHistogramName(groupNum, groupName);
-      }
+      _stackViz->changeHistogramName( groupNum , groupName );
     }
   }
 
@@ -2306,45 +2319,43 @@ void MainWindow::clearGroups( void )
       {
         if(s.contains(":"))
         {
-         auto limits = s.split(":");
-         for(unsigned int id = limits.first().toUInt(); id <= limits.last().toUInt(); ++id)
-           gids.insert(id);
+          auto limits = s.split( ":" );
+          for ( unsigned int id = limits.first( ).toUInt( );
+                id <= limits.last( ).toUInt( ); ++id )
+            gids.insert( id );
         }
         else
         {
-          gids.insert(s.toUInt());
+          gids.insert( s.toUInt( ));
         }
       };
-      std::for_each(gidsStrings.cbegin(), gidsStrings.cend(), addGids);
+      std::for_each( gidsStrings.cbegin( ) , gidsStrings.cend( ) , addGids );
 
-      auto group = _domainManager->addVisualGroup(gids, name.toStdString(), overrideGIDS);
-      auto idx = _domainManager->groups().size()-1;
-      addGroupControls(group, idx, gids.size());
-      const auto active = o.value("active").toBool(true);
-      auto checkbox = std::get< gr_checkbox >(_groupsVisButtons.at(idx));
-      checkbox->setChecked(active);
+      auto group = _domainManager->addVisualGroup( gids , name.toStdString( ) ,
+                                                   overrideGIDS );
+      auto idx = _domainManager->groups( ).size( ) - 1;
+      addGroupControls( group , idx , gids.size( ));
+      const auto active = o.value( "active" ).toBool( true );
+      auto checkbox = std::get< gr_checkbox >( _groupsVisButtons.at( idx ));
+      checkbox->setChecked( active );
 
-      if(m_stackviz)
-      {
-        visimpl::Selection selection;
-        selection.gids = gids;
-        selection.name = name.toStdString();
+      visimpl::Selection selection;
+      selection.gids = gids;
+      selection.name = name.toStdString( );
 
-        m_stackviz->addSelection(selection);
-      }
+      _stackViz->addSelection( selection );
 
+      _domainManager->setVisualGroupState( idx , active );
 
-      _domainManager->setVisualGroupState( idx, active );
-
-      const auto functionPairs = o.value("function").toString().split(";");
+      const auto functionPairs = o.value( "function" ).toString( ).split( ";" );
       TTransferFunction function;
-      auto addFunctionPair = [&function](const QString &s)
+      auto addFunctionPair = [ &function ]( const QString& s )
       {
-        const auto parts = s.split(",");
-        Q_ASSERT(parts.size() == 2);
-        const auto value = parts.first().toFloat();
-        const auto color = QColor(parts.last());
-        function.emplace_back(value, color);
+        const auto parts = s.split( "," );
+        Q_ASSERT( parts.size( ) == 2 );
+        const auto value = parts.first( ).toFloat( );
+        const auto color = QColor( parts.last( ));
+        function.emplace_back( value , color );
       };
       std::for_each(functionPairs.cbegin(), functionPairs.cend(), addFunctionPair);
 
@@ -2533,10 +2544,7 @@ void MainWindow::clearGroups( void )
 
     _domainManager->removeVisualGroup( idx );
 
-    if(m_stackviz)
-    {
-      m_stackviz->removeSubset(idx);
-    }
+    _stackViz->removeSubset( idx );
 
     _groupsVisButtons.erase(_groupsVisButtons.begin() + idx);
 

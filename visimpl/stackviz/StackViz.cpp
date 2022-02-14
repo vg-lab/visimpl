@@ -30,6 +30,7 @@
 #include <QShortcut>
 #include <QDateTime>
 #include <QtGlobal>
+#include <QApplication>
 
 #include <boost/bind.hpp>
 
@@ -41,53 +42,38 @@ template<class T> void ignore( const T& ) { }
 
 using namespace visimpl;
 
-StackViz::StackViz( QWidget* parent_ )
-: QMainWindow( parent_ )
-, _ui( new Ui::StackVizGui )
-, _simulationType( simil::TSimNetwork )
-, _summary( nullptr )
-, _player( nullptr )
-, _subsetEventManager( nullptr )
-, _autoCalculateCorrelations( false )
-, _displayManager( nullptr )
+StackViz::StackViz( QWidget *parent_ )
+  : QWidget( parent_ )
+  , _simulationType( simil::TSimNetwork )
+  , _summary( nullptr )
+  , _player( nullptr )
+  , _subsetEventManager( nullptr )
+  , _autoCalculateCorrelations( false )
+  , _followPlayhead( false )
+  , _displayManager( nullptr )
 {
-  _ui->setupUi( this );
-
-  _ui->actionOpenSubsetEventsFile->setEnabled(false);
-  _ui->actionShowDataManager->setEnabled(false);
+  setLayout( new QGridLayout( ));
 }
 
 void StackViz::init( simil::SimulationPlayer* p )
 {
-  QApplication::setOverrideCursor(Qt::WaitCursor);
+  // StackViz already loaded.
+  if ( p == nullptr || _player != nullptr ) return;
 
-  connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void )),
-           this, SLOT( openSubsetEventsFileThroughDialog( void )));
-
-  connect( _ui->actionShowDataManager, SIGNAL( triggered( void )),
-           this, SLOT( showDisplayManagerWidget( void )));
-
-  _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
-  _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
+  QApplication::setOverrideCursor( Qt::WaitCursor );
 
   _player = p;
-  _simulationType = _player->data()->simulationType();
+  _simulationType = _player->data( )->simulationType( );
   _subsetEventManager = _player->data( )->subsetsEvents( );
 
   // TODO: events file.
-  updateUIonOpen(std::string());
+  updateUIonOpen( std::string( ));
 
-  QApplication::restoreOverrideCursor();
+  QApplication::restoreOverrideCursor( );
 }
 
 StackViz::~StackViz( void )
 {
-  delete _ui;
-}
-
-void StackViz::showStatusBarMessage ( const QString& message )
-{
-  _ui->statusbar->showMessage( message );
 }
 
 void StackViz::openSubsetEventFile(const std::string &filePath, bool append)
@@ -187,38 +173,30 @@ void StackViz::showDisplayManagerWidget( void )
 
 void StackViz::initSummaryWidget( )
 {
-  _summary = new visimpl::Summary( this, visimpl::T_STACK_EXPANDABLE );
+  _summary = new visimpl::Summary( this , visimpl::T_STACK_EXPANDABLE );
 
-  if( _simulationType == simil::TSimSpikes )
+  if ( _simulationType == simil::TSimSpikes )
   {
-    auto spikesPlayer = dynamic_cast< simil::SpikesPlayer* >( _player );
+    auto spikesPlayer = dynamic_cast< simil::SpikesPlayer * >( _player );
 
     _summary->Init( spikesPlayer->data( ));
     _summary->simulationPlayer( _player );
   }
 
-  this->setCentralWidget( _summary );
 
-  connect( _ui->actionAutoNamingSelections, SIGNAL( triggered( )),
-           _summary, SLOT( toggleAutoNameSelections( )));
+  layout( )->addWidget( _summary );
 
-  _ui->actionFill_Plots->setChecked( true );
-  connect( _ui->actionFill_Plots, SIGNAL( triggered( bool )),
-           _summary, SLOT( fillPlots( bool )));
+  connect( _summary , SIGNAL( histogramClicked( visimpl::HistogramWidget * )) ,
+           this , SLOT( HistogramClicked( visimpl::HistogramWidget * )) );
 
-  connect( _summary, SIGNAL( histogramClicked( visimpl::HistogramWidget* )),
-             this, SLOT( HistogramClicked( visimpl::HistogramWidget* )));
+  //_ui->actionFocusOnPlayhead->setVisible( true );
 
-  _ui->actionFocusOnPlayhead->setVisible( true );
-  connect( _ui->actionFocusOnPlayhead, SIGNAL( triggered( )),
-           _summary, SLOT( focusPlayback( )));
-
-  if( _autoCalculateCorrelations )
+  if ( _autoCalculateCorrelations )
   {
     calculateCorrelations( );
   }
 
-  QTimer::singleShot( 0, _summary, SLOT( adjustSplittersSize( )));
+  QTimer::singleShot( 0 , _summary , SLOT( adjustSplittersSize( )) );
 }
 
 
@@ -348,19 +326,34 @@ void StackViz::updateUIonOpen(const std::string &eventsFile)
   if( _displayManager )
     _displayManager->refresh( );
 
-  _ui->actionShowDataManager->setEnabled(true);
+  //_ui->actionShowDataManager->setEnabled(true);
 }
 
-void visimpl::StackViz::closeEvent(__attribute__((unused)) QCloseEvent *e)
+void visimpl::StackViz::updateHistograms( )
 {
-  hide();
+  if ( _summary )
+    _summary->repaintHistograms( );
+
+  if ( _followPlayhead )
+    _summary->focusPlayback( );
 }
 
-void visimpl::StackViz::updateHistograms()
+void visimpl::StackViz::toggleAutoNameSelections( )
 {
-  if (_summary)
-    _summary->repaintHistograms();
+  if ( _summary ) _summary->toggleAutoNameSelections( );
+}
 
-  if (_ui->actionFollowPlayhead->isChecked())
-    _summary->focusPlayback();
+void visimpl::StackViz::fillPlots( bool fill )
+{
+  if ( _summary ) _summary->fillPlots( fill );
+}
+
+void visimpl::StackViz::focusPlayback( )
+{
+  if ( _summary ) _summary->focusPlayback( );
+}
+
+void StackViz::followPlayhead( bool follow )
+{
+  _followPlayhead = follow;
 }

@@ -33,19 +33,12 @@
 #include <sumrice/sumrice.h>
 #include <simil/simil.h>
 
-#include "ui_StackVizGui.h"
-
 #include "DisplayManagerWidget.h"
-
-namespace Ui
-{
-  class StackVizGui;
-}
 
 namespace visimpl
 {
   class StackViz
-  : public QMainWindow
+  : public QWidget
   {
     Q_OBJECT
 
@@ -54,7 +47,6 @@ namespace visimpl
     virtual ~StackViz( void );
 
     void init( simil::SimulationPlayer* p );
-    void showStatusBarMessage ( const QString& message );
 
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
@@ -94,23 +86,26 @@ namespace visimpl
 
     void calculateCorrelations( void );
 
-    void updateHistograms();
+    void updateHistograms( );
+
+    void toggleAutoNameSelections( );
+
+    void fillPlots( bool fill );
+
+    void focusPlayback( );
+
+    void followPlayhead ( bool follow );
 
   protected slots:
 
-    void HistogramClicked( visimpl::HistogramWidget* );
+    void HistogramClicked( visimpl::HistogramWidget * );
 
     void loadComplete( void );
 
   protected:
 
-    virtual void closeEvent(QCloseEvent *e);
-
     void initSummaryWidget( void );
 
-    Ui::StackVizGui* _ui;
-
-    QString _lastOpenedFileNamePath;
     QString _lastOpenedSubsetsFileName;
 
     simil::TSimulationType _simulationType;
@@ -121,6 +116,7 @@ namespace visimpl
     simil::SubsetEventManager* _subsetEventManager;
 
     bool _autoCalculateCorrelations;
+    bool _followPlayhead;
 
     DisplayManagerWidget* _displayManager;
 

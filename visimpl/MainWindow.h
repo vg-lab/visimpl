@@ -98,7 +98,7 @@ namespace visimpl
     void closeData( void );
 
     void dialogAbout( void );
-    void onStackVizActionTriggered();
+
     void dialogSelectionManagement( void );
     void dialogSubsetImporter( void );
 
@@ -224,6 +224,7 @@ namespace visimpl
   protected:
     void _initSimControlDock( void );
     void _initPlaybackDock( void );
+    void _initStackVizDock( void );
     void _initSummaryWidget( void );
 
     void _configurePlayer( void );
@@ -286,6 +287,9 @@ namespace visimpl
 
     QDockWidget* _simConfigurationDock;
 
+    QDockWidget* _stackVizDock;
+    StackViz *_stackViz;
+
     QTabWidget* _modeSelectionWidget;
     QToolBox* _toolBoxOptions;
 
@@ -341,7 +345,6 @@ namespace visimpl
     QPushButton* _frameClippingColor;
     QPushButton* _buttonSelectionFromClippingPlanes;
 
-    StackViz *m_stackviz;
     simil::TDataType m_type;
     std::string m_subsetEventFile;
   };

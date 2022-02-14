@@ -91,7 +91,7 @@ int main( int argc, char** argv )
   std::string scaleFactor;
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
-  int initWindowWidth, initWindowHeight;
+  int initWindowWidth = 0, initWindowHeight = 0;
 
   for( int i = 1; i < argc; i++ )
   {

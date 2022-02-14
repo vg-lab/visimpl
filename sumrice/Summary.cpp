@@ -31,6 +31,7 @@
 #include <QScrollBar>
 #include <QApplication>
 #include <QGroupBox>
+#include <QDebug>
 
 unsigned int visimpl::Selection::_counter = 0;
 
@@ -131,7 +132,7 @@ namespace visimpl
       _splitVertEventsHisto->addWidget( _splitHorizEvents );
       _splitVertEventsHisto->addWidget( _splitHorizHisto );
       _splitVertEventsHisto->addWidget( footWidget );
-      _splitVertEventsHisto->setSizes( { 1000, 1000, 1000 } );
+      _splitVertEventsHisto->setSizes( { 1000, 1000, 2000 } );
 
       _layoutMain->addWidget(_splitVertEventsHisto );
     }
@@ -304,6 +305,7 @@ namespace visimpl
     _focusWidget = new FocusFrame();
     _focusWidget->colorLocal( _colorLocal );
     _focusWidget->colorGlobal( _colorGlobal );
+    _focusWidget->setMinimumHeight(200);
 
     _localColorWidget = new QWidget();
     _localColorWidget->setPalette( QPalette( _colorLocal ));
@@ -463,9 +465,9 @@ namespace visimpl
     layoutFootRight->addWidget( groupBoxInformation );
     layoutFootRight->addWidget( groupBoxRuleConfig );
 
-    footLayout->addWidget( scrollFootLeft, 0, 0, 1, 1 );
-    footLayout->addWidget( _focusWidget, 0, 1, 1, 3 );
-    footLayout->addWidget( scrollFootRight, 0, 4, 1, 1 );
+    footLayout->addWidget( _focusWidget, 0, 0, 1, 2 );
+    footLayout->addWidget( scrollFootLeft, 1, 0, 1, 1 );
+    footLayout->addWidget( scrollFootRight, 1, 1, 1, 1 );
 
     localComboBox->setCurrentIndex( ( int ) _colorScaleLocal );
     globalComboBox->setCurrentIndex( ( int ) _colorScaleGlobal );
