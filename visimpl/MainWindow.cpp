@@ -62,7 +62,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include "stackviz/StackViz.h"
 
 #include <thread>
 
@@ -201,35 +200,36 @@ namespace visimpl
     connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( void ) ), this,
              SLOT( openCSVFilesThroughDialog( void ) ) );
 
-    connect( _ui->actionOpenH5Files, SIGNAL( triggered( void ) ), this,
-             SLOT( openHDF5ThroughDialog( void ) ) );
+    connect( _ui->actionOpenH5Files , SIGNAL( triggered( void )) , this ,
+             SLOT( openHDF5ThroughDialog( void )) );
 
-    connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void ) ), this,
-             SLOT( openSubsetEventsFileThroughDialog( void ) ) );
+    connect( _ui->actionOpenSubsetEventsFile , SIGNAL( triggered( void )) ,
+             this ,
+             SLOT( openSubsetEventsFileThroughDialog( void )) );
 
-    connect( _ui->actionCloseData, SIGNAL( triggered( void ) ), this,
-             SLOT( closeData( void ) ) );
+    connect( _ui->actionCloseData , SIGNAL( triggered( void )) , this ,
+             SLOT( closeData( void )) );
 
-    connect( _ui->actionQuit, SIGNAL( triggered( void ) ), this,
-             SLOT( close( ) ) );
+    connect( _ui->actionQuit , SIGNAL( triggered( void )) , this ,
+             SLOT( close( )) );
 
-    connect( _ui->actionAbout, SIGNAL( triggered( void ) ), this,
-             SLOT( dialogAbout( void ) ) );
+    connect( _ui->actionAbout , SIGNAL( triggered( void )) , this ,
+             SLOT( dialogAbout( void )) );
 
-    connect( _ui->actionHome, SIGNAL( triggered( void ) ), _openGLWidget,
-             SLOT( home( void ) ) );
+    connect( _ui->actionHome , SIGNAL( triggered( void )) , _openGLWidget ,
+             SLOT( home( void )) );
 
-    connect( _openGLWidget, SIGNAL( stepCompleted( void ) ), this,
-             SLOT( completedStep( void ) ) );
+    connect( _openGLWidget , SIGNAL( stepCompleted( void )) , this ,
+             SLOT( completedStep( void )) );
 
-    connect( _openGLWidget, SIGNAL( pickedSingle( unsigned int ) ), this,
-             SLOT( updateSelectedStatsPickingSingle( unsigned int ) ) );
+    connect( _openGLWidget , SIGNAL( pickedSingle( unsigned int )) , this ,
+             SLOT( updateSelectedStatsPickingSingle( unsigned int )) );
 
-    QAction* actionTogglePause = new QAction( this );
+    QAction *actionTogglePause = new QAction( this );
     actionTogglePause->setShortcut( Qt::Key_Space );
 
-    connect( actionTogglePause, SIGNAL( triggered( ) ), this,
-             SLOT( PlayPause( ) ) );
+    connect( actionTogglePause , SIGNAL( triggered( )) , this ,
+             SLOT( PlayPause( )) );
     addAction( actionTogglePause );
 
 #ifdef VISIMPL_USE_ZEROEQ
@@ -238,29 +238,46 @@ namespace visimpl
 
     _openGLWidget->showInactive( true );
 
-    connect( _ui->actionShowInactive, SIGNAL( toggled( bool ) ), this,
-             SLOT( showInactive( bool ) ) );
+    connect( _ui->actionShowInactive , SIGNAL( toggled( bool )) , this ,
+             SLOT( showInactive( bool )) );
 #endif
 
     _initPlaybackDock( );
     _initSimControlDock( );
     _initStackVizDock( );
 
-    connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool ) ),
-             _ui->actionTogglePlaybackDock, SLOT( setChecked( bool ) ) );
+    connect(
+      _simulationDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
+      _ui->actionTogglePlaybackDock , SLOT( setChecked( bool ))
+    );
 
-    connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( ) ), this,
-             SLOT( togglePlaybackDock( ) ) );
+    connect(
+      _ui->actionTogglePlaybackDock , SIGNAL( triggered( )) ,
+      this , SLOT( togglePlaybackDock( ))
+    );
 
-    connect( _simConfigurationDock->toggleViewAction( ),
-             SIGNAL( toggled( bool ) ), _ui->actionToggleSimConfigDock,
-             SLOT( setChecked( bool ) ) );
+    connect(
+      _simConfigurationDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
+      _ui->actionToggleSimConfigDock , SLOT( setChecked( bool ))
+    );
 
-    connect( _ui->actionToggleSimConfigDock, SIGNAL( triggered( ) ), this,
-             SLOT( toggleSimConfigDock( ) ) );
+    connect(
+      _ui->actionToggleSimConfigDock , SIGNAL( triggered( )) ,
+      this , SLOT( toggleSimConfigDock( ))
+    );
 
-    _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
-    _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
+    connect(
+      _stackVizDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
+      _ui->actionToggleStackVizDock , SLOT( setChecked( bool ))
+    );
+
+    connect(
+      _ui->actionToggleStackVizDock , SIGNAL( triggered( )) ,
+      this , SLOT( toggleStackVizDock( ))
+    );
+
+    _ui->toolBar->setContextMenuPolicy( Qt::PreventContextMenu );
+    _ui->menubar->setContextMenuPolicy( Qt::PreventContextMenu );
   }
 
   MainWindow::~MainWindow( void )
@@ -404,6 +421,7 @@ namespace visimpl
     if(!eventsFile.exists())
       return;
 
+    bool h5 = false;
     QString errorText;
     try
     {
@@ -414,6 +432,7 @@ namespace visimpl
       else if(eventsFile.suffix().toLower().compare("h5") == 0)
       {
         _subsetEvents->loadH5( filePath );
+        h5 = true;
       }
       else
       {
@@ -425,16 +444,19 @@ namespace visimpl
       errorText = QString::fromLocal8Bit(e.what());
     }
 
-    if(!errorText.isEmpty())
+    if ( !errorText.isEmpty( ))
     {
-      QMessageBox::warning(this, tr("Error loading Events file"), errorText, QMessageBox::Ok);
+      QMessageBox::warning( this , tr( "Error loading Events file" ) ,
+                            errorText , QMessageBox::Ok );
       return;
     }
 
-    _subsetImporter->reload(_subsetEvents);
+    _subsetImporter->reload( _subsetEvents );
 
-    _openGLWidget->subsetEventsManager(_subsetEvents);
-    _openGLWidget->showEventsActivityLabels(_ui->actionShowEventsActivity->isChecked());
+    _openGLWidget->subsetEventsManager( _subsetEvents );
+    _openGLWidget->showEventsActivityLabels(
+      _ui->actionShowEventsActivity->isChecked( ));
+    _stackViz->openSubsetEventsFile( h5 );
   }
 
   void MainWindow::openSubsetEventsFileThroughDialog( void )
@@ -449,9 +471,8 @@ namespace visimpl
       QFileInfo eventsFile{ filePath };
       if(eventsFile.exists())
       {
-        _lastOpenedSubsetsFileName = eventsFile.path();
-
-        openSubsetEventFile( filePath.toStdString( ), false );
+        _lastOpenedSubsetsFileName = eventsFile.path( );
+        openSubsetEventFile( filePath.toStdString( ) , false );
       }
     }
   }
@@ -553,7 +574,7 @@ namespace visimpl
 
   void MainWindow::toggleSimConfigDock( void )
   {
-    if ( _ui->actionToggleSimConfigDock->isChecked( ) )
+    if ( _ui->actionToggleSimConfigDock->isChecked( ))
       _simConfigurationDock->show( );
     else
       _simConfigurationDock->close( );
@@ -561,21 +582,31 @@ namespace visimpl
     update( );
   }
 
+
+  void MainWindow::toggleStackVizDock( void )
+  {
+    if ( _ui->actionToggleStackVizDock->isChecked( ))
+      _stackVizDock->show( );
+    else
+      _stackVizDock->close( );
+
+    update( );
+  }
+
   void MainWindow::_configurePlayer( void )
   {
-    connect( _openGLWidget, SIGNAL( updateSlider( float ) ), this,
-             SLOT( UpdateSimulationSlider( float ) ) );
+    connect( _openGLWidget , SIGNAL( updateSlider( float )) , this ,
+             SLOT( UpdateSimulationSlider( float )) );
 
-    _objectInspectorGB->setSimPlayer(_openGLWidget->player( ));
-    _subsetEvents = _openGLWidget->subsetEventsManager( );
+    _objectInspectorGB->setSimPlayer( _openGLWidget->player( ));
 
     _startTimeLabel->setText(
-      QString::number(_openGLWidget->player()->startTime(), 'f', 3));
+      QString::number( _openGLWidget->player( )->startTime( ) , 'f' , 3 ));
 
     _endTimeLabel->setText(
-      QString::number(_openGLWidget->player()->endTime(), 'f', 3));
+      QString::number( _openGLWidget->player( )->endTime( ) , 'f' , 3 ));
 
-    _simSlider->setEnabled(true);
+    _simSlider->setEnabled( true );
 
 #ifdef SIMIL_USE_ZEROEQ
     try
@@ -623,11 +654,6 @@ namespace visimpl
 
     _stackVizDock->setWidget( _stackViz );
     this->addDockWidget( Qt::LeftDockWidgetArea , _stackVizDock );
-
-    connect(
-      _ui->actionOpenSubsetEventsFile , SIGNAL( triggered( bool )) ,
-      _stackViz , SLOT( openSubsetEventsFileThroughDialog( ))
-    );
 
     connect(
       _ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,

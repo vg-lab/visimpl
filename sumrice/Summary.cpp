@@ -31,6 +31,7 @@
 #include <QScrollBar>
 #include <QApplication>
 #include <QGroupBox>
+#include <QToolBox>
 #include <QDebug>
 
 unsigned int visimpl::Selection::_counter = 0;
@@ -306,6 +307,7 @@ namespace visimpl
     _focusWidget->colorLocal( _colorLocal );
     _focusWidget->colorGlobal( _colorGlobal );
     _focusWidget->setMinimumHeight(200);
+    _focusWidget->setMinimumWidth( 200 );
 
     _localColorWidget = new QWidget();
     _localColorWidget->setPalette( QPalette( _colorLocal ));
@@ -360,135 +362,102 @@ namespace visimpl
     gridSpinBox->setSingleStep( 1 );
     gridSpinBox->setValue( 3 );
 
-    QPushButton* focusButton = new QPushButton( "Focus" );
+    QPushButton *focusButton = new QPushButton( "Focus" );
 
-    QScrollArea* scrollFootLeft = new QScrollArea();
-    scrollFootLeft->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-    scrollFootLeft->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-    scrollFootLeft->setWidgetResizable( true );
-    scrollFootLeft->setMaximumWidth( 300 );
+    QToolBox *toolBox = new QToolBox( );
+    toolBox->setMaximumWidth( 300 );
 
-    QWidget* containerFootLeft = new QWidget();
-    QVBoxLayout* layoutFootLeft = new QVBoxLayout();
-    layoutFootLeft->setAlignment( Qt::AlignTop );
-    containerFootLeft->setLayout( layoutFootLeft );
-    containerFootLeft->setMinimumWidth( _footWidthMax );
-    containerFootLeft->setMaximumWidth( _footWidthMax );
-    containerFootLeft->setMinimumHeight( _footHeightMin );
-    containerFootLeft->setMaximumHeight( _footHeightMax );
-
-    tmpFootLeft = containerFootLeft;
-
-    QGroupBox* groupBoxNorm = new QGroupBox( "Normalization: ");
-    QGridLayout* layoutNorm = new QGridLayout();
+    QWidget *groupBoxNorm = new QWidget( );
+    QGridLayout *layoutNorm = new QGridLayout( );
     layoutNorm->setAlignment( Qt::AlignTop );
     groupBoxNorm->setLayout( layoutNorm );
 
-    layoutNorm->addWidget( new QLabel( "Local:" ), 0, 0, 1, 1);
-    layoutNorm->addWidget( _localColorWidget, 0, 1, 1, 1 );
-    layoutNorm->addWidget( localComboBox, 0, 2, 1, 1 );
+    layoutNorm->addWidget( new QLabel( "Local:" ) , 0 , 0 , 1 , 1 );
+    layoutNorm->addWidget( _localColorWidget , 0 , 1 , 1 , 1 );
+    layoutNorm->addWidget( localComboBox , 0 , 2 , 1 , 1 );
 
-    layoutNorm->addWidget( new QLabel( "Global:" ), 1, 0, 1, 1);
-    layoutNorm->addWidget( _globalColorWidget, 1, 1, 1, 1 );
-    layoutNorm->addWidget( globalComboBox, 1, 2, 1, 1 );
+    layoutNorm->addWidget( new QLabel( "Global:" ) , 1 , 0 , 1 , 1 );
+    layoutNorm->addWidget( _globalColorWidget , 1 , 1 , 1 , 1 );
+    layoutNorm->addWidget( globalComboBox , 1 , 2 , 1 , 1 );
 
-    QGroupBox* groupBoxRuleConfig = new QGroupBox( "Rule configuration: ");
-    QGridLayout* layoutRuleConfig = new QGridLayout();
+    QWidget *groupBoxRuleConfig = new QWidget( );
+    QGridLayout *layoutRuleConfig = new QGridLayout( );
     layoutRuleConfig->setAlignment( Qt::AlignTop );
     groupBoxRuleConfig->setLayout( layoutRuleConfig );
 
-    layoutRuleConfig->addWidget( new QLabel( "Rule sectors: " ), 0, 0, 1, 1 );
-    layoutRuleConfig->addWidget( gridSpinBox, 0, 1, 1, 1 );
+    layoutRuleConfig->addWidget( new QLabel( "Rule sectors: " ) , 0 , 0 , 1 ,
+                                 1 );
+    layoutRuleConfig->addWidget( gridSpinBox , 0 , 1 , 1 , 1 );
 
-    scrollFootLeft->setWidget( containerFootLeft );
-
-    QScrollArea* scrollFootRight = new QScrollArea();
-    scrollFootRight->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-    scrollFootRight->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-    scrollFootRight->setWidgetResizable( true );
-    scrollFootRight->setMaximumWidth( 300 );
-
-    QWidget* containerFootRight = new QWidget();
-    QVBoxLayout* layoutFootRight = new QVBoxLayout();
-    layoutFootRight->setAlignment( Qt::AlignTop );
-    containerFootRight->setLayout( layoutFootRight );
-    containerFootRight->setMinimumWidth( _footWidthMax );
-    containerFootRight->setMaximumWidth( _footWidthMax );
-    containerFootRight->setMinimumHeight( _footHeightMin );
-    containerFootRight->setMaximumHeight( _footHeightMax );
-
-    tmpFootRight = containerFootRight;
-
-    QGroupBox* groupBoxScale = new QGroupBox( "Scale adjustment" );
-    QGridLayout* layoutScale = new QGridLayout();
+    QWidget *groupBoxScale = new QWidget( );
+    QGridLayout *layoutScale = new QGridLayout( );
+    layoutScale->setAlignment( Qt::AlignTop );
     groupBoxScale->setLayout( layoutScale );
-    layoutScale->addWidget( new QLabel( "Horizontal: "), 0, 0, 1, 1 );
-    layoutScale->addWidget( _spinBoxScaleHorizontal, 0, 1, 1, 1 );
-    layoutScale->addWidget( new QLabel( "Vertical: "), 1, 0, 1, 1 );
-    layoutScale->addWidget( _spinBoxScaleVertical, 1, 1, 1, 1 );
+    layoutScale->addWidget( new QLabel( "Horizontal: " ) , 0 , 0 , 1 , 1 );
+    layoutScale->addWidget( _spinBoxScaleHorizontal , 0 , 1 , 1 , 1 );
+    layoutScale->addWidget( new QLabel( "Vertical: " ) , 1 , 0 , 1 , 1 );
+    layoutScale->addWidget( _spinBoxScaleVertical , 1 , 1 , 1 , 1 );
 
-    connect( _spinBoxScaleHorizontal, SIGNAL( editingFinished( void )),
-             this, SLOT( _updateScaleHorizontal( void )));
+    connect( _spinBoxScaleHorizontal , SIGNAL( editingFinished( void )) ,
+             this , SLOT( _updateScaleHorizontal( void )) );
 
-    connect( _spinBoxScaleVertical, SIGNAL( editingFinished( void )),
-             this, SLOT( _updateScaleVertical( void )));
+    connect( _spinBoxScaleVertical , SIGNAL( editingFinished( void )) ,
+             this , SLOT( _updateScaleVertical( void )) );
 
 
-    QGroupBox* groupBoxBinConfig = new QGroupBox( "Bin configuration:" );
-    QGridLayout* layoutBinConfig = new QGridLayout();
+    QWidget *groupBoxBinConfig = new QWidget( );
+    QGridLayout *layoutBinConfig = new QGridLayout( );
     layoutBinConfig->setAlignment( Qt::AlignTop );
     groupBoxBinConfig->setLayout( layoutBinConfig );
 
-    layoutBinConfig->addWidget( new QLabel( "Bins number:" ), 0, 0, 1, 1 );
-    layoutBinConfig->addWidget( _spinBoxBins, 0, 1, 1, 1 );
-    layoutBinConfig->addWidget( new QLabel( "Zoom factor:" ), 1, 0, 1, 1 );
-    layoutBinConfig->addWidget( _spinBoxZoomFactor, 1, 1, 1, 1 );
+    layoutBinConfig->addWidget( new QLabel( "Bins number:" ) , 0 , 0 , 1 , 1 );
+    layoutBinConfig->addWidget( _spinBoxBins , 0 , 1 , 1 , 1 );
+    layoutBinConfig->addWidget( new QLabel( "Zoom factor:" ) , 1 , 0 , 1 , 1 );
+    layoutBinConfig->addWidget( _spinBoxZoomFactor , 1 , 1 , 1 , 1 );
 
-    QGroupBox* groupBoxInformation = new QGroupBox( "Data inspector: ");
-    QGridLayout* layoutInformation = new QGridLayout();
+    QWidget *groupBoxInformation = new QWidget( );
+    QGridLayout *layoutInformation = new QGridLayout( );
     layoutInformation->setAlignment( Qt::AlignTop );
     groupBoxInformation->setLayout( layoutInformation );
 
-    layoutInformation->addWidget( new QLabel( "Current value: "), 2, 9, 1, 2 );
-    layoutInformation->addWidget( _currentValueLabel, 2, 11, 1, 1 );
-    layoutInformation->addWidget( new QLabel( "Local max: "), 3, 9, 1, 2 );
-    layoutInformation->addWidget( _localMaxLabel, 3, 11, 1, 1 );
-    layoutInformation->addWidget( new QLabel( "Global max: "), 4, 9, 1, 2 );
-    layoutInformation->addWidget( _globalMaxLabel, 4, 11, 1, 1 );
+    layoutInformation->addWidget( new QLabel( "Current value: " ) , 2 , 9 , 1 ,
+                                  2 );
+    layoutInformation->addWidget( _currentValueLabel , 2 , 11 , 1 , 1 );
+    layoutInformation->addWidget( new QLabel( "Local max: " ) , 3 , 9 , 1 , 2 );
+    layoutInformation->addWidget( _localMaxLabel , 3 , 11 , 1 , 1 );
+    layoutInformation->addWidget( new QLabel( "Global max: " ) , 4 , 9 , 1 ,
+                                  2 );
+    layoutInformation->addWidget( _globalMaxLabel , 4 , 11 , 1 , 1 );
 
-    scrollFootRight->setWidget( containerFootRight );
+    toolBox->addItem( groupBoxNorm , "Normalization" );
+    toolBox->addItem( groupBoxScale , "Scale adjustment" );
+    toolBox->addItem( groupBoxBinConfig , "Bin configuration" );
+    toolBox->addItem( groupBoxInformation , "Data inspector" );
+    toolBox->addItem( groupBoxRuleConfig , "Rule configuration" );
 
-    layoutFootLeft->addWidget( groupBoxNorm );
-    layoutFootLeft->addWidget( groupBoxScale );
+    footLayout->addWidget( _focusWidget , 0 , 0 , 1 , 1 );
+    footLayout->addWidget( toolBox , 0 , 1 , 1 , 1 );
 
-    layoutFootRight->addWidget( groupBoxBinConfig );
-    layoutFootRight->addWidget( groupBoxInformation );
-    layoutFootRight->addWidget( groupBoxRuleConfig );
+    localComboBox->setCurrentIndex(( int ) _colorScaleLocal );
+    globalComboBox->setCurrentIndex(( int ) _colorScaleGlobal );
 
-    footLayout->addWidget( _focusWidget, 0, 0, 1, 2 );
-    footLayout->addWidget( scrollFootLeft, 1, 0, 1, 1 );
-    footLayout->addWidget( scrollFootRight, 1, 1, 1, 1 );
+    connect( localComboBox , SIGNAL( currentIndexChanged( int )) ,
+             this , SLOT( colorScaleLocal( int )) );
 
-    localComboBox->setCurrentIndex( ( int ) _colorScaleLocal );
-    globalComboBox->setCurrentIndex( ( int ) _colorScaleGlobal );
+    connect( globalComboBox , SIGNAL( currentIndexChanged( int )) ,
+             this , SLOT( colorScaleGlobal( int )) );
 
-    connect( localComboBox, SIGNAL( currentIndexChanged( int ) ),
-             this, SLOT( colorScaleLocal( int )));
+    connect( _spinBoxBins , SIGNAL( editingFinished( void )) ,
+             this , SLOT( binsChanged( void )) );
 
-    connect( globalComboBox, SIGNAL( currentIndexChanged( int ) ),
-               this, SLOT( colorScaleGlobal( int )));
+    connect( _spinBoxZoomFactor , SIGNAL( editingFinished( void )) ,
+             this , SLOT( zoomFactorChanged( void )) );
 
-    connect( _spinBoxBins, SIGNAL( editingFinished( void )),
-             this,  SLOT( binsChanged( void )));
+    connect( gridSpinBox , SIGNAL( valueChanged( int )) ,
+             this , SLOT( gridLinesNumber( int )) );
 
-    connect( _spinBoxZoomFactor, SIGNAL( editingFinished( void )),
-             this,  SLOT( zoomFactorChanged( void )));
-
-    connect( gridSpinBox, SIGNAL( valueChanged( int )),
-             this, SLOT( gridLinesNumber( int )));
-
-    connect( focusButton, SIGNAL( clicked()),
-             this, SLOT( focusPlayback()));
+    connect( focusButton , SIGNAL( clicked( )) ,
+             this , SLOT( focusPlayback( )) );
 
     foot->setLayout( footLayout );
 

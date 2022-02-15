@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 VG-Lab/URJC.
+ * Copyright (c) 2015-2022 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
@@ -20,6 +20,9 @@
  *
  */
 
+#ifndef STACKVIZ_H_
+#define STACKVIZ_H_
+
 #include <QMainWindow>
 #include <QDockWidget>
 #include <QPushButton>
@@ -33,10 +36,11 @@
 #include <sumrice/sumrice.h>
 #include <simil/simil.h>
 
-#include "DisplayManagerWidget.h"
-
 namespace visimpl
 {
+
+  class DisplayManagerWidget;
+
   class StackViz
   : public QWidget
   {
@@ -47,9 +51,6 @@ namespace visimpl
     virtual ~StackViz( void );
 
     void init( simil::SimulationPlayer* p );
-
-    void openSubsetEventFile( const std::string& fileName,
-                              bool append = false );
 
     /** \brief Adds an histogram for the given ids.
      * \param[in] selection Selected indexes.
@@ -78,11 +79,9 @@ namespace visimpl
 
   public slots:
 
-    void openSubsetEventsFileThroughDialog( void );
+    void openSubsetEventsFile( bool fromH5 );
 
     void showDisplayManagerWidget( void );
-
-    void addCorrelation( const std::string& subset );
 
     void calculateCorrelations( void );
 
@@ -100,13 +99,9 @@ namespace visimpl
 
     void HistogramClicked( visimpl::HistogramWidget * );
 
-    void loadComplete( void );
-
   protected:
 
     void initSummaryWidget( void );
-
-    QString _lastOpenedSubsetsFileName;
 
     simil::TSimulationType _simulationType;
 
@@ -121,14 +116,11 @@ namespace visimpl
     DisplayManagerWidget* _displayManager;
 
   private:
-    /** \brief Helper method to update the UI after a dataset has been loaded.
-     * \param[in] eventsFile Subset events filename.
-     *
-     */
-    void updateUIonOpen(const std::string &eventsFile);
 
     std::vector< std::string > _correlations;
   };
 
 
 } // namespace stackviz
+
+#endif //STACKVIZ_H_

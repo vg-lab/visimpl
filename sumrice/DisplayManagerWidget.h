@@ -23,7 +23,6 @@
 #ifndef DISPLAYMANAGERWIDGET_H_
 #define DISPLAYMANAGERWIDGET_H_
 
-// Sumrice
 #include <sumrice/sumrice.h>
 
 class QGridLayout;

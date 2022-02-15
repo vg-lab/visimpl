@@ -22,17 +22,12 @@
 
 #include "StackViz.h"
 #include <QDebug>
-#include <QFileDialog>
 #include <QInputDialog>
 #include <QGridLayout>
-#include <QInputDialog>
-#include <QMessageBox>
 #include <QShortcut>
 #include <QDateTime>
 #include <QtGlobal>
 #include <QApplication>
-
-#include <boost/bind.hpp>
 
 #include <thread>
 
@@ -67,7 +62,7 @@ void StackViz::init( simil::SimulationPlayer* p )
   _subsetEventManager = _player->data( )->subsetsEvents( );
 
   // TODO: events file.
-  updateUIonOpen( std::string( ));
+  initSummaryWidget( );
 
   QApplication::restoreOverrideCursor( );
 }
@@ -76,70 +71,15 @@ StackViz::~StackViz( void )
 {
 }
 
-void StackViz::openSubsetEventFile(const std::string &filePath, bool append)
+void StackViz::openSubsetEventsFile( bool fromH5 )
 {
-  if (filePath.empty() || !_subsetEventManager) return;
-
-  QApplication::setOverrideCursor(Qt::WaitCursor);
-
-  if (!append) _subsetEventManager->clear();
-
-  _summary->clearEvents();
-
-  QString errorText;
-  try
-  {
-    if (filePath.find("json") != std::string::npos)
-    {
-      _subsetEventManager->loadJSON(filePath);
-    }
-    else
-      if (filePath.find("h5") != std::string::npos)
-      {
-        _subsetEventManager->loadH5(filePath);
-        _autoCalculateCorrelations = true;
-      }
-      else
-      {
-        errorText = tr("Subset Events file not found: %1").arg(QString::fromStdString(filePath));
-      }
-  }
-  catch(const std::exception &e)
-  {
-    if(_subsetEventManager) _subsetEventManager->clear();
-
-    errorText = QString::fromLocal8Bit(e.what());
-  }
-
-  QApplication::restoreOverrideCursor();
-
-  if(!errorText.isEmpty())
-  {
-    QMessageBox::critical(this, tr("Error loading Events file"), errorText, QMessageBox::Ok);
-    return;
-  }
-}
-
-void StackViz::openSubsetEventsFileThroughDialog( void )
-{
-    const QString eventsFilename = QFileDialog::getOpenFileName(this,
-              tr( "Open file containing subsets/events data" ),
-              _lastOpenedSubsetsFileName,
-              tr( "JSON (*.json);; hdf5 (*.h5);; All files (*)" ),
-              nullptr, QFileDialog::DontUseNativeDialog );
-
-  if( !eventsFilename.isEmpty( ))
-  {
-    _lastOpenedSubsetsFileName = QFileInfo( eventsFilename ).path( );
-
-    openSubsetEventFile( eventsFilename.toStdString( ), false );
-
+    _summary->clearEvents();
     _summary->generateEventsRep( );
     _summary->importSubsetsFromSubsetMngr( );
+    _autoCalculateCorrelations = fromH5;
 
     if( _displayManager )
       _displayManager->refresh( );
-  }
 }
 
 void StackViz::showDisplayManagerWidget( void )
@@ -253,16 +193,6 @@ void StackViz::removeSubset(const unsigned int i)
   }
 }
 
-void StackViz::loadComplete(void)
-{
-  _summary->showMarker(false);
-}
-
-void StackViz::addCorrelation(const std::string &subset)
-{
-  _correlations.push_back(subset);
-}
-
 void StackViz::calculateCorrelations(void)
 {
   visimpl::CorrelationComputer cc(dynamic_cast<simil::SpikeData*>(_player->data()));
@@ -312,21 +242,6 @@ void visimpl::StackViz::setHistogramVisible(const unsigned idx, const bool state
     _summary->changeHistogramVisibility(idx + 1, state);
 
   }
-}
-
-void StackViz::updateUIonOpen(const std::string &eventsFile)
-{
-  initSummaryWidget( );
-
-  openSubsetEventFile( eventsFile, true );
-
-  _summary->generateEventsRep( );
-  _summary->importSubsetsFromSubsetMngr( );
-
-  if( _displayManager )
-    _displayManager->refresh( );
-
-  //_ui->actionShowDataManager->setEnabled(true);
 }
 
 void visimpl::StackViz::updateHistograms( )

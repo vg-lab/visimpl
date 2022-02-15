@@ -31,6 +31,8 @@
 #include <QGroupBox>
 #include <QGridLayout>
 
+#include <sumrice/sumrice.h>
+
 using namespace visimpl;
 
 DisplayManagerWidget::DisplayManagerWidget( )

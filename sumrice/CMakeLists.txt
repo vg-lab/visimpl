@@ -23,6 +23,8 @@ set(SUMRICE_PUBLIC_HEADERS
   LoaderThread.h
   LoadingDialog.h
   DataInspector.h
+  DisplayManagerWidget.h
+  StackViz.h
 )
 
 set(SUMRICE_HEADERS
@@ -42,6 +44,8 @@ set(SUMRICE_SOURCES
   LoaderThread.cpp
   LoadingDialog.cpp
   DataInspector.cpp
+  DisplayManagerWidget.cpp
+  StackViz.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES

@@ -32,9 +32,8 @@ set(VISIMPL_SOURCES
 
   visimpl.ui
   resources.qrc
-  stackviz/resources.qrc
 
-  visimpl.cpp
+        visimpl.cpp
   MainWindow.cpp
   OpenGLWidget.cpp
 
@@ -50,9 +49,6 @@ set(VISIMPL_SOURCES
   prefr/UpdaterStaticPosition.cpp
 
   render/Plane.cpp
-  
-  stackviz/StackViz.cpp
-  stackviz/DisplayManagerWidget.cpp
 )
 
 set(VISIMPL_HEADERS
@@ -71,11 +67,7 @@ set(VISIMPL_HEADERS
   prefr/ColorOperationModel.h
   prefr/SourceMultiPosition.h
   prefr/UpdaterStaticPosition.h
-
   render/Plane.h
-  
-  stackviz/StackViz.h
-  stackviz/DisplayManagerWidget.h
 )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

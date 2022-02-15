@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 VG-Lab/URJC.
+ * Copyright (c) 2015-2022 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
@@ -104,6 +104,7 @@ namespace visimpl
 
     void togglePlaybackDock( void );
     void toggleSimConfigDock( void );
+    void toggleStackVizDock( void );
 
     void UpdateSimulationSlider( float percentage );
     void UpdateSimulationColorMapping( void );

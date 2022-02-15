@@ -56,6 +56,7 @@
     <addaction name="separator"/>
     <addaction name="actionTogglePlaybackDock"/>
     <addaction name="actionToggleSimConfigDock"/>
+    <addaction name="actionToggleStackVizDock"/>
     <addaction name="separator"/>
     <addaction name="actionShowInactive"/>
     <addaction name="actionShowCurrentTime"/>
@@ -102,11 +103,17 @@
    <addaction name="actionHome"/>
    <addaction name="actionBackgroundColor"/>
    <addaction name="separator"/>
+   <addaction name="actionToggleStackVizDock"/>
    <addaction name="actionTogglePlaybackDock"/>
    <addaction name="actionToggleSimConfigDock"/>
    <addaction name="separator"/>
+   <addaction name="actionStackVizShowDataManager"/>
+   <addaction name="actionStackVizFillPlots"/>
+   <addaction name="separator"/>
+   <addaction name="actionStackVizFocusOnPlayhead"/>
+   <addaction name="actionStackVizFollowPlayHead"/>
+   <addaction name="separator"/>
    <addaction name="actionShowInactive"/>
-   <addaction name="actionStackViz"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -216,6 +223,24 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+T</string>
+   </property>
+  </action>
+  <action name="actionToggleStackVizDock">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/visimpl.png</normaloff>:/visimpl.png</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle StackViz Dock</string>
+   </property>
+   <property name="toolTip">
+    <string>Show/Hide StackViz dock</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string>
    </property>
   </action>
   <action name="actionHome">

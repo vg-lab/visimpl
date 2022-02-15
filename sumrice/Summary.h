@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 VG-Lab/URJC.
+ * Copyright (c) 2015-2022 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
@@ -348,10 +348,7 @@ namespace visimpl
     QSpinBox* _spinBoxBins;
     QDoubleSpinBox* _spinBoxZoomFactor;
 
-    QWidget* tmpFootLeft;
-    QWidget* tmpFootRight;
-
-//    simil::SubsetEventManager* _subsetEventManager;
+    //    simil::SubsetEventManager* _subsetEventManager;
     unsigned int _maxNumEvents;
     std::vector< TEvent > _events;
 
