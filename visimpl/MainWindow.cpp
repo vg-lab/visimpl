@@ -1591,8 +1591,8 @@ namespace visimpl
   {
     auto selection = _domainManager->selection( );
 
-    _buttonAddGroup->setEnabled( true );
-    _buttonClearSelection->setEnabled( true );
+    _buttonAddGroup->setEnabled( !selection.empty() );
+    _buttonClearSelection->setEnabled( !selection.empty() );
     _selectionSizeLabel->setText( QString::number( selection.size( ) ) );
     _selectionSizeLabel->update( );
   }
