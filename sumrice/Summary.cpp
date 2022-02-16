@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 VG-Lab/URJC.
+ * Copyright (c) 2015-2022 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
@@ -30,7 +30,6 @@
 #include <QInputDialog>
 #include <QScrollBar>
 #include <QApplication>
-#include <QGroupBox>
 #include <QToolBox>
 #include <QDebug>
 
@@ -47,11 +46,11 @@ static QString colorScaleToString( visimpl::TColorScale colorScale )
   switch( colorScale )
   {
     case visimpl::T_COLOR_LINEAR:
-      return QString( "Linear" );
+      return "Linear";
     case visimpl::T_COLOR_LOGARITHMIC:
-      return QString( "Logarithmic");
+      return "Logarithmic";
     default:
-      return QString();
+      return { };
   }
 }
 
@@ -162,13 +161,11 @@ namespace visimpl
     {
       case simil::TSimSpikes:
       {
-        simil::SpikeData* spikeData = dynamic_cast< simil::SpikeData* >( _simData );
+        auto *spikeData = dynamic_cast< simil::SpikeData * >( _simData );
         _spikeReport = spikeData;
 
         break;
       }
-      case simil::TSimVoltages:
-        break;
       default:
         break;
     }
@@ -178,28 +175,28 @@ namespace visimpl
     Init();
   }
 
-  void Summary::_initCentralGUI( void )
+  void Summary::_initCentralGUI( )
   {
-    if( _stackType == T_STACK_FIXED )
+    if ( _stackType == T_STACK_FIXED )
     {
-      _layoutHistograms = new QGridLayout();
+      _layoutHistograms = new QGridLayout( );
       this->setLayout( _layoutHistograms );
     }
-    else if( _stackType == T_STACK_EXPANDABLE )
+    else if ( _stackType == T_STACK_EXPANDABLE )
     {
-      _maxColumns= 20;
+      _maxColumns = 20;
       _regionWidth = 0.1f;
       _summaryColumns = _maxColumns - 2;
 
-      _layoutMain = new QVBoxLayout();
+      _layoutMain = new QVBoxLayout( );
       _layoutMain->setAlignment( Qt::AlignTop );
       this->setLayout( _layoutMain );
 
-      _layoutEventLabels = new QGridLayout();
+      _layoutEventLabels = new QGridLayout( );
       _layoutEventLabels->setAlignment( Qt::AlignTop );
       _layoutEventLabels->setVerticalSpacing( 0 );
 
-      QWidget* eventLabelsContainer = new QWidget();
+      auto *eventLabelsContainer = new QWidget( );
       eventLabelsContainer->setLayout( _layoutEventLabels );
       eventLabelsContainer->setMaximumWidth( 150 );
 
@@ -214,62 +211,78 @@ namespace visimpl
       _layoutEvents->setAlignment( Qt::AlignTop );
       _layoutEvents->setVerticalSpacing( 0 );
 
-      QWidget* eventsContainer = new QWidget();
+      auto *eventsContainer = new QWidget( );
       eventsContainer->setLayout( _layoutEvents );
 
-      _scrollEvent = new QScrollArea();
+      _scrollEvent = new QScrollArea( );
       _scrollEvent->setWidgetResizable( true );
       _scrollEvent->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
       _scrollEvent->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _scrollEvent->setVisible( false );
       _scrollEvent->setWidget( eventsContainer );
 
-      connect( _scrollEvent->horizontalScrollBar(), SIGNAL( actionTriggered( int )),
-               this, SLOT( moveHoriScrollSync( int )));
+      connect(
+        _scrollEvent->horizontalScrollBar( ) ,
+        SIGNAL( actionTriggered( int )) ,
+        this , SLOT( moveHoriScrollSync( int ))
+      );
 
-      connect( _scrollEvent->verticalScrollBar(), SIGNAL( actionTriggered( int )),
-               this, SLOT( moveVertScrollSync( int )));
+      connect(
+        _scrollEvent->verticalScrollBar( ) , SIGNAL( actionTriggered( int )) ,
+        this , SLOT( moveVertScrollSync( int ))
+      );
 
-      connect( _eventLabelsScroll->verticalScrollBar(), SIGNAL( actionTriggered( int )),
-               this, SLOT( moveVertScrollSync( int )));
+      connect(
+        _eventLabelsScroll->verticalScrollBar( ) ,
+        SIGNAL( actionTriggered( int )) ,
+        this , SLOT( moveVertScrollSync( int ))
+      );
 
-      _layoutHistoLabels = new QGridLayout();
+      _layoutHistoLabels = new QGridLayout( );
       _layoutHistoLabels->setAlignment( Qt::AlignTop );
       _layoutHistoLabels->setVerticalSpacing( 0 );
 
-      QWidget* histoLabelsContainer = new QWidget();
-      histoLabelsContainer->setLayout( _layoutHistoLabels );
-      histoLabelsContainer->setMaximumWidth( 150 );
+      auto *histogramLabelsContainer = new QWidget( );
+      histogramLabelsContainer->setLayout( _layoutHistoLabels );
+      histogramLabelsContainer->setMaximumWidth( 150 );
 
-      _scrollHistoLabels = new QScrollArea();
+      _scrollHistoLabels = new QScrollArea( );
       _scrollHistoLabels->setWidgetResizable( true );
       _scrollHistoLabels->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-      _scrollHistoLabels->setWidget( histoLabelsContainer );
+      _scrollHistoLabels->setWidget( histogramLabelsContainer );
 
-
-      _layoutHistograms = new QGridLayout();
+      _layoutHistograms = new QGridLayout( );
       _layoutHistograms->setAlignment( Qt::AlignTop );
       _layoutHistograms->setVerticalSpacing( 0 );
 
-      QWidget* histogramsContainer = new QWidget();
+      auto *histogramsContainer = new QWidget( );
       histogramsContainer->setLayout( _layoutHistograms );
 
-      _scrollHistogram = new QScrollArea();
+      _scrollHistogram = new QScrollArea( );
       _scrollHistogram->setWidgetResizable( true );
       _scrollHistogram->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
       _scrollHistogram->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
       _scrollHistogram->setWidget( histogramsContainer );
-      _scrollHistogram->horizontalScrollBar()->setMinimum(0);
-      _scrollHistogram->horizontalScrollBar()->setMaximum(1000);
+      _scrollHistogram->horizontalScrollBar( )->setMinimum( 0 );
+      _scrollHistogram->horizontalScrollBar( )->setMaximum( 1000 );
 
-      connect( _scrollHistogram->horizontalScrollBar(), SIGNAL( actionTriggered( int )),
-               this, SLOT( moveHoriScrollSync( int )));
+      connect(
+        _scrollHistogram->horizontalScrollBar( ) ,
+        SIGNAL( actionTriggered( int )) ,
+        this , SLOT( moveHoriScrollSync( int ))
+      );
 
-      connect( _scrollHistogram->verticalScrollBar(), SIGNAL( actionTriggered( int )),
-               this, SLOT( moveVertScrollSync( int )));
+      connect(
+        _scrollHistogram->verticalScrollBar( ) ,
+        SIGNAL( actionTriggered( int )) ,
+        this , SLOT( moveVertScrollSync( int ))
+      );
 
-      connect( _scrollHistoLabels->verticalScrollBar(), SIGNAL( actionTriggered( int )),
-               this, SLOT( moveVertScrollSync( int )));
+      connect(
+        _scrollHistoLabels->verticalScrollBar( ) ,
+        SIGNAL( actionTriggered( int )) ,
+        this , SLOT( moveVertScrollSync( int ))
+      );
 
       _splitHorizEvents = new QSplitter( Qt::Horizontal );
       _splitHorizHisto = new QSplitter( Qt::Horizontal );
@@ -280,36 +293,37 @@ namespace visimpl
       _splitHorizHisto->addWidget( _scrollHistoLabels );
       _splitHorizHisto->addWidget( _scrollHistogram );
 
-      connect( _splitHorizEvents, SIGNAL( splitterMoved( int, int )),
-               this, SLOT( syncSplitters() ));
+      connect(
+        _splitHorizEvents , SIGNAL( splitterMoved( int , int )) ,
+        this , SLOT( syncSplitters( ))
+      );
 
-      connect( _splitHorizHisto, SIGNAL( splitterMoved( int, int )),
-               this, SLOT( syncSplitters() ));
+      connect(
+        _splitHorizHisto , SIGNAL( splitterMoved( int , int )) ,
+        this , SLOT( syncSplitters( ))
+      );
     }
   }
 
   QWidget* Summary::_initFootGUI( void )
   {
-    QWidget* foot = new QWidget();
-    QGridLayout* footLayout = new QGridLayout();
+    auto *foot = new QWidget( );
+    auto *footLayout = new QGridLayout( );
 
-    QStringList csItems;
-    csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LINEAR )));
-    csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LOGARITHMIC )));
+    auto *toolBox = new QToolBox( );
+    toolBox->setMaximumWidth( 300 );
 
-    QComboBox* localComboBox = new QComboBox();
-    localComboBox->addItems( csItems );
+    // FOCUS
 
-    QComboBox* globalComboBox = new QComboBox();
-    globalComboBox->addItems( csItems );
-
-    _focusWidget = new FocusFrame();
+    _focusWidget = new FocusFrame( );
     _focusWidget->colorLocal( _colorLocal );
     _focusWidget->colorGlobal( _colorGlobal );
-    _focusWidget->setMinimumHeight(200);
+    _focusWidget->setMinimumHeight( 200 );
     _focusWidget->setMinimumWidth( 200 );
 
-    _localColorWidget = new QWidget();
+    // NORMALIZATION
+
+    _localColorWidget = new QWidget( );
     _localColorWidget->setPalette( QPalette( _colorLocal ));
     _localColorWidget->setAutoFillBackground( true );
     _localColorWidget->setMaximumWidth( 30 );
@@ -317,7 +331,7 @@ namespace visimpl
     _localColorWidget->setMinimumHeight( 30 );
     _localColorWidget->setMaximumHeight( 30 );
 
-    _globalColorWidget = new QWidget();
+    _globalColorWidget = new QWidget( );
     _globalColorWidget->setPalette( QPalette( _colorGlobal ));
     _globalColorWidget->setAutoFillBackground( true );
     _globalColorWidget->setMaximumWidth( 30 );
@@ -325,50 +339,19 @@ namespace visimpl
     _globalColorWidget->setMinimumHeight( 30 );
     _globalColorWidget->setMaximumHeight( 30 );
 
-    _currentValueLabel = new QLabel( "" );
-    _currentValueLabel->setMaximumWidth( 50 );
-    _globalMaxLabel = new QLabel( "" );
-    _globalMaxLabel->setMaximumWidth( 50 );
-    _localMaxLabel = new QLabel( "" );
-    _localMaxLabel->setMaximumWidth( 50 );
+    QStringList csItems;
+    csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LINEAR )));
+    csItems.push_back(
+      QString( colorScaleToString( visimpl::T_COLOR_LOGARITHMIC )));
 
-    _spinBoxBins = new QSpinBox();
-    _spinBoxBins->setMinimum( 50 );
-    _spinBoxBins->setMaximum( 100000 );
-    _spinBoxBins->setSingleStep( 50 );
-    _spinBoxBins->setValue( _bins );
+    auto *localComboBox = new QComboBox( );
+    localComboBox->addItems( csItems );
 
-    _spinBoxScaleHorizontal = new QDoubleSpinBox();
-    _spinBoxScaleHorizontal->setMinimum( 1.0 );
-    _spinBoxScaleHorizontal->setMaximum( 500 );
-    _spinBoxScaleHorizontal->setSingleStep( 0.1 );
-    _spinBoxScaleHorizontal->setValue( DEFAULT_SCALE );
+    auto *globalComboBox = new QComboBox( );
+    globalComboBox->addItems( csItems );
 
-    _spinBoxScaleVertical = new QDoubleSpinBox();
-    _spinBoxScaleVertical->setMinimum( 1.0 );
-    _spinBoxScaleVertical->setMaximum( 5 );
-    _spinBoxScaleVertical->setSingleStep( 0.1 );
-    _spinBoxScaleVertical->setValue( DEFAULT_SCALE );
-
-    _spinBoxZoomFactor = new QDoubleSpinBox();
-    _spinBoxZoomFactor->setMinimum( 1.0 );
-    _spinBoxZoomFactor->setMaximum( 1000.0 );
-    _spinBoxZoomFactor->setSingleStep( 0.5 );
-    _spinBoxZoomFactor->setValue( _zoomFactor );
-
-    QSpinBox* gridSpinBox = new QSpinBox();
-    gridSpinBox->setMinimum( 0 );
-    gridSpinBox->setMaximum( 10000 );
-    gridSpinBox->setSingleStep( 1 );
-    gridSpinBox->setValue( 3 );
-
-    QPushButton *focusButton = new QPushButton( "Focus" );
-
-    QToolBox *toolBox = new QToolBox( );
-    toolBox->setMaximumWidth( 300 );
-
-    QWidget *groupBoxNorm = new QWidget( );
-    QGridLayout *layoutNorm = new QGridLayout( );
+    auto *groupBoxNorm = new QWidget( );
+    auto *layoutNorm = new QGridLayout( );
     layoutNorm->setAlignment( Qt::AlignTop );
     groupBoxNorm->setLayout( layoutNorm );
 
@@ -380,17 +363,35 @@ namespace visimpl
     layoutNorm->addWidget( _globalColorWidget , 1 , 1 , 1 , 1 );
     layoutNorm->addWidget( globalComboBox , 1 , 2 , 1 , 1 );
 
-    QWidget *groupBoxRuleConfig = new QWidget( );
-    QGridLayout *layoutRuleConfig = new QGridLayout( );
-    layoutRuleConfig->setAlignment( Qt::AlignTop );
-    groupBoxRuleConfig->setLayout( layoutRuleConfig );
+    localComboBox->setCurrentIndex(( int ) _colorScaleLocal );
+    globalComboBox->setCurrentIndex(( int ) _colorScaleGlobal );
 
-    layoutRuleConfig->addWidget( new QLabel( "Rule sectors: " ) , 0 , 0 , 1 ,
-                                 1 );
-    layoutRuleConfig->addWidget( gridSpinBox , 0 , 1 , 1 , 1 );
+    connect(
+      localComboBox , SIGNAL( currentIndexChanged( int )) ,
+      this , SLOT( colorScaleLocal( int ))
+    );
 
-    QWidget *groupBoxScale = new QWidget( );
-    QGridLayout *layoutScale = new QGridLayout( );
+    connect(
+      globalComboBox , SIGNAL( currentIndexChanged( int )) ,
+      this , SLOT( colorScaleGlobal( int ))
+    );
+
+    // SCALE ADJUSTMENT
+
+    _spinBoxScaleHorizontal = new QDoubleSpinBox( );
+    _spinBoxScaleHorizontal->setMinimum( 1.0 );
+    _spinBoxScaleHorizontal->setMaximum( 500 );
+    _spinBoxScaleHorizontal->setSingleStep( 0.1 );
+    _spinBoxScaleHorizontal->setValue( DEFAULT_SCALE );
+
+    _spinBoxScaleVertical = new QDoubleSpinBox( );
+    _spinBoxScaleVertical->setMinimum( 1.0 );
+    _spinBoxScaleVertical->setMaximum( 5 );
+    _spinBoxScaleVertical->setSingleStep( 0.1 );
+    _spinBoxScaleVertical->setValue( DEFAULT_SCALE );
+
+    auto *groupBoxScale = new QWidget( );
+    auto *layoutScale = new QGridLayout( );
     layoutScale->setAlignment( Qt::AlignTop );
     groupBoxScale->setLayout( layoutScale );
     layoutScale->addWidget( new QLabel( "Horizontal: " ) , 0 , 0 , 1 , 1 );
@@ -398,15 +399,32 @@ namespace visimpl
     layoutScale->addWidget( new QLabel( "Vertical: " ) , 1 , 0 , 1 , 1 );
     layoutScale->addWidget( _spinBoxScaleVertical , 1 , 1 , 1 , 1 );
 
-    connect( _spinBoxScaleHorizontal , SIGNAL( editingFinished( void )) ,
-             this , SLOT( _updateScaleHorizontal( void )) );
+    connect(
+      _spinBoxScaleHorizontal , SIGNAL( editingFinished( void )) ,
+      this , SLOT( _updateScaleHorizontal( void ))
+    );
 
-    connect( _spinBoxScaleVertical , SIGNAL( editingFinished( void )) ,
-             this , SLOT( _updateScaleVertical( void )) );
+    connect(
+      _spinBoxScaleVertical , SIGNAL( editingFinished( void )) ,
+      this , SLOT( _updateScaleVertical( void ))
+    );
 
+    // BIN CONFIGURATION
 
-    QWidget *groupBoxBinConfig = new QWidget( );
-    QGridLayout *layoutBinConfig = new QGridLayout( );
+    _spinBoxBins = new QSpinBox( );
+    _spinBoxBins->setMinimum( 50 );
+    _spinBoxBins->setMaximum( 100000 );
+    _spinBoxBins->setSingleStep( 50 );
+    _spinBoxBins->setValue( static_cast<int>(_bins));
+
+    _spinBoxZoomFactor = new QDoubleSpinBox( );
+    _spinBoxZoomFactor->setMinimum( 1.0 );
+    _spinBoxZoomFactor->setMaximum( 1000.0 );
+    _spinBoxZoomFactor->setSingleStep( 0.5 );
+    _spinBoxZoomFactor->setValue( _zoomFactor );
+
+    auto *groupBoxBinConfig = new QWidget( );
+    auto *layoutBinConfig = new QGridLayout( );
     layoutBinConfig->setAlignment( Qt::AlignTop );
     groupBoxBinConfig->setLayout( layoutBinConfig );
 
@@ -415,8 +433,27 @@ namespace visimpl
     layoutBinConfig->addWidget( new QLabel( "Zoom factor:" ) , 1 , 0 , 1 , 1 );
     layoutBinConfig->addWidget( _spinBoxZoomFactor , 1 , 1 , 1 , 1 );
 
-    QWidget *groupBoxInformation = new QWidget( );
-    QGridLayout *layoutInformation = new QGridLayout( );
+    connect(
+      _spinBoxBins , SIGNAL( editingFinished( void )) ,
+      this , SLOT( binsChanged( void ))
+    );
+
+    connect(
+      _spinBoxZoomFactor , SIGNAL( editingFinished( void )) ,
+      this , SLOT( zoomFactorChanged( void ))
+    );
+
+    // DATA INSPECTOR
+
+    _currentValueLabel = new QLabel( "" );
+    _currentValueLabel->setMaximumWidth( 50 );
+    _globalMaxLabel = new QLabel( "" );
+    _globalMaxLabel->setMaximumWidth( 50 );
+    _localMaxLabel = new QLabel( "" );
+    _localMaxLabel->setMaximumWidth( 50 );
+
+    auto *groupBoxInformation = new QWidget( );
+    auto *layoutInformation = new QGridLayout( );
     layoutInformation->setAlignment( Qt::AlignTop );
     groupBoxInformation->setLayout( layoutInformation );
 
@@ -429,6 +466,30 @@ namespace visimpl
                                   2 );
     layoutInformation->addWidget( _globalMaxLabel , 4 , 11 , 1 , 1 );
 
+    // RULE CONFIGURATION
+
+    auto *gridSpinBox = new QSpinBox( );
+    gridSpinBox->setMinimum( 0 );
+    gridSpinBox->setMaximum( 10000 );
+    gridSpinBox->setSingleStep( 1 );
+    gridSpinBox->setValue( 3 );
+
+    auto *groupBoxRuleConfig = new QWidget( );
+    auto *layoutRuleConfig = new QGridLayout( );
+    layoutRuleConfig->setAlignment( Qt::AlignTop );
+    groupBoxRuleConfig->setLayout( layoutRuleConfig );
+
+    layoutRuleConfig->addWidget( new QLabel( "Rule sectors: " ) , 0 , 0 , 1 ,
+                                 1 );
+    layoutRuleConfig->addWidget( gridSpinBox , 0 , 1 , 1 , 1 );
+
+    connect(
+      gridSpinBox , SIGNAL( valueChanged( int )) ,
+      this , SLOT( gridLinesNumber( int ))
+    );
+
+    //
+
     toolBox->addItem( groupBoxNorm , "Normalization" );
     toolBox->addItem( groupBoxScale , "Scale adjustment" );
     toolBox->addItem( groupBoxBinConfig , "Bin configuration" );
@@ -437,27 +498,6 @@ namespace visimpl
 
     footLayout->addWidget( _focusWidget , 0 , 0 , 1 , 1 );
     footLayout->addWidget( toolBox , 0 , 1 , 1 , 1 );
-
-    localComboBox->setCurrentIndex(( int ) _colorScaleLocal );
-    globalComboBox->setCurrentIndex(( int ) _colorScaleGlobal );
-
-    connect( localComboBox , SIGNAL( currentIndexChanged( int )) ,
-             this , SLOT( colorScaleLocal( int )) );
-
-    connect( globalComboBox , SIGNAL( currentIndexChanged( int )) ,
-             this , SLOT( colorScaleGlobal( int )) );
-
-    connect( _spinBoxBins , SIGNAL( editingFinished( void )) ,
-             this , SLOT( binsChanged( void )) );
-
-    connect( _spinBoxZoomFactor , SIGNAL( editingFinished( void )) ,
-             this , SLOT( zoomFactorChanged( void )) );
-
-    connect( gridSpinBox , SIGNAL( valueChanged( int )) ,
-             this , SLOT( gridLinesNumber( int )) );
-
-    connect( focusButton , SIGNAL( clicked( )) ,
-             this , SLOT( focusPlayback( )) );
 
     foot->setLayout( footLayout );
 
