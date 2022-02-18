@@ -245,6 +245,7 @@ namespace visimpl
     _initPlaybackDock( );
     _initSimControlDock( );
     _initStackVizDock( );
+    _ui->actionToggleStackVizDock->setEnabled(false);
 
     connect(
       _simulationDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
@@ -270,6 +271,12 @@ namespace visimpl
       _stackVizDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
       _ui->actionToggleStackVizDock , SLOT( setChecked( bool ))
     );
+
+    connect(
+      _stackVizDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
+      this, SLOT( changeStackVizToolbarStatus(bool))
+    );
+    changeStackVizToolbarStatus(false);
 
     connect(
       _ui->actionToggleStackVizDock , SIGNAL( triggered( )) ,
@@ -306,6 +313,7 @@ namespace visimpl
 
     _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
 
+    _ui->actionToggleStackVizDock->setEnabled(true);
     _stackViz->init( _openGLWidget->player( ));
 
     if(_openGLWidget)
@@ -582,7 +590,6 @@ namespace visimpl
     update( );
   }
 
-
   void MainWindow::toggleStackVizDock( void )
   {
     if ( _ui->actionToggleStackVizDock->isChecked( ))
@@ -644,7 +651,8 @@ namespace visimpl
     _stackVizDock = new QDockWidget( );
     _stackVizDock->setMinimumHeight( 100 );
     _stackVizDock->setSizePolicy( QSizePolicy::MinimumExpanding ,
-                                    QSizePolicy::MinimumExpanding );
+                                  QSizePolicy::MinimumExpanding );
+    _stackVizDock->setVisible(false);
 
     _stackViz = new StackViz( this );
     if ( _openGLWidget && _openGLWidget->player( ))
@@ -684,7 +692,6 @@ namespace visimpl
       _ui->actionStackVizFollowPlayHead , SIGNAL( triggered( bool )) ,
       _stackViz , SLOT( followPlayhead( bool ))
     );
-
   }
 
   void MainWindow::_initPlaybackDock( void )
@@ -2580,6 +2587,14 @@ void MainWindow::clearGroups( void )
     _buttonSaveGroups->setEnabled( enabled);
 
     _openGLWidget->setUpdateGroups( );
+  }
+
+  void MainWindow::changeStackVizToolbarStatus(bool status)
+  {
+    _ui->actionStackVizFillPlots->setEnabled(status);
+    _ui->actionStackVizFocusOnPlayhead->setEnabled(status);
+    _ui->actionStackVizFollowPlayHead->setEnabled(status);
+    _ui->actionStackVizShowDataManager->setEnabled(status);
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)

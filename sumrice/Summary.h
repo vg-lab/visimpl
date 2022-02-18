@@ -44,6 +44,8 @@
 #include "FocusFrame.h"
 #include "Histogram.h"
 
+class QToolBox;
+
 namespace visimpl
 {
   class HistogramWidget;
@@ -181,7 +183,6 @@ namespace visimpl
     void gridLinesNumber( int linesNumber );
 
     void updateMouseMarker( QPoint point );
-    void moveVertScrollSync( int newPos );
     void moveHoriScrollSync( int newPos );
     void syncSplitters( );
 
@@ -195,6 +196,8 @@ namespace visimpl
     void _updateScaleVertical( void );
 
   protected:
+
+    virtual void showEvent(QShowEvent *);
 
     struct HistogramRow
     {
@@ -366,7 +369,7 @@ namespace visimpl
     unsigned int _footHeightMax;
     unsigned int _footHeightMin;
     unsigned int _footWidthMax;
-//    unsigned int _currentCentralMinWidth;
+    QToolBox *_footToolBox;
 
     QPoint _lastMousePosition;
     QPoint _regionGlobalPosition;

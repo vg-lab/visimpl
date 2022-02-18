@@ -163,7 +163,7 @@ namespace stackviz
     QLabel* _startTimeLabel;
     QLabel* _endTimeLabel;
 
-    DisplayManagerWidget* _displayManager;
+    visimpl::DisplayManagerWidget* _displayManager;
 
   private:
     /** \brief Helper method to update the UI after a dataset has been loaded.

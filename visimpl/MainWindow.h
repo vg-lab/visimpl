@@ -222,6 +222,12 @@ namespace visimpl
      */
     void saveGroups();
 
+    /** \brief Enables/disables the toolbar buttons related to stackviz widget.
+     * \param[in] status True to enable and false to disable.
+     *
+     */
+    void changeStackVizToolbarStatus(bool status);
+
   protected:
     void _initSimControlDock( void );
     void _initPlaybackDock( void );
@@ -262,6 +268,7 @@ namespace visimpl
      *
      */
     void sendZeroEQPlaybackOperation(const unsigned int op);
+
 
     Ui::MainWindow* _ui;
 

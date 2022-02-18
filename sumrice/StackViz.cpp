@@ -75,7 +75,7 @@ void StackViz::openSubsetEventsFile( bool fromH5 )
 {
     _summary->clearEvents();
     _summary->generateEventsRep( );
-    _summary->importSubsetsFromSubsetMngr( );
+    //_summary->importSubsetsFromSubsetMngr( );
     _autoCalculateCorrelations = fromH5;
 
     if( _displayManager )

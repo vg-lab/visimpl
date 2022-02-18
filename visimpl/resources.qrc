@@ -25,6 +25,7 @@
     <file>icons/focus.svg</file>
     <file>icons/generic-info.svg</file>
     <file>icons/trash.svg</file>
+    <file>icons/stackviz.svg</file>
     <file>visimpl.png</file>
   </qresource>
 </RCC>

@@ -106,6 +106,7 @@ namespace visimpl
   , _footHeightMax( 320)
   , _footHeightMin( _footHeightMax )
   , _footWidthMax( 250 )
+  , _footToolBox{nullptr}
   , _showMarker( false )
   , _regionPercentage( 0.0f )
   , _regionWidthPixels( -1 )
@@ -196,13 +197,14 @@ namespace visimpl
       _layoutEventLabels->setAlignment( Qt::AlignTop );
       _layoutEventLabels->setVerticalSpacing( 0 );
 
-      auto *eventLabelsContainer = new QWidget( );
+      auto eventLabelsContainer = new QWidget( );
       eventLabelsContainer->setLayout( _layoutEventLabels );
       eventLabelsContainer->setMaximumWidth( 150 );
+      eventLabelsContainer->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
 
       _eventLabelsScroll = new QScrollArea();
       _eventLabelsScroll->setWidgetResizable( true );
-      _eventLabelsScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _eventLabelsScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _eventLabelsScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _eventLabelsScroll->setVisible( false );
       _eventLabelsScroll->setWidget( eventLabelsContainer );
@@ -222,40 +224,34 @@ namespace visimpl
       _scrollEvent->setWidget( eventsContainer );
 
       connect(
-        _scrollEvent->horizontalScrollBar( ) ,
-        SIGNAL( actionTriggered( int )) ,
+        _scrollEvent->horizontalScrollBar( ) , SIGNAL( actionTriggered( int )) ,
         this , SLOT( moveHoriScrollSync( int ))
       );
 
       connect(
-        _scrollEvent->verticalScrollBar( ) , SIGNAL( actionTriggered( int )) ,
-        this , SLOT( moveVertScrollSync( int ))
-      );
-
-      connect(
-        _eventLabelsScroll->verticalScrollBar( ) ,
-        SIGNAL( actionTriggered( int )) ,
-        this , SLOT( moveVertScrollSync( int ))
+        _scrollEvent->verticalScrollBar( ) , SIGNAL( valueChanged( int )) ,
+        _eventLabelsScroll->verticalScrollBar(), SLOT(setValue(int))
       );
 
       _layoutHistoLabels = new QGridLayout( );
       _layoutHistoLabels->setAlignment( Qt::AlignTop );
       _layoutHistoLabels->setVerticalSpacing( 0 );
 
-      auto *histogramLabelsContainer = new QWidget( );
+      auto histogramLabelsContainer = new QWidget( );
       histogramLabelsContainer->setLayout( _layoutHistoLabels );
       histogramLabelsContainer->setMaximumWidth( 150 );
+      histogramLabelsContainer->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
 
       _scrollHistoLabels = new QScrollArea( );
       _scrollHistoLabels->setWidgetResizable( true );
-      _scrollHistoLabels->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
+      _scrollHistoLabels->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _scrollHistoLabels->setWidget( histogramLabelsContainer );
 
       _layoutHistograms = new QGridLayout( );
       _layoutHistograms->setAlignment( Qt::AlignTop );
       _layoutHistograms->setVerticalSpacing( 0 );
 
-      auto *histogramsContainer = new QWidget( );
+      auto histogramsContainer = new QWidget( );
       histogramsContainer->setLayout( _layoutHistograms );
 
       _scrollHistogram = new QScrollArea( );
@@ -266,22 +262,13 @@ namespace visimpl
       _scrollHistogram->horizontalScrollBar( )->setMinimum( 0 );
       _scrollHistogram->horizontalScrollBar( )->setMaximum( 1000 );
 
+      connect(_scrollHistogram->verticalScrollBar(), SIGNAL(valueChanged(int)),
+              _scrollHistoLabels->verticalScrollBar(), SLOT(setValue(int)));
+
       connect(
         _scrollHistogram->horizontalScrollBar( ) ,
         SIGNAL( actionTriggered( int )) ,
         this , SLOT( moveHoriScrollSync( int ))
-      );
-
-      connect(
-        _scrollHistogram->verticalScrollBar( ) ,
-        SIGNAL( actionTriggered( int )) ,
-        this , SLOT( moveVertScrollSync( int ))
-      );
-
-      connect(
-        _scrollHistoLabels->verticalScrollBar( ) ,
-        SIGNAL( actionTriggered( int )) ,
-        this , SLOT( moveVertScrollSync( int ))
       );
 
       _splitHorizEvents = new QSplitter( Qt::Horizontal );
@@ -289,9 +276,17 @@ namespace visimpl
 
       _splitHorizEvents->addWidget( _eventLabelsScroll );
       _splitHorizEvents->addWidget( _scrollEvent );
+      _splitHorizEvents->setCollapsible(0, false);
+      _splitHorizEvents->setCollapsible(1, false);
+      _splitHorizEvents->setStretchFactor(0, 0);
+      _splitHorizEvents->setStretchFactor(1, 1);
 
       _splitHorizHisto->addWidget( _scrollHistoLabels );
       _splitHorizHisto->addWidget( _scrollHistogram );
+      _splitHorizHisto->setCollapsible(0, false);
+      _splitHorizHisto->setCollapsible(1, false);
+      _splitHorizHisto->setStretchFactor(0, 0);
+      _splitHorizHisto->setStretchFactor(1, 1);
 
       connect(
         _splitHorizEvents , SIGNAL( splitterMoved( int , int )) ,
@@ -307,11 +302,11 @@ namespace visimpl
 
   QWidget* Summary::_initFootGUI( void )
   {
-    auto *foot = new QWidget( );
-    auto *footLayout = new QGridLayout( );
+    auto foot = new QWidget( );
+    auto footLayout = new QGridLayout( );
 
-    auto *toolBox = new QToolBox( );
-    toolBox->setMaximumWidth( 300 );
+    _footToolBox = new QToolBox( );
+    _footToolBox->setMaximumWidth( 300 );
 
     // FOCUS
 
@@ -326,32 +321,26 @@ namespace visimpl
     _localColorWidget = new QWidget( );
     _localColorWidget->setPalette( QPalette( _colorLocal ));
     _localColorWidget->setAutoFillBackground( true );
-    _localColorWidget->setMaximumWidth( 30 );
-    _localColorWidget->setMinimumWidth( 30 );
-    _localColorWidget->setMinimumHeight( 30 );
-    _localColorWidget->setMaximumHeight( 30 );
+    _localColorWidget->setFixedSize(30, 30);
 
     _globalColorWidget = new QWidget( );
     _globalColorWidget->setPalette( QPalette( _colorGlobal ));
     _globalColorWidget->setAutoFillBackground( true );
-    _globalColorWidget->setMaximumWidth( 30 );
-    _globalColorWidget->setMinimumWidth( 30 );
-    _globalColorWidget->setMinimumHeight( 30 );
-    _globalColorWidget->setMaximumHeight( 30 );
+    _globalColorWidget->setFixedSize(30, 30);
 
     QStringList csItems;
     csItems.push_back( QString( colorScaleToString( visimpl::T_COLOR_LINEAR )));
     csItems.push_back(
       QString( colorScaleToString( visimpl::T_COLOR_LOGARITHMIC )));
 
-    auto *localComboBox = new QComboBox( );
+    auto localComboBox = new QComboBox( );
     localComboBox->addItems( csItems );
 
-    auto *globalComboBox = new QComboBox( );
+    auto globalComboBox = new QComboBox( );
     globalComboBox->addItems( csItems );
 
-    auto *groupBoxNorm = new QWidget( );
-    auto *layoutNorm = new QGridLayout( );
+    auto groupBoxNorm = new QWidget( );
+    auto layoutNorm = new QGridLayout( );
     layoutNorm->setAlignment( Qt::AlignTop );
     groupBoxNorm->setLayout( layoutNorm );
 
@@ -390,8 +379,8 @@ namespace visimpl
     _spinBoxScaleVertical->setSingleStep( 0.1 );
     _spinBoxScaleVertical->setValue( DEFAULT_SCALE );
 
-    auto *groupBoxScale = new QWidget( );
-    auto *layoutScale = new QGridLayout( );
+    auto groupBoxScale = new QWidget( );
+    auto layoutScale = new QGridLayout( );
     layoutScale->setAlignment( Qt::AlignTop );
     groupBoxScale->setLayout( layoutScale );
     layoutScale->addWidget( new QLabel( "Horizontal: " ) , 0 , 0 , 1 , 1 );
@@ -423,8 +412,8 @@ namespace visimpl
     _spinBoxZoomFactor->setSingleStep( 0.5 );
     _spinBoxZoomFactor->setValue( _zoomFactor );
 
-    auto *groupBoxBinConfig = new QWidget( );
-    auto *layoutBinConfig = new QGridLayout( );
+    auto groupBoxBinConfig = new QWidget( );
+    auto layoutBinConfig = new QGridLayout( );
     layoutBinConfig->setAlignment( Qt::AlignTop );
     groupBoxBinConfig->setLayout( layoutBinConfig );
 
@@ -452,8 +441,8 @@ namespace visimpl
     _localMaxLabel = new QLabel( "" );
     _localMaxLabel->setMaximumWidth( 50 );
 
-    auto *groupBoxInformation = new QWidget( );
-    auto *layoutInformation = new QGridLayout( );
+    auto groupBoxInformation = new QWidget( );
+    auto layoutInformation = new QGridLayout( );
     layoutInformation->setAlignment( Qt::AlignTop );
     groupBoxInformation->setLayout( layoutInformation );
 
@@ -490,14 +479,16 @@ namespace visimpl
 
     //
 
-    toolBox->addItem( groupBoxNorm , "Normalization" );
-    toolBox->addItem( groupBoxScale , "Scale adjustment" );
-    toolBox->addItem( groupBoxBinConfig , "Bin configuration" );
-    toolBox->addItem( groupBoxInformation , "Data inspector" );
-    toolBox->addItem( groupBoxRuleConfig , "Rule configuration" );
+    _footToolBox->addItem( groupBoxNorm , "Normalization" );
+    _footToolBox->addItem( groupBoxScale , "Scale adjustment" );
+    _footToolBox->addItem( groupBoxBinConfig , "Bin configuration" );
+    _footToolBox->addItem( groupBoxInformation , "Data inspector" );
+    _footToolBox->addItem( groupBoxRuleConfig , "Rule configuration" );
 
     footLayout->addWidget( _focusWidget , 0 , 0 , 1 , 1 );
-    footLayout->addWidget( toolBox , 0 , 1 , 1 , 1 );
+    footLayout->addWidget( _footToolBox , 0 , 1 , 1 , 1 );
+    footLayout->setColumnStretch(0, 1);
+    footLayout->setColumnStretch(1, 0);
 
     foot->setLayout( footLayout );
 
@@ -560,7 +551,6 @@ namespace visimpl
       mainRow.histogram->name( text.toStdString() );
 
       mainRow.label = new QLabel( text );
-      mainRow.label->setMinimumWidth( _maxLabelWidth );
       mainRow.label->setMaximumWidth( _maxLabelWidth );
       mainRow.label->setMinimumHeight( _heightPerRow );
       mainRow.label->setMaximumHeight( _heightPerRow );
@@ -598,7 +588,7 @@ namespace visimpl
       _eventLabelsScroll->setVisible( true );
       _scrollEvent->setVisible( true );
 
-      simil::EventRange timeFrames = _simData->subsetsEvents()->events();
+      const simil::EventRange timeFrames = _simData->subsetsEvents()->events();
 
       float invTotal = 1.0f / ( _spikeReport->endTime() - _spikeReport->startTime());
 
@@ -631,7 +621,6 @@ namespace visimpl
 
         QLabel* label = new QLabel( timeFrame.name.c_str());
         label->setMinimumHeight( 20 );
-        label->setMinimumWidth( _maxLabelWidth );
         label->setMaximumWidth( _maxLabelWidth );
         label->setMinimumHeight( _heightPerRow );
         label->setMaximumHeight( _heightPerRow );
@@ -790,7 +779,6 @@ namespace visimpl
 
     currentRow.histogram = histogram;
     currentRow.label = new QLabel( name.c_str());
-    currentRow.label->setMinimumWidth( _maxLabelWidth );
     currentRow.label->setMaximumWidth( _maxLabelWidth );
     currentRow.label->setMinimumHeight( _heightPerRow );
     currentRow.label->setMaximumHeight( _heightPerRow );
@@ -1562,6 +1550,24 @@ namespace visimpl
     _resizeCharts( _sizeChartVertical, Qt::Vertical );
   }
 
+  void Summary::showEvent(QShowEvent *e)
+  {
+    QWidget::showEvent(e);
+
+    int maxWidth = -1;
+    for(auto &c: _footToolBox->children())
+    {
+      auto w = qobject_cast<QWidget *>(c);
+      if(w)
+      {
+        maxWidth = std::max(maxWidth, w->sizeHint().width());
+      }
+    }
+
+    std::cout << "maxWidth " << maxWidth << std::endl;
+    if(maxWidth != -1) _footToolBox->setMinimumWidth(maxWidth);
+  }
+
   void Summary::resizeEvent( QResizeEvent* event_ )
   {
     QWidget::resizeEvent( event_ );
@@ -1664,30 +1670,6 @@ namespace visimpl
     }
   }
 
-  void Summary::moveVertScrollSync( int /*action*/ )
-  {
-    if( _syncScrollsVertically )
-    {
-      const auto sbar = qobject_cast<QScrollBar *>(sender());
-      if(!sbar) return;
-
-      const auto newPos = sbar->sliderPosition();
-
-      if( sbar == _eventLabelsScroll->verticalScrollBar() ||
-          sbar == _scrollEvent->verticalScrollBar())
-      {
-        _eventLabelsScroll->verticalScrollBar()->setValue( newPos );
-        _scrollEvent->verticalScrollBar()->setValue( newPos );
-      }
-      else if( sbar == _scrollHistoLabels->verticalScrollBar() ||
-               sbar == _scrollHistogram->verticalScrollBar() )
-      {
-        _scrollHistoLabels->verticalScrollBar()->setValue( newPos );
-        _scrollHistogram->verticalScrollBar()->setValue( newPos );
-      }
-    }
-  }
-
   void Summary::syncSplitters()
   {
     if( sender() == _splitHorizEvents )
@@ -1727,6 +1709,13 @@ namespace visimpl
   {
     perc = std::max(0.f, std::min(perc, 1.f));
     _regionPercentage = perc;
+
+    for(QScrollArea *w: {_scrollEvent, _scrollHistogram})
+    {
+      auto hs = w->horizontalScrollBar();
+      hs->setValue(hs->maximum()*perc);
+      hs->update();
+    }
 
     if(!_histogramWidgets.empty())
     {

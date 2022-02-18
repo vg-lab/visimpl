@@ -384,7 +384,7 @@ void MainWindow::showDisplayManagerWidget( void )
 
   if( !_displayManager)
   {
-    _displayManager = new DisplayManagerWidget( );
+    _displayManager = new visimpl::DisplayManagerWidget( );
     _displayManager->init( _summary->eventWidgets(),
                            _summary->histogramWidgets( ));
 
