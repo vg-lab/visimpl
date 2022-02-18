@@ -31,14 +31,22 @@
 #endif
 #ifdef VISIMPL_USE_SCOOP
 #include <scoop/version.h>
+
 #endif
 #ifdef VISIMPL_USE_SIMIL
+
 #include <simil/version.h>
+
 #endif
 #ifdef VISIMPL_USE_PREFR
+
 #include <prefr/version.h>
+
 #endif
+
 #include <visimpl/version.h>
+
+#include <acuterecorder/acuterecorder.h>
 
 #include "MainWindow.h"
 
@@ -138,7 +146,8 @@ namespace visimpl
     , _spinBoxClippingDist( nullptr )
     , _frameClippingColor( nullptr )
     , _buttonSelectionFromClippingPlanes( nullptr )
-    , m_type{ simil::TDataType::TDataUndefined }
+    , m_type{simil::TDataType::TDataUndefined}
+    , _recorder( nullptr )
   {
     _ui->setupUi( this );
 
@@ -219,8 +228,11 @@ namespace visimpl
     connect( _ui->actionHome , SIGNAL( triggered( void )) , _openGLWidget ,
              SLOT( home( void )) );
 
+    connect( _ui->actionRecorder , SIGNAL( triggered( void )) , this ,
+             SLOT( openRecorder( void )));
+
     connect( _openGLWidget , SIGNAL( stepCompleted( void )) , this ,
-             SLOT( completedStep( void )) );
+             SLOT( completedStep( void )));
 
     connect( _openGLWidget , SIGNAL( pickedSingle( unsigned int )) , this ,
              SLOT( updateSelectedStatsPickingSingle( unsigned int )) );
@@ -477,13 +489,63 @@ namespace visimpl
     if ( !filePath.isEmpty( ) )
     {
       QFileInfo eventsFile{ filePath };
-      if(eventsFile.exists())
+      if ( eventsFile.exists( ))
       {
         _lastOpenedSubsetsFileName = eventsFile.path( );
         openSubsetEventFile( filePath.toStdString( ) , false );
       }
     }
   }
+
+  void MainWindow::openRecorder( void )
+  {
+
+    // The button stops the recorder if found.
+    if( _recorder != nullptr )
+    {
+      _ui->actionRecorder->setDisabled( true );
+      _recorder->stop();
+
+      // Recorder will be deleted after finishing.
+      _recorder = nullptr;
+      _ui->actionRecorder->setChecked( false );
+      return;
+    }
+
+    RSWParameters params;
+    params.widgetsToRecord.emplace_back( "Viewport" , _openGLWidget );
+    params.widgetsToRecord.emplace_back( "Main Widget" , this );
+    params.defaultFPS = 30;
+    params.includeScreens = false;
+    params.stabilizeFramerate = true;
+
+    if(!_ui->actionAdvancedRecorderOptions->isChecked())
+    {
+      params.showWorker = false;
+      params.showWidgetSourceMode = false;
+      params.showSourceParameters = false;
+    }
+
+    auto dialog = new RecorderDialog( nullptr , params , false );
+    dialog->setWindowIcon( QIcon( ":/visimpl.png" ));
+    dialog->setFixedSize( 800 , 600 );
+    if ( dialog->exec( ) == QDialog::Accepted)
+    {
+      _recorder = dialog->getRecorder( );
+      connect( _recorder , SIGNAL( finished( )) ,
+               _recorder , SLOT( deleteLater( )));
+      connect( _recorder , SIGNAL( finished( )) ,
+               this , SLOT( finishRecording( )));
+      connect( _openGLWidget , SIGNAL( frameSwapped( )) ,
+               _recorder , SLOT( takeFrame( )));
+      _ui->actionRecorder->setChecked( true );
+    } else
+    {
+      _ui->actionRecorder->setChecked( false );
+    }
+    dialog->deleteLater( );
+  }
+
 
   void MainWindow::closeData( void )
   {
@@ -2591,10 +2653,16 @@ void MainWindow::clearGroups( void )
 
   void MainWindow::changeStackVizToolbarStatus(bool status)
   {
+    _ui->actionStackVizAutoNamingSelections->setEnabled(status);
     _ui->actionStackVizFillPlots->setEnabled(status);
     _ui->actionStackVizFocusOnPlayhead->setEnabled(status);
     _ui->actionStackVizFollowPlayHead->setEnabled(status);
     _ui->actionStackVizShowDataManager->setEnabled(status);
+  }
+
+  void MainWindow::finishRecording( )
+  {
+    _ui->actionRecorder->setEnabled( true );
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)

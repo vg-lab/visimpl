@@ -33,7 +33,7 @@ set(VISIMPL_SOURCES
   visimpl.ui
   resources.qrc
 
-        visimpl.cpp
+  visimpl.cpp
   MainWindow.cpp
   OpenGLWidget.cpp
 
@@ -81,6 +81,7 @@ set(VISIMPL_LINK_LIBRARIES
   prefr
   sumrice
   scoop
+  acuterecorder
 )
 
 if(WIN32)
@@ -121,7 +122,6 @@ endif()
 if (BRION_FOUND)
   list(APPEND VISIMPL_LINK_LIBRARIES Brion Brain)
 endif()
-
 
 if (APPLE)
   set(VISIMPL_ICON visimpl.icns)
