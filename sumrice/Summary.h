@@ -277,6 +277,11 @@ namespace visimpl
     virtual void wheelEvent( QWheelEvent* event ) override;
     virtual void resizeEvent( QResizeEvent* event ) override;
 
+    /** \brief Updates the histogram and events labels width.
+     *
+     */
+    void updateLabelsWidth();
+
     unsigned int _bins;
     float _zoomFactor;
 

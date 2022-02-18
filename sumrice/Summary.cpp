@@ -196,6 +196,7 @@ namespace visimpl
       _layoutEventLabels = new QGridLayout( );
       _layoutEventLabels->setAlignment( Qt::AlignTop );
       _layoutEventLabels->setVerticalSpacing( 0 );
+      _layoutEventLabels->setMargin(2);
 
       auto eventLabelsContainer = new QWidget( );
       eventLabelsContainer->setLayout( _layoutEventLabels );
@@ -222,6 +223,8 @@ namespace visimpl
       _scrollEvent->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _scrollEvent->setVisible( false );
       _scrollEvent->setWidget( eventsContainer );
+      _scrollEvent->horizontalScrollBar()->setMinimum(0);
+      _scrollEvent->horizontalScrollBar()->setMaximum(1000);
 
       connect(
         _scrollEvent->horizontalScrollBar( ) , SIGNAL( actionTriggered( int )) ,
@@ -236,6 +239,7 @@ namespace visimpl
       _layoutHistoLabels = new QGridLayout( );
       _layoutHistoLabels->setAlignment( Qt::AlignTop );
       _layoutHistoLabels->setVerticalSpacing( 0 );
+      _layoutHistoLabels->setMargin(2);
 
       auto histogramLabelsContainer = new QWidget( );
       histogramLabelsContainer->setLayout( _layoutHistoLabels );
@@ -646,6 +650,8 @@ namespace visimpl
         _layoutEventLabels->addWidget( label, counter, 0, 1, 1 );
         _layoutEvents->addWidget( eventWidget, counter, 1, 1, _summaryColumns );
       }
+
+      updateLabelsWidth();
     }
   }
 
@@ -806,7 +812,7 @@ namespace visimpl
              this, SLOT( childHistogramClicked( float, Qt::KeyboardModifiers )));
 
     _histogramWidgets.push_back( histogram );
-
+    updateLabelsWidth();
     update();
   }
 
@@ -1563,8 +1569,6 @@ namespace visimpl
         maxWidth = std::max(maxWidth, w->sizeHint().width());
       }
     }
-
-    std::cout << "maxWidth " << maxWidth << std::endl;
     if(maxWidth != -1) _footToolBox->setMinimumWidth(maxWidth);
   }
 
@@ -1756,6 +1760,8 @@ namespace visimpl
       row.label->setText(name);
       row.histogram->name(name.toStdString());
     }
+
+    updateLabelsWidth();
   }
 
   void Summary::changeHistogramVisibility(unsigned int idx, const bool state)
@@ -1768,7 +1774,29 @@ namespace visimpl
       auto histogram = _histogramWidgets.at(idx);
       histogram->setVisible(state);
     }
+  }
 
+  void Summary::updateLabelsWidth()
+  {
+    int maxWidth = -1;
+    auto computeHistWidth = [&maxWidth](const HistogramRow &r)
+    {
+      maxWidth = std::max(maxWidth, r.label->sizeHint().width());
+    };
+    std::for_each(_histogramRows.cbegin(), _histogramRows.cend(), computeHistWidth);
+
+    auto computeEventWidth = [&maxWidth](const EventRow &r)
+    {
+      maxWidth = std::max(maxWidth, r.label->sizeHint().width());
+    };
+    std::for_each(_eventRows.cbegin(), _eventRows.cend(), computeEventWidth);
+
+    if(maxWidth != -1)
+    {
+      // + 2*layout margin
+      _scrollHistoLabels->setMinimumWidth(maxWidth + 4);
+      _eventLabelsScroll->setMinimumWidth(maxWidth + 4);
+    }
   }
 
 }
