@@ -248,6 +248,7 @@ namespace visimpl
 
       _scrollHistoLabels = new QScrollArea( );
       _scrollHistoLabels->setWidgetResizable( true );
+      _scrollHistoLabels->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff);
       _scrollHistoLabels->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
       _scrollHistoLabels->setWidget( histogramLabelsContainer );
 
