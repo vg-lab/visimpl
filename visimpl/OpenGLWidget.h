@@ -57,14 +57,6 @@
 #include <sumrice/sumrice.h>
 #include <scoop/scoop.h>
 
-#ifdef VISIMPL_USE_ZEROEQ
-  #include <zeroeq/zeroeq.h>
-  #include <servus/uri.h>
-
-  #include <pthread.h>
-  #include <mutex>
-#endif
-
 class QLabel;
 class LoadingDialog;
 class LoaderThread;
@@ -289,15 +281,20 @@ namespace visimpl
     virtual void mouseMoveEvent( QMouseEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
+    /** \brief Connects the player to ZeroEQ signaling.
+     *
+     */
+    void connectPlayerZeroEQ();
+
     std::unordered_set< uint32_t > _selectedGIDs;
 
     std::queue< std::pair< unsigned int, bool >> _pendingGroupStateChanges;
 
-  #ifdef VISIMPL_USE_ZEROEQ
+#ifdef VISIMPL_USE_ZEROEQ
 
-    std::string _zeqUri;
+  std::string _zeqUri;
 
-  #endif
+#endif
 
     QLabel* _fpsLabel;
     QLabel* _labelCurrentTime;

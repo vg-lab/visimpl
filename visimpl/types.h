@@ -186,9 +186,17 @@ namespace visimpl
 
     Camera( void ) : prefr::ICamera( ), reto::OrbitalCameraController( ){ }
 
+    Camera( std::string session
 #ifdef VISIMPL_USE_ZEROEQ
-    Camera( std::string zeqUri_ ): prefr::ICamera( ), reto::OrbitalCameraController( nullptr , zeqUri_ ){ }
+        // @felix I really apologize for doing this... no other way.
+        , std::shared_ptr<zeroeq::Subscriber> subscriber = nullptr
 #endif
+        ): prefr::ICamera( ), reto::OrbitalCameraController( nullptr , session
+#ifdef VISIMPL_USE_ZEROEQ
+        , subscriber
+#endif
+        ){
+    }
 
     glm::vec3 PReFrCameraPosition( void )
     {

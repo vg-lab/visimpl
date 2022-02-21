@@ -40,6 +40,8 @@
 void usageMessage(  char* progName );
 void dumpVersion( void );
 
+template<class T> void ignore( const T& ) { }
+
 int main( int argc, char** argv )
 {
   // Linux osg obj importer has a bug with non english lang.
@@ -58,6 +60,8 @@ int main( int argc, char** argv )
 
   std::string networkFile, activityFile, subsetEventFile;
   std::string zeqUri;
+  bool zNull = false;
+  std::string target;
   std::string correlations;
 
   simil::TDataType dataType = simil::TDataUndefined;
@@ -86,6 +90,12 @@ int main( int argc, char** argv )
     if( std::strcmp( argv[ i ], "-zeq" ) == 0 )
     {
 #ifdef VISIMPL_USE_ZEROEQ
+//      if(zNull)
+//      {
+//        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
+//        usageMessage(argv[0]);
+//      }
+
       if( ++i < argc )
       {
         zeqUri = std::string( argv[ i ]);
@@ -96,6 +106,24 @@ int main( int argc, char** argv )
       return -1;
 #endif
     }
+
+//    if( std::strcmp( argv[ i ], "-znull" ) == 0 )
+//    {
+//#ifdef VISIMPL_USE_ZEROEQ
+//      if(!zeqUri.empty())
+//      {
+//        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
+//        usageMessage(argv[0]);
+//      }
+//
+//      zNull = true;
+//      continue;
+//
+//#else
+//      std::cerr << "Zeq not supported " << std::endl;
+//      return -1;
+//#endif
+//    }
 
     if( std::strcmp( argv[ i ], "-bc" ) == 0 )
     {
@@ -217,6 +245,13 @@ int main( int argc, char** argv )
   {
     zeqUri = zeroeq::DEFAULT_SESSION;
   }
+
+  if(zNull)
+  {
+    zeqUri = zeroeq::NULL_SESSION;
+  }
+#else
+  ignore(zNull);
 #endif
 
   mainWindow.init( zeqUri );
@@ -268,6 +303,8 @@ void usageMessage( char* progName )
 #ifdef VISIMPL_USE_ZEROEQ
             << "\t[ -zeq <session_name*> ]"
             << std::endl
+//            << "\t[ -znull ]"
+//            << std::endl
 #endif
             << "\t[ -ws | --window-size ] <width> <height> ]"
             << std::endl
@@ -308,6 +345,7 @@ void dumpVersion( void )
 #else
   std::cerr << "\tno";
 #endif
+  std::cerr << std::endl;
 
   std::cerr << "REST API support: ";
 #ifdef SIMIL_WITH_REST_API
@@ -315,7 +353,6 @@ void dumpVersion( void )
 #else
   std::cerr << "\tno";
 #endif
-
   std::cerr << std::endl;
   std::cerr << std::endl;
 }

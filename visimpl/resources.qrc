@@ -20,6 +20,13 @@
     <file>icons/repeat.svg</file>
     <file>icons/previous.svg</file>
     <file>icons/next.svg</file>
+    <file>icons/autofocus.svg</file>
+    <file>icons/fill.svg</file>
+    <file>icons/focus.svg</file>
+    <file>icons/generic-info.svg</file>
+    <file>icons/trash.svg</file>
+    <file>icons/stackviz.svg</file>
+    <file>icons/recorder.svg</file>
     <file>visimpl.png</file>
   </qresource>
 </RCC>

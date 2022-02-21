@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 VG-Lab/URJC.
+ * Copyright (c) 2015-2022 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
@@ -43,6 +43,8 @@
 #include "EventWidget.h"
 #include "FocusFrame.h"
 #include "Histogram.h"
+
+class QToolBox;
 
 namespace visimpl
 {
@@ -122,6 +124,20 @@ namespace visimpl
 
     void repaintHistograms( void );
 
+    /** \brief Changes the name of the histogram.
+     * \param[in] idx Histogram index [1-N].
+     * \param[in] name Histogram name.
+     *
+     */
+    void changeHistogramName(unsigned int idx, const QString &name);
+
+    /** \brief Shows/hides a histogram.
+     * \param[in] idx Histogram index [1-N]
+     * \param[in] state True to make visible and false to hide.
+     *
+     */
+    void changeHistogramVisibility(unsigned int idx, const bool state);
+
   signals:
 
     void histogramClicked( float );
@@ -167,7 +183,6 @@ namespace visimpl
     void gridLinesNumber( int linesNumber );
 
     void updateMouseMarker( QPoint point );
-    void moveVertScrollSync( int newPos );
     void moveHoriScrollSync( int newPos );
     void syncSplitters( );
 
@@ -181,6 +196,8 @@ namespace visimpl
     void _updateScaleVertical( void );
 
   protected:
+
+    virtual void showEvent(QShowEvent *);
 
     struct HistogramRow
     {
@@ -260,6 +277,11 @@ namespace visimpl
     virtual void wheelEvent( QWheelEvent* event ) override;
     virtual void resizeEvent( QResizeEvent* event ) override;
 
+    /** \brief Updates the histogram and events labels width.
+     *
+     */
+    void updateLabelsWidth();
+
     unsigned int _bins;
     float _zoomFactor;
 
@@ -334,10 +356,7 @@ namespace visimpl
     QSpinBox* _spinBoxBins;
     QDoubleSpinBox* _spinBoxZoomFactor;
 
-    QWidget* tmpFootLeft;
-    QWidget* tmpFootRight;
-
-//    simil::SubsetEventManager* _subsetEventManager;
+    //    simil::SubsetEventManager* _subsetEventManager;
     unsigned int _maxNumEvents;
     std::vector< TEvent > _events;
 
@@ -355,7 +374,7 @@ namespace visimpl
     unsigned int _footHeightMax;
     unsigned int _footHeightMin;
     unsigned int _footWidthMax;
-//    unsigned int _currentCentralMinWidth;
+    QToolBox *_footToolBox;
 
     QPoint _lastMousePosition;
     QPoint _regionGlobalPosition;

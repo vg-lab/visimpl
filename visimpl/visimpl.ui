@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -56,22 +56,45 @@
     <addaction name="separator"/>
     <addaction name="actionTogglePlaybackDock"/>
     <addaction name="actionToggleSimConfigDock"/>
+    <addaction name="actionToggleStackVizDock"/>
     <addaction name="separator"/>
     <addaction name="actionShowInactive"/>
     <addaction name="actionShowCurrentTime"/>
     <addaction name="actionShowEventsActivity"/>
+    <addaction name="actionAddZeroEQhistograms"/>
     <addaction name="separator"/>
     <addaction name="actionUpdateOnIdle"/>
     <addaction name="actionShowFPSOnIdleUpdate"/>
+    <addaction name="separator"/>
+    <addaction name="actionRecorder"/>
+    <addaction name="actionAdvancedRecorderOptions"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="stackVizOptions">
+    <property name="title">
+     <string>StackViz</string>
+    </property>
+    <addaction name="actionStackVizAutoNamingSelections"/>
+    <addaction name="actionStackVizFillPlots"/>
+    <addaction name="actionStackVizShowDataManager"/>
+    <addaction name="actionStackVizFocusOnPlayhead"/>
+    <addaction name="actionStackVizFollowPlayHead"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
+   <addaction name="stackVizOptions"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="windowTitle">
     <string>toolBar</string>
+   </property>
+   <property name="toolTip">
+    <string>Starts/Stop the recorder.</string>
    </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>
@@ -90,10 +113,18 @@
    <addaction name="actionHome"/>
    <addaction name="actionBackgroundColor"/>
    <addaction name="separator"/>
+   <addaction name="actionStackVizShowDataManager"/>
+   <addaction name="actionStackVizFillPlots"/>
+   <addaction name="separator"/>
+   <addaction name="actionStackVizFocusOnPlayhead"/>
+   <addaction name="actionStackVizFollowPlayHead"/>
+   <addaction name="separator"/>
+   <addaction name="actionToggleStackVizDock"/>
    <addaction name="actionTogglePlaybackDock"/>
    <addaction name="actionToggleSimConfigDock"/>
    <addaction name="separator"/>
    <addaction name="actionShowInactive"/>
+   <addaction name="actionRecorder"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -132,6 +163,21 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+B</string>
+   </property>
+  </action>
+  <action name="actionRecorder">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/recorder.svg</normaloff>:/icons/recorder.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Recorder</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
   <action name="actionOpenBlueConfig">
@@ -187,6 +233,17 @@
     <string>Ctrl+S</string>
    </property>
   </action>
+  <action name="actionAdvancedRecorderOptions">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Advanced recorder options</string>
+   </property>
+   <property name="toolTip">
+    <string>Enable advanced recorder options</string>
+   </property>
+  </action>
   <action name="actionToggleSimConfigDock">
    <property name="checkable">
     <bool>true</bool>
@@ -203,6 +260,24 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+T</string>
+   </property>
+  </action>
+  <action name="actionToggleStackVizDock">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/stackviz.svg</normaloff>:/icons/stackviz.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Toggle StackViz Dock</string>
+   </property>
+   <property name="toolTip">
+    <string>Show/Hide StackViz dock</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string>
    </property>
   </action>
   <action name="actionHome">
@@ -291,7 +366,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="resources.qrc">
      <normaloff>:/icons/hide.svg</normaloff>
      <normalon>:/icons/show.svg</normalon>:/icons/hide.svg</iconset>
    </property>
@@ -359,6 +434,79 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+H</string>
+   </property>
+  </action>
+  <action name="actionAddZeroEQhistograms">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Add ZeroEQ selections as visual groups</string>
+   </property>
+  </action>
+  <action name="actionStackVizAutoNamingSelections">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto Naming Selections</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
+   </property>
+  </action>
+  <action name="actionStackVizFillPlots">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/fill.svg</normaloff>:/icons/fill.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Fill Plots</string>
+   </property>
+   <property name="toolTip">
+    <string>Toggle line/fill plots</string>
+   </property>
+  </action>
+  <action name="actionStackVizShowDataManager">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/generic-info.svg</normaloff>:/icons/generic-info.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Show Data Manager</string>
+   </property>
+  </action>
+  <action name="actionStackVizFocusOnPlayhead">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/focus.svg</normaloff>:/icons/focus.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Focus on playhead</string>
+   </property>
+   <property name="toolTip">
+    <string>Focus on playhead</string>
+   </property>
+  </action>
+  <action name="actionStackVizFollowPlayHead">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/autofocus.svg</normaloff>:/icons/autofocus.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Follow playhead</string>
+   </property>
+   <property name="toolTip">
+    <string>Follow playhead</string>
    </property>
   </action>
  </widget>

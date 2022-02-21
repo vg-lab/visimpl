@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 VG-Lab/URJC.
+ * Copyright (c) 2015-2022 VG-Lab/URJC.
  *
  * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
  *
@@ -19,7 +19,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
- 
+
 #ifdef WIN32
 #include <winsock2.h>
 #endif
@@ -37,6 +37,10 @@
 // Sumrice
 #include <sumrice/sumrice.h>
 
+// C++
+#include <memory>
+
+class Recorder;
 class QDockWidget;
 class QPushButton;
 class QSlider;
@@ -53,6 +57,8 @@ namespace Ui
 
 namespace visimpl
 {
+  class StackViz;
+
   enum TSelectionSource
   {
     SRC_EXTERNAL = 0,
@@ -90,14 +96,18 @@ namespace visimpl
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
 
+    void openRecorder( void );
+
     void closeData( void );
 
     void dialogAbout( void );
+
     void dialogSelectionManagement( void );
     void dialogSubsetImporter( void );
 
     void togglePlaybackDock( void );
     void toggleSimConfigDock( void );
+    void toggleStackVizDock( void );
 
     void UpdateSimulationSlider( float percentage );
     void UpdateSimulationColorMapping( void );
@@ -184,6 +194,17 @@ namespace visimpl
      */
     void onGroupNameClicked();
 
+    /** \brief Removes the group.
+     *
+     */
+    void onGroupDeleteClicked();
+
+    /** \brief Removes the visual group with the given index.
+     * param[in] idx Index of visual group in domain manager.
+     *
+     */
+    void removeVisualGroup(const unsigned int idx);
+
     void selectionManagerChanged( void );
     void setSelection( const GIDUSet& selection_, TSelectionSource source_ = SRC_UNDEFINED );
     void clearSelection( void );
@@ -204,9 +225,18 @@ namespace visimpl
      */
     void saveGroups();
 
+    /** \brief Enables/disables the toolbar buttons related to stackviz widget.
+     * \param[in] status True to enable and false to disable.
+     *
+     */
+    void changeStackVizToolbarStatus(bool status);
+
+    void finishRecording();
+
   protected:
     void _initSimControlDock( void );
     void _initPlaybackDock( void );
+    void _initStackVizDock( void );
     void _initSummaryWidget( void );
 
     void _configurePlayer( void );
@@ -235,13 +265,6 @@ namespace visimpl
 
   protected:
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
-    void _setZeqUri( const std::string& );
-    bool _zeqConnection;
-
-    std::string _zeqUri;
-    zeroeq::Subscriber* _subscriber;
-
-    std::thread* _thread;
 
   #endif // VISIMPL_USE_ZEROEQ
 
@@ -250,6 +273,7 @@ namespace visimpl
      *
      */
     void sendZeroEQPlaybackOperation(const unsigned int op);
+
 
     Ui::MainWindow* _ui;
 
@@ -275,6 +299,9 @@ namespace visimpl
     QPushButton* _goToButton;
 
     QDockWidget* _simConfigurationDock;
+
+    QDockWidget* _stackVizDock;
+    StackViz *_stackViz;
 
     QTabWidget* _modeSelectionWidget;
     QToolBox* _toolBoxOptions;
@@ -331,7 +358,10 @@ namespace visimpl
     QPushButton* _frameClippingColor;
     QPushButton* _buttonSelectionFromClippingPlanes;
 
-    std::string m_subsetEventFile;
     simil::TDataType m_type;
+    std::string m_subsetEventFile;
+
+    // Recorder
+    Recorder* _recorder;
   };
 } // namespace visimpl

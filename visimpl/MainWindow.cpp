@@ -31,14 +31,22 @@
 #endif
 #ifdef VISIMPL_USE_SCOOP
 #include <scoop/version.h>
+
 #endif
 #ifdef VISIMPL_USE_SIMIL
+
 #include <simil/version.h>
+
 #endif
 #ifdef VISIMPL_USE_PREFR
+
 #include <prefr/version.h>
+
 #endif
+
 #include <visimpl/version.h>
+
+#include <acuterecorder/acuterecorder.h>
 
 #include "MainWindow.h"
 
@@ -67,6 +75,8 @@
 
 #include <sumrice/sumrice.h>
 
+template<class T> void ignore( const T& ) { }
+
 namespace visimpl
 {
   enum toolIndex
@@ -79,11 +89,6 @@ namespace visimpl
 
   MainWindow::MainWindow( QWidget* parent_, bool updateOnIdle )
     : QMainWindow( parent_ )
-#ifdef VISIMPL_USE_GMRVLEX
-    , _zeqConnection( false )
-    , _subscriber( nullptr )
-    , _thread( nullptr )
-#endif
     , _ui( new Ui::MainWindow )
     , _lastOpenedNetworkFileName( "" )
     , _playIcon(":/icons/play.svg")
@@ -100,9 +105,11 @@ namespace visimpl
     , _repeatButton( nullptr )
     , _goToButton( nullptr )
     , _simConfigurationDock( nullptr )
+    , _stackVizDock( nullptr )
+    , _stackViz( nullptr )
     , _modeSelectionWidget( nullptr )
     , _toolBoxOptions( nullptr )
-    , _objectInspectorGB{nullptr}
+    , _objectInspectorGB{ nullptr }
     , _groupBoxTransferFunction( nullptr )
     , _tfWidget( nullptr )
     , _selectionManager( nullptr )
@@ -140,6 +147,7 @@ namespace visimpl
     , _frameClippingColor( nullptr )
     , _buttonSelectionFromClippingPlanes( nullptr )
     , m_type{simil::TDataType::TDataUndefined}
+    , _recorder( nullptr )
   {
     _ui->setupUi( this );
 
@@ -161,6 +169,22 @@ namespace visimpl
     connect(_openGLWidget, SIGNAL(dataLoaded()), this, SLOT(onDataLoaded()));
 
     this->setCentralWidget( _openGLWidget );
+
+#ifdef VISIMPL_USE_ZEROEQ
+
+    auto &zInstance = ZeroEQConfig::instance();
+    if(!zInstance.isConnected())
+    {
+      zInstance.connect(zeqUri);
+    }
+
+    zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
+                                      [&](const void* data_, unsigned long long size_)
+                                      { _onSelectionEvent(lexis::data::SelectedIDs::create(data_,  size_));});
+
+    // receive loop will be started by OpenGLWidget after loading data.
+
+#endif
 
     _openGLWidget->idleUpdate( _ui->actionUpdateOnIdle->isChecked( ) );
 
@@ -185,35 +209,39 @@ namespace visimpl
     connect( _ui->actionOpenCSVFiles, SIGNAL( triggered( void ) ), this,
              SLOT( openCSVFilesThroughDialog( void ) ) );
 
-    connect( _ui->actionOpenH5Files, SIGNAL( triggered( void ) ), this,
-             SLOT( openHDF5ThroughDialog( void ) ) );
+    connect( _ui->actionOpenH5Files , SIGNAL( triggered( void )) , this ,
+             SLOT( openHDF5ThroughDialog( void )) );
 
-    connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void ) ), this,
-             SLOT( openSubsetEventsFileThroughDialog( void ) ) );
+    connect( _ui->actionOpenSubsetEventsFile , SIGNAL( triggered( void )) ,
+             this ,
+             SLOT( openSubsetEventsFileThroughDialog( void )) );
 
-    connect( _ui->actionCloseData, SIGNAL( triggered( void ) ), this,
-             SLOT( closeData( void ) ) );
+    connect( _ui->actionCloseData , SIGNAL( triggered( void )) , this ,
+             SLOT( closeData( void )) );
 
-    connect( _ui->actionQuit, SIGNAL( triggered( void ) ), this,
-             SLOT( close( ) ) );
+    connect( _ui->actionQuit , SIGNAL( triggered( void )) , this ,
+             SLOT( close( )) );
 
-    connect( _ui->actionAbout, SIGNAL( triggered( void ) ), this,
-             SLOT( dialogAbout( void ) ) );
+    connect( _ui->actionAbout , SIGNAL( triggered( void )) , this ,
+             SLOT( dialogAbout( void )) );
 
-    connect( _ui->actionHome, SIGNAL( triggered( void ) ), _openGLWidget,
-             SLOT( home( void ) ) );
+    connect( _ui->actionHome , SIGNAL( triggered( void )) , _openGLWidget ,
+             SLOT( home( void )) );
 
-    connect( _openGLWidget, SIGNAL( stepCompleted( void ) ), this,
-             SLOT( completedStep( void ) ) );
+    connect( _ui->actionRecorder , SIGNAL( triggered( void )) , this ,
+             SLOT( openRecorder( void )));
 
-    connect( _openGLWidget, SIGNAL( pickedSingle( unsigned int ) ), this,
-             SLOT( updateSelectedStatsPickingSingle( unsigned int ) ) );
+    connect( _openGLWidget , SIGNAL( stepCompleted( void )) , this ,
+             SLOT( completedStep( void )));
 
-    QAction* actionTogglePause = new QAction( this );
+    connect( _openGLWidget , SIGNAL( pickedSingle( unsigned int )) , this ,
+             SLOT( updateSelectedStatsPickingSingle( unsigned int )) );
+
+    QAction *actionTogglePause = new QAction( this );
     actionTogglePause->setShortcut( Qt::Key_Space );
 
-    connect( actionTogglePause, SIGNAL( triggered( ) ), this,
-             SLOT( PlayPause( ) ) );
+    connect( actionTogglePause , SIGNAL( triggered( )) , this ,
+             SLOT( PlayPause( )) );
     addAction( actionTogglePause );
 
 #ifdef VISIMPL_USE_ZEROEQ
@@ -222,58 +250,66 @@ namespace visimpl
 
     _openGLWidget->showInactive( true );
 
-    connect( _ui->actionShowInactive, SIGNAL( toggled( bool ) ), this,
-             SLOT( showInactive( bool ) ) );
+    connect( _ui->actionShowInactive , SIGNAL( toggled( bool )) , this ,
+             SLOT( showInactive( bool )) );
 #endif
 
     _initPlaybackDock( );
     _initSimControlDock( );
+    _initStackVizDock( );
+    _ui->actionToggleStackVizDock->setEnabled(false);
 
-    connect( _simulationDock->toggleViewAction( ), SIGNAL( toggled( bool ) ),
-             _ui->actionTogglePlaybackDock, SLOT( setChecked( bool ) ) );
+    connect(
+      _simulationDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
+      _ui->actionTogglePlaybackDock , SLOT( setChecked( bool ))
+    );
 
-    connect( _ui->actionTogglePlaybackDock, SIGNAL( triggered( ) ), this,
-             SLOT( togglePlaybackDock( ) ) );
+    connect(
+      _ui->actionTogglePlaybackDock , SIGNAL( triggered( )) ,
+      this , SLOT( togglePlaybackDock( ))
+    );
 
-    connect( _simConfigurationDock->toggleViewAction( ),
-             SIGNAL( toggled( bool ) ), _ui->actionToggleSimConfigDock,
-             SLOT( setChecked( bool ) ) );
+    connect(
+      _simConfigurationDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
+      _ui->actionToggleSimConfigDock , SLOT( setChecked( bool ))
+    );
 
-    connect( _ui->actionToggleSimConfigDock, SIGNAL( triggered( ) ), this,
-             SLOT( toggleSimConfigDock( ) ) );
+    connect(
+      _ui->actionToggleSimConfigDock , SIGNAL( triggered( )) ,
+      this , SLOT( toggleSimConfigDock( ))
+    );
 
-    _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
-    _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
+    connect(
+      _stackVizDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
+      _ui->actionToggleStackVizDock , SLOT( setChecked( bool ))
+    );
 
-#ifdef VISIMPL_USE_ZEROEQ
+    connect(
+      _stackVizDock->toggleViewAction( ) , SIGNAL( toggled( bool )) ,
+      this, SLOT( changeStackVizToolbarStatus(bool))
+    );
+    changeStackVizToolbarStatus(false);
 
-    _setZeqUri( zeqUri );
+    connect(
+      _ui->actionToggleStackVizDock , SIGNAL( triggered( )) ,
+      this , SLOT( toggleStackVizDock( ))
+    );
 
-#endif
+    _ui->toolBar->setContextMenuPolicy( Qt::PreventContextMenu );
+    _ui->menubar->setContextMenuPolicy( Qt::PreventContextMenu );
   }
 
   MainWindow::~MainWindow( void )
   {
 #ifdef VISIMPL_USE_ZEROEQ
 
-    if( _zeqConnection )
-    {
-      _zeqConnection = false;
-      _thread->join();
-
-      delete _thread;
-
-      if(_subscriber)
-      {
-        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
-        delete _subscriber;
-        _subscriber = nullptr;
-      }
-    }
+    auto &instance = ZeroEQConfig::instance();
+    if(instance.isConnected())
+      instance.disconnect();
 
 #endif
-
     delete _ui;
+
   }
 
   void MainWindow::showStatusBarMessage( const QString& message )
@@ -288,6 +324,9 @@ namespace visimpl
     _selectionManager->setGIDs( _domainManager->gids( ) );
 
     _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
+
+    _ui->actionToggleStackVizDock->setEnabled(true);
+    _stackViz->init( _openGLWidget->player( ));
 
     if(_openGLWidget)
     {
@@ -402,6 +441,7 @@ namespace visimpl
     if(!eventsFile.exists())
       return;
 
+    bool h5 = false;
     QString errorText;
     try
     {
@@ -412,6 +452,7 @@ namespace visimpl
       else if(eventsFile.suffix().toLower().compare("h5") == 0)
       {
         _subsetEvents->loadH5( filePath );
+        h5 = true;
       }
       else
       {
@@ -423,16 +464,19 @@ namespace visimpl
       errorText = QString::fromLocal8Bit(e.what());
     }
 
-    if(!errorText.isEmpty())
+    if ( !errorText.isEmpty( ))
     {
-      QMessageBox::warning(this, tr("Error loading Events file"), errorText, QMessageBox::Ok);
+      QMessageBox::warning( this , tr( "Error loading Events file" ) ,
+                            errorText , QMessageBox::Ok );
       return;
     }
 
-    _subsetImporter->reload(_subsetEvents);
+    _subsetImporter->reload( _subsetEvents );
 
-    _openGLWidget->subsetEventsManager(_subsetEvents);
-    _openGLWidget->showEventsActivityLabels(_ui->actionShowEventsActivity->isChecked());
+    _openGLWidget->subsetEventsManager( _subsetEvents );
+    _openGLWidget->showEventsActivityLabels(
+      _ui->actionShowEventsActivity->isChecked( ));
+    _stackViz->openSubsetEventsFile( h5 );
   }
 
   void MainWindow::openSubsetEventsFileThroughDialog( void )
@@ -445,14 +489,63 @@ namespace visimpl
     if ( !filePath.isEmpty( ) )
     {
       QFileInfo eventsFile{ filePath };
-      if(eventsFile.exists())
+      if ( eventsFile.exists( ))
       {
-        _lastOpenedSubsetsFileName = eventsFile.path();
-
-        openSubsetEventFile( filePath.toStdString( ), false );
+        _lastOpenedSubsetsFileName = eventsFile.path( );
+        openSubsetEventFile( filePath.toStdString( ) , false );
       }
     }
   }
+
+  void MainWindow::openRecorder( void )
+  {
+
+    // The button stops the recorder if found.
+    if( _recorder != nullptr )
+    {
+      _ui->actionRecorder->setDisabled( true );
+      _recorder->stop();
+
+      // Recorder will be deleted after finishing.
+      _recorder = nullptr;
+      _ui->actionRecorder->setChecked( false );
+      return;
+    }
+
+    RSWParameters params;
+    params.widgetsToRecord.emplace_back( "Viewport" , _openGLWidget );
+    params.widgetsToRecord.emplace_back( "Main Widget" , this );
+    params.defaultFPS = 30;
+    params.includeScreens = false;
+    params.stabilizeFramerate = true;
+
+    if(!_ui->actionAdvancedRecorderOptions->isChecked())
+    {
+      params.showWorker = false;
+      params.showWidgetSourceMode = false;
+      params.showSourceParameters = false;
+    }
+
+    auto dialog = new RecorderDialog( nullptr , params , false );
+    dialog->setWindowIcon( QIcon( ":/visimpl.png" ));
+    dialog->setFixedSize( 800 , 600 );
+    if ( dialog->exec( ) == QDialog::Accepted)
+    {
+      _recorder = dialog->getRecorder( );
+      connect( _recorder , SIGNAL( finished( )) ,
+               _recorder , SLOT( deleteLater( )));
+      connect( _recorder , SIGNAL( finished( )) ,
+               this , SLOT( finishRecording( )));
+      connect( _openGLWidget , SIGNAL( frameSwapped( )) ,
+               _recorder , SLOT( takeFrame( )));
+      _ui->actionRecorder->setChecked( true );
+    } else
+    {
+      _ui->actionRecorder->setChecked( false );
+    }
+    dialog->deleteLater( );
+  }
+
 
   void MainWindow::closeData( void )
   {
@@ -551,7 +644,7 @@ namespace visimpl
 
   void MainWindow::toggleSimConfigDock( void )
   {
-    if ( _ui->actionToggleSimConfigDock->isChecked( ) )
+    if ( _ui->actionToggleSimConfigDock->isChecked( ))
       _simConfigurationDock->show( );
     else
       _simConfigurationDock->close( );
@@ -559,21 +652,30 @@ namespace visimpl
     update( );
   }
 
+  void MainWindow::toggleStackVizDock( void )
+  {
+    if ( _ui->actionToggleStackVizDock->isChecked( ))
+      _stackVizDock->show( );
+    else
+      _stackVizDock->close( );
+
+    update( );
+  }
+
   void MainWindow::_configurePlayer( void )
   {
-    connect( _openGLWidget, SIGNAL( updateSlider( float ) ), this,
-             SLOT( UpdateSimulationSlider( float ) ) );
+    connect( _openGLWidget , SIGNAL( updateSlider( float )) , this ,
+             SLOT( UpdateSimulationSlider( float )) );
 
-    _objectInspectorGB->setSimPlayer(_openGLWidget->player( ));
-    _subsetEvents = _openGLWidget->subsetEventsManager( );
+    _objectInspectorGB->setSimPlayer( _openGLWidget->player( ));
 
     _startTimeLabel->setText(
-      QString::number(_openGLWidget->player()->startTime(), 'f', 3));
+      QString::number( _openGLWidget->player( )->startTime( ) , 'f' , 3 ));
 
     _endTimeLabel->setText(
-      QString::number(_openGLWidget->player()->endTime(), 'f', 3));
+      QString::number( _openGLWidget->player( )->endTime( ) , 'f' , 3 ));
 
-    _simSlider->setEnabled(true);
+    _simSlider->setEnabled( true );
 
 #ifdef SIMIL_USE_ZEROEQ
     try
@@ -606,11 +708,59 @@ namespace visimpl
     _initSummaryWidget( );
   }
 
+  void MainWindow::_initStackVizDock( void )
+  {
+    _stackVizDock = new QDockWidget( );
+    _stackVizDock->setMinimumHeight( 100 );
+    _stackVizDock->setSizePolicy( QSizePolicy::MinimumExpanding ,
+                                  QSizePolicy::MinimumExpanding );
+    _stackVizDock->setVisible(false);
+
+    _stackViz = new StackViz( this );
+    if ( _openGLWidget && _openGLWidget->player( ))
+    {
+      _stackViz->init( _openGLWidget->player( ));
+    }
+
+    _stackVizDock->setWidget( _stackViz );
+    this->addDockWidget( Qt::LeftDockWidgetArea , _stackVizDock );
+
+    connect(
+      _ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
+      _stackViz , SLOT( showDisplayManagerWidget( ))
+    );
+
+    connect(
+      _ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
+      _stackViz , SLOT( showDisplayManagerWidget( ))
+    );
+
+    connect(
+      _ui->actionStackVizAutoNamingSelections , SIGNAL( triggered( )) ,
+      _stackViz , SLOT( toggleAutoNameSelections( ))
+    );
+
+    connect(
+      _ui->actionStackVizFillPlots , SIGNAL( triggered( bool )) ,
+      _stackViz , SLOT( fillPlots( bool ))
+    );
+
+    connect(
+      _ui->actionStackVizFocusOnPlayhead , SIGNAL( triggered( )) ,
+      _stackViz , SLOT( focusPlayback( ))
+    );
+
+    connect(
+      _ui->actionStackVizFollowPlayHead , SIGNAL( triggered( bool )) ,
+      _stackViz , SLOT( followPlayhead( bool ))
+    );
+  }
+
   void MainWindow::_initPlaybackDock( void )
   {
     _simulationDock = new QDockWidget( );
     _simulationDock->setMinimumHeight( 100 );
-    _simulationDock->setSizePolicy( QSizePolicy::MinimumExpanding,
+    _simulationDock->setSizePolicy( QSizePolicy::MinimumExpanding ,
                                     QSizePolicy::MinimumExpanding );
 
     unsigned int totalHSpan = 20;
@@ -1178,6 +1328,8 @@ namespace visimpl
 
     if ( _summary )
       _summary->repaintHistograms( );
+
+    _stackViz->updateHistograms( );
   }
 
   void MainWindow::UpdateSimulationColorMapping( void )
@@ -1508,8 +1660,8 @@ namespace visimpl
   {
     auto selection = _domainManager->selection( );
 
-    _buttonAddGroup->setEnabled( true );
-    _buttonClearSelection->setEnabled( true );
+    _buttonAddGroup->setEnabled( !selection.empty() );
+    _buttonClearSelection->setEnabled( !selection.empty() );
     _selectionSizeLabel->setText( QString::number( selection.size( ) ) );
     _selectionSizeLabel->update( );
   }
@@ -1588,46 +1740,6 @@ namespace visimpl
 
 #endif
 
-  void MainWindow::_setZeqUri( const std::string& uri_ )
-  {
-    if(!uri_.empty())
-    {
-      bool failed = false;
-      try
-      {
-        _zeqUri = uri_;
-        _zeqConnection = true;
-        _subscriber = new zeroeq::Subscriber( _zeqUri );
-
-        _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ),
-          [&]( const void* data_, unsigned long long size_ )
-          { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
-
-        _thread = new std::thread( [this]( )
-        { while ( _zeqConnection ) _subscriber->receive( 10000 ); } );
-      }
-      catch(std::exception &e)
-      {
-        std::cerr << "Exception when initializing ZeroEQ. ";
-        std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
-        failed = true;
-      }
-      catch(...)
-      {
-        std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-        failed = true;
-      }
-
-      if(failed)
-      {
-        _zeqUri.clear();
-        _zeqConnection = false;
-        _subscriber = nullptr;
-        _thread = nullptr;
-      }
-    }
-  }
-
   void MainWindow::_onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected )
   {
     if ( _openGLWidget )
@@ -1637,6 +1749,11 @@ namespace visimpl
       visimpl::GIDUSet selectedSet( ids.begin( ), ids.end( ) );
 
       setSelection( selectedSet, SRC_EXTERNAL );
+
+      if(_ui->actionAddZeroEQhistograms->isChecked())
+      {
+        addGroupFromSelection();
+      }
     }
   }
 
@@ -1693,9 +1810,19 @@ namespace visimpl
 
     connect(nameButton, SIGNAL(clicked()), this, SLOT(onGroupNameClicked()));
 
+    auto deleteButton = new QPushButton(QIcon(":/icons/close.svg"), "");
+    deleteButton->setProperty("groupPtr", reinterpret_cast<unsigned long long>(group));
+
+    connect(deleteButton, SIGNAL(clicked()), this, SLOT(onGroupDeleteClicked()));
+
+    auto firstLayout = new QHBoxLayout();
+    firstLayout->setMargin(0);
+    firstLayout->addWidget(nameButton, 1);
+    firstLayout->addWidget(deleteButton, 0);
+
     auto layout = new QVBoxLayout();
     layout->setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
-    layout->addWidget( nameButton );
+    layout->addLayout(firstLayout);
     layout->addWidget( visibilityCheckbox );
     layout->addWidget( new QLabel( numberText ) );
 
@@ -1736,22 +1863,8 @@ namespace visimpl
 
 void MainWindow::clearGroups( void )
   {
-    for ( auto row : _groupsVisButtons )
-    {
-      auto container = std::get< gr_container >( row );
-
-      _groupLayout->removeWidget( container );
-
-      delete container;
-
-      _domainManager->removeVisualGroup( 0 );
-    }
-
-    _groupsVisButtons.clear( );
-
-    _buttonImportGroups->setEnabled( true );
-    _buttonClearGroups->setEnabled( false );
-    _buttonSaveGroups->setEnabled(false);
+    while(!_groupsVisButtons.empty())
+      removeVisualGroup(0);
   }
 
   void MainWindow::importVisualGroups( void )
@@ -1795,21 +1908,31 @@ void MainWindow::clearGroups( void )
     if ( !_autoNameGroups )
     {
       bool ok;
-      groupName = QInputDialog::getText( this, tr( "Group Name" ),
-                                         tr( "Please, introduce group name: " ),
-                                         QLineEdit::Normal, groupName, &ok );
+      groupName = QInputDialog::getText( this , tr( "Group Name" ) ,
+                                         tr(
+                                           "Please, introduce group name: " ) ,
+                                         QLineEdit::Normal , groupName , &ok );
 
       if ( !ok ) return;
     }
 
-    const auto group = _domainManager->addVisualGroupFromSelection( groupName.toStdString( ) );
+    const auto group = _domainManager->addVisualGroupFromSelection(
+      groupName.toStdString( ));
 
-    addGroupControls( group,
-                      _domainManager->groups( ).size( ) - 1,
-                      _domainManager->selection( ).size( ) );
+    addGroupControls( group ,
+                      _domainManager->groups( ).size( ) - 1 ,
+                      _domainManager->selection( ).size( ));
 
     _openGLWidget->setUpdateGroups( );
     _openGLWidget->update( );
+
+
+    visimpl::Selection selection;
+    selection.gids = _domainManager->selection( );
+    selection.name = groupName.toStdString( );
+
+    _stackViz->addSelection( selection );
+
   }
 
   void MainWindow::checkGroupsVisibility( void )
@@ -1822,7 +1945,9 @@ void MainWindow::clearGroups( void )
 
       if ( checkBox->isChecked( ) != ( *group )->active( ) )
       {
-        _domainManager->setVisualGroupState( counter, checkBox->isChecked( ) );
+        const auto state = checkBox->isChecked( );
+        _domainManager->setVisualGroupState( counter , state );
+        _stackViz->setHistogramVisible( counter , state );
       }
 
       ++group;
@@ -2171,6 +2296,8 @@ void MainWindow::clearGroups( void )
       if (!ok) return;
       group->name(groupName.toStdString());
       button->setText(groupName);
+
+      _stackViz->changeHistogramName( groupNum , groupName );
     }
   }
 
@@ -2287,35 +2414,43 @@ void MainWindow::clearGroups( void )
       {
         if(s.contains(":"))
         {
-         auto limits = s.split(":");
-         for(unsigned int id = limits.first().toUInt(); id <= limits.last().toUInt(); ++id)
-           gids.insert(id);
+          auto limits = s.split( ":" );
+          for ( unsigned int id = limits.first( ).toUInt( );
+                id <= limits.last( ).toUInt( ); ++id )
+            gids.insert( id );
         }
         else
         {
-          gids.insert(s.toUInt());
+          gids.insert( s.toUInt( ));
         }
       };
-      std::for_each(gidsStrings.cbegin(), gidsStrings.cend(), addGids);
+      std::for_each( gidsStrings.cbegin( ) , gidsStrings.cend( ) , addGids );
 
-      auto group = _domainManager->addVisualGroup(gids, name.toStdString(), overrideGIDS);
-      auto idx = _domainManager->groups().size()-1;
-      addGroupControls(group, idx, gids.size());
-      const auto active = o.value("active").toBool(true);
-      auto checkbox = std::get< gr_checkbox >(_groupsVisButtons.at(idx));
-      checkbox->setChecked(active);
+      auto group = _domainManager->addVisualGroup( gids , name.toStdString( ) ,
+                                                   overrideGIDS );
+      auto idx = _domainManager->groups( ).size( ) - 1;
+      addGroupControls( group , idx , gids.size( ));
+      const auto active = o.value( "active" ).toBool( true );
+      auto checkbox = std::get< gr_checkbox >( _groupsVisButtons.at( idx ));
+      checkbox->setChecked( active );
 
-      _domainManager->setVisualGroupState( idx, active );
+      visimpl::Selection selection;
+      selection.gids = gids;
+      selection.name = name.toStdString( );
 
-      const auto functionPairs = o.value("function").toString().split(";");
+      _stackViz->addSelection( selection );
+
+      _domainManager->setVisualGroupState( idx , active );
+
+      const auto functionPairs = o.value( "function" ).toString( ).split( ";" );
       TTransferFunction function;
-      auto addFunctionPair = [&function](const QString &s)
+      auto addFunctionPair = [ &function ]( const QString& s )
       {
-        const auto parts = s.split(",");
-        Q_ASSERT(parts.size() == 2);
-        const auto value = parts.first().toFloat();
-        const auto color = QColor(parts.last());
-        function.emplace_back(value, color);
+        const auto parts = s.split( "," );
+        Q_ASSERT( parts.size( ) == 2 );
+        const auto value = parts.first( ).toFloat( );
+        const auto color = QColor( parts.last( ));
+        function.emplace_back( value , color );
       };
       std::for_each(functionPairs.cbegin(), functionPairs.cend(), addFunctionPair);
 
@@ -2473,6 +2608,61 @@ void MainWindow::clearGroups( void )
 
     wFile.flush();
     wFile.close();
+  }
+
+  void MainWindow::onGroupDeleteClicked()
+  {
+    auto button = qobject_cast<QPushButton *>(sender());
+    if(button)
+    {
+      auto groupPtr = reinterpret_cast<VisualGroup *>(button->property("groupPtr").toULongLong());
+      auto groups = _domainManager->groups();
+      for(size_t i = 0; i < groups.size(); ++i)
+      {
+        if(groupPtr == groups.at(i))
+        {
+          removeVisualGroup(i);
+          return;
+        }
+      }
+    }
+  }
+
+  void MainWindow::removeVisualGroup(const unsigned int idx)
+  {
+    auto row = _groupsVisButtons.at(idx);
+    auto container = std::get< gr_container >( row );
+
+    _groupLayout->removeWidget( container );
+
+    delete container;
+
+    _domainManager->removeVisualGroup( idx );
+
+    _stackViz->removeSubset( idx );
+
+    _groupsVisButtons.erase(_groupsVisButtons.begin() + idx);
+
+    const bool enabled = !_groupsVisButtons.empty();
+    _buttonImportGroups->setEnabled( enabled );
+    _buttonClearGroups->setEnabled( enabled );
+    _buttonSaveGroups->setEnabled( enabled);
+
+    _openGLWidget->setUpdateGroups( );
+  }
+
+  void MainWindow::changeStackVizToolbarStatus(bool status)
+  {
+    _ui->actionStackVizAutoNamingSelections->setEnabled(status);
+    _ui->actionStackVizFillPlots->setEnabled(status);
+    _ui->actionStackVizFocusOnPlayhead->setEnabled(status);
+    _ui->actionStackVizFollowPlayHead->setEnabled(status);
+    _ui->actionStackVizShowDataManager->setEnabled(status);
+  }
+
+  void MainWindow::finishRecording( )
+  {
+    _ui->actionRecorder->setEnabled( true );
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
