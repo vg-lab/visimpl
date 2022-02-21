@@ -64,7 +64,7 @@ namespace stackviz
     explicit MainWindow( QWidget* parent = nullptr );
     ~MainWindow( void );
 
-    void init( const std::string& zeqUri = "" );
+    void init( const std::string& zeqUri = std::string() );
     void showStatusBarMessage ( const QString& message );
 
     void loadData(const simil::TDataType type,
@@ -129,11 +129,9 @@ namespace stackviz
     void initSummaryWidget( void );
     void initPlaybackDock( void );
 
-
   #ifdef VISIMPL_USE_ZEROEQ
 
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr selected );
-    void _setZeqUri( const std::string& );
 
   #endif
 
@@ -165,19 +163,7 @@ namespace stackviz
     QLabel* _startTimeLabel;
     QLabel* _endTimeLabel;
 
-    DisplayManagerWidget* _displayManager;
-
-  #ifdef VISIMPL_USE_ZEROEQ
-
-    bool _zeqConnection;
-
-    std::string _zeqUri;
-    zeroeq::Subscriber* _subscriber;
-    zeroeq::Publisher* _publisher;
-
-    std::thread* _thread;
-
-  #endif
+    visimpl::DisplayManagerWidget* _displayManager;
 
   private:
     /** \brief Helper method to update the UI after a dataset has been loaded.

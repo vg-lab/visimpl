@@ -21,7 +21,6 @@ configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.h
 configure_file(${CMAKE_SOURCE_DIR}/CMake/common/cpp/version.cpp
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp @ONLY)
 
-
 set(UIDIR ${PROJECT_SOURCE_DIR}/ui)
 set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 
@@ -68,7 +67,6 @@ set(VISIMPL_HEADERS
   prefr/ColorOperationModel.h
   prefr/SourceMultiPosition.h
   prefr/UpdaterStaticPosition.h
-
   render/Plane.h
 )
 
@@ -83,6 +81,7 @@ set(VISIMPL_LINK_LIBRARIES
   prefr
   sumrice
   scoop
+  acuterecorder
 )
 
 if(WIN32)
@@ -124,7 +123,6 @@ if (BRION_FOUND)
   list(APPEND VISIMPL_LINK_LIBRARIES Brion Brain)
 endif()
 
-
 if (APPLE)
   set(VISIMPL_ICON visimpl.icns)
 endif()
@@ -132,6 +130,5 @@ endif()
 if (UNIX AND NOT APPLE)
   set(VISIMPL_ICON visimpl.png )
 endif()
-
 
 common_application( visimpl GUI ${COMMON_APP_ARGS})

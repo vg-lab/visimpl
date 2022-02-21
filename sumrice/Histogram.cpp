@@ -68,6 +68,7 @@ namespace visimpl
   , _autoBuildHistogram( true )
   , _autoCalculateColors( true )
   {
+    setMinimumHeight(150);
   }
 
   HistogramWidget::HistogramWidget( const simil::Spikes& spikes,
@@ -229,7 +230,7 @@ namespace visimpl
     {
       simil::TSpikes::const_iterator spikeIt = references[ i ];
 
-      float endTime = ( i < ( ( int )references.size( ) - 1 )) ?
+      const float endTime = ( i < ( static_cast<int>(references.size()) - 1 )) ?
                       references[ i + 1]->first :
                       _endTime;
 

@@ -24,12 +24,15 @@
 #include <winsock2.h>
 #endif
 
+// C++
+#include <sys/stat.h>
+#include <locale>
+
 // Qt
 #include <QApplication>
 #include <QDebug>
 #include <QOpenGLWidget>
 #include <QDir>
-#include <QFile>
 #include <QString>
 #include <QApplication>
 
@@ -45,8 +48,15 @@
 #define GL_MINIMUM_REQUIRED_MAJOR 4
 #define GL_MINIMUM_REQUIRED_MINOR 0
 
-constexpr float TESTTIME = 2.f;
-constexpr int TESTPARTICLES = 50; // num particles == TESTPARTICLES^3
+constexpr float TEST_TIME = 2.f;
+constexpr int TEST_PARTICLES_NUM = 50; // num particles == TESTPARTICLES^3
+
+struct dotSeparator: std::numpunct<char>
+{
+    char do_decimal_point() const { return '.'; }
+};
+
+template<class T> void ignore( const T& ) { }
 
 bool setFormat( void );
 void usageMessage(  char* progName );
@@ -73,10 +83,15 @@ int main( int argc, char** argv )
   simil::TSimulationType simType = simil::TSimSpikes;
   simil::TDataType dataType = simil::TDataUndefined;
 
-  std::string networkFile, activityFile, zeqUri, subsetEventFile, scaleFactor;
+  std::string networkFile;
+  std::string activityFile;
+  std::string zeqUri;
+  bool zNull = false;
+  std::string subsetEventFile;
+  std::string scaleFactor;
 
   bool fullscreen = false, initWindowSize = false, initWindowMaximized = false;
-  int initWindowWidth, initWindowHeight;
+  int initWindowWidth = 0, initWindowHeight = 0;
 
   for( int i = 1; i < argc; i++ )
   {
@@ -89,9 +104,16 @@ int main( int argc, char** argv )
     {
       dumpVersion( );
     }
+
     if( std::strcmp( argv[ i ], "-zeq" ) == 0 )
     {
 #ifdef VISIMPL_USE_ZEROEQ
+//      if(zNull)
+//      {
+//        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
+//        usageMessage(argv[0]);
+//      }
+
       if( ++i < argc )
       {
         zeqUri = std::string( argv[ i ]);
@@ -104,6 +126,24 @@ int main( int argc, char** argv )
       return -1;
 #endif
     }
+
+//    if( std::strcmp( argv[ i ], "-znull" ) == 0 )
+//    {
+//#ifdef VISIMPL_USE_ZEROEQ
+//      if(!zeqUri.empty())
+//      {
+//        std::cerr << "'zeq' and 'znull' parameters can't be used simultaneously.";
+//        usageMessage(argv[0]);
+//      }
+//
+//       zNull = true;
+//       continue;
+//#else
+//      std::cerr << "Zeq not supported " << std::endl;
+//      return -1;
+//#endif
+//    }
+
     if( std::strcmp( argv[ i ], "-bc" ) == 0 )
     {
       if( ++i < argc && dataType == simil::TDataUndefined)
@@ -271,6 +311,13 @@ int main( int argc, char** argv )
   {
     zeqUri = zeroeq::DEFAULT_SESSION;
   }
+
+  if(zNull)
+  {
+    zeqUri = zeroeq::NULL_SESSION;
+  }
+#else
+  ignore(zNull);
 #endif
 
   mainWindow.init( zeqUri );
@@ -330,8 +377,12 @@ void usageMessage( char* progName )
 //            << std::endl
             << "\t[ -scale <X,Y,Z> ]"
             << std::endl
+#ifdef VISIMPL_USE_ZEROEQ
             << "\t[ -zeq <session_name*> ]"
             << std::endl
+//            << "\t[ -znull ]"
+//            << std::endl
+#endif
             << "\t[ -ws | --window-size ] <width> <height> ]"
             << std::endl
             << "\t[ -fs | --fullscreen ] "
@@ -374,6 +425,13 @@ void dumpVersion( void )
   std::cerr << "\tno";
   #endif
   std::cerr << std::endl;
+
+  std::cerr << "REST API support: ";
+#ifdef SIMIL_WITH_REST_API
+  std::cerr << "\tyes";
+#else
+  std::cerr << "\tno";
+#endif
   std::cerr << std::endl;
 
   exit(0);
@@ -434,55 +492,54 @@ bool generateTestFiles(const QString &path, std::string &networkFile, std::strin
     return false;
   }
 
-  QFile nFile{filePath.absoluteFilePath("network.csv")};
-  QFile aFile{filePath.absoluteFilePath("activity.csv")};
+  const auto nFilename = filePath.absoluteFilePath("network.csv").toStdString();
+  const auto aFilename = filePath.absoluteFilePath("activity.csv").toStdString();
 
-  if(nFile.exists() && aFile.exists())
+  struct stat buf;
+  if((stat(nFilename.c_str(), &buf) != -1) && (stat(aFilename.c_str(), &buf) != -1))
   {
     std::cout << "Test files already exists in path: " << filePath.absolutePath().toStdString() << std::endl;
-    networkFile = nFile.fileName().toStdString();
-    activityFile = aFile.fileName().toStdString();
+    networkFile = nFilename;
+    activityFile = aFilename;
     return true;
   }
 
-  if(!nFile.open(QIODevice::WriteOnly) || !aFile.open(QIODevice::WriteOnly))
+  std::ofstream nFile, aFile;
+  nFile.open(nFilename);
+  aFile.open(aFilename);
+
+  if(nFile.fail() || aFile.fail())
   {
     std::cerr << "Unable to create test files in path: " << filePath.absolutePath().toStdString() << std::endl;
     return false;
   }
 
-  std::cout << "Created test files in path: " << filePath.absolutePath().toStdString() << std::endl;
-  std::cout << "Network: " << nFile.fileName().toStdString() << std::endl;
-  std::cout << "Activity: " << aFile.fileName().toStdString() << std::endl;
+  // write floating point numbers with dot separation no matter the locale
+  nFile.imbue(std::locale(nFile.getloc(), new dotSeparator()));
+  aFile.imbue(std::locale(aFile.getloc(), new dotSeparator()));
 
-  auto printDoubleWithPoint = [](const double v)
-  {
-    auto value = std::to_string(v);
-    std::replace(value.begin(), value.end(), ',', '.');
-    return value;
-  };
+  std::cout << "Created test files in path: " << filePath.absolutePath().toStdString() << std::endl;
+  std::cout << "Network: " << nFilename << std::endl;
+  std::cout << "Activity: " << aFilename << std::endl;
 
   int index = 0;
   float time = 0.f;
 
-  for(float i = -TESTPARTICLES/2 * 10; i < TESTPARTICLES/2 * 10; i+=10)
+  for(float i = -TEST_PARTICLES_NUM/2 * 10; i < TEST_PARTICLES_NUM/2 * 10; i+=10)
   {
-    for(float j = -TESTPARTICLES/2 * 10; j < TESTPARTICLES/2 * 10; j+=10)
+    for(float j = -TEST_PARTICLES_NUM/2 * 10; j < TEST_PARTICLES_NUM/2 * 10; j+=10)
     {
-      for(float k = -TESTPARTICLES/2 * 10; k < TESTPARTICLES/2 * 10; k+=10)
+      for(float k = -TEST_PARTICLES_NUM/2 * 10; k < TEST_PARTICLES_NUM/2 * 10; k+=10)
       {
-        std::string line = std::to_string(index) + "," + printDoubleWithPoint(i) + "," + printDoubleWithPoint(j) + "," + printDoubleWithPoint(k) + "\n";
-        nFile.write(line.c_str());
+        nFile << std::to_string(index) << "," << i << "," << j << "," << k << "\n";
 
-        line = std::to_string(index) + "," + printDoubleWithPoint(time) + "\n";
-        aFile.write(line.c_str());
-        line = std::to_string(index) + "," + printDoubleWithPoint((2*TESTTIME)-time) + "\n";
-        aFile.write(line.c_str());
+        aFile << std::to_string(index) << "," << time << "\n";
+        aFile << std::to_string(index) << "," << ((2*TEST_TIME)-time) << "\n";
 
         ++index;
       }
     }
-    time += TESTTIME/TESTPARTICLES;
+    time += TEST_TIME/TEST_PARTICLES_NUM;
   }
 
   nFile.flush();
@@ -490,8 +547,8 @@ bool generateTestFiles(const QString &path, std::string &networkFile, std::strin
   aFile.flush();
   aFile.close();
 
-  networkFile = nFile.fileName().toStdString();
-  activityFile = aFile.fileName().toStdString();
+  networkFile = nFilename;
+  activityFile = aFilename;
 
   return true;
 }

@@ -56,9 +56,11 @@
 #include <thread>
 
 #include <sumrice/sumrice.h>
+#include <sumrice/Utils.h>
 
 using namespace stackviz;
 
+template<class T> void ignore( const T& ) { }
 constexpr int SLIDER_MAX = 1000;
 
 MainWindow::MainWindow( QWidget* parent_ )
@@ -80,12 +82,6 @@ MainWindow::MainWindow( QWidget* parent_ )
 , _startTimeLabel( nullptr )
 , _endTimeLabel( nullptr )
 , _displayManager( nullptr )
-#ifdef VISIMPL_USE_ZEROEQ
-, _zeqConnection( false )
-, _subscriber( nullptr )
-, _publisher( nullptr )
-, _thread( nullptr )
-#endif
 , m_loader{nullptr}
 , m_loaderDialog{nullptr}
 , m_dataInspector{nullptr}
@@ -111,12 +107,24 @@ MainWindow::MainWindow( QWidget* parent_ )
   m_dataInspector->hide();
 }
 
-void MainWindow::init( const std::string&
-  #ifdef VISIMPL_USE_ZEROEQ
-                         zeqUri
-  #endif
-    )
+void MainWindow::init( const std::string &session )
 {
+#ifdef VISIMPL_USE_ZEROEQ
+  const auto session_ = session.empty() ? zeroeq::DEFAULT_SESSION : session;
+
+  auto &zInstance = visimpl::ZeroEQConfig::instance();
+  if(!zInstance.isConnected())
+  {
+    zInstance.connect(session_);
+  }
+
+  if(zInstance.isConnected())
+  {
+    zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
+                                      [&](const void* data_, unsigned long long size_)
+                                      { _onSelectionEvent(lexis::data::SelectedIDs::create(data_,  size_));});
+  }
+#endif
 
   connect( _ui->actionOpenBlueConfig, SIGNAL( triggered( void )),
            this, SLOT( openBlueConfigThroughDialog( void )));
@@ -142,11 +150,16 @@ void MainWindow::init( const std::string&
            this, SLOT( showDisplayManagerWidget( void )));
 
 #ifdef VISIMPL_USE_ZEROEQ
+  if(zInstance.isConnected())
+    zInstance.startReceiveLoop();
 
-  _setZeqUri( zeqUri );
   _ui->actionTogglePlaybackDock->setChecked( true );
 
+#else
+  // to avoid compilation warnings about unused parameter.
+  ignore(session);
 #endif
+
   _ui->toolBar->setContextMenuPolicy(Qt::PreventContextMenu);
   _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
 
@@ -159,37 +172,12 @@ MainWindow::~MainWindow( void )
 
 #ifdef VISIMPL_USE_ZEROEQ
 
-  if( _zeqConnection )
+  auto &zInstance = visimpl::ZeroEQConfig::instance();
+  if(zInstance.isConnected())
   {
-    _zeqConnection = false;
-
-    if(_thread)
-    {
-      _thread->join();
-      delete _thread;
-      _thread = nullptr;
-    }
-
-    try
-    {
-      if(_subscriber)
-      {
-        _subscriber->unsubscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER( ));
-        delete _subscriber;
-        _subscriber = nullptr;
-      }
-
-      if(_publisher)
-      {
-        delete _publisher;
-        _publisher = nullptr;
-      }
-    }
-    catch(...)
-    {
-      // Nothing to do on destructor.
-    }
+    zInstance.disconnect();
   }
+
 #endif
 }
 
@@ -348,31 +336,36 @@ void MainWindow::configurePlayer( void )
 
   m_dataInspector->setSimPlayer(_player);
 
-  #ifdef SIMIL_USE_ZEROEQ
+#ifdef SIMIL_USE_ZEROEQ
   try
   {
-    _player->connectZeq( _zeqUri );
-
-    const auto eventMgr = _player->zeqEvents( );
-    if(eventMgr)
+    auto &zInstance = visimpl::ZeroEQConfig::instance();
+    if(zInstance.isConnected())
     {
-      eventMgr->frameReceived.connect(
-            boost::bind( &MainWindow::UpdateSimulationSlider, this, _1 ));
+      _player->connectZeq(zInstance.subscriber(), zInstance.publisher());
 
-      eventMgr->playbackOpReceived.connect(
-            boost::bind( &MainWindow::ApplyPlaybackOperation, this, _1 ));
+      const auto eventMgr = _player->zeqEvents();
+      if (eventMgr)
+      {
+        eventMgr->frameReceived.connect(
+            boost::bind(&MainWindow::UpdateSimulationSlider, this, _1));
+        eventMgr->playbackOpReceived.connect(
+            boost::bind(&MainWindow::ApplyPlaybackOperation, this, _1));
+      }
     }
   }
-  catch(const std::exception &e)
+  catch (const std::exception &e)
   {
     std::cerr << "Exception when initializing player events. ";
-    std::cerr << e.what() << std::endl << " " << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << e.what() << std::endl << " " << __FILE__
+              << ":" << __LINE__ << std::endl;
   }
-  catch(...)
+  catch (...)
   {
-    std::cerr << "Unknown exception when initializing player events. " << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Unknown exception when initializing player events. "
+              << __FILE__ << ":" << __LINE__ << std::endl;
   }
-  #endif
+#endif
 }
 
 void MainWindow::togglePlaybackDock(void)
@@ -391,7 +384,7 @@ void MainWindow::showDisplayManagerWidget( void )
 
   if( !_displayManager)
   {
-    _displayManager = new DisplayManagerWidget( );
+    _displayManager = new visimpl::DisplayManagerWidget( );
     _displayManager->init( _summary->eventWidgets(),
                            _summary->histogramWidgets( ));
 
@@ -682,11 +675,13 @@ void MainWindow::PlayAtTime(float timePos, bool notify)
       }
       catch(const std::exception &e)
       {
-        std::cerr << "Exception when sending frame. " << e.what() << std::endl;
+        std::cerr << "Exception when sending frame. " << e.what() << ". "
+                  << __FILE__ << ":" << __LINE__ << std::endl;
       }
       catch(...)
       {
-        std::cerr << "Unknown exception when sending frame. " << __FILE__ << ":" << __LINE__ << std::endl;
+        std::cerr << "Unknown exception when sending frame. "
+                  << __FILE__ << ":" << __LINE__ << std::endl;
       }
 #endif
 #ifdef VISIMPL_USE_GMRVLEX
@@ -811,70 +806,38 @@ void MainWindow::HistogramClicked(visimpl::HistogramWidget *histogram)
 
   try
   {
-    if(_publisher) _publisher->publish(lexis::data::SelectedIDs(selected));
+    auto &zInstance = visimpl::ZeroEQConfig::instance();
+    if(zInstance.isConnected())
+    {
+      zInstance.publisher()->publish(lexis::data::SelectedIDs(selected));
+    }
   }
   catch(std::exception &e)
   {
-    std::cerr << "Exception sending histogram id event. " << e.what() << std::endl;
+    std::cerr << "Exception sending histogram id event. " << e.what() << ". "
+              << __FILE__ << ":" << __LINE__ << std::endl;
   }
   catch(...)
   {
-    std::cerr << "Unknown exception sending histrogram id event." << std::endl;
+    std::cerr << "Unknown exception sending histogram id event."
+              << __FILE__ << ":" << __LINE__ << std::endl;
   }
 }
 
 #endif
 
-void MainWindow::_setZeqUri(const std::string &uri_)
-{
-  bool failed = false;
-
-  try
-  {
-    _zeqUri = uri_.empty() ? zeroeq::DEFAULT_SESSION : uri_;
-
-    _zeqConnection = true;
-    _subscriber = new zeroeq::Subscriber(_zeqUri);
-    _publisher = new zeroeq::Publisher(_zeqUri);
-
-    _subscriber->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
-                           [&](const void *data_, const size_t size_)
-                           { _onSelectionEvent( lexis::data::SelectedIDs::create( data_, size_ ));});
-
-    _thread = new std::thread([&]()
-    { while( _zeqConnection ) try { _subscriber->receive( 10000 ); } catch(...) { return; }});
-  }
-  catch(const std::exception &e)
-  {
-    std::cerr << "Exception initializing ZeroEQ. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
-    failed = true;
-  }
-  catch(...)
-  {
-    std::cerr << "Unknown exception initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-    failed = true;
-  }
-
-  if(failed)
-  {
-    _zeqConnection = false;
-    _subscriber = nullptr;
-    _publisher = nullptr;
-    _thread = nullptr;
-  }
-}
-
 void MainWindow::_onSelectionEvent(lexis::data::ConstSelectedIDsPtr selected)
 {
-  std::vector<uint32_t> ids = selected->getIdsVector();
-
-  visimpl::GIDUSet selectedSet(ids.begin(), ids.end());
-
-  if (_summary)
+  if (_summary && _ui->actionAddZeroEQhistograms->isChecked())
   {
+    std::vector<uint32_t> ids = selected->getIdsVector();
+
+    visimpl::GIDUSet selectedSet(ids.begin(), ids.end());
+
     visimpl::Selection selection;
 
     selection.gids = selectedSet;
+    selection.name = std::string("Selection ") + std::to_string(_summary->histogramsNumber());
 
     _summary->AddNewHistogram(selection, true);
   }
@@ -1027,6 +990,7 @@ void MainWindow::openH5FilesThroughDialog(void)
 void MainWindow::updateUIonOpen(const std::string &eventsFile)
 {
   configurePlayer( );
+
   initSummaryWidget( );
 
   openSubsetEventFile( eventsFile, true );
@@ -1162,14 +1126,16 @@ void stackviz::MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
   }
   catch(const std::exception &e)
   {
-    std::cerr << "Exception when sending play operation. " << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    std::cerr << "Exception when sending play operation. " << e.what() << ". "
+              << __FILE__ << ":" << __LINE__ << std::endl;
   }
   catch(...)
   {
-    std::cerr << "Unknown exception when sending play operation. " << __FILE__ << ":" << __LINE__  << std::endl;
+    std::cerr << "Unknown exception when sending play operation. "
+              << __FILE__ << ":" << __LINE__  << std::endl;
   }
 #else
-  __attribute__((unused)) const auto unused = op; // c++17 [[maybe_unused]]
+  ignore(op); // c++17 [[maybe_unused]]
 #endif
 }
 
@@ -1187,7 +1153,6 @@ void stackviz::MainWindow::onDataUpdated()
     const float percentage = static_cast<float>(tCurrent - tBegin) / (tEnd - tBegin);
     _simSlider->setValue( percentage * SLIDER_MAX );
   }
-
 }
 
 void stackviz::MainWindow::closeLoadingDialog()

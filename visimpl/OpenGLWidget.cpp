@@ -53,6 +53,10 @@
 #include <brion/brion.h>
 #endif
 
+#ifdef VISIMPL_USE_ZEROEQ
+  #include <zeroeq/zeroeq.h>
+#endif
+
 constexpr float ZOOM_FACTOR = 1.3f;
 constexpr float TRANSLATION_FACTOR = 0.001f;
 constexpr float ROTATION_FACTOR = 0.01f;
@@ -103,7 +107,7 @@ namespace visimpl
   , _translation( false )
   , _idleUpdate( true )
   , _paint( false )
-  , _currentClearColor( 20, 20, 20, 0 )
+  , _currentClearColor( 20, 20, 20, 255 )
   , _particleRadiusThreshold( 0.8 )
   , _currentShader( T_SHADER_UNDEFINED )
   , _shaderParticlesCurrent( nullptr )
@@ -172,37 +176,6 @@ namespace visimpl
   , _domainManager( nullptr )
   , _selectedPickingSingle( 0 )
   {
-  #ifdef VISIMPL_USE_ZEROEQ
-    if ( !_zeqUri.empty( ) )
-    {
-      bool failed = false;
-      try
-      {
-        _camera = new Camera( _zeqUri );
-      }
-      catch(std::exception &e)
-      {
-        std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
-        failed = true;
-      }
-      catch(...)
-      {
-        std::cerr << "Unknown exception catched when initializing camera. " << __FILE__ << ":" << __LINE__ << std::endl;
-        failed = true;
-      }
-
-      if(failed)
-      {
-        _camera = nullptr;
-        _zeqUri.clear();
-      }
-    }
-  #endif
-
-    if(!_camera) _camera = new Camera( );
-
-    _camera->camera()->farPlane( 100000.f );
-
     _lastCameraPosition = glm::vec3( 0, 0, 0 );
 
     _maxFPS = 60.0f;
@@ -248,6 +221,47 @@ namespace visimpl
 
     // This is needed to get key events
     this->setFocusPolicy( Qt::WheelFocus );
+
+#ifdef VISIMPL_USE_ZEROEQ
+    if ( !_zeqUri.empty( ) )
+    {
+      bool failed = false;
+      try
+      {
+        auto &instance = ZeroEQConfig::instance();
+        if(!instance.isConnected())
+        {
+          instance.connect(_zeqUri);
+        }
+
+        _camera = new Camera( _zeqUri, instance.subscriber() );
+      }
+      catch(std::exception &e)
+      {
+        std::cerr << e.what() << " " << __FILE__ << ":" << __LINE__ << std::endl;
+        failed = true;
+      }
+      catch(...)
+      {
+        std::cerr << "Unknown exception catched when initializing camera. " << __FILE__ << ":" << __LINE__ << std::endl;
+        failed = true;
+      }
+
+      if(failed)
+      {
+        _camera = nullptr;
+        _zeqUri.clear();
+      }
+    }
+#endif
+
+    if(!_camera)
+      _camera = new Camera( );
+
+    _camera->camera()->farPlane( 100000.f );
+
+    setAutoFillBackground(true);
+    setPalette(QPalette(QPalette::Window, Qt::black));
   }
 
   OpenGLWidget::~OpenGLWidget( void )
@@ -404,24 +418,32 @@ namespace visimpl
     simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ) );
     changeSimulationDecayValue( std::get< T_DECAY >( config ) );
 
-  #ifdef VISIMPL_USE_ZEROEQ
-    if( !_zeqUri.empty( ))
+#ifdef VISIMPL_USE_ZEROEQ
+  if( !_zeqUri.empty( ))
+  {
+    try
     {
-      try
+      auto &instance = ZeroEQConfig::instance();
+      if(!instance.isConnected())
       {
-        _player->connectZeq( _zeqUri );
+        instance.connect(_zeqUri);
       }
-      catch(std::exception &e)
-      {
-        std::cerr << "Exception when initializing ZeroEQ. ";
-        std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
-      }
-      catch(...)
-      {
-        std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
-      }
+
+      _player->connectZeq(instance.subscriber(), instance.publisher());
+      instance.startReceiveLoop();
     }
-  #endif
+    catch(std::exception &e)
+    {
+      std::cerr << "Exception when initializing ZeroEQ. ";
+      std::cerr << e.what() << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+    catch(...)
+    {
+      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+  }
+#endif
+
     this->_paint = true;
     update( );
 
