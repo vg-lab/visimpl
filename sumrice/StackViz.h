@@ -77,6 +77,9 @@ namespace visimpl
      */
     void setHistogramVisible(const unsigned idx, const bool state);
 
+  signals:
+    void changedBins(const unsigned int);
+
   public slots:
 
     void openSubsetEventsFile( bool fromH5 );
@@ -87,6 +90,8 @@ namespace visimpl
 
     void updateHistograms( );
 
+    void repaintHistograms();
+
     void toggleAutoNameSelections( );
 
     void fillPlots( bool fill );
@@ -94,6 +99,12 @@ namespace visimpl
     void focusPlayback( );
 
     void followPlayhead ( bool follow );
+
+    /** \brief Shows/Hides the StackViz configuration panels.
+     * \param[in] value True to show the panels and false otherwise.
+     *
+     */
+    void showStackVizPanels( bool value);
 
   protected slots:
 

@@ -79,6 +79,7 @@
     <addaction name="actionStackVizShowDataManager"/>
     <addaction name="actionStackVizFocusOnPlayhead"/>
     <addaction name="actionStackVizFollowPlayHead"/>
+    <addaction name="actionStackVizShowPanels"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
@@ -115,6 +116,7 @@
    <addaction name="separator"/>
    <addaction name="actionStackVizShowDataManager"/>
    <addaction name="actionStackVizFillPlots"/>
+   <addaction name="actionStackVizShowPanels"/>
    <addaction name="separator"/>
    <addaction name="actionStackVizFocusOnPlayhead"/>
    <addaction name="actionStackVizFollowPlayHead"/>
@@ -507,6 +509,24 @@
    </property>
    <property name="toolTip">
     <string>Follow playhead</string>
+   </property>
+  </action>
+  <action name="actionStackVizShowPanels">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/toolconfig.svg</normaloff>:/icons/toolconfig.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Show StackViz Panels</string>
+   </property>
+   <property name="toolTip">
+    <string>Shows/Hides the StackViz configuration panels.</string>
    </property>
   </action>
  </widget>

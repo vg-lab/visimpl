@@ -213,8 +213,9 @@ namespace visimpl
              SLOT( openHDF5ThroughDialog( void )) );
 
     connect( _ui->actionOpenSubsetEventsFile , SIGNAL( triggered( void )) ,
-             this ,
-             SLOT( openSubsetEventsFileThroughDialog( void )) );
+             this , SLOT( openSubsetEventsFileThroughDialog( void )) );
+
+    _ui->actionOpenSubsetEventsFile->setEnabled(false);
 
     connect( _ui->actionCloseData , SIGNAL( triggered( void )) , this ,
              SLOT( closeData( void )) );
@@ -326,7 +327,7 @@ namespace visimpl
     _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
 
     _ui->actionToggleStackVizDock->setEnabled(true);
-    _stackViz->init( _openGLWidget->player( ));
+    _ui->actionOpenSubsetEventsFile->setEnabled(true);
 
     if(_openGLWidget)
     {
@@ -499,7 +500,6 @@ namespace visimpl
 
   void MainWindow::openRecorder( void )
   {
-
     // The button stops the recorder if found.
     if( _recorder != nullptr )
     {
@@ -526,12 +526,12 @@ namespace visimpl
       params.showSourceParameters = false;
     }
 
-    auto dialog = new RecorderDialog( nullptr , params , false );
-    dialog->setWindowIcon( QIcon( ":/visimpl.png" ));
-    dialog->setFixedSize( 800 , 600 );
-    if ( dialog->exec( ) == QDialog::Accepted)
+    RecorderDialog dialog( nullptr , params , false );
+    dialog.setWindowIcon( QIcon( ":/visimpl.png" ));
+    dialog.setFixedSize( 800 , 600 );
+    if ( dialog.exec( ) == QDialog::Accepted)
     {
-      _recorder = dialog->getRecorder( );
+      _recorder = dialog.getRecorder( );
       connect( _recorder , SIGNAL( finished( )) ,
                _recorder , SLOT( deleteLater( )));
       connect( _recorder , SIGNAL( finished( )) ,
@@ -543,9 +543,7 @@ namespace visimpl
     {
       _ui->actionRecorder->setChecked( false );
     }
-    dialog->deleteLater( );
   }
-
 
   void MainWindow::closeData( void )
   {
@@ -717,6 +715,7 @@ namespace visimpl
     _stackVizDock->setVisible(false);
 
     _stackViz = new StackViz( this );
+
     if ( _openGLWidget && _openGLWidget->player( ))
     {
       _stackViz->init( _openGLWidget->player( ));
@@ -725,35 +724,37 @@ namespace visimpl
     _stackVizDock->setWidget( _stackViz );
     this->addDockWidget( Qt::LeftDockWidgetArea , _stackVizDock );
 
-    connect(
-      _ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
-      _stackViz , SLOT( showDisplayManagerWidget( ))
-    );
+    connect( _objectInspectorGB, SIGNAL( simDataChanged()),
+             _stackViz,          SLOT( updateHistograms()));
 
-    connect(
-      _ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
-      _stackViz , SLOT( showDisplayManagerWidget( ))
-    );
+    connect(_stackViz, SIGNAL(changedBins(const unsigned int)),
+            _summary, SLOT(bins(unsigned int)));
 
-    connect(
-      _ui->actionStackVizAutoNamingSelections , SIGNAL( triggered( )) ,
-      _stackViz , SLOT( toggleAutoNameSelections( ))
-    );
+    connect(_ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
+            _stackViz , SLOT( showDisplayManagerWidget( )));
 
-    connect(
-      _ui->actionStackVizFillPlots , SIGNAL( triggered( bool )) ,
-      _stackViz , SLOT( fillPlots( bool ))
-    );
+    connect(_ui->actionStackVizShowPanels , SIGNAL( triggered( bool )) ,
+            _stackViz , SLOT( showStackVizPanels(bool )));
 
-    connect(
-      _ui->actionStackVizFocusOnPlayhead , SIGNAL( triggered( )) ,
-      _stackViz , SLOT( focusPlayback( ))
-    );
+    connect(_ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
+            _stackViz , SLOT( showDisplayManagerWidget( )));
 
-    connect(
-      _ui->actionStackVizFollowPlayHead , SIGNAL( triggered( bool )) ,
-      _stackViz , SLOT( followPlayhead( bool ))
-    );
+    connect(_ui->actionStackVizAutoNamingSelections , SIGNAL( triggered( )) ,
+            _stackViz , SLOT( toggleAutoNameSelections( )));
+
+    connect(_ui->actionStackVizFillPlots , SIGNAL( triggered( bool )) ,
+            _stackViz , SLOT( fillPlots( bool )));
+
+    connect(_ui->actionStackVizFocusOnPlayhead , SIGNAL( triggered( )) ,
+            _stackViz , SLOT( focusPlayback( )));
+
+    connect(_ui->actionStackVizFollowPlayHead , SIGNAL( triggered( bool )) ,
+            _stackViz , SLOT( followPlayhead( bool )));
+
+    // this avoids making the dock smaller when the stackviz config panels
+    // hide.
+    QObject::connect(_ui->actionStackVizShowPanels , &QAction::triggered ,
+            [=](bool){ this->resizeDocks({_stackVizDock}, {_stackVizDock->width()}, Qt::Horizontal);});
   }
 
   void MainWindow::_initPlaybackDock( void )
@@ -1329,7 +1330,7 @@ namespace visimpl
     if ( _summary )
       _summary->repaintHistograms( );
 
-    _stackViz->updateHistograms( );
+    _stackViz->repaintHistograms( );
   }
 
   void MainWindow::UpdateSimulationColorMapping( void )
@@ -1932,7 +1933,6 @@ void MainWindow::clearGroups( void )
     selection.name = groupName.toStdString( );
 
     _stackViz->addSelection( selection );
-
   }
 
   void MainWindow::checkGroupsVisibility( void )
@@ -2245,6 +2245,8 @@ void MainWindow::clearGroups( void )
     _configurePlayer( );
 
     _comboAttribSelection->clear();
+
+    _stackViz->init( _openGLWidget->player( ));
 
     switch(m_type)
     {
@@ -2658,6 +2660,7 @@ void MainWindow::clearGroups( void )
     _ui->actionStackVizFocusOnPlayhead->setEnabled(status);
     _ui->actionStackVizFollowPlayHead->setEnabled(status);
     _ui->actionStackVizShowDataManager->setEnabled(status);
+    _ui->actionStackVizShowPanels->setEnabled(status);
   }
 
   void MainWindow::finishRecording( )

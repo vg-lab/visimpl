@@ -142,6 +142,7 @@ namespace visimpl
 
     void histogramClicked( float );
     void histogramClicked( visimpl::HistogramWidget* );
+    void changedBins(const unsigned int);
 
   public slots:
 
@@ -170,6 +171,11 @@ namespace visimpl
     void focusPlayback( void );
     void setFocusAt( float perc );
 
+    /** \brief Shows/hides the toolbox panels.
+     * \param[in] value True to show and false otherwise.
+     */
+    void showConfigPanels(bool value);
+
   protected slots:
 
     void childHistogramPressed( const QPoint&, float );
@@ -195,9 +201,15 @@ namespace visimpl
     void _updateScaleHorizontal( void );
     void _updateScaleVertical( void );
 
+
   protected:
 
     virtual void showEvent(QShowEvent *);
+
+    /** \brief Removes all widgets.
+     *
+     */
+    void clear();
 
     struct HistogramRow
     {
@@ -206,7 +218,6 @@ namespace visimpl
       HistogramRow( )
       : histogram( nullptr )
       , label( nullptr )
-      , checkBox( nullptr )
       { }
 
       ~HistogramRow( )
@@ -214,8 +225,6 @@ namespace visimpl
 
       visimpl::HistogramWidget* histogram;
       QLabel* label;
-      QCheckBox* checkBox;
-
     };
 
     struct EventRow
@@ -225,7 +234,6 @@ namespace visimpl
       EventRow( )
       : widget( nullptr )
       , label( nullptr )
-      , checkBox( nullptr )
       { }
 
       ~EventRow( )
@@ -233,8 +241,6 @@ namespace visimpl
 
       visimpl::EventWidget* widget;
       QLabel* label;
-      QCheckBox* checkBox;
-
     };
 
   #ifdef VISIMPL_USE_ZEROEQ
@@ -342,7 +348,7 @@ namespace visimpl
     QScrollArea* _scrollEvent;
 
     QVBoxLayout* _layoutMain;
-//    QSplitter* _splitVertCentralFoot;
+
     QSplitter* _splitVertEventsHisto;
     QSplitter* _splitHorizEvents;
     QSplitter* _splitHorizHisto;
@@ -400,8 +406,6 @@ namespace visimpl
     float _defaultCorrelationDeltaTime;
 
     scoop::ColorPalette _eventsPalette;
-//    std::vector< QColor > _subsetEventColorPalette;
-
   };
 
 }

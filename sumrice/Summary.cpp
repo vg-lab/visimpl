@@ -126,6 +126,7 @@ namespace visimpl
 
     _initCentralGUI();
     auto footWidget = _initFootGUI();
+    footWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     if( _stackType == T_STACK_EXPANDABLE )
     {
@@ -135,7 +136,7 @@ namespace visimpl
       _splitVertEventsHisto->addWidget( footWidget );
       _splitVertEventsHisto->setSizes( { 1000, 1000, 2000 } );
 
-      _layoutMain->addWidget(_splitVertEventsHisto );
+      _layoutMain->addWidget(_splitVertEventsHisto , 1);
     }
 
   #ifdef VISIMPL_USE_ZEROEQ
@@ -152,6 +153,8 @@ namespace visimpl
     // but rearranging to have consecutive colors with different hue.
     _eventsPalette = scoop::ColorPalette::colorBrewerQualitative(
         scoop::ColorPalette::ColorBrewerQualitative::Set1, 9 );
+
+    this->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
   }
 
   void Summary::Init( simil::SimulationData* data_ )
@@ -320,6 +323,7 @@ namespace visimpl
     _focusWidget->colorGlobal( _colorGlobal );
     _focusWidget->setMinimumHeight( 200 );
     _focusWidget->setMinimumWidth( 200 );
+    _focusWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     // NORMALIZATION
 
@@ -502,8 +506,9 @@ namespace visimpl
 
   void Summary::Init()
   {
-    if( !_spikeReport )
-      return;
+    if( !_spikeReport ) return;
+
+    if(_mainHistogram) clear();
 
     _mainHistogram = new visimpl::HistogramWidget( *_spikeReport );
     _mainHistogram->setMinimumHeight( _heightPerRow );
@@ -1093,6 +1098,7 @@ namespace visimpl
   {
     const unsigned int binsNumber = _spinBoxBins->value();
     bins( binsNumber );
+    emit changedBins(binsNumber);
   }
 
   void Summary::bins( unsigned int bins_ )
@@ -1361,7 +1367,6 @@ namespace visimpl
 
     delete summaryRow.label;
     delete summaryRow.histogram;
-    delete summaryRow.checkBox;
 
     _histogramWidgets.erase( _histogramWidgets.begin() + i );
 
@@ -1798,6 +1803,29 @@ namespace visimpl
       _scrollHistoLabels->setMinimumWidth(maxWidth + 4);
       _eventLabelsScroll->setMinimumWidth(maxWidth + 4);
     }
+  }
+
+  void Summary::showConfigPanels(bool value)
+  {
+    _footToolBox->setVisible(value);
+  }
+
+  void Summary::clear()
+  {
+    clearEvents();
+
+    auto row = _histogramRows.front();
+
+    _layoutHistoLabels->removeWidget( row.label );
+    _layoutHistograms->removeWidget( row.histogram );
+
+    delete row.label;
+    delete row.histogram;
+
+    _histogramWidgets.erase( _histogramWidgets.begin());
+    _histogramRows.erase( _histogramRows.begin());
+
+    while(!_histogramRows.empty()) removeSubset(0);
   }
 
 }

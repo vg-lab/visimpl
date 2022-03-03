@@ -9,7 +9,7 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 1.5.0 )
+project( visimpl VERSION 1.5.1 )
 set( visimpl_VERSION_ABI 6 )
 
 SET( VISIMPL_LICENSE "GPL")
@@ -127,6 +127,10 @@ common_find_package_post()
 add_subdirectory( sumrice )
 add_subdirectory( visimpl )
 add_subdirectory( stackviz )
+
+# importers subdirectory contains code for processing data and convert it 
+# to ViSimpl formats, not needed for release.
+#add_subdirectory( importers )
 
 include( CPackConfig )
 include( DoxygenRule )

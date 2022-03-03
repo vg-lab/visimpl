@@ -101,9 +101,6 @@ void DataInspector::updateInfo( )
       }
     }
 
-    if ( updated )
-    {
-      emit simDataChanged( );
-    }
+    if ( updated ) emit simDataChanged( );
   }
 }
