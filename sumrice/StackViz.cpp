@@ -50,14 +50,13 @@ StackViz::StackViz( QWidget *parent_ )
   setLayout( new QGridLayout( ));
 }
 
-void StackViz::init( simil::SimulationPlayer* p )
+void StackViz::init( simil::SimulationPlayer* player )
 {
-  // StackViz already loaded.
-  if ( p == nullptr || _player != nullptr ) return;
+  if ( !player ) return;
 
   QApplication::setOverrideCursor( Qt::WaitCursor );
 
-  _player = p;
+  _player = player;
   _simulationType = _player->data( )->simulationType( );
   _subsetEventManager = _player->data( )->subsetsEvents( );
 
@@ -82,7 +81,7 @@ void StackViz::openSubsetEventsFile( bool fromH5 )
       _displayManager->refresh( );
 }
 
-void StackViz::showDisplayManagerWidget( void )
+void StackViz::showDisplayManagerWidget( )
 {
   if(!_summary) return;
 
@@ -113,7 +112,12 @@ void StackViz::showDisplayManagerWidget( void )
 
 void StackViz::initSummaryWidget( )
 {
-  _summary = new visimpl::Summary( this , visimpl::T_STACK_EXPANDABLE );
+  const bool hasSummary = _summary != nullptr;
+
+  if(!hasSummary)
+  {
+    _summary = new visimpl::Summary( this , visimpl::T_STACK_EXPANDABLE );
+  }
 
   if ( _simulationType == simil::TSimSpikes )
   {
@@ -123,13 +127,16 @@ void StackViz::initSummaryWidget( )
     _summary->simulationPlayer( _player );
   }
 
+  if(!hasSummary)
+  {
+    layout( )->addWidget( _summary );
 
-  layout( )->addWidget( _summary );
+    connect( _summary , SIGNAL( histogramClicked( visimpl::HistogramWidget * )) ,
+             this , SLOT( HistogramClicked( visimpl::HistogramWidget * )) );
 
-  connect( _summary , SIGNAL( histogramClicked( visimpl::HistogramWidget * )) ,
-           this , SLOT( HistogramClicked( visimpl::HistogramWidget * )) );
-
-  //_ui->actionFocusOnPlayhead->setVisible( true );
+    connect( _summary, SIGNAL(changedBins(const unsigned int)),
+             this, SIGNAL(changedBins(const unsigned int)));
+  }
 
   if ( _autoCalculateCorrelations )
   {
@@ -138,7 +145,6 @@ void StackViz::initSummaryWidget( )
 
   QTimer::singleShot( 0 , _summary , SLOT( adjustSplittersSize( )) );
 }
-
 
 void StackViz::HistogramClicked(visimpl::HistogramWidget *histogram)
 {
@@ -177,10 +183,7 @@ void StackViz::HistogramClicked(visimpl::HistogramWidget *histogram)
 
 void StackViz::addSelection(const visimpl::Selection &selection)
 {
-  if (_summary)
-  {
-     _summary->AddNewHistogram(selection);
-  }
+  if (_summary) _summary->AddNewHistogram(selection);
 }
 
 void StackViz::removeSubset(const unsigned int i)
@@ -228,29 +231,19 @@ void StackViz::calculateCorrelations(void)
 
 void visimpl::StackViz::changeHistogramName(const unsigned idx, const QString &name)
 {
-  if(_summary)
-  {
-    _summary->changeHistogramName(idx + 1, name);
-
-  }
+  if(_summary) _summary->changeHistogramName(idx + 1, name);
 }
 
 void visimpl::StackViz::setHistogramVisible(const unsigned idx, const bool state)
 {
-  if(_summary)
-  {
-    _summary->changeHistogramVisibility(idx + 1, state);
-
-  }
+  if(_summary) _summary->changeHistogramVisibility(idx + 1, state);
 }
 
 void visimpl::StackViz::updateHistograms( )
 {
-  if ( _summary )
-    _summary->repaintHistograms( );
+  if ( _summary ) _summary->UpdateHistograms( );
 
-  if ( _followPlayhead )
-    _summary->focusPlayback( );
+  if ( _followPlayhead ) _summary->focusPlayback( );
 }
 
 void visimpl::StackViz::toggleAutoNameSelections( )
@@ -271,4 +264,19 @@ void visimpl::StackViz::focusPlayback( )
 void StackViz::followPlayhead( bool follow )
 {
   _followPlayhead = follow;
+}
+
+void visimpl::StackViz::showStackVizPanels(bool value)
+{
+  if(_summary) _summary->showConfigPanels(value);
+}
+
+void visimpl::StackViz::repaintHistograms()
+{
+  if(_summary)
+  {
+    if(_followPlayhead) _summary->focusPlayback();
+
+    _summary->repaintHistograms();
+  }
 }

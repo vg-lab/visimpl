@@ -50,6 +50,7 @@ set(STACKVIZ_LINK_LIBRARIES
   prefr  
   sumrice
   scoop
+  acuterecorder
 )
 
 if(WIN32)

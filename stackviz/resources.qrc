@@ -23,5 +23,7 @@
     <file>visimpl.png</file>
     <file>icons/generic-info.svg</file>
     <file>icons/fill.svg</file>
+    <file>icons/toolconfig.svg</file>
+    <file>icons/recorder.svg</file>
   </qresource>
 </RCC>

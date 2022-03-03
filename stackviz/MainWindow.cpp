@@ -55,6 +55,8 @@
 
 #include <thread>
 
+#include <acuterecorder/acuterecorder.h>
+
 #include <sumrice/sumrice.h>
 #include <sumrice/Utils.h>
 
@@ -85,6 +87,7 @@ MainWindow::MainWindow( QWidget* parent_ )
 , m_loader{nullptr}
 , m_loaderDialog{nullptr}
 , m_dataInspector{nullptr}
+, _recorder{nullptr}
 {
   _ui->setupUi( this );
 
@@ -101,8 +104,9 @@ MainWindow::MainWindow( QWidget* parent_ )
   connect( _ui->actionAbout, SIGNAL( triggered( void )),
            this, SLOT( aboutDialog( void )));
 
-  // only used for data refresh in case of REST API. Similar one included
-  // in Summary class, refactor?
+  connect( _ui->actionRecorder , SIGNAL( triggered( void )) , this ,
+           SLOT( openRecorder( void )));
+
   m_dataInspector = new DataInspector("");
   m_dataInspector->hide();
 }
@@ -137,6 +141,8 @@ void MainWindow::init( const std::string &session )
 
   connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void )),
            this, SLOT( openSubsetEventsFileThroughDialog( void )));
+
+  _ui->actionOpenSubsetEventsFile->setEnabled(false);
 
   initPlaybackDock( );
 
@@ -507,6 +513,9 @@ void MainWindow::initSummaryWidget( )
   _ui->actionFill_Plots->setChecked( true );
   connect( _ui->actionFill_Plots, SIGNAL( triggered( bool )),
            _summary, SLOT( fillPlots( bool )));
+
+  connect(_ui->actionShowPanels, SIGNAL(triggered(bool)),
+          _summary, SLOT( showConfigPanels(bool)));
 
   connect( _summary, SIGNAL( histogramClicked( float )),
            this, SLOT( PlayAtPercentage( float )));
@@ -1002,6 +1011,7 @@ void MainWindow::updateUIonOpen(const std::string &eventsFile)
     _displayManager->refresh( );
 
   _ui->actionShowDataManager->setEnabled(true);
+  _ui->actionOpenSubsetEventsFile->setEnabled(true);
 }
 
 void stackviz::MainWindow::loadData(const simil::TDataType type,
@@ -1029,6 +1039,55 @@ void stackviz::MainWindow::loadData(const simil::TDataType type,
   connect(m_loader.get(), SIGNAL(spikes(unsigned int)),  m_loaderDialog, SLOT(setSpikesValue(unsigned int)));
 
   m_loader->start();
+}
+
+void MainWindow::openRecorder( void )
+{
+  // The button stops the recorder if found.
+  if( _recorder != nullptr )
+  {
+    _ui->actionRecorder->setDisabled( true );
+    _recorder->stop();
+
+    // Recorder will be deleted after finishing.
+    _recorder = nullptr;
+    _ui->actionRecorder->setChecked( false );
+    return;
+  }
+
+  RSWParameters params;
+  params.widgetsToRecord.emplace_back( "Main Widget" , this );
+  params.defaultFPS = 30;
+  params.includeScreens = false;
+  params.stabilizeFramerate = true;
+
+  if(!_ui->actionAdvancedRecorderOptions->isChecked())
+  {
+    params.showWorker = false;
+    params.showWidgetSourceMode = false;
+    params.showSourceParameters = false;
+  }
+
+  RecorderDialog dialog( nullptr , params , true );
+  dialog.setWindowIcon( QIcon( ":/visimpl.png" ));
+  dialog.setFixedSize( 800 , 600 );
+  if ( dialog.exec( ) == QDialog::Accepted)
+  {
+    _recorder = dialog.getRecorder( );
+    connect( _recorder , SIGNAL( finished( )) ,
+             _recorder , SLOT( deleteLater( )));
+    connect( _recorder , SIGNAL( finished( )) ,
+             this , SLOT( finishRecording( )));
+    _ui->actionRecorder->setChecked( true );
+  } else
+  {
+    _ui->actionRecorder->setChecked( false );
+  }
+}
+
+void MainWindow::finishRecording( )
+{
+  _ui->actionRecorder->setEnabled( true );
 }
 
 void stackviz::MainWindow::onLoadFinished()

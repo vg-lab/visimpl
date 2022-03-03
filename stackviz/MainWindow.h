@@ -48,6 +48,8 @@
 #include "ui_stackviz.h"
 #include "DisplayManagerWidget.h"
 
+class Recorder;
+
 namespace Ui
 {
   class MainWindow;
@@ -123,6 +125,10 @@ namespace stackviz
 
     void onDataUpdated();
 
+    void openRecorder();
+
+    void finishRecording();
+
   protected:
     void configurePlayer( void );
 
@@ -189,6 +195,9 @@ namespace stackviz
     std::shared_ptr<LoaderThread> m_loader;
     LoadingDialog *m_loaderDialog;
     DataInspector * m_dataInspector;
+
+    // Recorder
+    Recorder* _recorder;
   };
 
 
