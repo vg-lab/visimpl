@@ -21,16 +21,40 @@
  */
 
 // ViSimpl
-#include "SelectionManagerWidget.h"
-
-// Qt
-#include <QGridLayout>
-#include <QGroupBox>
-#include <QLabel>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QTextStream>
-#include <QShortcut>
+#include <qabstractitemmodel.h>
+#include <qabstractitemview.h>
+#include <qalgorithms.h>
+#include <qboxlayout.h>
+#include <qchar.h>
+#include <qdir.h>
+#include <qfile.h>
+#include <qfiledialog.h>
+#include <qflags.h>
+#include <qgridlayout.h>
+#include <qgroupbox.h>
+#include <qicon.h>
+#include <qiodevice.h>
+#include <qitemselectionmodel.h>
+#include <qkeysequence.h>
+#include <qlabel.h>
+#include <qlineedit.h>
+#include <qlist.h>
+#include <qlistview.h>
+#include <qmessagebox.h>
+#include <qnamespace.h>
+#include <qobject.h>
+#include <qobjectdefs.h>
+#include <qpushbutton.h>
+#include <qradiobutton.h>
+#include <qshortcut.h>
+#include <qstandarditemmodel.h>
+#include <qstring.h>
+#include <qstringlist.h>
+#include <qtabwidget.h>
+#include <qtextstream.h>
+#include <qvariant.h>
+#include <sumrice/types.h>
+#include <visimpl/SelectionManagerWidget.h>
 
 namespace visimpl
 {
@@ -109,16 +133,36 @@ namespace visimpl
     _listViewAvailable->setModel( _modelAvailable );
     _listViewSelected->setModel( _modelSelected );
 
-    _buttonAddToSelection = new QPushButton( "-->" );
+    _buttonAddToSelection = new QPushButton(QIcon(":/icons/right.svg"), "");
     _buttonAddToSelection->setToolTip( tr( "Add to selected GIDs" ));
 
-    _buttonRemoveFromSelection = new QPushButton( "<--" );
+    _buttonRemoveFromSelection = new QPushButton(QIcon(":/icons/left.svg"), "");
     _buttonRemoveFromSelection->setToolTip( tr( "Remove from selected GIDs" ));
 
     layoutSelection->addWidget( _listViewAvailable, 1, 0, 5, 1 );
     layoutSelection->addWidget( _buttonAddToSelection, 2, 1, 1, 1 );
     layoutSelection->addWidget( _buttonRemoveFromSelection, 4, 1, 1, 1 );
     layoutSelection->addWidget( _listViewSelected, 1, 2, 5, 1 );
+    layoutSelection->addWidget( new QLabel("Selected:"), 6,0,1,1);
+
+    QRegExp rx("[0-9 \\-\\,]+");
+    auto validator = new QRegExpValidator(rx, this);
+
+    _rangeEdit = new QLineEdit();
+    _rangeEdit->setPlaceholderText("Nothing selected");
+    _rangeEdit->setValidator(validator);
+
+    auto rangeLayout = new QHBoxLayout();
+    rangeLayout->addWidget(new QLabel("Selected:"), 0);
+    rangeLayout->addWidget(_rangeEdit, 1);
+
+    layoutSelection->addLayout(rangeLayout, 6, 0, 1, 4);
+
+    connect(_rangeEdit, SIGNAL(editingFinished()),
+            this,       SLOT(_updateRangeEdit()));
+
+    connect(_listViewAvailable->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection&)),
+            this,                                 SLOT(_updateRangeEdit()));
 
     connect( _buttonAddToSelection, SIGNAL( clicked( void )),
              this, SLOT( _addToSelected( void )));
@@ -244,8 +288,10 @@ namespace visimpl
     for( auto gid : gids )
     {
       const auto text = QString::number(gid);
+      auto idx = new QStandardItem(text);
+      idx->setData(gid);
 
-      available << new QStandardItem(text);
+      available << idx;
       selected << new QStandardItem(text);
 
       _gidIndex.insert( std::make_pair( gid, index ));
@@ -279,11 +325,13 @@ namespace visimpl
   {
     _labelAvailable->setText( QString( "Available GIDs: ") + QString::number( _gidsAvailable.size( )));
     _labelSelection->setText( QString( "Selected GIDs: ") + QString::number( _gidsSelected.size( )));
+
+    _buttonRemoveFromSelection->setEnabled(!_gidsSelected.empty());
   }
 
   void SelectionManagerWidget::_addToSelected( void )
   {
-    auto selectedIndices =
+    const auto selectedIndices =
         _listViewAvailable->selectionModel( )->selectedIndexes( );
 
     if( selectedIndices.size( ) <= 0 )
@@ -294,7 +342,7 @@ namespace visimpl
       if( index.row( ) < 0 )
         continue;
 
-      auto item = _modelAvailable->itemFromIndex( index );
+      const auto item = _modelAvailable->itemFromIndex( index );
 
       bool ok;
       unsigned int gid = item->data( Qt::DisplayRole ).toUInt( &ok );
@@ -302,7 +350,7 @@ namespace visimpl
       _gidsAvailable.erase( gid );
       _gidsSelected.insert( gid );
 
-      auto gidIndex = _gidIndex.find( gid );
+      const auto gidIndex = _gidIndex.find( gid );
       assert( gidIndex != _gidIndex.end( ));
 
       _listViewAvailable->setRowHidden( gidIndex->second, true );
@@ -310,6 +358,7 @@ namespace visimpl
     }
 
     _listViewAvailable->selectionModel( )->clearSelection( );
+    _rangeEdit->clear();
 
     _updateListsLabelNumbers( );
   }
@@ -342,6 +391,120 @@ namespace visimpl
     _updateListsLabelNumbers( );
   }
 
+  void SelectionManagerWidget::_updateRangeEdit()
+  {
+    auto lEdit = qobject_cast<QLineEdit*>(sender());
+    if(lEdit)
+    {
+      const auto parts = _rangeEdit->text().split(',');
+      const auto model = _listViewAvailable->model();
+      QItemSelection selection;
+
+      auto processPart = [&model, &selection, this](const QString &s)
+      {
+        if(s.isEmpty()) return true;
+        const auto trim = s.trimmed();
+        bool ok = false;
+
+        if(trim.contains("-"))
+        {
+          const auto values = trim.split("-");
+          if(values.size() > 2) return false;
+          const auto min = values.first().trimmed().toULongLong(&ok);
+          if(!ok) return false;
+          const auto max = values.last().trimmed().toULongLong(&ok);
+          if(!ok || max < min) return false;
+          const auto minIt = _gidIndex.find(min);
+          const auto maxIt = _gidIndex.find(max);
+          if(minIt == _gidIndex.end() || maxIt == _gidIndex.end()) return false;
+
+          const auto range = QItemSelectionRange(model->index((*minIt).second, 0), model->index((*maxIt).second, 0));
+          selection.append(range);
+          return true;
+        }
+
+        // not a range
+        const auto value = trim.toULongLong(&ok);
+        if(!ok) return false;
+        const auto it = _gidIndex.find(value);
+        if(it == _gidIndex.end()) return false;
+        const auto item = model->index((*it).second, 0);
+        selection.append(QItemSelectionRange(item, item));
+        return true;
+      };
+
+      auto it = std::find_if_not(parts.cbegin(), parts.cend(), processPart);
+      if(it != parts.cend())
+      {
+        lEdit->setStyleSheet("QLineEdit { background: rgb(255, 160, 160); selection-background-color: rgb(0, 200, 200); }");
+      }
+      else
+      {
+        lEdit->setStyleSheet("");
+      }
+
+      if(!selection.isEmpty())
+      {
+        auto sModel = _listViewAvailable->selectionModel();
+        sModel->blockSignals(true);
+        sModel->select(selection, QItemSelectionModel::ClearAndSelect);
+        sModel->blockSignals(false);
+        _listViewAvailable->scrollTo(selection.last().bottomRight(), QAbstractItemView::EnsureVisible);
+        _listViewAvailable->repaint();
+      }
+    }
+    else
+    {
+      auto sModel = qobject_cast<QItemSelectionModel*>(sender());
+      if(sModel)
+      {
+        const auto selection = sModel->selection();
+        std::vector<Range> ranges;
+
+        auto processRange = [&ranges](const QItemSelectionRange &r)
+        {
+          bool ok = false;
+          const auto min = r.topLeft();
+          if(!min.isValid()) return false;
+          const auto minData = min.data(Qt::UserRole + 1);
+          if(!minData.isValid()) return false;
+          const auto minValue = minData.toULongLong(&ok);
+          if(!ok) return false;
+
+          const auto max = r.bottomRight();
+          if(!max.isValid()) return false;
+          if(min != max)
+          {
+            const auto maxData = max.data(Qt::UserRole + 1);
+            if(!maxData.isValid()) return false;
+            const auto maxValue = maxData.toULongLong(&ok);
+            if(!ok) return false;
+
+            ranges.emplace_back(minValue, maxValue);
+            return true;
+          }
+
+          ranges.emplace_back(minValue, minValue);
+          return true;
+        };
+        auto it = std::find_if_not(selection.cbegin(), selection.cend(), processRange);
+        if(it != selection.cend() || ranges.empty()) return;
+
+        ranges = mergeRanges(ranges);
+
+        _rangeEdit->setStyleSheet("");
+        _rangeEdit->blockSignals(true);
+        _rangeEdit->setText(printRanges(ranges));
+        _rangeEdit->blockSignals(false);
+        _rangeEdit->repaint();
+      }
+      else
+      {
+        std::cerr << "Unable to indentify sender! " << __FILE__ << "," << __LINE__ << std::endl;
+      }
+    }
+  }
+
   void SelectionManagerWidget::_saveToFile( const QString& filePath,
                                             const QString& separator,
                                             const QString& prefix,
@@ -353,6 +516,7 @@ namespace visimpl
       msgBox.setWindowTitle("Selection save");
       msgBox.setText( "The prefix and the suffix cannot contain the separator character." );
       msgBox.setStandardButtons( QMessageBox::Ok );
+      msgBox.setWindowIcon(QIcon(":/visimpl.png"));
       msgBox.exec( );
 
       return;
@@ -364,6 +528,7 @@ namespace visimpl
       QMessageBox msgBox( this );
       msgBox.setWindowTitle("Selection save");
       msgBox.setText( "The selected file already exists." );
+      msgBox.setWindowIcon(QIcon(":/visimpl.png"));
       msgBox.setInformativeText( "Do you want to overwrite?" );
       msgBox.setStandardButtons( QMessageBox::Save | QMessageBox::Cancel );
       msgBox.setDefaultButton( QMessageBox::Save );
@@ -429,4 +594,48 @@ namespace visimpl
     _saveToFile( _lineEditFilePath->text( ), separator,
                  _lineEditPrefix->text( ), _lineEditSuffix->text( ));
   }
+
+  SelectionManagerWidget::Ranges SelectionManagerWidget::mergeRanges(
+      SelectionManagerWidget::Ranges &r)
+  {
+    Ranges result;
+
+    auto sortRanges = [](const Range &lhs, const Range &rhs)
+    {
+      // ranges dont overlap
+      return lhs.min < rhs.min;
+    };
+    std::sort(r.begin(), r.end(), sortRanges);
+
+    // join sorted ranges
+    for(auto it = r.cbegin(); it != r.cend(); ++it)
+    {
+      if(result.empty())
+      {
+        result.emplace_back(*it);
+        continue;
+      }
+
+      if(result.back().canMerge(*it))
+      {
+        result.back() = result.back() + (*it);
+      }
+      else
+      {
+        result.emplace_back(*it);
+      }
+    }
+
+    return result;
+  }
+
+  QString SelectionManagerWidget::printRanges(const SelectionManagerWidget::Ranges &r)
+  {
+    QStringList texts;
+    auto printRange = [&texts](const Range &item){ texts << item.print(); };
+    std::for_each(r.cbegin(), r.cend(), printRange);
+
+    return texts.join(',');
+  }
+
 }
