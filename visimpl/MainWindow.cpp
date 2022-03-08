@@ -857,6 +857,7 @@ namespace visimpl
     _selectionManager->setWindowModality( Qt::WindowModal );
     _selectionManager->setMinimumHeight( 300 );
     _selectionManager->setMinimumWidth( 500 );
+    _selectionManager->setWindowIcon(QIcon( ":/visimpl.png" ));
 
     connect( _selectionManager, SIGNAL( selectionChanged( void ) ), this,
              SLOT( selectionManagerChanged( void ) ) );

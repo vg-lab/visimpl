@@ -28,6 +28,8 @@
     <file>icons/stackviz.svg</file>
     <file>icons/recorder.svg</file>
     <file>icons/toolconfig.svg</file>
+    <file>icons/left.svg</file>
+    <file>icons/right.svg</file>
     <file>visimpl.png</file>
   </qresource>
 </RCC>

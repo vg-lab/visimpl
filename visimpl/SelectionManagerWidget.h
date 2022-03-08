@@ -78,6 +78,8 @@ namespace visimpl
     void _buttonCancelClicked( void );
     void _buttonAcceptClicked( void );
 
+    void _updateRangeEdit();
+
   protected:
     void _initTabSelection( void );
     void _initTabExport( void );
@@ -110,6 +112,7 @@ namespace visimpl
 
     QLabel* _labelAvailable;
     QLabel* _labelSelection;
+    QLineEdit *_rangeEdit;
 
     TUIntUintMap _gidIndex;
 
@@ -128,6 +131,70 @@ namespace visimpl
     QPushButton* _buttonSave;
 
     QString _pathExportDefault;
+
+  private:
+    /** \struct Range
+     * \brief Minimal class to represent a range of uint64_t and its basic operations.
+     *
+     */
+    struct Range
+    {
+        unsigned long long min;
+        unsigned long long max;
+
+        /** \brief Range class constructor.
+         * \param[in] a Range minimum
+         * \param[in] b Range maximim
+         */
+        Range(unsigned long a, unsigned long b)
+        : min { a }, max { b }
+        {};
+
+        /** \brief Returns true if the given Range can be merged.
+         * \param[in] r Range reference.
+         */
+        bool canMerge(const Range &r)
+        {
+          // dont overcomplicate it, Qt returns QItemSelections without overlaps.
+          return (max + 1 == r.min) || (min - 1 == r.max);
+        };
+
+        /** \brief Modifies the range struct adding with the given one.
+         * \param[in] r Range reference.
+         */
+        Range& operator+(const Range &r)
+        {
+          if (max + 1 == r.min)
+            max = r.max;
+          else
+            min = r.min;
+
+          return *this;
+        };
+
+        /** \brief Returns a QString with the range.
+         *
+         */
+        QString print() const
+        {
+          if(min != max) return QString("%1-%2").arg(min).arg(max);
+          return QString("%1").arg(min);
+        }
+    };
+
+    using Ranges = std::vector<Range>;
+
+    /** \brief Returns the minimal vector of ranges representing the given one.
+     * \param[inout] r Vector of ranges. Returned sorted.
+     *
+     */
+    Ranges mergeRanges(Ranges &r);
+
+    /** \brief Returns a QString with the given ranges separated by commas.
+     *
+     */
+    QString printRanges(const Ranges &r);
+
   };
 }
 
