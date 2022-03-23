@@ -963,8 +963,9 @@ void MainWindow::aboutDialog( void )
     "</li><li>ZeroEQ " + tr ("support not built.") +
 #endif
 
-  "</li></ul>" +
-  "<h4>" + tr( "Developed by:" ) + "</h4>" +
+    "</li><li>AcuteRecorder " + ACUTERECORDER_REV_STRING +
+
+  "</li></ul>" + "<h4>" + tr( "Developed by:" ) + "</h4>" +
   "VG-Lab / URJC / UPM"
   "<br><a href='https://vg-lab.es'>https://vg-lab.es</a>"
   "<br>(C) 2015-" + QString::number(QDateTime::currentDateTime().date().year()) + "<br><br>"

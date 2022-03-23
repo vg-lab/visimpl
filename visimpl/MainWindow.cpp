@@ -597,6 +597,8 @@ namespace visimpl
       "</li><li>ZeroEQ " + tr( "support not built." ) +
 #endif
 
+      "</li><li>AcuteRecorder " + ACUTERECORDER_REV_STRING +
+
       "</li></ul>" + "<h4>" + tr( "Developed by:" ) + "</h4>" +
       "VG-Lab / URJC / UPM"
       "<br><a href='https://vg-lab.es/'>https://vg-lab.es/</a>"
