@@ -65,10 +65,6 @@
     <addaction name="separator"/>
     <addaction name="actionUpdateOnIdle"/>
     <addaction name="actionShowFPSOnIdleUpdate"/>
-    <addaction name="separator"/>
-    <addaction name="actionRecorder"/>
-    <addaction name="actionAdvancedRecorderOptions"/>
-    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="stackVizOptions">
     <property name="title">
@@ -81,9 +77,16 @@
     <addaction name="actionStackVizFollowPlayHead"/>
     <addaction name="actionStackVizShowPanels"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionAdvancedRecorderOptions"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
    <addaction name="stackVizOptions"/>
+   <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -126,7 +129,6 @@
    <addaction name="actionToggleSimConfigDock"/>
    <addaction name="separator"/>
    <addaction name="actionShowInactive"/>
-   <addaction name="actionRecorder"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -165,21 +167,6 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+B</string>
-   </property>
-  </action>
-  <action name="actionRecorder">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/recorder.svg</normaloff>:/icons/recorder.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Recorder</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+R</string>
    </property>
   </action>
   <action name="actionOpenBlueConfig">

@@ -56,9 +56,6 @@
     <addaction name="actionFill_Plots"/>
     <addaction name="actionShowPanels"/>
     <addaction name="actionAddZeroEQhistograms"/>
-    <addaction name="separator"/>
-    <addaction name="actionRecorder"/>
-    <addaction name="actionAdvancedRecorderOptions"/>
    </widget>
    <widget class="QMenu" name="menuPlayback">
     <property name="title">
@@ -67,9 +64,16 @@
     <addaction name="actionFocusOnPlayhead"/>
     <addaction name="actionFollowPlayhead"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionAdvancedRecorderOptions"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuPlayback"/>
    <addaction name="menuOptions"/>
+   <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -99,7 +103,6 @@
    <addaction name="separator"/>
    <addaction name="actionFill_Plots"/>
    <addaction name="separator"/>
-   <addaction name="actionRecorder"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -297,24 +300,6 @@
    </property>
    <property name="toolTip">
     <string>Shows/Hides the configuration panels.</string>
-   </property>
-  </action>
-  <action name="actionRecorder">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/recorder.svg</normaloff>:/icons/recorder.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Recorder</string>
-   </property>
-   <property name="toolTip">
-    <string>Starts/Stops the recorder</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+R</string>
    </property>
   </action>
   <action name="actionAdvancedRecorderOptions">

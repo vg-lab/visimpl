@@ -151,6 +151,13 @@ namespace visimpl
   {
     _ui->setupUi( this );
 
+    auto recorderAction = RecorderUtils::recorderAction();
+    _ui->menuTools->insertAction(_ui->menuTools->actions().first(), recorderAction);
+    _ui->toolBar->addAction(recorderAction);
+
+    connect(recorderAction, SIGNAL(triggered(bool)),
+            this, SLOT(openRecorder()));
+
     _ui->actionUpdateOnIdle->setChecked( updateOnIdle );
     _ui->actionShowFPSOnIdleUpdate->setChecked( false );
 
@@ -228,9 +235,6 @@ namespace visimpl
 
     connect( _ui->actionHome , SIGNAL( triggered( void )) , _openGLWidget ,
              SLOT( home( void )) );
-
-    connect( _ui->actionRecorder , SIGNAL( triggered( void )) , this ,
-             SLOT( openRecorder( void )));
 
     connect( _openGLWidget , SIGNAL( stepCompleted( void )) , this ,
              SLOT( completedStep( void )));
@@ -500,15 +504,17 @@ namespace visimpl
 
   void MainWindow::openRecorder( void )
   {
+    auto action = qobject_cast<QAction *>(sender());
+
     // The button stops the recorder if found.
     if( _recorder != nullptr )
     {
-      _ui->actionRecorder->setDisabled( true );
-      _recorder->stop();
+      if(action) action->setDisabled( true );
+
+      RecorderUtils::stopAndWait(_recorder, this);
 
       // Recorder will be deleted after finishing.
       _recorder = nullptr;
-      _ui->actionRecorder->setChecked( false );
       return;
     }
 
@@ -538,10 +544,10 @@ namespace visimpl
                this , SLOT( finishRecording( )));
       connect( _openGLWidget , SIGNAL( frameSwapped( )) ,
                _recorder , SLOT( takeFrame( )));
-      _ui->actionRecorder->setChecked( true );
+      if(action) action->setChecked( true );
     } else
     {
-      _ui->actionRecorder->setChecked( false );
+      if(action) action->setChecked( false );
     }
   }
 
@@ -2668,7 +2674,32 @@ void MainWindow::clearGroups( void )
 
   void MainWindow::finishRecording( )
   {
-    _ui->actionRecorder->setEnabled( true );
+    auto recorderAction = _ui->menuTools->actions().first();
+    recorderAction->setEnabled( true );
+    recorderAction->setChecked( false );
+  }
+
+  void MainWindow::closeEvent(QCloseEvent *e)
+  {
+    if(_recorder)
+    {
+      QMessageBox msgBox(this);
+      msgBox.setWindowTitle(tr("Exit SimPart"));
+      msgBox.setWindowIcon( QIcon( ":/visimpl.png" ));
+      msgBox.setText(tr("A recording is being made. Do you really want to exit SimPart?"));
+      msgBox.setStandardButtons(QMessageBox::Cancel|QMessageBox::Yes);
+
+      if(msgBox.exec() != QMessageBox::Yes)
+      {
+        e->ignore();
+        return;
+      }
+
+      RecorderUtils::stopAndWait(_recorder, this);
+      _recorder = nullptr;
+    }
+
+    QMainWindow::closeEvent(e);
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
