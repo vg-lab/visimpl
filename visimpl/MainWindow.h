@@ -49,6 +49,7 @@ class QRadioButton;
 class QGroupBox;
 class QPushButton;
 class QToolBox;
+class QCloseEvent;
 
 namespace Ui
 {
@@ -253,6 +254,8 @@ namespace visimpl
      *
      */
     void updateGroupColors(size_t idx, const TTransferFunction &t, const TSizeFunction &s);
+
+    virtual void closeEvent(QCloseEvent *e) override;
 
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX

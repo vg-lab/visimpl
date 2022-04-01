@@ -91,6 +91,13 @@ MainWindow::MainWindow( QWidget* parent_ )
 {
   _ui->setupUi( this );
 
+  auto recorderAction = RecorderUtils::recorderAction();
+  _ui->menuTools->insertAction(_ui->menuTools->actions().first(), recorderAction);
+  _ui->toolBar->addAction(recorderAction);
+
+  connect(recorderAction, SIGNAL(triggered(bool)),
+          this, SLOT(openRecorder()));
+
   #ifdef VISIMPL_USE_SIMIL
     _ui->actionOpenBlueConfig->setEnabled( true );
   #else
@@ -103,9 +110,6 @@ MainWindow::MainWindow( QWidget* parent_ )
   // Connect about dialog
   connect( _ui->actionAbout, SIGNAL( triggered( void )),
            this, SLOT( aboutDialog( void )));
-
-  connect( _ui->actionRecorder , SIGNAL( triggered( void )) , this ,
-           SLOT( openRecorder( void )));
 
   m_dataInspector = new DataInspector("");
   m_dataInspector->hide();
@@ -1044,15 +1048,14 @@ void stackviz::MainWindow::loadData(const simil::TDataType type,
 
 void MainWindow::openRecorder( void )
 {
+  auto action = qobject_cast<QAction *>(sender());
   // The button stops the recorder if found.
   if( _recorder != nullptr )
   {
-    _ui->actionRecorder->setDisabled( true );
-    _recorder->stop();
+    if(action) action->setDisabled( true );
 
-    // Recorder will be deleted after finishing.
+    RecorderUtils::stopAndWait(_recorder,  this);
     _recorder = nullptr;
-    _ui->actionRecorder->setChecked( false );
     return;
   }
 
@@ -1079,16 +1082,18 @@ void MainWindow::openRecorder( void )
              _recorder , SLOT( deleteLater( )));
     connect( _recorder , SIGNAL( finished( )) ,
              this , SLOT( finishRecording( )));
-    _ui->actionRecorder->setChecked( true );
+    if(action) action->setChecked( true );
   } else
   {
-    _ui->actionRecorder->setChecked( false );
+    if(action) action->setChecked( false );
   }
 }
 
 void MainWindow::finishRecording( )
 {
-  _ui->actionRecorder->setEnabled( true );
+  auto action = _ui->menuTools->actions().first();
+  action->setEnabled( true );
+  action->setChecked( false );
 }
 
 void stackviz::MainWindow::onLoadFinished()
@@ -1213,6 +1218,29 @@ void stackviz::MainWindow::onDataUpdated()
     const float percentage = static_cast<float>(tCurrent - tBegin) / (tEnd - tBegin);
     _simSlider->setValue( percentage * SLIDER_MAX );
   }
+}
+
+void stackviz::MainWindow::closeEvent(QCloseEvent *e)
+{
+  if(_recorder)
+  {
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle(tr("Exit StackViz"));
+    msgBox.setWindowIcon( QIcon( ":/visimpl.png" ));
+    msgBox.setText(tr("A recording is being made. Do you really want to exit StackViz?"));
+    msgBox.setStandardButtons(QMessageBox::Cancel|QMessageBox::Yes);
+
+    if(msgBox.exec() != QMessageBox::Yes)
+    {
+      e->ignore();
+      return;
+    }
+
+    RecorderUtils::stopAndWait(_recorder, this);
+    _recorder = nullptr;
+  }
+
+  QMainWindow::closeEvent(e);
 }
 
 void stackviz::MainWindow::closeLoadingDialog()

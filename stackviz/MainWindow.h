@@ -49,6 +49,7 @@
 #include "DisplayManagerWidget.h"
 
 class Recorder;
+class QCloseEvent;
 
 namespace Ui
 {
@@ -134,6 +135,8 @@ namespace stackviz
 
     void initSummaryWidget( void );
     void initPlaybackDock( void );
+
+    virtual void closeEvent(QCloseEvent *e) override;
 
   #ifdef VISIMPL_USE_ZEROEQ
 
