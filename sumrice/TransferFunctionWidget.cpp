@@ -81,10 +81,10 @@ void TransferFunctionWidget::InitDialog( void )
     QGradientStops stops;
 
     stops.clear( );
-    stops << qMakePair( 0.0,  QColor::fromRgbF( 0.0, 1.0, 0.0, 0.05 ))
-          << qMakePair( 0.35, QColor::fromRgbF( 1.0, 0.0, 0.0, 0.2  ))
-          << qMakePair( 0.7,  QColor::fromRgbF( 1.0, 1.0, 0.0, 0.2  ))
-          << qMakePair( 1.0,  QColor::fromRgbF( 0.0, 0.0, 1.0, 0.2  ));
+    stops << qMakePair( 0.0,  QColor::fromRgbF( 0.0, 1.0, 0.0, 0.2 ))
+          << qMakePair( 0.35, QColor::fromRgbF( 1.0, 0.0, 0.0, 0.5  ))
+          << qMakePair( 0.7,  QColor::fromRgbF( 1.0, 1.0, 0.0, 0.5  ))
+          << qMakePair( 1.0,  QColor::fromRgbF( 0.0, 0.0, 1.0, 0.5  ));
     _presets.push_back( Preset( "Default [ multi-hue]", stops ));
 
      stops.clear( );
@@ -98,23 +98,23 @@ void TransferFunctionWidget::InitDialog( void )
     _presets.push_back( Preset( "Red-green [ multi-hue]", stops ));
 
     stops.clear( );
-    stops << qMakePair( 0.0, QColor( 255, 0, 0, 50 ))
+    stops << qMakePair( 0.0, QColor( 255, 0, 0, 100 ))
           << qMakePair( 0.1, QColor( 255, 0, 0, 200 ))
           << qMakePair( 1.0, QColor( 0, 0, 0, 20 ));
     _presets.push_back( Preset( "Red [ mono-hue]", stops ));
 
     stops.clear( );
-    stops << qMakePair( 0.0, QColor( 0, 255, 0, 50 ))
+    stops << qMakePair( 0.0, QColor( 0, 255, 0, 100 ))
           << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
     _presets.push_back( Preset( "Green [ mono-hue]", stops ));
 
     stops.clear( );
-    stops << qMakePair( 0.0, QColor( 0, 0, 255, 50 ))
+    stops << qMakePair( 0.0, QColor( 0, 0, 255, 100 ))
           << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
     _presets.push_back( Preset( "Blue [ mono-hue]", stops ));
 
     stops.clear( );
-    stops << qMakePair( 0.0, QColor::fromHsv( 60, 255, 255, 50 ))
+    stops << qMakePair( 0.0, QColor::fromHsv( 60, 255, 255, 100 ))
           << qMakePair( 1.0, QColor::fromHsv( 60, 128, 128,  0 ))
           << qMakePair( 1.0, QColor::fromHsv( 60,   0,   0,  0 ));
     _presets.push_back( Preset( "Yellow [ mono-hue]", stops ));

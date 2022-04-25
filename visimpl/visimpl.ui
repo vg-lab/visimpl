@@ -37,6 +37,9 @@
     <addaction name="separator"/>
     <addaction name="actionOpenSubsetEventsFile"/>
     <addaction name="separator"/>
+    <addaction name="actionLoad_camera_positions"/>
+    <addaction name="actionSave_camera_positions"/>
+    <addaction name="separator"/>
     <addaction name="actionCloseData"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -52,6 +55,9 @@
      <string>Options</string>
     </property>
     <addaction name="actionHome"/>
+    <addaction name="actionAdd_camera_position"/>
+    <addaction name="actionRemove_camera_position"/>
+    <addaction name="actionCamera_Positions"/>
     <addaction name="actionBackgroundColor"/>
     <addaction name="separator"/>
     <addaction name="actionTogglePlaybackDock"/>
@@ -514,6 +520,56 @@
    </property>
    <property name="toolTip">
     <string>Shows/Hides the StackViz configuration panels.</string>
+   </property>
+  </action>
+  <action name="actionCamera_Positions">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/eye.svg</normaloff>:/icons/eye.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Camera positions</string>
+   </property>
+   <property name="toolTip">
+    <string>Camera positions list.</string>
+   </property>
+  </action>
+  <action name="actionLoad_camera_positions">
+   <property name="text">
+    <string>Load camera positions...</string>
+   </property>
+   <property name="toolTip">
+    <string>Load camera positions from a file on disk.</string>
+   </property>
+  </action>
+  <action name="actionSave_camera_positions">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save camera positions...</string>
+   </property>
+   <property name="toolTip">
+    <string>Save camera positions to a file on disk.</string>
+   </property>
+  </action>
+  <action name="actionAdd_camera_position">
+   <property name="text">
+    <string>Add camera position...</string>
+   </property>
+   <property name="toolTip">
+    <string>Add camera position</string>
+   </property>
+  </action>
+  <action name="actionRemove_camera_position">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Remove camera position...</string>
    </property>
   </action>
  </widget>
