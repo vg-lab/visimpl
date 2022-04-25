@@ -103,14 +103,14 @@ namespace visimpl
     _loadPaletteColors( );
   }
 
-  void DomainManager::initializeParticleSystem( void )
+  void DomainManager::initializeParticleSystem( prefr::IGLRenderProgram* program )
   {
     std::cout << "Initializing particle system..." << std::endl;
 
     _updater = new UpdaterStaticPosition( );
 
     prefr::Sorter* sorter = new prefr::Sorter( );
-    prefr::GLRenderer* renderer = new prefr::GLPickRenderer( );
+    prefr::OIGLRenderer* renderer = new prefr::OIGLRenderer( program );
 
     _particleSystem->addUpdater( _updater );
     _particleSystem->sorter( sorter );
@@ -135,10 +135,10 @@ namespace visimpl
 
 
     _modelBase = new prefr::ColorOperationModel( _decayValue, _decayValue );
-    _modelBase->color.Insert( 0.0f, ( glm::vec4(0.f, 1.f, 0.f, 0.05)));
-    _modelBase->color.Insert( 0.35f, ( glm::vec4(1, 0, 0, 0.2 )));
-    _modelBase->color.Insert( 0.7f, ( glm::vec4(1.f, 1.f, 0, 0.2 )));
-    _modelBase->color.Insert( 1.0f, ( glm::vec4(0, 0, 1.f, 0.2 )));
+    _modelBase->color.Insert( 0.0f, ( glm::vec4(0.f, 1.f, 0.f, 0.2)));
+    _modelBase->color.Insert( 0.35f, ( glm::vec4(1, 0, 0, 0.5 )));
+    _modelBase->color.Insert( 0.7f, ( glm::vec4(1.f, 1.f, 0, 0.5 )));
+    _modelBase->color.Insert( 1.0f, ( glm::vec4(0, 0, 1.f, 0.5 )));
 
     _modelBase->velocity.Insert( 0.0f, 0.0f );
 

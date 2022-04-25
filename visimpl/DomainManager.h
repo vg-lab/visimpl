@@ -26,6 +26,7 @@
 #include <unordered_map>
 
 #include <prefr/prefr.h>
+#include <prefr/GL/IGLRenderProgram.h>
 #include <simil/simil.h>
 #include <scoop/scoop.h>
 
@@ -59,7 +60,7 @@ namespace visimpl
 #endif
 
 
-    void initializeParticleSystem( void );
+    void initializeParticleSystem( prefr::IGLRenderProgram* program );
 
     VisualGroup* addVisualGroupFromSelection( const std::string& name,
                                               bool overrideGIDs = false );

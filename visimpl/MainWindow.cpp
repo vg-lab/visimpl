@@ -70,12 +70,16 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QMenu>
 
 #include <thread>
+#include <iterator>
 
 #include <sumrice/sumrice.h>
 
 template<class T> void ignore( const T& ) { }
+
+constexpr const char* POSITION_KEY = "positionData";
 
 namespace visimpl
 {
@@ -168,6 +172,10 @@ namespace visimpl
 #else
     _ui->actionOpenBlueConfig->setEnabled( false );
 #endif
+
+    auto positionsMenu = new QMenu();
+    positionsMenu->setTitle("Camera positions");
+    _ui->actionCamera_Positions->setMenu(positionsMenu);
   }
 
   void MainWindow::init( const std::string& zeqUri )
@@ -241,6 +249,18 @@ namespace visimpl
 
     connect( _openGLWidget , SIGNAL( pickedSingle( unsigned int )) , this ,
              SLOT( updateSelectedStatsPickingSingle( unsigned int )) );
+
+    connect(_ui->actionAdd_camera_position, SIGNAL(triggered(bool)), this,
+             SLOT(addCameraPosition()));
+
+    connect(_ui->actionRemove_camera_position, SIGNAL(triggered(bool)), this,
+             SLOT(removeCameraPosition()));
+
+    connect(_ui->actionLoad_camera_positions, SIGNAL(triggered(bool)), this,
+             SLOT(loadCameraPositions()));
+
+    connect(_ui->actionSave_camera_positions, SIGNAL(triggered(bool)), this,
+             SLOT(saveCameraPositions()));
 
     QAction *actionTogglePause = new QAction( this );
     actionTogglePause->setShortcut( Qt::Key_Space );
@@ -510,8 +530,12 @@ namespace visimpl
     if( _recorder != nullptr )
     {
       if(action) action->setDisabled( true );
+      const bool currentlyPlaying = (_openGLWidget && _openGLWidget->player() && _openGLWidget->player()->isPlaying());
+      if(currentlyPlaying) Pause();
 
       RecorderUtils::stopAndWait(_recorder, this);
+
+      if(currentlyPlaying) Play();
 
       // Recorder will be deleted after finishing.
       _recorder = nullptr;
@@ -2356,10 +2380,10 @@ void MainWindow::clearGroups( void )
 
     const auto contents = file.readAll();
     QJsonParseError jsonError;
-    const auto  jsonDoc = QJsonDocument::fromJson(contents, &jsonError);;
+    const auto  jsonDoc = QJsonDocument::fromJson(contents, &jsonError);
     if(jsonDoc.isNull() || !jsonDoc.isObject())
     {
-      const auto message = tr("Couldn't read the contents of %1 or error at parsing.").arg(fileName);
+      const auto message = tr("Couldn't read the contents of %1 or parsing error.").arg(fileName);
 
       QMessageBox msgbox{this};
       msgbox.setWindowTitle(title);
@@ -2375,7 +2399,7 @@ void MainWindow::clearGroups( void )
     const auto jsonObj = jsonDoc.object();
     if(jsonObj.isEmpty())
     {
-      const auto message = tr("Error at parsing.").arg(fileName);
+      const auto message = tr("Error parsing the contents of %1.").arg(fileName);
 
       QMessageBox msgbox{this};
       msgbox.setWindowTitle(title);
@@ -2598,7 +2622,6 @@ void MainWindow::clearGroups( void )
     obj.insert("groups", groupsObjs);
 
     QJsonDocument doc{obj};
-    const auto temp = doc.toJson().toStdString();
     wFile.write(doc.toJson());
 
     QApplication::restoreOverrideCursor();
@@ -2700,6 +2723,295 @@ void MainWindow::clearGroups( void )
     }
 
     QMainWindow::closeEvent(e);
+  }
+
+  void MainWindow::loadCameraPositions()
+  {
+    const QString title = "Load camera positions";
+
+    auto actions = _ui->actionCamera_Positions->menu()->actions();
+    const auto numActions = actions.size();
+    if(numActions > 0)
+    {
+      const auto warnText = tr("Loading new camera positions will erase"
+                               " %1 existing position%2. Are you sure?").arg(numActions).arg(numActions > 1 ? "s":"");
+      if(QMessageBox::Ok != QMessageBox::warning(this, title, warnText, QMessageBox::Cancel|QMessageBox::Ok))
+        return;
+    }
+
+    const QString nameFilter = "Camera positions (*.json)";
+    QDir directory;
+
+    if(_lastOpenedNetworkFileName.isEmpty())
+      directory = QDir::home();
+    else
+      directory = QFileInfo(_lastOpenedNetworkFileName).dir();
+
+    QFileDialog fDialog(this);
+    fDialog.setWindowIcon(QIcon(":/visimpl.png"));
+    fDialog.setWindowTitle(title);
+    fDialog.setAcceptMode(QFileDialog::AcceptMode::AcceptOpen);
+    fDialog.setDefaultSuffix("json");
+    fDialog.setDirectory(directory);
+    fDialog.setOption(QFileDialog::Option::DontUseNativeDialog, true);
+    fDialog.setFileMode(QFileDialog::FileMode::ExistingFile);
+    fDialog.setNameFilters(QStringList{nameFilter});
+    fDialog.setNameFilter(nameFilter);
+
+    if(fDialog.exec() != QFileDialog::Accepted)
+      return;
+
+    if(fDialog.selectedFiles().empty()) return;
+
+    auto file = fDialog.selectedFiles().first();
+
+    QFile posFile{file};
+    if(!posFile.open(QIODevice::ReadOnly|QIODevice::Text))
+    {
+      const QString errorText = tr("Unable to open: %1").arg(file);
+      QMessageBox::critical(this, title, errorText);
+      return;
+    }
+
+    const auto contents = posFile.readAll();
+    QJsonParseError parserError;
+
+    const auto  jsonDoc = QJsonDocument::fromJson(contents, &parserError);
+    if(jsonDoc.isNull() || !jsonDoc.isObject())
+    {
+      const auto message = tr("Couldn't read the contents of %1 or parsing error.").arg(file);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Ok);
+      msgbox.setDetailedText(parserError.errorString());
+      msgbox.exec();
+      return;
+    }
+
+    const auto jsonObj = jsonDoc.object();
+    if(jsonObj.isEmpty())
+    {
+      const auto message = tr("Error parsing the contents of %1.").arg(file);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Ok);
+      msgbox.exec();
+      return;
+    }
+
+    // Clear existing actions before entering new ones.
+    for(auto action: actions)
+    {
+      _ui->actionCamera_Positions->menu()->removeAction(action);
+      delete action;
+    }
+
+    const auto jsonPositions = jsonObj.value("positions").toArray();
+
+    auto createPosition = [this](const QJsonValue &v)
+    {
+      const auto o = v.toObject();
+
+      const auto name = o.value("name").toString();
+      const auto position = o.value("position").toString();
+      const auto radius = o.value("radius").toString();
+      const auto rotation = o.value("rotation").toString();
+
+      auto action = new QAction(name);
+      action->setProperty(POSITION_KEY, position + ";" + radius + ";" + rotation);
+
+      connect(action, SIGNAL(triggered(bool)), this, SLOT(applyCameraPosition()));
+
+      _ui->actionCamera_Positions->menu()->addAction(action);
+    };
+    std::for_each(jsonPositions.constBegin(), jsonPositions.constEnd(), createPosition);
+
+    const bool positionsExist = !_ui->actionCamera_Positions->menu()->actions().isEmpty();
+    _ui->actionSave_camera_positions->setEnabled(positionsExist);
+    _ui->actionRemove_camera_position->setEnabled(positionsExist);
+    _ui->actionCamera_Positions->setEnabled(positionsExist);
+  }
+
+  void MainWindow::saveCameraPositions()
+  {
+    const QString nameFilter = "Camera positions (*.json)";
+    QDir directory;
+
+    if(_lastOpenedNetworkFileName.isEmpty())
+      directory = QDir::home();
+    else
+      directory = QFileInfo(_lastOpenedNetworkFileName).dir();
+
+    QFileDialog fDialog(this);
+    fDialog.setWindowIcon(QIcon(":/visimpl.png"));
+    fDialog.setWindowTitle("Save camera positions");
+    fDialog.setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
+    fDialog.setDefaultSuffix("json");
+    fDialog.setDirectory(directory);
+    fDialog.setOption(QFileDialog::Option::DontUseNativeDialog, true);
+    fDialog.setFileMode(QFileDialog::FileMode::AnyFile);
+    fDialog.setNameFilters(QStringList{nameFilter});
+    fDialog.setNameFilter(nameFilter);
+
+    if(fDialog.exec() != QFileDialog::Accepted)
+      return;
+
+    if(fDialog.selectedFiles().empty()) return;
+
+    const auto filename = fDialog.selectedFiles().first();
+
+    QFile wFile{filename};
+    if(!wFile.open(QIODevice::WriteOnly|QIODevice::Text|QIODevice::Truncate))
+    {
+      const auto message = tr("Unable to open file %1 for writing.").arg(filename);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(tr("Save camera positions"));
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setDefaultButton(QMessageBox::Ok);
+      msgbox.exec();
+      return;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    const auto actions = _ui->actionCamera_Positions->menu()->actions();
+
+    QJsonArray positionsObjs;
+
+    auto insertPosition = [&positionsObjs, this](const QAction *a)
+    {
+      if(!a) return;
+      const auto posData = a->property(POSITION_KEY).toString();
+      const auto parts = posData.split(";");
+      Q_ASSERT(parts.size() == 3);
+      const auto position = parts.first();
+      const auto radius = parts.at(1);
+      const auto rotation = parts.last();
+
+      QJsonObject positionObj;
+      positionObj.insert("name", a->text());
+      positionObj.insert("position", position);
+      positionObj.insert("radius", radius);
+      positionObj.insert("rotation", rotation);
+
+      positionsObjs << positionObj;
+    };
+    std::for_each(actions.cbegin(), actions.cend(), insertPosition);
+
+    QJsonObject obj;
+    obj.insert("positions", positionsObjs);
+
+    QJsonDocument doc{obj};
+    wFile.write(doc.toJson());
+
+    QApplication::restoreOverrideCursor();
+
+    if(wFile.error() != QFile::NoError)
+    {
+      const auto message = tr("Error saving file %1.").arg(filename);
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(tr("Save camera positions"));
+      msgbox.setIcon(QMessageBox::Icon::Critical);
+      msgbox.setText(message);
+      msgbox.setDetailedText(wFile.errorString());
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setDefaultButton(QMessageBox::Ok);
+      msgbox.exec();
+    }
+
+    wFile.flush();
+    wFile.close();
+  }
+
+  void MainWindow::addCameraPosition()
+  {
+    QStringList items;
+
+    auto actions = _ui->actionCamera_Positions->menu()->actions();
+    auto insertItemName = [&items](const QAction *a){ items << a->text(); };
+    std::for_each(actions.cbegin(), actions.cend(), insertItemName);
+
+    const QString title = tr("Add camera position");
+
+    bool ok = false;
+    QString name;
+    while(!ok || name.isEmpty())
+    {
+      name = QInputDialog::getText(this, title, tr("Position name:"), QLineEdit::Normal, tr("New position"), &ok);
+
+      if(ok && !name.isEmpty())
+      {
+        QString tempName(name);
+        int collision = 0;
+        while(items.contains(tempName, Qt::CaseInsensitive))
+        {
+          ++collision;
+          tempName = tr("%1 (%2)").arg(name).arg(collision);
+        }
+
+        name = tempName;
+      }
+    }
+
+    auto action = new QAction(name);
+
+    const auto position = _openGLWidget->cameraPosition();
+    action->setProperty(POSITION_KEY, position.toString());
+
+    connect(action, SIGNAL(triggered(bool)), this, SLOT(applyCameraPosition()));
+    _ui->actionCamera_Positions->menu()->addAction(action);
+    _ui->actionCamera_Positions->setEnabled(true);
+    _ui->actionSave_camera_positions->setEnabled(true);
+    _ui->actionRemove_camera_position->setEnabled(true);
+  }
+
+  void MainWindow::removeCameraPosition()
+  {
+    bool ok = false;
+    QStringList items;
+
+    auto actions = _ui->actionCamera_Positions->menu()->actions();
+    auto insertItemName = [&items](const QAction *a){ items << a->text(); };
+    std::for_each(actions.cbegin(), actions.cend(), insertItemName);
+
+    auto item = QInputDialog::getItem(this, tr("Remove camera position"), tr("Position name:"), items, 0, false, &ok);
+    if (ok && !item.isEmpty())
+    {
+      auto actionOfName = [&item](const QAction *a){ return a->text() == item; };
+      const auto it = std::find_if(actions.cbegin(), actions.cend(), actionOfName);
+      auto distance = std::distance(actions.cbegin(), it);
+      auto action = actions.at(distance);
+      _ui->actionCamera_Positions->menu()->removeAction(action);
+      delete action;
+
+      const auto enabled = actions.size() > 1;
+      _ui->actionRemove_camera_position->setEnabled(enabled);
+      _ui->actionSave_camera_positions->setEnabled(enabled);
+      _ui->actionCamera_Positions->setEnabled(enabled);
+    }
+  }
+
+  void MainWindow::applyCameraPosition()
+  {
+    auto action = qobject_cast<QAction *>(sender());
+    if(action)
+    {
+      auto positionString = action->property(POSITION_KEY).toString();
+      CameraPosition position(positionString);
+      _openGLWidget->setCameraPosition(position);
+    }
   }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
