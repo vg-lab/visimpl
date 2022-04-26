@@ -37,6 +37,8 @@
 #include <chrono>
 #include <unordered_set>
 #include <queue>
+#include <locale>
+#include <iostream>
 
 #define VISIMPL_SKIP_GLEW_INCLUDE 1
 
@@ -64,6 +66,11 @@
 class QLabel;
 class LoadingDialog;
 class LoaderThread;
+
+struct streamDotSeparator: std::numpunct<char>
+{
+    char do_decimal_point() const { return '.'; }
+};
 
 namespace visimpl
 {
@@ -93,19 +100,29 @@ namespace visimpl
        */
       CameraPosition(const QString &data)
       {
-        const auto parts = data.split(";");
+        const auto separator = std::use_facet<std::numpunct<char>>(std::cout.getloc()).decimal_point();
+        const bool needSubst = (separator == ',');
+
+        auto parts = data.split(";");
         Q_ASSERT(parts.size() == 3);
         const auto posData = parts.first();
         const auto rotData = parts.last();
-        radius = parts.at(1).toFloat();
+        auto radiusData = parts.at(1);
 
-        const auto posParts = posData.split(",");
+        auto posParts = posData.split(",");
         Q_ASSERT(posParts.size() == 3);
-        const auto rotParts = rotData.split(",");
+        auto rotParts = rotData.split(",");
         Q_ASSERT(rotParts.size() == 9);
 
+        if(needSubst)
+        {
+          for(auto &part: posParts) part.replace('.', ',');
+          for(auto &part: rotParts) part.replace('.', ',');
+          radiusData.replace('.', ',');
+        }
+
         position = Eigen::Vector3f(posParts[0].toFloat(), posParts[1].toFloat(), posParts[2].toFloat());
-        radius = parts.at(1).toFloat();
+        radius = radiusData.toFloat();
         rotation.block<1,3>(0,0) = Eigen::Vector3f{rotParts[0].toFloat(), rotParts[1].toFloat(), rotParts[2].toFloat()};
         rotation.block<1,3>(1,0) = Eigen::Vector3f{rotParts[3].toFloat(), rotParts[4].toFloat(), rotParts[5].toFloat()};
         rotation.block<1,3>(2,0) = Eigen::Vector3f{rotParts[6].toFloat(), rotParts[7].toFloat(), rotParts[8].toFloat()};
@@ -117,6 +134,7 @@ namespace visimpl
       QString toString() const
       {
         std::stringstream stream;
+        stream.imbue(std::locale(stream.getloc(), new streamDotSeparator()));
         stream << position << ";" << radius << ";"
                << rotation(0,0) << "," << rotation(0,1) << "," << rotation(0,2) << ","
                << rotation(1,0) << "," << rotation(1,1) << "," << rotation(1,2) << ","
