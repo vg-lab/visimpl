@@ -2413,10 +2413,10 @@ void MainWindow::clearGroups( void )
 
     const QFileInfo currentFile{_lastOpenedNetworkFileName};
     const QString jsonGroupsFile = jsonObj.value("filename").toString();
-    if(jsonGroupsFile.compare(currentFile.fileName(), Qt::CaseInsensitive) != 0)
+    if(!jsonGroupsFile.isEmpty() && jsonGroupsFile.compare(currentFile.fileName(), Qt::CaseInsensitive) != 0)
     {
-      const auto message = tr("This groups definitions are from file %1. Current file"
-                              " is %2. Do you want to continue?").arg(jsonGroupsFile).arg(currentFile.fileName());
+      const auto message = tr("This groups definitions are from file '%1'. Current file"
+                              " is '%2'. Do you want to continue?").arg(jsonGroupsFile).arg(currentFile.fileName());
 
       QMessageBox msgbox{this};
       msgbox.setWindowTitle(title);
@@ -2733,7 +2733,7 @@ void MainWindow::clearGroups( void )
     const auto numActions = actions.size();
     if(numActions > 0)
     {
-      const auto warnText = tr("Loading new camera positions will erase"
+      const auto warnText = tr("Loading new camera positions will remove"
                                " %1 existing position%2. Are you sure?").arg(numActions).arg(numActions > 1 ? "s":"");
       if(QMessageBox::Ok != QMessageBox::warning(this, title, warnText, QMessageBox::Cancel|QMessageBox::Ok))
         return;
@@ -2807,6 +2807,25 @@ void MainWindow::clearGroups( void )
       return;
     }
 
+    const QFileInfo currentFile{_lastOpenedNetworkFileName};
+    const QString jsonPositionsFile = jsonObj.value("filename").toString();
+    if(!jsonPositionsFile.isEmpty() && jsonPositionsFile.compare(currentFile.fileName(), Qt::CaseInsensitive) != 0)
+    {
+      const auto message = tr("This positions are from file '%1'. Current file"
+                              " is '%2'. Do you want to continue?").arg(jsonPositionsFile).arg(currentFile.fileName());
+
+      QMessageBox msgbox{this};
+      msgbox.setWindowTitle(title);
+      msgbox.setIcon(QMessageBox::Icon::Question);
+      msgbox.setText(message);
+      msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+      msgbox.setStandardButtons(QMessageBox::Cancel|QMessageBox::Ok);
+      msgbox.setDefaultButton(QMessageBox::Ok);
+
+      if(QMessageBox::Ok != msgbox.exec())
+        return;
+    }
+
     // Clear existing actions before entering new ones.
     for(auto action: actions)
     {
@@ -2844,19 +2863,29 @@ void MainWindow::clearGroups( void )
   {
     const QString nameFilter = "Camera positions (*.json)";
     QDir directory;
+    QString filename;
 
     if(_lastOpenedNetworkFileName.isEmpty())
+    {
       directory = QDir::home();
+      filename = "positions.json";
+    }
     else
-      directory = QFileInfo(_lastOpenedNetworkFileName).dir();
+    {
+      QFileInfo fi(_lastOpenedNetworkFileName);
+      directory = fi.dir();
+      filename = QString("%1_positions.json").arg(fi.baseName());
+    }
 
     QFileDialog fDialog(this);
     fDialog.setWindowIcon(QIcon(":/visimpl.png"));
     fDialog.setWindowTitle("Save camera positions");
     fDialog.setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
     fDialog.setDefaultSuffix("json");
+    fDialog.selectFile(filename);
     fDialog.setDirectory(directory);
     fDialog.setOption(QFileDialog::Option::DontUseNativeDialog, true);
+    fDialog.setOption(QFileDialog::Option::DontConfirmOverwrite, false);
     fDialog.setFileMode(QFileDialog::FileMode::AnyFile);
     fDialog.setNameFilters(QStringList{nameFilter});
     fDialog.setNameFilter(nameFilter);
@@ -2866,7 +2895,7 @@ void MainWindow::clearGroups( void )
 
     if(fDialog.selectedFiles().empty()) return;
 
-    const auto filename = fDialog.selectedFiles().first();
+    filename = fDialog.selectedFiles().first();
 
     QFile wFile{filename};
     if(!wFile.open(QIODevice::WriteOnly|QIODevice::Text|QIODevice::Truncate))
@@ -2910,6 +2939,7 @@ void MainWindow::clearGroups( void )
     std::for_each(actions.cbegin(), actions.cend(), insertPosition);
 
     QJsonObject obj;
+    obj.insert("filename", QFileInfo{_lastOpenedNetworkFileName}.fileName());
     obj.insert("positions", positionsObjs);
 
     QJsonDocument doc{obj};

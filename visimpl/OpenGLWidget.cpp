@@ -1356,6 +1356,7 @@ void main()
     _gidPositions.clear( );
     _gidPositions.reserve( positions.size( ));
 
+    vec3 bbmin, bbmax;
     auto gidit = _player->gids( ).cbegin( );
     auto insertElement = [ & ]( const vmml::Vector3f& v )
     {
@@ -1364,9 +1365,28 @@ void main()
                            v.z( ) * _scaleFactor.z );
 
       _gidPositions.insert( std::make_pair( *gidit , position ));
+      if(gidit == _player->gids().cbegin())
+      {
+        bbmin = bbmax = position;
+      }
+      else
+      {
+        auto x = std::min(bbmin.x, position.x);
+        auto y = std::min(bbmin.y, position.y);
+        auto z = std::min(bbmin.z, position.z);
+        bbmin = vec3{x,y,z};
+
+        x = std::max(bbmax.x, position.x);
+        y = std::max(bbmax.y, position.y);
+        z = std::max(bbmax.z, position.z);
+        bbmax = vec3{x,y,z};
+      }
       ++gidit;
     };
     std::for_each( positions.cbegin( ) , positions.cend( ) , insertElement );
+
+    _boundingBoxHome = tBoundingBox{ bbmin, bbmax };
+
     return true;
   }
 
