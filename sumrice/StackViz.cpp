@@ -66,26 +66,23 @@ void StackViz::init( simil::SimulationPlayer* player )
   QApplication::restoreOverrideCursor( );
 }
 
-StackViz::~StackViz( void )
-{
-}
-
 void StackViz::openSubsetEventsFile( bool fromH5 )
 {
+  if(_summary)
+  {
     _summary->clearEvents();
-    _summary->generateEventsRep( );
-    //_summary->importSubsetsFromSubsetMngr( );
+    _summary->generateEventsRep();
     _autoCalculateCorrelations = fromH5;
+  }
 
-    if( _displayManager )
-      _displayManager->refresh( );
+  if (_displayManager) _displayManager->refresh();
 }
 
 void StackViz::showDisplayManagerWidget( )
 {
   if(!_summary) return;
 
-  if( !_displayManager)
+  if(!_displayManager)
   {
     _displayManager = new DisplayManagerWidget( );
     _displayManager->init( _summary->eventWidgets(),
@@ -112,6 +109,8 @@ void StackViz::showDisplayManagerWidget( )
 
 void StackViz::initSummaryWidget( )
 {
+  if(!_player) return;
+
   const bool hasSummary = _summary != nullptr;
 
   if(!hasSummary)
@@ -198,6 +197,8 @@ void StackViz::removeSubset(const unsigned int i)
 
 void StackViz::calculateCorrelations(void)
 {
+  if(!_player || !_subsetEventManager) return;
+
   visimpl::CorrelationComputer cc(dynamic_cast<simil::SpikeData*>(_player->data()));
 
   const auto eventNames = _subsetEventManager->eventNames();
@@ -279,4 +280,30 @@ void visimpl::StackViz::repaintHistograms()
 
     _summary->repaintHistograms();
   }
+}
+
+void visimpl::StackViz::closeData()
+{
+  _player = nullptr;
+  _subsetEventManager = nullptr;
+
+  // remove histograms
+  if(_summary)
+  {
+    while(_summary->histogramsNumber() > 1)
+      _summary->removeSubset(1);
+
+    layout()->removeWidget(_summary);
+    _summary->deleteLater();
+    _summary = nullptr;
+  }
+
+  if(_displayManager)
+  {
+    if(_displayManager->isVisible()) _displayManager->hide();
+    _displayManager->deleteLater();
+    _displayManager = nullptr;
+  }
+
+  _correlations.clear();
 }

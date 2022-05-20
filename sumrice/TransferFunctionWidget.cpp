@@ -78,46 +78,46 @@ void TransferFunctionWidget::InitDialog( void )
 
   _presetsComboBox = new QComboBox( _dialog );
   {
-    QGradientStops stops;
+    QGradientStops _stops;
 
-    stops.clear( );
-    stops << qMakePair( 0.0,  QColor::fromRgbF( 0.0, 1.0, 0.0, 0.2 ))
-          << qMakePair( 0.35, QColor::fromRgbF( 1.0, 0.0, 0.0, 0.5  ))
-          << qMakePair( 0.7,  QColor::fromRgbF( 1.0, 1.0, 0.0, 0.5  ))
-          << qMakePair( 1.0,  QColor::fromRgbF( 0.0, 0.0, 1.0, 0.5  ));
-    _presets.push_back( Preset( "Default [ multi-hue]", stops ));
+    _stops.clear( );
+    _stops << qMakePair( 0.0,  QColor::fromRgbF( 0.0, 1.0, 0.0, 0.2 ))
+           << qMakePair( 0.35, QColor::fromRgbF( 1.0, 0.0, 0.0, 0.5  ))
+           << qMakePair( 0.7,  QColor::fromRgbF( 1.0, 1.0, 0.0, 0.5  ))
+           << qMakePair( 1.0,  QColor::fromRgbF( 0.0, 0.0, 1.0, 0.5  ));
+    _presets.push_back( Preset( "Default [ multi-hue]", _stops ));
 
-     stops.clear( );
-    stops << qMakePair( 0.0, QColor( 255, 0, 0, 127 ))
-          << qMakePair( 1.0, QColor( 0, 0, 255, 127 ));
-    _presets.push_back( Preset( "Red-blue [ multi-hue]", stops ));
+    _stops.clear( );
+    _stops << qMakePair( 0.0, QColor( 255, 0, 0, 127 ))
+           << qMakePair( 1.0, QColor( 0, 0, 255, 127 ));
+    _presets.push_back( Preset( "Red-blue [ multi-hue]", _stops ));
 
-    stops.clear( );
-    stops << qMakePair( 0.0, QColor( 255, 0, 0, 127 ))
-          << qMakePair( 1.0, QColor( 0, 255, 0, 127 ));
-    _presets.push_back( Preset( "Red-green [ multi-hue]", stops ));
+    _stops.clear( );
+    _stops << qMakePair( 0.0, QColor( 255, 0, 0, 127 ))
+           << qMakePair( 1.0, QColor( 0, 255, 0, 127 ));
+    _presets.push_back( Preset( "Red-green [ multi-hue]", _stops ));
 
-    stops.clear( );
-    stops << qMakePair( 0.0, QColor( 255, 0, 0, 100 ))
-          << qMakePair( 0.1, QColor( 255, 0, 0, 200 ))
-          << qMakePair( 1.0, QColor( 0, 0, 0, 20 ));
-    _presets.push_back( Preset( "Red [ mono-hue]", stops ));
+    _stops.clear( );
+    _stops << qMakePair( 0.0, QColor( 255, 0, 0, 100 ))
+           << qMakePair( 0.1, QColor( 255, 0, 0, 200 ))
+           << qMakePair( 1.0, QColor( 0, 0, 0, 20 ));
+    _presets.push_back( Preset( "Red [ mono-hue]", _stops ));
 
-    stops.clear( );
-    stops << qMakePair( 0.0, QColor( 0, 255, 0, 100 ))
-          << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
-    _presets.push_back( Preset( "Green [ mono-hue]", stops ));
+    _stops.clear( );
+    _stops << qMakePair( 0.0, QColor( 0, 255, 0, 100 ))
+           << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
+    _presets.push_back( Preset( "Green [ mono-hue]", _stops ));
 
-    stops.clear( );
-    stops << qMakePair( 0.0, QColor( 0, 0, 255, 100 ))
-          << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
-    _presets.push_back( Preset( "Blue [ mono-hue]", stops ));
+    _stops.clear( );
+    _stops << qMakePair( 0.0, QColor( 0, 0, 255, 100 ))
+           << qMakePair( 1.0, QColor( 0, 0, 0, 0 ));
+    _presets.push_back( Preset( "Blue [ mono-hue]", _stops ));
 
-    stops.clear( );
-    stops << qMakePair( 0.0, QColor::fromHsv( 60, 255, 255, 100 ))
-          << qMakePair( 1.0, QColor::fromHsv( 60, 128, 128,  0 ))
-          << qMakePair( 1.0, QColor::fromHsv( 60,   0,   0,  0 ));
-    _presets.push_back( Preset( "Yellow [ mono-hue]", stops ));
+    _stops.clear( );
+    _stops << qMakePair( 0.0, QColor::fromHsv( 60, 255, 255, 100 ))
+           << qMakePair( 1.0, QColor::fromHsv( 60, 128, 128,  0 ))
+           << qMakePair( 1.0, QColor::fromHsv( 60,   0,   0,  0 ));
+    _presets.push_back( Preset( "Yellow [ mono-hue]", _stops ));
 
     for ( const auto& preset : _presets )
       _presetsComboBox->addItem( preset.name( ));

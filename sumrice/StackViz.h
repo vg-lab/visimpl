@@ -48,7 +48,8 @@ namespace visimpl
 
   public:
     explicit StackViz( QWidget* parent = nullptr );
-    virtual ~StackViz( void );
+    virtual ~StackViz()
+    {};
 
     void init( simil::SimulationPlayer* p );
 
@@ -76,6 +77,11 @@ namespace visimpl
      *
      */
     void setHistogramVisible(const unsigned idx, const bool state);
+
+    /** \brief Removes histograms and resets interface.
+     *
+     */
+    void closeData();
 
   signals:
     void changedBins(const unsigned int);

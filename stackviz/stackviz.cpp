@@ -268,7 +268,28 @@ int main( int argc, char** argv )
 
   if (dataType != simil::TDataType::TDataUndefined)
   {
-    mainWindow.loadData(dataType, networkFile, activityFile, simType);
+    switch(dataType)
+    {
+      case simil::TDataType::TREST:
+        {
+#ifdef SIMIL_WITH_REST_API
+          simil::LoaderRestData::Configuration config;
+          config.url = networkFile;
+          config.port = stoi(activityFile);
+          config.api = simil::LoaderRestData::Rest_API::NEST;
+
+          mainWindow.loadRESTData(config);
+#else
+          std::cerr << "REST API not supported." << std::endl;
+          return -1;
+#endif
+
+        }
+        break;
+      default:
+        mainWindow.loadData(dataType, networkFile, activityFile, simType);
+        break;
+    }
 
     if (dataType == simil::TDataType::THDF5)
     {

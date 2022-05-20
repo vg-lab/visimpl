@@ -54,6 +54,8 @@ void LoaderThread::setData(const simil::TDataType type,
                            const std::string &arg1,
                            const std::string &arg2)
 {
+  assert(type != simil::TDataType::TREST);
+
   m_type = type;
   m_arg1 = arg1;
   m_arg2 = arg2;
@@ -106,15 +108,31 @@ void LoaderThread::run()
 #ifdef SIMIL_WITH_REST_API
           m_rest = new simil::LoaderRestData();
           m_rest->deltaTime(REST_DELTATIME);
-          m_network = m_rest->loadNetwork(m_arg1, m_arg2);
-          m_data = m_rest->loadSimulationData(m_arg1, m_arg2);
+          m_rest->setConfiguration(m_restConfig);
+
+          const auto url = m_restConfig.url;
+          const auto port = std::to_string(m_restConfig.port);
+          const auto version = m_rest->getVersion(url, m_restConfig.port);
+
+          std::cout << "REST api version " << version.api << " - insite pipeline version " << version.insite << std::endl;
+
+          if(version.api.empty() || version.insite.empty())
+          {
+            m_errors = std::string("Unknown protocol connecting to ")
+                     + m_restConfig.url + ":" + std::to_string(m_restConfig.port);
+            break;
+          }
+
+          m_network = m_rest->loadNetwork(url, port);
+          m_data = m_rest->loadSimulationData(url, port);
 
           unsigned int oldSpikes = 0, oldNetwork = 0;
-          for(int i = 0; i < 5; ++i)
+          unsigned int count = 0;
+          while(count < 5 || oldNetwork < 2)
           {
             QThread::sleep(1);
             const auto newNetwork = m_network->gidsSize();
-            if(newNetwork != oldNetwork)
+            if(newNetwork != oldNetwork && newNetwork > 2)
             {
               oldNetwork = newNetwork;
               emit network(newNetwork);
@@ -126,7 +144,17 @@ void LoaderThread::run()
               oldSpikes = newSpikes;
               emit spikes(newSpikes);
             }
+
+            ++count;
+
+            if(count > 60)
+            {
+              m_errors = std::string("Unable to connect to ")
+                       + m_restConfig.url + ":" + std::to_string(m_restConfig.port);
+              break;
+            }
           }
+
           emit progress(50);
 #else
           m_errors = "REST data loading is unsupported.";
@@ -142,16 +170,16 @@ void LoaderThread::run()
   }
   catch(const std::exception &ex)
   {
-    m_errors = std::string("simil::LoaderThread::run() -> ") + std::string(ex.what());
+    m_errors = std::string("sumrice::LoaderThread::run() -> ") + std::string(ex.what());
   }
   catch(...)
   {
-    m_errors = std::string("simil::LoaderThread::run() -> Unhandled exception when loading data. ");
+    m_errors = std::string("sumrice::LoaderThread::run() -> Un-handled exception when loading data. ");
   }
 
   emit progress(75);
 
-  if(!m_errors.empty())
+  if(!m_errors.empty() && m_type != simil::TDataType::TREST)
   {
     m_errors += std::string("\ndata type: ") + std::to_string(static_cast<int>(m_type));
     m_errors += std::string(" argument 1: ") + m_arg1;
@@ -160,3 +188,26 @@ void LoaderThread::run()
 
   emit progress(100);
 }
+
+#ifdef SIMIL_WITH_REST_API
+simil::LoaderRestData *LoaderThread::RESTLoader()
+{
+  if(m_type != simil::TDataType::TREST)
+  {
+    throw std::logic_error("No REST data loader!");
+  }
+
+  return m_rest;
+}
+
+void LoaderThread::setRESTConfiguration(const simil::LoaderRestData::Configuration &config)
+{
+  m_type = simil::TDataType::TREST;
+  m_restConfig = config;
+
+  if(m_rest)
+  {
+    m_rest->setConfiguration(m_restConfig);
+  }
+}
+#endif

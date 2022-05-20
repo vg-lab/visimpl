@@ -39,6 +39,7 @@
 // Project
 #include "MainWindow.h"
 #include <visimpl/version.h>
+#include <sumrice/sumrice.h>
 
 #ifdef VISIMPL_USE_ZEROEQ
 // zeroeq
@@ -349,9 +350,31 @@ int main( int argc, char** argv )
     }
   }
 
-  if(dataType != simil::TDataUndefined)
+  switch(dataType)
   {
-    mainWindow.loadData(dataType, networkFile, activityFile, simType, subsetEventFile);
+    case simil::TDataType::TREST:
+      {
+#ifdef SIMIL_WITH_REST_API
+        simil::LoaderRestData::Configuration config;
+        config.url = networkFile;
+        config.port = stoi(activityFile);
+        config.api = simil::LoaderRestData::Rest_API::NEST;
+
+        mainWindow.loadRESTData(config);
+#else
+        std::cerr << "REST API not supported." << std::endl;
+        exit(-1);
+#endif
+
+      }
+      break;
+    case simil::TDataType::TBlueConfig:
+    case simil::TDataType::TCSV:
+    case simil::TDataType::THDF5:
+      mainWindow.loadData(dataType, networkFile, activityFile, simType, subsetEventFile);
+      break;
+    default:
+      break;
   }
 
   return application.exec();

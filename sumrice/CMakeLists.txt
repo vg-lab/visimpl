@@ -25,6 +25,8 @@ set(SUMRICE_PUBLIC_HEADERS
   DataInspector.h
   DisplayManagerWidget.h
   StackViz.h
+  ConfigureRESTDialog.h
+  ConnectRESTDialog.h
 )
 
 set(SUMRICE_HEADERS
@@ -46,6 +48,8 @@ set(SUMRICE_SOURCES
   DataInspector.cpp
   DisplayManagerWidget.cpp
   StackViz.cpp
+  ConfigureRESTDialog.cpp
+  ConnectRESTDialog.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES

@@ -64,8 +64,6 @@
 #include <sstream>
 
 class QLabel;
-class LoadingDialog;
-class LoaderThread;
 
 struct streamDotSeparator: std::numpunct<char>
 {
@@ -189,10 +187,12 @@ namespace visimpl
     virtual ~OpenGLWidget();
 
     void createParticleSystem(  );
-    void loadData( const std::string& fileName,
-                   const simil::TDataType = simil::TDataType::TBlueConfig,
-                   simil::TSimulationType simulationType = simil::TSimulationType::TSimSpikes,
-                   const std::string& report = std::string( "" ));
+
+    /** \brief Sets a new spikes player and initializes.
+     * \param[in] p SpikesPlayer pointer.
+     *
+     */
+    void setPlayer(simil::SpikesPlayer *p, const simil::TDataType type);
 
     void idleUpdate( bool idleUpdate_ = true );
 
@@ -221,8 +221,6 @@ namespace visimpl
 
     const scoop::ColorPalette& colorPalette( void );
 
-    void closeLoadingDialog();
-
     /** \brief Returns the current camera position.
      *
      */
@@ -243,8 +241,6 @@ namespace visimpl
     void attributeStatsComputed( void );
 
     void pickedSingle( unsigned int );
-
-    void dataLoaded();
 
   public slots:
 
@@ -317,8 +313,6 @@ namespace visimpl
     float getSimulationDecayValue( void );
 
     GIDVec getPlanesContainedElements( void ) const;
-
-    void onLoaderFinished();
 
   protected:
     void _resolveFlagsOperations( void );
@@ -435,11 +429,7 @@ namespace visimpl
     prefr::ParticleSystem* _particleSystem;
     prefr::GLPickRenderer* _pickRenderer;
 
-    simil::TSimulationType _simulationType;
     simil::SpikesPlayer* _player;
-
-    std::shared_ptr<LoaderThread> m_loader;
-    LoadingDialog *m_loaderDialog;
 
     reto::ClippingPlane* _clippingPlaneLeft;
     reto::ClippingPlane* _clippingPlaneRight;

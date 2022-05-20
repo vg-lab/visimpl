@@ -34,6 +34,7 @@
     <addaction name="actionOpenBlueConfig"/>
     <addaction name="actionOpenCSVFiles"/>
     <addaction name="actionOpenH5Files"/>
+    <addaction name="actionConnectREST"/>
     <addaction name="separator"/>
     <addaction name="actionOpenSubsetEventsFile"/>
     <addaction name="separator"/>
@@ -71,6 +72,8 @@
     <addaction name="separator"/>
     <addaction name="actionUpdateOnIdle"/>
     <addaction name="actionShowFPSOnIdleUpdate"/>
+    <addaction name="separator"/>
+    <addaction name="actionConfigureREST"/>
    </widget>
    <widget class="QMenu" name="stackVizOptions">
     <property name="title">
@@ -115,6 +118,7 @@
    <addaction name="actionOpenBlueConfig"/>
    <addaction name="actionOpenCSVFiles"/>
    <addaction name="actionOpenH5Files"/>
+   <addaction name="actionConnectREST"/>
    <addaction name="separator"/>
    <addaction name="actionOpenSubsetEventsFile"/>
    <addaction name="separator"/>
@@ -199,7 +203,7 @@
      <normaloff>:/icons/close.svg</normaloff>:/icons/close.svg</iconset>
    </property>
    <property name="text">
-    <string>Close Data</string>
+    <string>Close Dataset</string>
    </property>
    <property name="toolTip">
     <string>Close Data</string>
@@ -570,6 +574,32 @@
    </property>
    <property name="text">
     <string>Remove camera position...</string>
+   </property>
+  </action>
+  <action name="actionConnectREST">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/folder-rest.svg</normaloff>:/icons/folder-rest.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Connect to REST server...</string>
+   </property>
+   <property name="toolTip">
+    <string>Connects to a REST API server...</string>
+   </property>
+  </action>
+  <action name="actionConfigureREST">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Configure REST connection...</string>
+   </property>
+   <property name="toolTip">
+    <string>Configures REST connection options.</string>
    </property>
   </action>
  </widget>

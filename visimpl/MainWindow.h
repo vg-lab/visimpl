@@ -51,6 +51,9 @@ class QPushButton;
 class QToolBox;
 class QCloseEvent;
 
+class LoadingDialog;
+class LoaderThread;
+
 namespace Ui
 {
   class MainWindow;
@@ -87,11 +90,20 @@ namespace visimpl
                   const simil::TSimulationType simType = simil::TSimulationType::TSimSpikes,
                   const std::string &subsetEventFile = std::string());
 
+#ifdef SIMIL_WITH_REST_API
+    /** \brief Connects and loads data using the given REST connection.
+     * \param[in] config REST connection configuration.
+     *
+     */
+    void loadRESTData(const simil::LoaderRestData::Configuration &config);
+#endif
+
   public slots:
 
     void openBlueConfigThroughDialog( void );
     void openCSVFilesThroughDialog( void );
     void openHDF5ThroughDialog( void );
+    void openRESTThroughDialog();
     void openSubsetEventsFileThroughDialog( void );
 
     void openSubsetEventFile( const std::string& fileName,
@@ -262,6 +274,11 @@ namespace visimpl
      */
     void applyCameraPosition();
 
+    /** \brief Shows a dialog with REST API options and applies them.
+     *
+     */
+    void configureREST();
+
   protected:
     void _initSimControlDock( void );
     void _initPlaybackDock( void );
@@ -284,6 +301,11 @@ namespace visimpl
     void updateGroupColors(size_t idx, const TTransferFunction &t, const TSizeFunction &s);
 
     virtual void closeEvent(QCloseEvent *e) override;
+
+    /** \brief Closes the data loading dialog.
+     *
+     */
+    void closeLoadingDialog();
 
   #ifdef VISIMPL_USE_ZEROEQ
   #ifdef VISIMPL_USE_GMRVLEX
@@ -389,10 +411,11 @@ namespace visimpl
     QPushButton* _frameClippingColor;
     QPushButton* _buttonSelectionFromClippingPlanes;
 
-    simil::TDataType m_type;
     std::string m_subsetEventFile;
 
-    // Recorder
-    Recorder* _recorder;
+    Recorder* _recorder; /** Recorder */
+
+    std::shared_ptr<LoaderThread> m_loader; /** data loader thread. */
+    LoadingDialog *m_loaderDialog;          /** data loader dialog. */
   };
 } // namespace visimpl

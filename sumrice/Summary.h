@@ -176,6 +176,11 @@ namespace visimpl
      */
     void showConfigPanels(bool value);
 
+    /** \brief Removes all widgets.
+     *
+     */
+    void clear();
+
   protected slots:
 
     void childHistogramPressed( const QPoint&, float );
@@ -205,11 +210,6 @@ namespace visimpl
   protected:
 
     virtual void showEvent(QShowEvent *);
-
-    /** \brief Removes all widgets.
-     *
-     */
-    void clear();
 
     struct HistogramRow
     {

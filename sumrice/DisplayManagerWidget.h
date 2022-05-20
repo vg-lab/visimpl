@@ -32,14 +32,12 @@ class QPushButton;
 
 namespace visimpl
 {
-
   typedef enum
   {
     TDM_E_CONTAINER = 0,
     TDM_E_NAME,
     TDM_E_SHOW,
     TDM_E_DELETE,
-//    TDM_E_LINE,
     TDM_E_MAXCOLUMN
   } TDispMngrEventName;
 
@@ -47,7 +45,6 @@ namespace visimpl
                       QLabel*,
                       QPushButton*,
                       QPushButton*
-//                      QFrame*
                       > TDisplayEventTuple;
 
   typedef enum
@@ -112,14 +109,8 @@ namespace visimpl
     void refreshEvents( void );
     void refreshHistograms( void );
 
-//    QTableWidget* _eventTable;
-//    QTableWidget* _histoTable;
-
     const std::vector< visimpl::EventWidget* >* _eventData;
     const std::vector< visimpl::HistogramWidget* >* _histData;
-
-//    std::vector< visimpl::EventWidget* > _availableEvents;
-//    std::vector< visimpl::HistogramWidget* > _availableHistograms;
 
     std::vector< TDisplayEventTuple > _events;
     std::vector< TDisplayHistogramTuple > _histograms;
@@ -130,8 +121,6 @@ namespace visimpl
     bool _dirtyFlagEvents;
     bool _dirtyFlagHistograms;
   };
-
-
 }
 
 #endif /* DISPLAYMANAGERWIDGET_H_ */

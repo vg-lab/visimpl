@@ -25,6 +25,7 @@
 
 // Qt
 #include <QGroupBox>
+#include <QTimer>
 
 // Simil
 #include <simil/simil.h>
@@ -37,21 +38,37 @@ class DataInspector : public QGroupBox
   Q_OBJECT
 public:
     DataInspector(const QString &title, QWidget *parent = nullptr);
+    virtual ~DataInspector() {};
 
     void addWidget(QWidget *widget, int row, int column,
                    int rowSpan, int columnSpan,
                    Qt::Alignment alignment = Qt::Alignment());
 
+    /** \brief Sets the simulation player to check for updates.
+     * \param[in] simPlayer_ Simulation player raw pointer.
+     *
+     */
     void setSimPlayer(simil::SimulationPlayer * simPlayer_);
 
-public slots:
-  void updateInfo( void );
+    /** \brief Enables/disables the player update checks.
+     * \param[in] value True to enable false otherwise.
+     *
+     */
+    void setCheckUpdates(const bool value);
+
+    /** \brief Check for player updates interval, default 5000 milliseconds.
+     *
+     */
+    void setCheckTimer(const int ms);
 
 signals:
   void simDataChanged( void );
 
+protected slots:
+  void updateInfo( void );
+
 protected:
-    virtual void paintEvent(QPaintEvent *event);
+    virtual void paintEvent(QPaintEvent *e);
 
     unsigned int _gidsize;
     unsigned int _spikesize;
@@ -60,6 +77,8 @@ protected:
     QLabel *_labelStartTime;
     QLabel *_labelEndTime;
     simil::SimulationPlayer * _simPlayer;
+    bool m_check;
+    QTimer m_timer;
 };
 
 #endif // DATAINSPECTOR_H

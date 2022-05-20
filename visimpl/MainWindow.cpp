@@ -61,7 +61,6 @@
 #include <QDockWidget>
 #include <QPushButton>
 #include <QSlider>
-#include <QTimer>
 #include <QRadioButton>
 #include <QGroupBox>
 #include <QPushButton>
@@ -150,8 +149,9 @@ namespace visimpl
     , _spinBoxClippingDist( nullptr )
     , _frameClippingColor( nullptr )
     , _buttonSelectionFromClippingPlanes( nullptr )
-    , m_type{simil::TDataType::TDataUndefined}
     , _recorder( nullptr )
+    , m_loader{nullptr}
+    , m_loaderDialog{nullptr}
   {
     _ui->setupUi( this );
 
@@ -181,7 +181,6 @@ namespace visimpl
   void MainWindow::init( const std::string& zeqUri )
   {
     _openGLWidget = new OpenGLWidget( this, Qt::WindowFlags(), zeqUri );
-    connect(_openGLWidget, SIGNAL(dataLoaded()), this, SLOT(onDataLoaded()));
 
     this->setCentralWidget( _openGLWidget );
 
@@ -227,10 +226,20 @@ namespace visimpl
     connect( _ui->actionOpenH5Files , SIGNAL( triggered( void )) , this ,
              SLOT( openHDF5ThroughDialog( void )) );
 
+    connect( _ui->actionConnectREST , SIGNAL( triggered( void )) , this ,
+             SLOT( openRESTThroughDialog()));
+
+    connect( _ui->actionConfigureREST, SIGNAL(triggered()), this,
+             SLOT(configureREST()));
+
     connect( _ui->actionOpenSubsetEventsFile , SIGNAL( triggered( void )) ,
              this , SLOT( openSubsetEventsFileThroughDialog( void )) );
 
     _ui->actionOpenSubsetEventsFile->setEnabled(false);
+
+#ifdef SIMIL_WITH_REST_API
+    _ui->actionConnectREST->setEnabled(true);
+#endif
 
     connect( _ui->actionCloseData , SIGNAL( triggered( void )) , this ,
              SLOT( closeData( void )) );
@@ -335,6 +344,8 @@ namespace visimpl
 #endif
     delete _ui;
 
+    m_loader = nullptr;
+    closeLoadingDialog( );
   }
 
   void MainWindow::showStatusBarMessage( const QString& message )
@@ -352,6 +363,7 @@ namespace visimpl
 
     _ui->actionToggleStackVizDock->setEnabled(true);
     _ui->actionOpenSubsetEventsFile->setEnabled(true);
+    _ui->actionCloseData->setEnabled(true);
 
     if(_openGLWidget)
     {
@@ -369,6 +381,8 @@ namespace visimpl
         UpdateSimulationSlider(percentage);
       }
     }
+
+    _simulationDock->setEnabled(true);
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -422,8 +436,8 @@ namespace visimpl
       {
         _lastOpenedNetworkFileName = QFileInfo( pathNetwork ).path( );
         _lastOpenedActivityFileName = QFileInfo( pathActivity ).path( );
-        std::string networkFile = pathNetwork.toStdString( );
-        std::string activityFile = pathActivity.toStdString( );
+        const auto networkFile = pathNetwork.toStdString( );
+        const auto activityFile = pathActivity.toStdString( );
 
         loadData(simil::TCSV, networkFile, activityFile, simil::TSimSpikes);
       }
@@ -577,7 +591,29 @@ namespace visimpl
 
   void MainWindow::closeData( void )
   {
-    // TODO
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    Stop();
+
+    clearGroups();
+    clearSelection();
+    _openGLWidget->setPlayer(nullptr, simil::TDataType::TDataUndefined);
+    _stackViz->closeData();
+    _ui->actionToggleStackVizDock->setChecked(false);
+    _ui->actionToggleStackVizDock->setEnabled(false);
+    _ui->actionCloseData->setEnabled(false);
+
+    _objectInspectorGB->setCheckUpdates(false);
+    _objectInspectorGB->setSimPlayer(nullptr);
+
+    _simSlider->setSliderPosition(0);
+    _summary->clear();
+    _simulationDock->setEnabled(false);
+
+    _tfWidget->setColorPoints( visimpl::TTransferFunction() );
+    _tfWidget->setSizeFunction( visimpl::TSizeFunction());
+
+    QApplication::restoreOverrideCursor();
   }
 
   void MainWindow::dialogAbout( void )
@@ -741,6 +777,7 @@ namespace visimpl
   void MainWindow::_initStackVizDock( void )
   {
     _stackVizDock = new QDockWidget( );
+    _stackVizDock->setObjectName("stackvizDock");
     _stackVizDock->setMinimumHeight( 100 );
     _stackVizDock->setSizePolicy( QSizePolicy::MinimumExpanding ,
                                   QSizePolicy::MinimumExpanding );
@@ -866,6 +903,8 @@ namespace visimpl
 
     connect( _summary, SIGNAL( histogramClicked( float ) ), this,
              SLOT( PlayAtPercentage( float ) ) );
+
+    _simulationDock->setEnabled(false);
   }
 
   void MainWindow::_initSimControlDock( void )
@@ -1215,8 +1254,6 @@ namespace visimpl
     _toolBoxOptions->addItem( tSpeedGB, tr( "Playback Configuration" ) );
     _toolBoxOptions->addItem( vcContainer, tr( "Visual Configuration" ) );
     _toolBoxOptions->addItem( containerSelectionTools, tr( "Selection" ) );
-
-
     _toolBoxOptions->addItem( _objectInspectorGB, tr( "Inspector" ));
 
     connect( _objectInspectorGB, SIGNAL( simDataChanged()),
@@ -1344,6 +1381,7 @@ namespace visimpl
       _summary->Init( spikesPlayer->data( ) );
 
       _summary->simulationPlayer( _openGLWidget->player( ) );
+      _summary->show();
     }
   }
 
@@ -1566,7 +1604,7 @@ namespace visimpl
 
     _labelPosition->setText( posText );
 
-    _toolBoxOptions->setCurrentIndex( ( unsigned int )T_TOOL_Inpector );
+    _toolBoxOptions->setCurrentIndex( static_cast<unsigned int>( T_TOOL_Inpector ));
   }
 
   void MainWindow::clippingPlanesReset( void )
@@ -1623,18 +1661,18 @@ namespace visimpl
       return;
 
     bool ok;
+    auto player = _openGLWidget->player();
     double result = QInputDialog::getDouble(
       this, tr( "Set simulation time to play:" ), tr( "Simulation time" ),
-      ( double )_openGLWidget->currentTime( ),
-      ( double )_openGLWidget->player( )->data( )->startTime( ),
-      ( double )_openGLWidget->player( )->data( )->endTime( ), 3, &ok,
+      static_cast<double>(_openGLWidget->currentTime( )),
+      static_cast<double>(player->data( )->startTime( )),
+      static_cast<double>(player->data( )->endTime( )), 3, &ok,
       Qt::Popup );
 
     if ( ok )
     {
-      float percentage = ( result - _openGLWidget->player( )->startTime( ) ) /
-                         ( _openGLWidget->player( )->endTime( ) -
-                           _openGLWidget->player( )->startTime( ) );
+      float percentage = ( result - player->startTime( ) ) /
+                         ( player->endTime( ) - player->startTime( ) );
 
       percentage = std::max( 0.0f, std::min( 1.0f, percentage ) );
 
@@ -1736,7 +1774,7 @@ namespace visimpl
   void MainWindow::ApplyPlaybackOperation( unsigned int playbackOp )
   {
     zeroeq::gmrv::PlaybackOperation operation =
-      ( zeroeq::gmrv::PlaybackOperation )playbackOp;
+        static_cast<zeroeq::gmrv::PlaybackOperation>(playbackOp);
 
     switch ( operation )
     {
@@ -2090,10 +2128,11 @@ void MainWindow::clearGroups( void )
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    const auto tBegin = _openGLWidget->player()->startTime();
-    const auto tEnd   = _openGLWidget->player()->endTime();
+    auto player = _openGLWidget->player();
+    const auto tBegin = player->startTime();
+    const auto tEnd   = player->endTime();
     const auto newPosition = std::min(tEnd, std::max(tBegin, timePos));
-    const auto isOverflow = timePos != newPosition;
+    const auto isOverflow = std::abs(timePos-newPosition) > std::numeric_limits<float>::epsilon();
 
     PlayAtTime( newPosition, isOverflow );
 
@@ -2126,8 +2165,9 @@ void MainWindow::clearGroups( void )
     if ( !_openGLWidget || !_openGLWidget->player( ) )
       return;
 
-    const auto tBegin = _openGLWidget->player()->startTime();
-    const auto tEnd = _openGLWidget->player()->endTime();
+    auto player = _openGLWidget->player();
+    const auto tBegin = player->startTime();
+    const auto tEnd = player->endTime();
     const auto timePos = (percentage * (tEnd - tBegin)) + tBegin;
 
     PlayAtTime(timePos, notify);
@@ -2138,8 +2178,9 @@ void MainWindow::clearGroups( void )
     if(!_openGLWidget || !_openGLWidget->player())
       return;
 
-    const auto tBegin = _openGLWidget->player()->startTime();
-    const auto tEnd = _openGLWidget->player()->endTime();
+    auto player = _openGLWidget->player();
+    const auto tBegin = player->startTime();
+    const auto tEnd = player->endTime();
     const auto newPosition = std::max(tBegin, std::min(tEnd, timePos));
     const auto percentage = (newPosition - tBegin) / (tEnd - tBegin);
 
@@ -2153,8 +2194,7 @@ void MainWindow::clearGroups( void )
 
     _openGLWidget->PlayAt( newPosition );
     _openGLWidget->playbackMode( TPlaybackMode::CONTINUOUS );
-    _startTimeLabel->setText(
-        QString::number(_openGLWidget->player()->currentTime(), 'f',3));
+    _startTimeLabel->setText(QString::number(player->currentTime(), 'f',3));
 
     if ( notify )
     {
@@ -2162,7 +2202,6 @@ void MainWindow::clearGroups( void )
       try
       {
         // Send event
-        auto player   = _openGLWidget->player();
         auto eventMgr = player->zeqEvents( );
         if(eventMgr)
         {
@@ -2251,26 +2290,132 @@ void MainWindow::clearGroups( void )
                             const std::string arg_1, const std::string arg_2,
                             const simil::TSimulationType simType, const std::string &subsetEventFile)
   {
+    closeLoadingDialog();
+
+    Q_ASSERT(type != simil::TDataType::TREST);
+
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
-    try
+    _objectInspectorGB->setCheckUpdates(false);
+    _ui->actionConfigureREST->setEnabled(false);
+
+    Q_ASSERT(simType == simil::TSimulationType::TSimSpikes);
+
+    m_loaderDialog = new LoadingDialog( this );
+    m_loaderDialog->show( );
+
+    QApplication::processEvents( );
+
+    m_loader = std::make_shared< LoaderThread >( );
+    m_loader->setData( type , arg_1 , arg_2 );
+
+    connect( m_loader.get( ) , SIGNAL( finished( )),
+             this, SLOT( onDataLoaded( )) );
+    connect( m_loader.get( ) , SIGNAL( progress( int )),
+             m_loaderDialog , SLOT( setProgress( int )) );
+    connect( m_loader.get( ) , SIGNAL( network( unsigned int )) ,
+             m_loaderDialog , SLOT( setNetwork( unsigned int )) );
+    connect( m_loader.get( ) , SIGNAL( spikes( unsigned int )) ,
+             m_loaderDialog , SLOT( setSpikesValue( unsigned int )) );
+
+    _lastOpenedNetworkFileName = QString::fromStdString(arg_1);
+    _lastOpenedSubsetsFileName = QString::fromStdString(subsetEventFile);
+
+    m_loader->start( );
+  }
+
+  void MainWindow::closeLoadingDialog( )
+  {
+    if ( m_loaderDialog )
     {
-      m_type = type;
-      m_subsetEventFile = subsetEventFile;
-      _openGLWidget->loadData( arg_1, type, simType, arg_2 );
-      _lastOpenedNetworkFileName = QString::fromStdString(arg_1);
-    }
-    catch(const std::exception &e)
-    {
-      QApplication::restoreOverrideCursor();
-      const auto errorText = QString::fromLocal8Bit(e.what());
-      QMessageBox::critical(this, tr("Error loading data"), errorText, QMessageBox::Ok);
-      return;
+      m_loaderDialog->close( );
+      delete m_loaderDialog;
+      m_loaderDialog = nullptr;
     }
   }
 
   void MainWindow::onDataLoaded()
   {
+    if(!m_loader) return;
+
+    const auto error = m_loader->errors();
+    if (!error.empty())
+    {
+      closeLoadingDialog();
+      QApplication::restoreOverrideCursor();
+
+      const auto message = QString::fromStdString(error);
+      QMessageBox::critical(this, tr("Error loading data"), message,
+          QMessageBox::Ok);
+
+      m_loader = nullptr;
+      return;
+    }
+
+    simil::SpikesPlayer *player = nullptr;
+    const auto dataType = m_loader->type();
+
+    switch ( dataType )
+    {
+      case simil::TBlueConfig:
+      case simil::TCSV:
+      case simil::THDF5:
+        {
+          const auto spikeData = m_loader->simulationData( );
+
+          player = new simil::SpikesPlayer( );
+          player->LoadData( spikeData );
+
+          m_loader = nullptr;
+        }
+        break;
+      case simil::TREST:
+        {
+          const auto netData = m_loader->network( );
+          const auto simData = m_loader->simulationData( );
+
+          player = new simil::SpikesPlayer( );
+          player->LoadData( netData , simData );
+
+          // NOTE: loader doesn't get destroyed because has a loop for getting data.
+        }
+        break;
+      case simil::TDataUndefined:
+      default:
+        {
+          m_loader = nullptr;
+          closeLoadingDialog( );
+          QMessageBox::critical( this , tr( "Error loading data" ) ,
+                                 tr( "Data type is undefined after loading" ) ,
+                                 QMessageBox::Ok );
+
+          return;
+        }
+        break;
+    }
+
+    if(!player)
+    {
+      closeLoadingDialog( );
+      QApplication::restoreOverrideCursor( );
+
+      const auto message = tr("Unable to load data.");
+      QMessageBox::critical( this , tr( "Error loading data" ) , message ,
+                             QMessageBox::Ok );
+
+      m_loader = nullptr;
+      return;
+    }
+
+    if ( m_loaderDialog )
+    {
+      m_loaderDialog->setNetwork( player->gidsSize( ));
+      m_loaderDialog->setSpikesValue( player->spikesSize( ));
+      m_loaderDialog->repaint( );
+    }
+
+    _openGLWidget->setPlayer(player, dataType);
+
     configureComponents( );
 
     openSubsetEventFile( m_subsetEventFile, false );
@@ -2279,9 +2424,9 @@ void MainWindow::clearGroups( void )
 
     _comboAttribSelection->clear();
 
-    _stackViz->init( _openGLWidget->player( ));
+    _stackViz->init( player );
 
-    switch(m_type)
+    switch(dataType)
     {
       case simil::TDataType::TBlueConfig:
         {
@@ -2292,11 +2437,10 @@ void MainWindow::clearGroups( void )
       case simil::TDataType::TREST:
         {
 #ifdef SIMIL_WITH_REST_API
-          auto timer = new QTimer( this );
-          connect( timer,              SIGNAL( timeout()),
-                   _objectInspectorGB, SLOT( updateInfo()) );
-
-          timer->start( 4000 );
+          const auto waitTime = m_loader->RESTLoader()->getConfiguration().waitTime;
+          _objectInspectorGB->setCheckTimer(waitTime);
+          _objectInspectorGB->setCheckUpdates(true);
+          _ui->actionConfigureREST->setEnabled(true);
 #endif
         }
         break;
@@ -2307,7 +2451,12 @@ void MainWindow::clearGroups( void )
         break;
     }
 
-    _openGLWidget->closeLoadingDialog();
+    closeLoadingDialog();
+
+    if(!_lastOpenedSubsetsFileName.isEmpty())
+    {
+      openSubsetEventFile( _lastOpenedSubsetsFileName.toStdString() , false );
+    }
 
     QApplication::restoreOverrideCursor();
   }
@@ -3043,6 +3192,104 @@ void MainWindow::clearGroups( void )
       _openGLWidget->setCameraPosition(position);
     }
   }
+
+  void MainWindow::openRESTThroughDialog()
+  {
+#ifdef SIMIL_WITH_REST_API
+    ConnectRESTDialog dialog(this);
+    ConnectRESTDialog::Connection connection;
+    dialog.setRESTConnection(connection);
+
+    if(QDialog::Accepted == dialog.exec())
+    {
+      connection = dialog.getRESTConnection();
+      const auto restOpt = dialog.getRESTOptions();
+
+      simil::LoaderRestData::Configuration config;
+      config.api = connection.protocol.compare("NEST", Qt::CaseInsensitive) == 0 ?
+                                        simil::LoaderRestData::Rest_API::NEST :
+                                        simil::LoaderRestData::Rest_API::ARBOR;
+      config.port = connection.port;
+      config.url = connection.url.toStdString();
+      config.waitTime = restOpt.waitTime;
+      config.failTime = restOpt.failTime;
+      config.spikesSize = restOpt.spikesSize;
+
+      loadRESTData(config);
+    }
+#else
+    const auto title = tr("Connect REST API");
+    const auto message = tr("REST data loading is unsupported.");
+    QMessageBox::critical(this, title, message, QMessageBox::Ok);
+#endif
+  }
+
+  void MainWindow::configureREST()
+  {
+#ifdef SIMIL_WITH_REST_API
+    if(!m_loader)
+    {
+      const QString message = tr("There is no REST connection!");
+      QMessageBox::warning(this, tr("REST API Options"), message, QMessageBox::Ok);
+      return;
+    }
+
+    auto loader = m_loader->RESTLoader();
+    auto options = loader->getConfiguration();
+
+    RESTConfigurationWidget::Options dialogOptions;
+    dialogOptions.waitTime = options.waitTime;
+    dialogOptions.failTime = options.failTime;
+    dialogOptions.spikesSize = options.spikesSize;
+
+    ConfigureRESTDialog dialog(this, Qt::WindowFlags(), dialogOptions);
+    if(QDialog::Accepted == dialog.exec())
+    {
+      dialogOptions = dialog.getRESTOptions();
+
+      simil::LoaderRestData::Configuration config;
+      config.waitTime = dialogOptions.waitTime;
+      config.failTime = dialogOptions.failTime;
+      config.spikesSize = dialogOptions.spikesSize;
+
+      loader->setConfiguration(config);
+    }
+#else
+    const auto title = tr("Configure REST API");
+    const auto message = tr("REST data loading is unsupported.");
+    QMessageBox::critical(this, title, message, QMessageBox::Ok);
+#endif
+  }
+
+#ifdef SIMIL_WITH_REST_API
+  void MainWindow::loadRESTData(const simil::LoaderRestData::Configuration &o)
+  {
+    closeLoadingDialog();
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    _objectInspectorGB->setCheckUpdates(false);
+
+    m_loaderDialog = new LoadingDialog( this );
+    m_loaderDialog->show( );
+
+    QApplication::processEvents( );
+
+    m_loader = std::make_shared< LoaderThread >( );
+    m_loader->setRESTConfiguration(o);
+
+    connect( m_loader.get( ) , SIGNAL( finished( )),
+             this, SLOT( onDataLoaded( )) );
+    connect( m_loader.get( ) , SIGNAL( progress( int )),
+             m_loaderDialog , SLOT( setProgress( int )) );
+    connect( m_loader.get( ) , SIGNAL( network( unsigned int )) ,
+             m_loaderDialog , SLOT( setNetwork( unsigned int )) );
+    connect( m_loader.get( ) , SIGNAL( spikes( unsigned int )) ,
+             m_loaderDialog , SLOT( setSpikesValue( unsigned int )) );
+
+    m_loader->start( );
+  }
+#endif
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
   {
