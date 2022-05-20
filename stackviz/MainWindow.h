@@ -46,10 +46,10 @@
 #endif
 
 #include "ui_stackviz.h"
-#include "DisplayManagerWidget.h"
 
 class Recorder;
 class QCloseEvent;
+class DisplayManagerWidget;
 
 namespace Ui
 {
@@ -76,6 +76,14 @@ namespace stackviz
                   const simil::TSimulationType simType = simil::TSimulationType::TSimSpikes,
                   const std::string &subsetEventFile = "");
 
+#ifdef SIMIL_WITH_REST_API
+    /** \brief Connects and loads data using the given REST connection.
+     * \param[in] config REST connection configuration.
+     *
+     */
+    void loadRESTData(const simil::LoaderRestData::Configuration &config);
+#endif
+
     void openSubsetEventFile( const std::string& fileName,
                               bool append = false );
 
@@ -85,6 +93,7 @@ namespace stackviz
     void openCSVFilesThroughDialog( void );
     void openH5FilesThroughDialog( void );
     void openSubsetEventsFileThroughDialog( void );
+    void openRESTThroughDialog();
 
     void aboutDialog( void );
     void togglePlaybackDock( void );
@@ -108,6 +117,11 @@ namespace stackviz
 
     void calculateCorrelations( void );
 
+    /** \brief Closes the current dataset and resets the UI.
+     *
+     */
+    void closeData();
+
   protected slots:
 
   #ifdef VISIMPL_USE_GMRVLEX
@@ -129,6 +143,11 @@ namespace stackviz
     void openRecorder();
 
     void finishRecording();
+
+    /** \brief Shows a dialog with REST API options and applies them.
+     *
+     */
+    void configureREST();
 
   protected:
     void configurePlayer( void );

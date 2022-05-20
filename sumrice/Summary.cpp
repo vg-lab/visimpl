@@ -161,20 +161,23 @@ namespace visimpl
   {
     _simData = data_;
 
-    switch( data_->simulationType())
+    if(_simData)
     {
-      case simil::TSimSpikes:
+      switch( data_->simulationType())
       {
-        auto *spikeData = dynamic_cast< simil::SpikeData * >( _simData );
-        _spikeReport = spikeData;
+        case simil::TSimSpikes:
+        {
+          auto *spikeData = dynamic_cast< simil::SpikeData * >( _simData );
+          _spikeReport = spikeData;
 
-        break;
+          break;
+        }
+        default:
+          break;
       }
-      default:
-        break;
-    }
 
-    _gids = GIDUSet( data_->gids().begin(), data_->gids().end());
+      _gids = GIDUSet( data_->gids().begin(), data_->gids().end());
+    }
 
     Init();
   }
@@ -361,8 +364,8 @@ namespace visimpl
     layoutNorm->addWidget( _globalColorWidget , 1 , 1 , 1 , 1 );
     layoutNorm->addWidget( globalComboBox , 1 , 2 , 1 , 1 );
 
-    localComboBox->setCurrentIndex(( int ) _colorScaleLocal );
-    globalComboBox->setCurrentIndex(( int ) _colorScaleGlobal );
+    localComboBox->setCurrentIndex(static_cast<int>(_colorScaleLocal ));
+    globalComboBox->setCurrentIndex(static_cast<int>( _colorScaleGlobal ));
 
     connect(
       localComboBox , SIGNAL( currentIndexChanged( int )) ,
@@ -506,9 +509,9 @@ namespace visimpl
 
   void Summary::Init()
   {
-    if( !_spikeReport ) return;
+    clear();
 
-    if(_mainHistogram) clear();
+    if( !_spikeReport ) return;
 
     _mainHistogram = new visimpl::HistogramWidget( *_spikeReport );
     _mainHistogram->setMinimumHeight( _heightPerRow );
@@ -663,8 +666,7 @@ namespace visimpl
 
   void Summary::importSubsetsFromSubsetMngr( void )
   {
-    simil::SubsetMapRange subsets =
-        _spikeReport->subsetsEvents()->subsets();
+    auto subsets = _spikeReport->subsetsEvents()->subsets();
 
     for( auto it = subsets.first; it != subsets.second; ++it )
     {
@@ -734,7 +736,6 @@ namespace visimpl
 
       insertSubset( selection );
     }
-
   }
 
   #endif
@@ -748,6 +749,8 @@ namespace visimpl
       h->update();
     };
     std::for_each(_histogramWidgets.begin(), _histogramWidgets.end(), updateHistogram);
+
+    update();
   }
 
   void Summary::insertSubset( const Selection& selection )
@@ -1136,7 +1139,7 @@ namespace visimpl
 
   void Summary::zoomFactor( double zoom )
   {
-    if(_zoomFactor == zoom) return;
+    if(std::abs(_zoomFactor - zoom) < std::numeric_limits<float>::epsilon()) return;
 
     _zoomFactor = zoom;
 
@@ -1317,8 +1320,8 @@ namespace visimpl
 
     updateEventWidgets();
 
-    _eventLabelsScroll->setVisible( false );
-    _scrollEvent->setVisible( false );
+    if(_eventLabelsScroll) _eventLabelsScroll->setVisible( false );
+    if(_scrollEvent) _scrollEvent->setVisible( false );
 
     update();
   }
@@ -1369,7 +1372,6 @@ namespace visimpl
     delete summaryRow.histogram;
 
     _histogramWidgets.erase( _histogramWidgets.begin() + i );
-
     _histogramRows.erase( _histogramRows.begin() + i );
 
     updateHistogramWidgets();
@@ -1814,18 +1816,41 @@ namespace visimpl
   {
     clearEvents();
 
-    auto row = _histogramRows.front();
+    switch(_stackType)
+    {
+      case TStackType::T_STACK_FIXED:
+      {
+        if(_mainHistogram)
+        {
+          _histogramWidgets.clear();
+          _mainHistogram->hide();
+          _layoutHistograms->removeWidget( _mainHistogram);
+          delete _mainHistogram;
+          _mainHistogram = nullptr;
+        }
+      }
+        break;
+      case TStackType::T_STACK_EXPANDABLE:
+        while(_layoutHistograms->count() > 0 && !_histogramRows.empty())
+        {
+          auto row = _histogramRows.front();
 
-    _layoutHistoLabels->removeWidget( row.label );
-    _layoutHistograms->removeWidget( row.histogram );
+          if(_layoutHistoLabels && row.label) _layoutHistoLabels->removeWidget( row.label );
+          _layoutHistograms->removeWidget( row.histogram );
 
-    delete row.label;
-    delete row.histogram;
+          if(row.label) delete row.label;
+          delete row.histogram;
 
-    _histogramWidgets.erase( _histogramWidgets.begin());
-    _histogramRows.erase( _histogramRows.begin());
+          _histogramRows.erase( _histogramRows.begin());
+          _histogramWidgets.erase( _histogramWidgets.begin());
+        }
+        break;
+    }
 
-    while(!_histogramRows.empty()) removeSubset(0);
+    _gids.clear();
+    _mainHistogram = nullptr;
+    _focusedHistogram = nullptr;
+
+    layout()->activate();
   }
-
 }

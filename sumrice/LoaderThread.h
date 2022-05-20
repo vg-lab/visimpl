@@ -29,6 +29,9 @@
 // Simil
 #include <simil/types.h>
 #include <simil/api.h>
+#ifdef SIMIL_WITH_REST_API
+#include <simil/loaders/LoaderRestData.h>
+#endif
 
 // Qt
 #include <QThread>
@@ -41,11 +44,6 @@ namespace simil
 {
   class Network;
   class SimulationData;
-  class LoaderRestData;
-
-#ifdef SIMIL_WITH_REST_API
-  class LoaderRestData;
-#endif
 }
 
 
@@ -68,7 +66,8 @@ class SUMRICE_API LoaderThread
      */
     virtual ~LoaderThread();
 
-    /** \brief Set the information for the data to load.
+    /** \brief Set the information for the data to load. If data
+     * is REST use setRESTConfiguration().
      * \param[in] type Data origin type.
      * \param[in] arg1 Load argument 1.
      * \param[in] arg1 Load argument 1.
@@ -99,6 +98,19 @@ class SUMRICE_API LoaderThread
      */
     simil::TDataType type() const;
 
+#ifdef SIMIL_WITH_REST_API
+    /** \brief Sets the REST loader protocol configuration.
+     * \param[in] o REST protocol configuration.
+     *
+     */
+    void setRESTConfiguration(const simil::LoaderRestData::Configuration &o);
+
+    /** \brief Returns the REST loader.
+     *
+     */
+    simil::LoaderRestData *RESTLoader();
+#endif
+
   protected:
     virtual void run();
 
@@ -108,15 +120,18 @@ class SUMRICE_API LoaderThread
     void network(unsigned int);
 
   private:
-    simil::TDataType       m_type;    /** data origin type.                    */
-    std::string            m_arg1;    /** argument 1, meaning depends on type. */
-    std::string            m_arg2;    /** argument 2, meaning depends on type. */
-    simil::Network*        m_network; /** loaded network.                      */
-    simil::SimulationData* m_data;    /** loaded data.                         */
+    simil::TDataType       m_type;       /** data origin type.                    */
+    std::string            m_arg1;       /** argument 1, meaning depends on type. */
+    std::string            m_arg2;       /** argument 2, meaning depends on type. */
+    simil::Network*        m_network;    /** loaded network.                      */
+    simil::SimulationData* m_data;       /** loaded data.                         */
 #ifdef SIMIL_WITH_REST_API
-    simil::LoaderRestData* m_rest;    /** rest data importer.                  */
+    using Loader = simil::LoaderRestData;
+
+    Loader*                m_rest;       /** rest data importer.                  */
+    Loader::Configuration  m_restConfig; /** rest connnection configuration.      */
 #endif
-    std::string            m_errors;  /** error messages or empty if success.  */
+    std::string            m_errors;     /** error messages or empty if success.  */
 };
 
 #endif /* SUMRICE_LOADERTHREAD_H_ */

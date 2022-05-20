@@ -67,6 +67,8 @@ constexpr float TRANSLATION_FACTOR = 0.001f;
 constexpr float ROTATION_FACTOR = 0.01f;
 constexpr int FRAMEBUFFER_SCALE_FACTOR = 2;
 constexpr int SAMPLES = 4;
+constexpr float DEFAULT_DELTA_TIME = 0.5f;
+const QString INITIAL_CAMERA_POSITION = "0,0,0;1;1,0,0,0,1,0,0,0,1";
 
 namespace visimpl
 {
@@ -151,10 +153,7 @@ void main()
     , _shaderClippingPlanes( nullptr )
     , _particleSystem( nullptr )
     , _pickRenderer( nullptr )
-    , _simulationType( simil::TSimulationType::TSimNetwork )
     , _player( nullptr )
-    , m_loader{ nullptr }
-    , m_loaderDialog{ nullptr }
     , _clippingPlaneLeft( nullptr )
     , _clippingPlaneRight( nullptr )
     , _planeHeight( 1 )
@@ -325,180 +324,6 @@ void main()
 
     if ( _player )
       delete _player;
-
-    m_loader = nullptr;
-    closeLoadingDialog( );
-  }
-
-  void OpenGLWidget::loadData( const std::string& fileName ,
-                               const simil::TDataType fileType ,
-                               simil::TSimulationType simulationType ,
-                               const std::string& report )
-  {
-    m_loader = nullptr;
-    closeLoadingDialog( );
-
-    _simulationType = simulationType;
-
-    m_loaderDialog = new LoadingDialog( this );
-    m_loaderDialog->show( );
-
-    QApplication::processEvents( );
-
-    m_loader = std::make_shared< LoaderThread >( );
-    m_loader->setData( fileType , fileName , report );
-
-    connect( m_loader.get( ) , SIGNAL( finished( )) , this ,
-             SLOT( onLoaderFinished( )) );
-    connect( m_loader.get( ) , SIGNAL( progress( int )) , m_loaderDialog ,
-             SLOT( setProgress( int )) );
-    connect( m_loader.get( ) , SIGNAL( network( unsigned int )) ,
-             m_loaderDialog , SLOT( setNetwork( unsigned int )) );
-    connect( m_loader.get( ) , SIGNAL( spikes( unsigned int )) ,
-             m_loaderDialog , SLOT( setSpikesValue( unsigned int )) );
-
-    m_loader->start( );
-  }
-
-  void OpenGLWidget::onLoaderFinished( )
-  {
-    makeCurrent( );
-
-    _deltaTime = 0.5f;
-
-    if ( m_loader )
-    {
-      const auto error = m_loader->errors( );
-      if ( !error.empty( ))
-      {
-        closeLoadingDialog( );
-        QApplication::restoreOverrideCursor( );
-
-        const auto message = QString::fromStdString( error );
-        QMessageBox::critical( this , tr( "Error loading data" ) , message ,
-                               QMessageBox::Ok );
-
-        m_loader = nullptr;
-        return;
-      }
-    }
-
-    const auto dataType = m_loader->type( );
-
-    switch ( dataType )
-    {
-      case simil::TBlueConfig:
-      case simil::TCSV:
-      case simil::THDF5:
-      {
-        const auto spikeData = m_loader->simulationData( );
-
-        _player = new simil::SpikesPlayer( );
-        _player->LoadData( spikeData );
-
-        m_loader = nullptr;
-      }
-        break;
-      case simil::TREST:
-      {
-        const auto netData = m_loader->network( );
-        const auto simData = m_loader->simulationData( );
-
-        _player = new simil::SpikesPlayer( );
-        _player->LoadData( netData , simData );
-
-        // NOTE: loader doesn't get destroyed because has a loop for getting data.
-      }
-        break;
-      case simil::TDataUndefined:
-      default:
-      {
-        m_loader = nullptr;
-        closeLoadingDialog( );
-        QMessageBox::critical( this , tr( "Error loading data" ) ,
-                               tr( "Data type is undefined after loading" ) ,
-                               QMessageBox::Ok );
-
-        return;
-      }
-        break;
-    }
-
-    if ( m_loaderDialog )
-    {
-      m_loaderDialog->setNetwork( _player->gidsSize( ));
-      m_loaderDialog->setSpikesValue( _player->spikesSize( ));
-      m_loaderDialog->repaint( );
-    }
-
-    InitialConfig config;
-    switch ( dataType )
-    {
-      case simil::TBlueConfig:
-        config = _initialConfigSimBlueConfig;
-        break;
-      case simil::THDF5:
-        config = _initialConfigSimH5;
-        break;
-      case simil::TCSV:
-        config = _initialConfigSimCSV;
-        break;
-      case simil::TREST:
-        config = _initialConfigSimREST;
-        break;
-      default:
-        break;
-    }
-
-    if ( !_scaleFactorExternal )
-    {
-      const auto scale = std::get< T_SCALE >( config );
-      _scaleFactor = vec3( scale , scale , scale );
-    }
-
-    std::cout << "Using scale factor of " << _scaleFactor.x
-              << ", " << _scaleFactor.y
-              << ", " << _scaleFactor.z
-              << std::endl;
-
-    createParticleSystem( );
-    _initRenderToTexture( );
-
-    simulationDeltaTime( std::get< T_DELTATIME >( config ));
-    simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ));
-    changeSimulationDecayValue( std::get< T_DECAY >( config ));
-
-#ifdef VISIMPL_USE_ZEROEQ
-    if ( !_zeqUri.empty( ))
-    {
-      try
-      {
-        auto& instance = ZeroEQConfig::instance( );
-        if ( !instance.isConnected( ))
-        {
-          instance.connect( _zeqUri );
-        }
-
-        _player->connectZeq( instance.subscriber( ) , instance.publisher( ));
-        instance.startReceiveLoop( );
-      }
-      catch ( std::exception& e )
-      {
-        std::cerr << "Exception when initializing ZeroEQ. ";
-        std::cerr << e.what( ) << __FILE__ << ":" << __LINE__ << std::endl;
-      }
-      catch ( ... )
-      {
-        std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__
-                  << ":" << __LINE__ << std::endl;
-      }
-    }
-#endif
-
-    this->_paint = true;
-    update( );
-
-    emit dataLoaded( );
   }
 
   void OpenGLWidget::initializeGL( void )
@@ -727,8 +552,10 @@ void main()
 
   void OpenGLWidget::_backtraceSimulation( void )
   {
-    float endTime = _player->currentTime( );
-    float startTime = std::max( 0.0f , endTime - _domainManager->decay( ));
+    if(!_player) return;
+
+    const float endTime = _player->currentTime( );
+    const float startTime = std::max( 0.0f , endTime - _domainManager->decay( ));
     if ( startTime < endTime )
     {
       const auto context = _player->spikesBetween( startTime , endTime );
@@ -770,7 +597,7 @@ void main()
     auto render = _particleSystem->renderer( );
     auto glRender = dynamic_cast<prefr::GLAbstractRenderer*>(render);
 
-    if ( glRender != nullptr )
+    if ( glRender )
     {
       glRender->setRenderProgram( _shaderParticlesCurrent );
     }
@@ -912,21 +739,30 @@ void main()
       std::cout << "Loaded default shaders." << std::endl;
     }
 
+    unsigned int currentParticles = _player ? static_cast<unsigned int>( _player->gids( ).size( )) : 0u;
     const unsigned int maxParticles =
-      std::max( 100000u , static_cast<unsigned int>( _player->gids( ).size( )));
+      std::max( 100000u , currentParticles);
 
     _updateData( );
     _particleSystem = new prefr::ParticleSystem( maxParticles , _camera );
     _flagResetParticles = true;
 
-    _domainManager = new DomainManager( _particleSystem , _player->gids( ));
+    if(!_player)
+    {
+      if(_domainManager) delete _domainManager;
+      _domainManager = nullptr;
+    }
+    else
+    {
+      _domainManager = new DomainManager( _particleSystem , _player->gids( ));
 #ifdef SIMIL_USE_BRION
-    _domainManager->init( _gidPositions , _player->data( )->blueConfig( ));
+      _domainManager->init( _gidPositions , _player->data( )->blueConfig( ));
 #else
-    _domainManager->init( _gidPositions );
+      _domainManager->init( _gidPositions );
 #endif
-    _domainManager->initializeParticleSystem( _shaderParticlesDefault );
-    _domainManager->updateData( _player->gids( ) , _gidPositions );
+      _domainManager->initializeParticleSystem( _shaderParticlesDefault );
+      _domainManager->updateData( _player->gids( ) , _gidPositions );
+    }
 
     _pickRenderer =
       dynamic_cast< prefr::GLPickRenderer* >( _particleSystem->renderer( ));
@@ -937,7 +773,8 @@ void main()
       _pickRenderer->setDefaultFBO( defaultFramebufferObject( ));
     }
 
-    _domainManager->mode( TMODE_SELECTION );
+    if(_domainManager)
+      _domainManager->mode( TMODE_SELECTION );
 
     updateCameraBoundingBox( true );
 
@@ -1271,18 +1108,17 @@ void main()
 
   void OpenGLWidget::_updateSelection( void )
   {
-    if ( _particleSystem /*&& _pendingSelection*/ )
-    {
-      _particleSystem->run( false );
+    if(!_particleSystem || !_player) return;
 
-      updateCameraBoundingBox( );
+    _particleSystem->run(false);
 
-      _particleSystem->run( true );
-      _particleSystem->update( 0.0f );
+    updateCameraBoundingBox();
 
-      _flagUpdateSelection = false;
-      _flagUpdateRender = true;
-    }
+    _particleSystem->run(true);
+    _particleSystem->update(0.0f);
+
+    _flagUpdateSelection = false;
+    _flagUpdateRender = true;
   }
 
   void OpenGLWidget::setGroupVisibility( unsigned int i , bool state )
@@ -1348,6 +1184,13 @@ void main()
 
   bool OpenGLWidget::_updateData( bool force )
   {
+    if(!_player)
+    {
+      _gidPositions.clear( );
+      _boundingBoxHome = tBoundingBox{ vec3{0,0,0}, vec3{0,0,0} };
+      return false;
+    }
+
     const auto& positions = _player->positions( );
 
     // assumed positions doesn't change so if equal the network didn't change.
@@ -1429,7 +1272,7 @@ void main()
 
   void OpenGLWidget::updateCameraBoundingBox( bool setBoundingBox )
   {
-    if ( _gidPositions.empty( )) return;
+    if ( _gidPositions.empty( ) || !_domainManager) return;
 
     const auto boundingBox = _domainManager->boundingBox( );
 
@@ -1536,7 +1379,7 @@ void main()
 
   void OpenGLWidget::_updateParticles( float renderDelta )
   {
-    if ( _player->isPlaying( ) || _firstFrame )
+    if ( _player && (_player->isPlaying( ) || _firstFrame ))
     {
       _particleSystem->update( renderDelta );
       _firstFrame = false;
@@ -1545,6 +1388,8 @@ void main()
 
   void OpenGLWidget::_updateEventLabelsVisibility( void )
   {
+    if(!_player) return;
+
     std::vector< bool > visibility = _activeEventsAt( _player->currentTime( ));
 
     unsigned int counter = 0;
@@ -1564,16 +1409,19 @@ void main()
   {
     std::vector< bool > result( _eventLabels.size( ) , false );
 
-    const float totalTime = _player->endTime( ) - _player->startTime( );
-    const double perc = time / totalTime;
-
-    unsigned int counter = 0;
-    for ( auto event: _eventsActivation )
+    if(_player)
     {
-      unsigned int position = perc * event.size( );
-      result[ counter ] = event[ position ];
+      const float totalTime = _player->endTime( ) - _player->startTime( );
+      const double perc = time / totalTime;
 
-      ++counter;
+      unsigned int counter = 0;
+      for ( auto event: _eventsActivation )
+      {
+        unsigned int position = perc * event.size( );
+        result[ counter ] = event[ position ];
+
+        ++counter;
+      }
     }
 
     return result;
@@ -1639,6 +1487,8 @@ void main()
 
   void OpenGLWidget::_genPlanesFromBoundingBox( void )
   {
+    if(!_domainManager) return;
+
     auto currentBoundingBox = _domainManager->boundingBox( );
 
     _planesCenter =
@@ -2000,6 +1850,88 @@ void main()
     update( );
   }
 
+  void OpenGLWidget::setPlayer(simil::SpikesPlayer *p, const simil::TDataType type)
+  {
+    // Resets camera position
+    setCameraPosition(CameraPosition(INITIAL_CAMERA_POSITION));
+
+    if(_player)
+    {
+      // TODO: clear data?
+    }
+
+    _deltaTime = DEFAULT_DELTA_TIME;
+    _player = p;
+
+    InitialConfig config;
+    switch ( type )
+    {
+      case simil::TBlueConfig:
+        config = _initialConfigSimBlueConfig;
+        break;
+      case simil::THDF5:
+        config = _initialConfigSimH5;
+        break;
+      case simil::TCSV:
+        config = _initialConfigSimCSV;
+        break;
+      case simil::TREST:
+        config = _initialConfigSimREST;
+        break;
+      default:
+        break;
+    }
+
+    if ( !_scaleFactorExternal )
+    {
+      const auto scale = std::get< T_SCALE >( config );
+      _scaleFactor = vec3( scale , scale , scale );
+    }
+
+    std::cout << "Using scale factor of " << _scaleFactor.x
+              << ", " << _scaleFactor.y
+              << ", " << _scaleFactor.z
+              << std::endl;
+
+    createParticleSystem( );
+    _initRenderToTexture( );
+
+    simulationDeltaTime( std::get< T_DELTATIME >( config ));
+    simulationStepsPerSecond( std::get< T_STEPS_PER_SEC >( config ));
+    changeSimulationDecayValue( std::get< T_DECAY >( config ));
+
+#ifdef VISIMPL_USE_ZEROEQ
+    if ( !_zeqUri.empty( ))
+    {
+      try
+      {
+        auto& instance = ZeroEQConfig::instance( );
+        if ( !instance.isConnected( ))
+        {
+          instance.connect( _zeqUri );
+        }
+
+        _player->connectZeq( instance.subscriber( ) , instance.publisher( ));
+        instance.startReceiveLoop( );
+        _zeqUri = std::string(); // clear to avoid re-connect.
+      }
+      catch ( std::exception& e )
+      {
+        std::cerr << "Exception when initializing ZeroEQ. ";
+        std::cerr << e.what( ) << __FILE__ << ":" << __LINE__ << std::endl;
+      }
+      catch ( ... )
+      {
+        std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__
+                  << ":" << __LINE__ << std::endl;
+      }
+    }
+#endif
+
+    this->_paint = (_player != nullptr);
+    update( );
+  }
+
   void OpenGLWidget::keyPressEvent( QKeyEvent* event_ )
   {
     switch ( event_->key( ))
@@ -2099,6 +2031,8 @@ void main()
 
   float OpenGLWidget::currentTime( void )
   {
+    if(!_player) return 0.;
+
     switch ( _playbackMode )
     {
       case TPlaybackMode::STEP_BY_STEP:
@@ -2117,7 +2051,7 @@ void main()
   {
     _subsetEvents = manager;
 
-    _createEventLabels( );
+    if(manager) _createEventLabels( );
 
     update( );
   }
@@ -2395,7 +2329,7 @@ void main()
 
   void OpenGLWidget::simulationDeltaTime( float value )
   {
-    _player->deltaTime( value );
+    if(_player) _player->deltaTime( value );
 
     _simDeltaTime = value;
 
@@ -2443,16 +2377,6 @@ void main()
   float OpenGLWidget::getSimulationDecayValue( void )
   {
     return _domainManager->decay( );
-  }
-
-  void OpenGLWidget::closeLoadingDialog( )
-  {
-    if ( m_loaderDialog )
-    {
-      m_loaderDialog->close( );
-      delete m_loaderDialog;
-      m_loaderDialog = nullptr;
-    }
   }
 
   CameraPosition OpenGLWidget::cameraPosition() const

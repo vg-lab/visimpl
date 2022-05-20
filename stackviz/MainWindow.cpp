@@ -111,6 +111,10 @@ MainWindow::MainWindow( QWidget* parent_ )
   connect( _ui->actionAbout, SIGNAL( triggered( void )),
            this, SLOT( aboutDialog( void )));
 
+#ifdef SIMIL_WITH_REST_API
+  _ui->actionConnectRESTserver->setEnabled(true);
+#endif
+
   m_dataInspector = new DataInspector("");
   m_dataInspector->hide();
 }
@@ -146,6 +150,9 @@ void MainWindow::init( const std::string &session )
   connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void )),
            this, SLOT( openSubsetEventsFileThroughDialog( void )));
 
+  connect( _ui->actionCloseData, SIGNAL(triggered(bool)),
+           this, SLOT(closeData()));
+
   _ui->actionOpenSubsetEventsFile->setEnabled(false);
 
   initPlaybackDock( );
@@ -174,6 +181,7 @@ void MainWindow::init( const std::string &session )
   _ui->menubar->setContextMenuPolicy(Qt::PreventContextMenu);
 
   _ui->actionShowDataManager->setEnabled(false);
+  _ui->actionCloseData->setEnabled(false);
 }
 
 MainWindow::~MainWindow( void )
@@ -495,6 +503,8 @@ void MainWindow::initPlaybackDock( )
   _dockSimulation->setWidget( content );
   this->addDockWidget( Qt::BottomDockWidgetArea,
                          _dockSimulation );
+
+  _dockSimulation->setEnabled(false);
 }
 
 void MainWindow::initSummaryWidget( )
@@ -509,6 +519,12 @@ void MainWindow::initSummaryWidget( )
     _summary->simulationPlayer( _player );
   }
 
+  if(centralWidget())
+  {
+    auto toRemove = centralWidget();
+    layout()->removeWidget(toRemove);
+    delete toRemove;
+  }
   this->setCentralWidget( _summary );
 
   connect( _ui->actionAutoNamingSelections, SIGNAL( triggered( )),
@@ -751,7 +767,7 @@ void MainWindow::UpdateSimulationSlider(float position)
   const auto tBegin = _player->startTime();
   const auto tEnd = _player->endTime();
   const auto newPosition = std::min(tEnd, std::max(tBegin, position));
-  const auto isOverflow = newPosition != position;
+  const auto isOverflow = (newPosition != position);
 
   PlayAtTime( newPosition, isOverflow );
 
@@ -889,6 +905,8 @@ void MainWindow::addCorrelation(const std::string &subset)
 
 void MainWindow::calculateCorrelations(void)
 {
+  if(!_subsetEventManager) return;
+
   visimpl::CorrelationComputer cc(dynamic_cast<simil::SpikeData*>(_player->data()));
 
   const auto eventNames = _subsetEventManager->eventNames();
@@ -1017,6 +1035,9 @@ void MainWindow::updateUIonOpen(const std::string &eventsFile)
 
   _ui->actionShowDataManager->setEnabled(true);
   _ui->actionOpenSubsetEventsFile->setEnabled(true);
+  _ui->actionCloseData->setEnabled(true);
+
+  _dockSimulation->setEnabled(true);
 }
 
 void stackviz::MainWindow::loadData(const simil::TDataType type,
@@ -1024,6 +1045,11 @@ void stackviz::MainWindow::loadData(const simil::TDataType type,
     const simil::TSimulationType simType, const std::string &subsetEventFile)
 {
   updateGeometry();
+
+  Q_ASSERT(type != simil::TDataType::TREST);
+  m_dataInspector->setUpdatesEnabled(false);
+  _ui->actionConfigureRESTconnection->setEnabled(false);
+  _ui->actionConnectRESTserver->setEnabled(false);
 
   _simulationType = simType;
   m_subsetEventFile = subsetEventFile;
@@ -1134,6 +1160,7 @@ void stackviz::MainWindow::onLoadFinished()
       break;
     case simil::TREST:
       {
+#ifdef SIMIL_WITH_REST_API
         const auto netData = m_loader->network();
         const auto simData = m_loader->simulationData();
 
@@ -1141,12 +1168,10 @@ void stackviz::MainWindow::onLoadFinished()
         _player->LoadData(netData, simData);
 
         // NOTE: loader doesn't get destroyed.
-#ifdef SIMIL_WITH_REST_API
-        auto timer = new QTimer( this );
-        connect( timer,           SIGNAL( timeout()),
-                 m_dataInspector, SLOT( updateInfo()) );
-
-        timer->start( 4000 );
+        const auto waitTime = m_loader->RESTLoader()->getConfiguration().waitTime;
+        m_dataInspector->setCheckTimer(waitTime);
+        m_dataInspector->setUpdatesEnabled(true);
+        _ui->actionConfigureRESTconnection->setEnabled(true);
 #endif
       }
       break;
@@ -1243,6 +1268,107 @@ void stackviz::MainWindow::closeEvent(QCloseEvent *e)
   QMainWindow::closeEvent(e);
 }
 
+void stackviz::MainWindow::openRESTThroughDialog()
+{
+#ifdef SIMIL_WITH_REST_API
+  ConnectRESTDialog dialog(this);
+  ConnectRESTDialog::Connection connection;
+  dialog.setRESTConnection(connection);
+
+  if (QDialog::Accepted == dialog.exec())
+  {
+    connection = dialog.getRESTConnection();
+    const auto restOpt = dialog.getRESTOptions();
+
+    simil::LoaderRestData::Configuration config;
+    config.api = connection.protocol.compare("NEST", Qt::CaseInsensitive) == 0 ?
+                                             simil::LoaderRestData::Rest_API::NEST :
+                                             simil::LoaderRestData::Rest_API::ARBOR;
+    config.port = connection.port;
+    config.url = connection.url.toStdString();
+    config.waitTime = restOpt.waitTime;
+    config.failTime = restOpt.failTime;
+    config.spikesSize = restOpt.spikesSize;
+
+    loadRESTData(config);
+  }
+#else
+  const auto title = tr("Connect REST API");
+  const auto message = tr("REST data loading is unsupported.");
+  QMessageBox::critical(this, title, message, QMessageBox::Ok);
+#endif
+}
+
+void stackviz::MainWindow::configureREST()
+{
+#ifdef SIMIL_WITH_REST_API
+  if (!m_loader)
+  {
+    const QString message = tr("There is no REST connection!");
+    QMessageBox::warning(this, tr("REST API Options"), message, QMessageBox::Ok);
+    return;
+  }
+
+  auto loader = m_loader->RESTLoader();
+  auto options = loader->getConfiguration();
+
+  RESTConfigurationWidget::Options dialogOptions;
+  dialogOptions.waitTime = options.waitTime;
+  dialogOptions.failTime = options.failTime;
+  dialogOptions.spikesSize = options.spikesSize;
+
+  ConfigureRESTDialog dialog(this, Qt::WindowFlags(), dialogOptions);
+  if (QDialog::Accepted == dialog.exec())
+  {
+    dialogOptions = dialog.getRESTOptions();
+
+    simil::LoaderRestData::Configuration config;
+    config.waitTime = dialogOptions.waitTime;
+    config.failTime = dialogOptions.failTime;
+    config.spikesSize = dialogOptions.spikesSize;
+
+    loader->setConfiguration(config);
+  }
+#else
+  const auto title = tr("Configure REST API");
+  const auto message = tr("REST data loading is unsupported.");
+  QMessageBox::critical(this, title, message, QMessageBox::Ok);
+#endif
+}
+
+void stackviz::MainWindow::closeData()
+{
+  QApplication::setOverrideCursor(Qt::WaitCursor);
+  _player->Clear();
+  _subsetEventManager = nullptr;
+
+  // remove histograms
+  if(_summary)
+  {
+    layout()->removeWidget(_summary);
+    _summary->deleteLater();
+    _summary = nullptr;
+    setCentralWidget(new QWidget());
+  }
+
+  if(_displayManager)
+  {
+    if(_displayManager->isVisible()) _displayManager->hide();
+    _displayManager->deleteLater();
+    _displayManager = nullptr;
+  }
+
+  _correlations.clear();
+
+  _ui->actionCloseData->setEnabled(false);
+  _dockSimulation->setEnabled(false);
+
+  m_dataInspector->setUpdatesEnabled(false);
+  m_dataInspector->setSimPlayer(nullptr);
+
+  QApplication::restoreOverrideCursor();
+}
+
 void stackviz::MainWindow::closeLoadingDialog()
 {
   if(m_loaderDialog)
@@ -1252,3 +1378,33 @@ void stackviz::MainWindow::closeLoadingDialog()
     m_loaderDialog = nullptr;
   }
 }
+
+#ifdef SIMIL_WITH_REST_API
+void stackviz::MainWindow::loadRESTData(const simil::LoaderRestData::Configuration &config)
+{
+  closeLoadingDialog();
+
+  QApplication::setOverrideCursor(Qt::WaitCursor);
+
+  m_dataInspector->setCheckUpdates(false);
+
+  m_loaderDialog = new LoadingDialog( this );
+  m_loaderDialog->show( );
+
+  QApplication::processEvents( );
+
+  m_loader = std::make_shared< LoaderThread >( );
+  m_loader->setRESTConfiguration(config);
+
+  connect( m_loader.get( ) , SIGNAL( finished( )),
+           this, SLOT( onDataLoaded( )) );
+  connect( m_loader.get( ) , SIGNAL( progress( int )),
+           m_loaderDialog , SLOT( setProgress( int )) );
+  connect( m_loader.get( ) , SIGNAL( network( unsigned int )) ,
+           m_loaderDialog , SLOT( setNetwork( unsigned int )) );
+  connect( m_loader.get( ) , SIGNAL( spikes( unsigned int )) ,
+           m_loaderDialog , SLOT( setSpikesValue( unsigned int )) );
+
+  m_loader->start( );
+}
+#endif

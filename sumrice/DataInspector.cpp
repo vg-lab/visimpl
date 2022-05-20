@@ -30,6 +30,8 @@
 #include <QGridLayout>
 #include <QLabel>
 
+constexpr int DEFAULT_CKECK_INTERVAL = 5000;
+
 DataInspector::DataInspector( const QString& title, QWidget* parent )
   : QGroupBox( title, parent )
   , _gidsize( 0 )
@@ -39,22 +41,26 @@ DataInspector::DataInspector( const QString& title, QWidget* parent )
   , _labelStartTime( nullptr )
   , _labelEndTime( nullptr )
   , _simPlayer( nullptr )
+  , m_check{false}
 {
   _labelGIDs = new QLabel( QString::number( _gidsize ) );
   _labelSpikes = new QLabel( QString::number( _spikesize ) );
   _labelStartTime = new QLabel( "0" );
   _labelEndTime = new QLabel( "0" );
-  QGridLayout* oiLayout = new QGridLayout( );
-  oiLayout->setAlignment( Qt::AlignTop );
-  oiLayout->addWidget( new QLabel( "Network Information:" ), 0, 0, 1, 1 );
-  oiLayout->addWidget( _labelGIDs, 0, 1, 1, 3 );
-  oiLayout->addWidget( new QLabel( "Simulation Spikes: " ), 1, 0, 1, 1 );
-  oiLayout->addWidget( _labelSpikes, 1, 1, 1, 3 );
-  oiLayout->addWidget( new QLabel( "Start Time: " ), 4, 0, 1, 1 );
-  oiLayout->addWidget( _labelStartTime, 4, 1, 1, 3 );
-  oiLayout->addWidget( new QLabel( "End Time: " ), 5, 0, 1, 1 );
-  oiLayout->addWidget( _labelEndTime, 5, 1, 1, 3 );
-  setLayout( oiLayout );
+  QGridLayout* gLayout = new QGridLayout( );
+  gLayout->setAlignment( Qt::AlignTop );
+  gLayout->addWidget( new QLabel( "Network Information:" ), 0, 0, 1, 1 );
+  gLayout->addWidget( _labelGIDs, 0, 1, 1, 3 );
+  gLayout->addWidget( new QLabel( "Simulation Spikes: " ), 1, 0, 1, 1 );
+  gLayout->addWidget( _labelSpikes, 1, 1, 1, 3 );
+  gLayout->addWidget( new QLabel( "Start Time: " ), 4, 0, 1, 1 );
+  gLayout->addWidget( _labelStartTime, 4, 1, 1, 3 );
+  gLayout->addWidget( new QLabel( "End Time: " ), 5, 0, 1, 1 );
+  gLayout->addWidget( _labelEndTime, 5, 1, 1, 3 );
+  setLayout( gLayout );
+
+  m_timer.setInterval(DEFAULT_CKECK_INTERVAL);
+  connect(&m_timer, SIGNAL(timeout()), this, SLOT(updateInfo()));
 }
 
 void DataInspector::addWidget( QWidget* widget, int row, int column,
@@ -67,7 +73,31 @@ void DataInspector::addWidget( QWidget* widget, int row, int column,
 
 void DataInspector::setSimPlayer( simil::SimulationPlayer* simPlayer_ )
 {
+  const auto timerActive = m_timer.isActive();
+  if(timerActive) m_timer.stop();
+
   _simPlayer = simPlayer_;
+  _gidsize = 0;
+  _spikesize = 0;
+
+  if(timerActive) m_timer.start();
+}
+
+void DataInspector::setCheckUpdates(const bool value)
+{
+  if(value != m_check)
+  {
+    m_check = value;
+
+    if(m_check)
+    {
+      m_timer.start();
+    }
+    else
+    {
+      m_timer.stop();
+    }
+  }
 }
 
 void DataInspector::paintEvent( QPaintEvent* event )
@@ -102,5 +132,28 @@ void DataInspector::updateInfo( )
     }
 
     if ( updated ) emit simDataChanged( );
+  }
+  else
+  {
+    _labelGIDs = new QLabel( "0" );
+    _labelSpikes = new QLabel( "0" );
+    _labelStartTime = new QLabel( "0" );
+    _labelEndTime = new QLabel( "0" );
+  }
+}
+
+void DataInspector::setCheckTimer(const int ms)
+{
+  if(m_timer.interval() == ms) return;
+
+  if(m_timer.isActive())
+  {
+    m_timer.stop();
+    m_timer.setInterval(ms);
+    m_timer.start();
+  }
+  else
+  {
+    m_timer.setInterval(ms);
   }
 }
