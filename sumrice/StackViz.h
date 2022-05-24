@@ -51,7 +51,7 @@ namespace visimpl
     virtual ~StackViz()
     {};
 
-    void init( simil::SimulationPlayer* p );
+    void init( simil::SimulationPlayer* p, simil::SubsetEventManager *m );
 
     /** \brief Adds an histogram for the given ids.
      * \param[in] selection Selected indexes.

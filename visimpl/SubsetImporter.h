@@ -34,6 +34,8 @@
 // SimIL
 #include <simil/simil.h>
 
+class QListWidget;
+
 namespace visimpl
 {
   class SubsetImporter : public QDialog
@@ -60,7 +62,7 @@ namespace visimpl
     QPushButton* _buttonAccept;
     QPushButton* _buttonCancel;
 
-    QVBoxLayout* _layoutSubsets;
+    QListWidget* _listSubsets;
 
     std::map< std::string, tSubsetLine > _subsets;
   };

@@ -267,8 +267,8 @@ void DisplayManagerWidget::refreshHistograms(void)
     container->setLayout(contLayout);
 
     QLabel *nameLabel = new QLabel(tr(hist->name().c_str()), container);
-
-    QLabel *numberLabel = new QLabel(QString::number(hist->gidsSize()), container);
+    QString sizeText = row == 0 ? QString() : QString::number(hist->filteredGIDs().size());
+    QLabel *numberLabel = new QLabel(sizeText, container);
 
     QPushButton *hideButton = new QPushButton(container);
     hideButton->setIcon(QIcon(QPixmap(":icons/show.svg")));

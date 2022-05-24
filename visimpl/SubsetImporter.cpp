@@ -25,7 +25,7 @@
 
 // Qt
 #include <QGroupBox>
-#include <QScrollArea>
+#include <QListWidget>
 #include <QCheckBox>
 #include <QLabel>
 
@@ -36,12 +36,12 @@ namespace visimpl
   , _subsetEventManager( nullptr )
   , _buttonAccept( nullptr )
   , _buttonCancel( nullptr )
-  , _layoutSubsets( nullptr )
   {
     init( );
 
     setWindowIcon(QIcon(tr(":/visimpl.png")));
     setWindowTitle(tr("Import Subsets"));
+    setMinimumSize(400, 400);
   }
 
   void SubsetImporter::init( void )
@@ -62,13 +62,12 @@ namespace visimpl
     layoutHeader->addWidget( checkBoxHeader, 0, 0, 1, 2 );
     layoutHeader->addWidget( labelHeader, 0, 2, 1, 1 );
 
-    auto scrollSubsets = new QScrollArea( );
+    _listSubsets = new QListWidget( );
     layoutGroupBox->addWidget( header );
-    layoutGroupBox->addWidget( scrollSubsets );
+    layoutGroupBox->addWidget( _listSubsets );
 
-    _layoutSubsets = new QVBoxLayout( );
-    _layoutSubsets->setMargin( 0 );
-    scrollSubsets->setLayout( _layoutSubsets );
+    _listSubsets->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
+    _listSubsets->setVerticalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAsNeeded);
 
     auto foot = new QWidget( );
     auto layoutBottom = new QGridLayout( );
@@ -118,25 +117,22 @@ namespace visimpl
       checkBox->setChecked( true );
 
       container->setLayout( layout );
+      container->setFixedHeight(30);
       layout->addWidget( checkBox, 0, 0, 1, 2 );
       layout->addWidget( label, 0, 2, 1, 1 );
 
-      _layoutSubsets->addWidget( container );
+      auto item = new QListWidgetItem(_listSubsets, Qt::UserRole+1);
+
+      _listSubsets->addItem(item);
+      item->setSizeHint(QSize(0, 35));
+      _listSubsets->setItemWidget(item, container);
     };
     std::for_each(names.cbegin(), names.cend(), createSubsetWidgets);
   }
 
   void SubsetImporter::clear( )
   {
-    auto removeSubsetWidgets = [this](std::pair<const std::string, tSubsetLine> &row)
-    {
-      auto container = std::get< sl_container >( row.second );
-      _layoutSubsets->removeWidget( container );
-
-      delete container;
-    };
-    std::for_each(_subsets.begin(), _subsets.end(), removeSubsetWidgets);
-
+    _listSubsets->clear();
     _subsets.clear( );
   }
 
@@ -154,5 +150,3 @@ namespace visimpl
     return result;
   }
 }
-
-

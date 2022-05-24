@@ -359,11 +359,13 @@ namespace visimpl
 
     _selectionManager->setGIDs( _domainManager->gids( ) );
 
-    _subsetEvents = _openGLWidget->player( )->data( )->subsetsEvents( );
+    _subsetEvents = _openGLWidget->subsetEventsManager();
 
     _ui->actionToggleStackVizDock->setEnabled(true);
     _ui->actionOpenSubsetEventsFile->setEnabled(true);
     _ui->actionCloseData->setEnabled(true);
+
+    _buttonImportGroups->setEnabled( _subsetEvents->numSubsets() > 0 );
 
     if(_openGLWidget)
     {
@@ -787,7 +789,7 @@ namespace visimpl
 
     if ( _openGLWidget && _openGLWidget->player( ))
     {
-      _stackViz->init( _openGLWidget->player( ));
+      _stackViz->init( _openGLWidget->player( ), _openGLWidget->subsetEventsManager() );
     }
 
     _stackVizDock->setWidget( _stackViz );
@@ -1961,6 +1963,11 @@ void MainWindow::clearGroups( void )
 
       addGroupControls( group, _domainManager->groups( ).size( ) - 1,
                         filteredGIDs.size( ) );
+
+      visimpl::Selection selection;
+      selection.name = groupName;
+      selection.gids = filteredGIDs;
+      _stackViz->addSelection( selection );
     };
     std::for_each(groups.cbegin(), groups.cend(), addGroup);
 
@@ -2376,6 +2383,7 @@ void MainWindow::clearGroups( void )
 
           player = new simil::SpikesPlayer( );
           player->LoadData( netData , simData );
+          _subsetEvents = netData->subsetsEvents();
 
           // NOTE: loader doesn't get destroyed because has a loop for getting data.
         }
@@ -2416,6 +2424,10 @@ void MainWindow::clearGroups( void )
 
     _openGLWidget->setPlayer(player, dataType);
 
+    _openGLWidget->subsetEventsManager( _subsetEvents );
+    _openGLWidget->showEventsActivityLabels( _ui->actionShowEventsActivity->isChecked( ));
+    _openGLWidget->idleUpdate( _ui->actionUpdateOnIdle->isChecked( ) );
+
     configureComponents( );
 
     openSubsetEventFile( m_subsetEventFile, false );
@@ -2424,7 +2436,9 @@ void MainWindow::clearGroups( void )
 
     _comboAttribSelection->clear();
 
-    _stackViz->init( player );
+    _stackViz->init( player, _subsetEvents );
+
+    _subsetImporter->reload(_subsetEvents);
 
     switch(dataType)
     {
@@ -2827,7 +2841,6 @@ void MainWindow::clearGroups( void )
     _groupsVisButtons.erase(_groupsVisButtons.begin() + idx);
 
     const bool enabled = !_groupsVisButtons.empty();
-    _buttonImportGroups->setEnabled( enabled );
     _buttonClearGroups->setEnabled( enabled );
     _buttonSaveGroups->setEnabled( enabled);
 
