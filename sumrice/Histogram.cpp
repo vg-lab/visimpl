@@ -226,7 +226,7 @@ namespace visimpl
     omp_set_dynamic( 0 );
     omp_set_num_threads( numThreads );
     const auto& references = _spikes->refData( );
-    for( int i = 0; i < ( int ) references.size( ); i++)
+    for( int i = 0; i < static_cast<int>(references.size( )); i++)
     {
       simil::TSpikes::const_iterator spikeIt = references[ i ];
 

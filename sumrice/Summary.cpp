@@ -778,12 +778,6 @@ namespace visimpl
 
     histogram->init( _bins, _zoomFactor );
 
-    if( histogram->empty())
-    {
-      delete histogram;
-      return;
-    }
-
     histogram->setMinimumHeight( _heightPerRow );
     histogram->setMaximumHeight( _heightPerRow );
     histogram->setMinimumWidth( _sizeChartHorizontal );

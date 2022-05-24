@@ -50,7 +50,7 @@ StackViz::StackViz( QWidget *parent_ )
   setLayout( new QGridLayout( ));
 }
 
-void StackViz::init( simil::SimulationPlayer* player )
+void StackViz::init( simil::SimulationPlayer* player, simil::SubsetEventManager *manager )
 {
   if ( !player ) return;
 
@@ -58,7 +58,7 @@ void StackViz::init( simil::SimulationPlayer* player )
 
   _player = player;
   _simulationType = _player->data( )->simulationType( );
-  _subsetEventManager = _player->data( )->subsetsEvents( );
+  _subsetEventManager = manager;
 
   // TODO: events file.
   initSummaryWidget( );
