@@ -29,7 +29,6 @@
 #ifdef SIMIL_WITH_REST_API
 #include <simil/loaders/LoaderRestData.h>
 
-const float REST_DELTATIME = 0.005f; /* defined in application for rest data. */
 #endif
 
 LoaderThread::LoaderThread()
@@ -107,14 +106,11 @@ void LoaderThread::run()
         {
 #ifdef SIMIL_WITH_REST_API
           m_rest = new simil::LoaderRestData();
-          m_rest->deltaTime(REST_DELTATIME);
           m_rest->setConfiguration(m_restConfig);
 
           const auto url = m_restConfig.url;
           const auto port = std::to_string(m_restConfig.port);
           const auto version = m_rest->getVersion(url, m_restConfig.port);
-
-          std::cout << "REST api version " << version.api << " - insite pipeline version " << version.insite << std::endl;
 
           if(version.api.empty() || version.insite.empty())
           {
@@ -126,7 +122,8 @@ void LoaderThread::run()
           m_network = m_rest->loadNetwork(url, port);
           m_data = m_rest->loadSimulationData(url, port);
 
-          unsigned int oldSpikes = 0, oldNetwork = 0;
+          unsigned int oldSpikes = 0;
+          unsigned int oldNetwork = 0;
           unsigned int count = 0;
           while(count < 5 || oldNetwork < 2)
           {

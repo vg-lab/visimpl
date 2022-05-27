@@ -567,10 +567,10 @@ void main()
 
   void OpenGLWidget::changeShader( int shaderIndex )
   {
-    if ( shaderIndex < 0 || shaderIndex >= ( int ) T_SHADER_UNDEFINED )
+    if ( shaderIndex < 0 || shaderIndex >= static_cast<int>(T_SHADER_UNDEFINED))
       return;
 
-    _currentShader = ( tShaderParticlesType ) shaderIndex;
+    _currentShader = static_cast<tShaderParticlesType>(shaderIndex);
     _flagChangeShader = true;
   }
 
@@ -638,9 +638,6 @@ void main()
             std::cout << "shaders failed at _shaderParticlesDefault."
                       << __FILE__ << ":" << __LINE__ << std::endl;
           }
-
-          _shaderParticlesCurrent = _shaderParticlesDefault;
-          _currentShader = T_SHADER_DEFAULT;
 
           _shaderParticlesSolid = new prefr::RenderProgram( );
           shadersSuccess[ 1 ] &= _shaderParticlesSolid->loadVertexShaderFromText(
@@ -712,9 +709,6 @@ void main()
       _shaderParticlesDefault->compileAndLink( );
       _shaderParticlesDefault->autocatching( );
 
-      _shaderParticlesCurrent = _shaderParticlesDefault;
-      _currentShader = T_SHADER_DEFAULT;
-
       _shaderParticlesSolid = new prefr::RenderProgram( );
       _shaderParticlesSolid->loadVertexShaderFromText(
         prefr::prefrVertexShader );
@@ -738,6 +732,9 @@ void main()
 
       std::cout << "Loaded default shaders." << std::endl;
     }
+
+    _currentShader = (_currentShader == T_SHADER_UNDEFINED) ? T_SHADER_DEFAULT : _currentShader;
+    _flagChangeShader = true;
 
     unsigned int currentParticles = _player ? static_cast<unsigned int>( _player->gids( ).size( )) : 0u;
     const unsigned int maxParticles =
@@ -1074,11 +1071,11 @@ void main()
   void OpenGLWidget::selectAttrib( int newAttrib )
   {
     if ( _domainManager &&
-         ( newAttrib < 0 || newAttrib >= ( int ) T_TYPE_UNDEFINED ||
+         ( newAttrib < 0 || newAttrib >= static_cast<int>(T_TYPE_UNDEFINED) ||
            _domainManager->mode( ) != TMODE_ATTRIBUTE ))
       return;
 
-    _newAttrib = ( tNeuronAttributes ) newAttrib;
+    _newAttrib = static_cast<tNeuronAttributes>(newAttrib);
     _flagAttribChange = true;
   }
 
@@ -1199,7 +1196,8 @@ void main()
     _gidPositions.clear( );
     _gidPositions.reserve( positions.size( ));
 
-    vec3 bbmin, bbmax;
+    vec3 bbmin;
+    vec3 bbmax;
     auto gidit = _player->gids( ).cbegin( );
     auto insertElement = [ & ]( const vmml::Vector3f& v )
     {
@@ -1246,7 +1244,7 @@ void main()
 
   void OpenGLWidget::setMode( int mode )
   {
-    if ( mode < 0 || ( mode >= ( int ) TMODE_UNDEFINED ))
+    if ( mode < 0 || ( mode >= static_cast<int>(TMODE_UNDEFINED) ))
       return;
 
     _newMode = static_cast<tVisualMode>(mode);
@@ -1267,7 +1265,13 @@ void main()
 
   void OpenGLWidget::home( void )
   {
-    _focusOn( _boundingBoxHome );
+    if(_homePosition.isEmpty())
+    {
+      _focusOn( _boundingBoxHome );
+      _homePosition = cameraPosition().toString();
+    }
+
+    setCameraPosition(_homePosition);
   }
 
   void OpenGLWidget::updateCameraBoundingBox( bool setBoundingBox )
@@ -1657,6 +1661,8 @@ void main()
 
     _planeLeft.color( _planesColor );
     _planeRight.color( _planesColor );
+
+    emit planesColorChanged( color_ );
   }
 
   QColor OpenGLWidget::clippingPlanesColor( void )
@@ -1669,27 +1675,24 @@ void main()
 
   void OpenGLWidget::_rotatePlanes( float yaw_ , float pitch_ )
   {
-    Eigen::Matrix4f rot;
+    const float sinYaw = sin( yaw_ );
+    const float cosYaw = cos( yaw_ );
+    const float sinPitch = sin( pitch_ );
+    const float cosPitch = cos( pitch_ );
+
     Eigen::Matrix4f rYaw;
-    Eigen::Matrix4f rPitch;
-
-    float sinYaw , cosYaw , sinPitch , cosPitch;
-
-    sinYaw = sin( yaw_ );
-    cosYaw = cos( yaw_ );
-    sinPitch = sin( pitch_ );
-    cosPitch = cos( pitch_ );
-
     rYaw << cosYaw , 0.0f , sinYaw , 0.0f ,
       0.0f , 1.0f , 0.0f , 0.0f ,
       -sinYaw , 0.0f , cosYaw , 0.0f ,
       0.0f , 0.0f , 0.0f , 1.0f;
 
+    Eigen::Matrix4f rPitch;
     rPitch << 1.0f , 0.0f , 0.0f , 0.0f ,
       0.0f , cosPitch , -sinPitch , 0.0f ,
       0.0f , sinPitch , cosPitch , 0.0f ,
       0.0f , 0.0f , 0.0f , 1.0f;
 
+    Eigen::Matrix4f rot;
     rot = rPitch * rYaw;
 
     _planeRotation = rot * _planeRotation;
@@ -1854,6 +1857,7 @@ void main()
   {
     // Resets camera position
     setCameraPosition(CameraPosition(INITIAL_CAMERA_POSITION));
+    _homePosition.clear();
 
     if(_player)
     {
@@ -1929,6 +1933,7 @@ void main()
 #endif
 
     this->_paint = (_player != nullptr);
+    home(); // stores initial 'home' position.
     update( );
   }
 
@@ -1946,10 +1951,9 @@ void main()
 
   void OpenGLWidget::changeClearColor( void )
   {
-    QColor color =
-      QColorDialog::getColor( _currentClearColor , parentWidget( ) ,
-                              "Choose new background color" ,
-                              QColorDialog::DontUseNativeDialog );
+    const auto color = QColorDialog::getColor( _currentClearColor , parentWidget( ) ,
+                       "Choose new background color" ,
+                       QColorDialog::DontUseNativeDialog );
 
     if ( color.isValid( ))
     {
@@ -1960,6 +1964,14 @@ void main()
                     float( _currentClearColor.green( )) / 255.0f ,
                     float( _currentClearColor.blue( )) / 255.0f ,
                     float( _currentClearColor.alpha( )) / 255.0f );
+
+      const QColor inverseColor{ 255 - _currentClearColor.red(),
+                                 255 - _currentClearColor.green(),
+                                 255 - _currentClearColor.blue(),
+                                 255};
+
+      clippingPlanesColor(inverseColor);
+
       update( );
     }
   }
@@ -2343,7 +2355,7 @@ void main()
 
   void OpenGLWidget::simulationStepsPerSecond( float value )
   {
-    if ( value == 0 ) return;
+    if ( std::abs (value) < std::numeric_limits<float>::epsilon() ) return;
 
     _timeStepsPerSecond = value;
 

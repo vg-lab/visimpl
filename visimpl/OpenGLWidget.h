@@ -242,6 +242,8 @@ namespace visimpl
 
     void pickedSingle( unsigned int );
 
+    void planesColorChanged ( const QColor &);
+
   public slots:
 
     void updateData( void );
@@ -516,6 +518,7 @@ namespace visimpl
 
     DomainManager* _domainManager;
     tBoundingBox _boundingBoxHome;
+    QString      _homePosition;
 
     scoop::ColorPalette _colorPalette;
 

@@ -79,6 +79,9 @@
 template<class T> void ignore( const T& ) { }
 
 constexpr const char* POSITION_KEY = "positionData";
+constexpr const char* PLANES_COLOR_KEY = "clippingPlanesColor";
+constexpr const char* GROUP_KEY = "groupNum";
+constexpr const char* GROUP_POINTER_KEY = "groupPtr";
 
 namespace visimpl
 {
@@ -207,6 +210,9 @@ namespace visimpl
 
     connect( _ui->actionBackgroundColor, SIGNAL( triggered( void ) ),
              _openGLWidget, SLOT( changeClearColor( void ) ) );
+
+    connect( _openGLWidget, SIGNAL( planesColorChanged( const QColor & ) ),
+             this, SLOT( changePlanesColor( const QColor & ) ) );
 
     connect( _ui->actionShowFPSOnIdleUpdate, SIGNAL( triggered( void ) ),
              _openGLWidget, SLOT( toggleShowFPS( void ) ) );
@@ -365,7 +371,7 @@ namespace visimpl
     _ui->actionOpenSubsetEventsFile->setEnabled(true);
     _ui->actionCloseData->setEnabled(true);
 
-    _buttonImportGroups->setEnabled( _subsetEvents->numSubsets() > 0 );
+    _buttonImportGroups->setEnabled( _subsetEvents && _subsetEvents->numSubsets() > 0 );
 
     if(_openGLWidget)
     {
@@ -385,6 +391,7 @@ namespace visimpl
     }
 
     _simulationDock->setEnabled(true);
+    _simConfigurationDock->setEnabled(true);
   }
 
   void MainWindow::openBlueConfigThroughDialog( void )
@@ -593,6 +600,39 @@ namespace visimpl
 
   void MainWindow::closeData( void )
   {
+#ifdef SIMIL_WITH_REST_API
+    if(m_loader && m_loader->type() == simil::TREST)
+    {
+      CloseDataDialog dialog(this);
+      const auto result = dialog.exec();
+
+      if(result == QDialog::Rejected) return;
+
+      if(dialog.keepNetwork())
+      {
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+
+        Stop();
+
+        _objectInspectorGB->setCheckUpdates(false);
+
+        auto rest = m_loader->RESTLoader();
+        rest->resetSpikes();
+
+        _summary->UpdateHistograms();
+        _stackViz->updateHistograms();
+
+        _objectInspectorGB->update();
+        _objectInspectorGB->setCheckUpdates(true);
+
+        QApplication::processEvents();
+
+        QApplication::restoreOverrideCursor();
+
+        return;
+      }
+    }
+#endif
     QApplication::setOverrideCursor(Qt::WaitCursor);
 
     Stop();
@@ -611,6 +651,9 @@ namespace visimpl
     _simSlider->setSliderPosition(0);
     _summary->clear();
     _simulationDock->setEnabled(false);
+    _simConfigurationDock->setEnabled(false);
+
+    m_loader = nullptr;
 
     _tfWidget->setColorPoints( visimpl::TTransferFunction() );
     _tfWidget->setSizeFunction( visimpl::TSizeFunction());
@@ -1002,6 +1045,7 @@ namespace visimpl
                                         clippingColor.name( ) );
     _frameClippingColor->setMinimumSize( 20, 20 );
     _frameClippingColor->setMaximumSize( 20, 20 );
+    _frameClippingColor->setProperty(PLANES_COLOR_KEY, clippingColor.name());
 
     _buttonSelectionFromClippingPlanes = new QPushButton( "To selection" );
     _buttonSelectionFromClippingPlanes->setToolTip(
@@ -1369,6 +1413,7 @@ namespace visimpl
     connect( _buttonSaveGroups, SIGNAL( clicked(void)), this, SLOT(saveGroups()));
 
     _alphaNormalButton->setChecked( true );
+    _simConfigurationDock->setEnabled(false);
   }
 
   void MainWindow::_initSummaryWidget( void )
@@ -1706,7 +1751,6 @@ namespace visimpl
       if ( _showDialog( current, "Select planes color" ) )
       {
         _openGLWidget->clippingPlanesColor( current );
-        button->setStyleSheet( "background-color: " + current.name( ) );
       }
     }
   }
@@ -1855,7 +1899,7 @@ namespace visimpl
     tfWidget->setColorPoints(group->colorMapping());
     tfWidget->setSizeFunction(group->sizeFunction());
     tfWidget->setDialogIcon(QIcon(":/visimpl.png"));
-    tfWidget->setProperty("groupNum", static_cast<unsigned int>(currentIndex));
+    tfWidget->setProperty(GROUP_KEY, static_cast<unsigned int>(currentIndex));
 
     itemLayout->addWidget(tfWidget);
 
@@ -1880,12 +1924,12 @@ namespace visimpl
 
     auto nameButton = new QPushButton(group->name().c_str());
     nameButton->setFlat(true);
-    nameButton->setProperty("groupNum", static_cast<unsigned int>(currentIndex));
+    nameButton->setProperty(GROUP_KEY, static_cast<unsigned int>(currentIndex));
 
     connect(nameButton, SIGNAL(clicked()), this, SLOT(onGroupNameClicked()));
 
     auto deleteButton = new QPushButton(QIcon(":/icons/close.svg"), "");
-    deleteButton->setProperty("groupPtr", reinterpret_cast<unsigned long long>(group));
+    deleteButton->setProperty(GROUP_POINTER_KEY, reinterpret_cast<unsigned long long>(group));
 
     connect(deleteButton, SIGNAL(clicked()), this, SLOT(onGroupDeleteClicked()));
 
@@ -2264,7 +2308,7 @@ void MainWindow::clearGroups( void )
     if(tfw)
     {
       bool ok = false;
-      size_t groupNum = tfw->property("groupNum").toUInt(&ok);
+      size_t groupNum = tfw->property(GROUP_KEY).toUInt(&ok);
 
       if(!ok) return;
       updateGroupColors(groupNum, tfw->getColors(), tfw->getSizeFunction());
@@ -2277,7 +2321,7 @@ void MainWindow::clearGroups( void )
     if(tfw)
     {
       bool ok = false;
-      size_t groupNum = tfw->property("groupNum").toUInt(&ok);
+      size_t groupNum = tfw->property(GROUP_KEY).toUInt(&ok);
 
       if(!ok) return;
       updateGroupColors(groupNum, tfw->getPreviewColors(), tfw->getSizePreview());
@@ -2383,6 +2427,7 @@ void MainWindow::clearGroups( void )
 
           player = new simil::SpikesPlayer( );
           player->LoadData( netData , simData );
+
           _subsetEvents = netData->subsetsEvents();
 
           // NOTE: loader doesn't get destroyed because has a loop for getting data.
@@ -2423,6 +2468,7 @@ void MainWindow::clearGroups( void )
     }
 
     _openGLWidget->setPlayer(player, dataType);
+    _modeSelectionWidget->setCurrentIndex(0);
 
     _openGLWidget->subsetEventsManager( _subsetEvents );
     _openGLWidget->showEventsActivityLabels( _ui->actionShowEventsActivity->isChecked( ));
@@ -2481,7 +2527,7 @@ void MainWindow::clearGroups( void )
     if(button)
     {
       bool ok = false;
-      size_t groupNum = button->property("groupNum").toUInt(&ok);
+      size_t groupNum = button->property(GROUP_KEY).toUInt(&ok);
 
       if(!ok) return;
       auto group = _domainManager->groups().at(groupNum);
@@ -2812,7 +2858,7 @@ void MainWindow::clearGroups( void )
     auto button = qobject_cast<QPushButton *>(sender());
     if(button)
     {
-      auto groupPtr = reinterpret_cast<VisualGroup *>(button->property("groupPtr").toULongLong());
+      auto groupPtr = reinterpret_cast<VisualGroup *>(button->property(GROUP_POINTER_KEY).toULongLong());
       auto groups = _domainManager->groups();
       for(size_t i = 0; i < groups.size(); ++i)
       {
@@ -3303,6 +3349,15 @@ void MainWindow::clearGroups( void )
     m_loader->start( );
   }
 #endif
+
+  void MainWindow::changePlanesColor(const QColor &color_)
+  {
+    const auto currentColor = QColor( _frameClippingColor->property(PLANES_COLOR_KEY).toString());
+    if(currentColor == color_) return;
+
+    _frameClippingColor->setStyleSheet( "background-color: " + color_.name( ) );
+    _frameClippingColor->setProperty(PLANES_COLOR_KEY, color_.name( ) );
+  }
 
   void MainWindow::sendZeroEQPlaybackOperation(const unsigned int op)
   {

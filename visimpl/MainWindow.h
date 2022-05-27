@@ -279,6 +279,11 @@ namespace visimpl
      */
     void configureREST();
 
+    /** \brief Updates the color of the clipping planes color button.
+     *
+     */
+    void changePlanesColor( const QColor & );
+
   protected:
     void _initSimControlDock( void );
     void _initPlaybackDock( void );

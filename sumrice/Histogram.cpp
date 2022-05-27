@@ -453,7 +453,7 @@ namespace visimpl
 
   void HistogramWidget::zoomFactor( float factor )
   {
-    if(_zoomFactor == factor) return;
+    if(std::abs(_zoomFactor - factor) < std::numeric_limits<float>::epsilon()) return;
 
     _zoomFactor = factor;
 
@@ -899,7 +899,7 @@ namespace visimpl
         {
           const float timeValue = ( _endTime - _startTime ) * line + _startTime;
           QString value;
-          if(ceilf(timeValue) == timeValue)
+          if(std::abs(ceilf(timeValue) - timeValue) < std::numeric_limits<float>::epsilon())
           {
             value = QString::number(static_cast<int>(timeValue));
           }
