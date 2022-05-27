@@ -27,6 +27,7 @@ set(SUMRICE_PUBLIC_HEADERS
   StackViz.h
   ConfigureRESTDialog.h
   ConnectRESTDialog.h
+  CloseDataDialog.h
 )
 
 set(SUMRICE_HEADERS
@@ -50,6 +51,7 @@ set(SUMRICE_SOURCES
   StackViz.cpp
   ConfigureRESTDialog.cpp
   ConnectRESTDialog.cpp
+  CloseDataDialog.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES

@@ -5,6 +5,6 @@
 #git_subproject( Brion https://github.com/BlueBrain/Brion.git 073f356 )
 git_subproject( ReTo https://github.com/gmrvvis/ReTo.git 13f5747f )
 git_subproject( prefr https://github.com/gmrvvis/prefr.git 5b4b874a )
-git_subproject( SimIL https://github.com/gmrvvis/SimIL.git 8be4a847 )
+git_subproject( SimIL https://github.com/gmrvvis/SimIL.git 13c4ed58 )
 git_subproject( scoop https://github.com/gmrvvis/scoop.git b3326cd )
 git_subproject( acuterecorder https://github.com/vg-lab/AcuteRecorder.git 3ae70efa )
