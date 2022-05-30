@@ -2412,4 +2412,13 @@ void main()
     }
   }
 
+  void OpenGLWidget::resetParticles()
+  {
+    _flagResetParticles = true;
+    _flagUpdateRender = true;
+    _firstFrame = true;
+
+    update();
+  }
+
 } // namespace visimpl

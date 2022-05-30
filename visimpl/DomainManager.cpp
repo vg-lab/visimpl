@@ -957,7 +957,7 @@ namespace visimpl
     _particleSystem->run( false );
 
     auto particles = _particleSystem->retrieveActive( );
-    for( int i = 0; i < ( int ) particles.size( ); ++i )
+    for( int i = 0; i < static_cast<int>( particles.size( )); ++i )
     {
       particles.at( i ).set_life( 0 );
     }

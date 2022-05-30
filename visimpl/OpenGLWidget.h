@@ -211,8 +211,6 @@ namespace visimpl
 
     DomainManager* domainManager( void );
 
-    void resetParticles( void );
-
     void SetAlphaBlendingAccumulative( bool accumulative = true );
 
     void subsetEventsManager( simil::SubsetEventManager* manager );
@@ -231,6 +229,11 @@ namespace visimpl
      *
      */
     void setCameraPosition(const CameraPosition &pos);
+
+    /** \brief Resets the view.
+     *
+     */
+    void resetParticles();
 
   signals:
 

@@ -625,6 +625,11 @@ namespace visimpl
         _objectInspectorGB->update();
         _objectInspectorGB->setCheckUpdates(true);
 
+        _openGLWidget->resetParticles();
+        _simSlider->setSliderPosition(0);
+
+        repaint();
+
         QApplication::processEvents();
 
         QApplication::restoreOverrideCursor();
