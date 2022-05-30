@@ -1338,6 +1338,43 @@ void stackviz::MainWindow::configureREST()
 
 void stackviz::MainWindow::closeData()
 {
+#ifdef SIMIL_WITH_REST_API
+  if(m_loader && m_loader->type() == simil::TREST)
+  {
+    CloseDataDialog dialog(this);
+    const auto result = dialog.exec();
+
+    if(result == QDialog::Rejected) return;
+
+    if(dialog.keepNetwork())
+    {
+      QApplication::setOverrideCursor(Qt::WaitCursor);
+
+      Stop();
+
+      m_dataInspector->setCheckUpdates(false);
+
+      auto rest = m_loader->RESTLoader();
+      rest->resetSpikes();
+
+      _summary->UpdateHistograms();
+
+      m_dataInspector->update();
+      m_dataInspector->setCheckUpdates(true);
+
+      _simSlider->setSliderPosition(0);
+
+      repaint();
+
+      QApplication::processEvents();
+
+      QApplication::restoreOverrideCursor();
+
+      return;
+    }
+  }
+#endif
+
   QApplication::setOverrideCursor(Qt::WaitCursor);
   _player->Clear();
   _subsetEventManager = nullptr;
