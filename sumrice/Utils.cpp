@@ -87,6 +87,8 @@ void visimpl::ZeroEQConfig::connect(const std::string &s)
   }
   catch(const std::exception &e)
   {
+    std::cerr << "Exception in ZeroEQConfig when connecting to session " << m_session << std::endl;
+    std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
     disconnect();
     throw;
   }
@@ -134,6 +136,8 @@ void visimpl::ZeroEQConfig::connect(const std::string &h, const uint16_t p, bool
   }
   catch(const std::exception &e)
   {
+    std::cerr << "Exception in ZeroEQConfig when connecting to session " << m_session << std::endl;
+    std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
     disconnect();
     throw;
   }
@@ -214,6 +218,8 @@ void visimpl::ZeroEQConfig::connectNullSession()
 
   if(!m_publisher)
   {
+    std::cerr << "Exception in ZeroEQConfig when connecting to session " << m_session << std::endl;
+    std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
     disconnect();
     const auto message = std::string("ZeroEQ unable to publish in any of the known ports. ") + __FILE__ + ":" + std::to_string(__LINE__);
     throw std::runtime_error(message);
@@ -244,6 +250,8 @@ void visimpl::ZeroEQConfig::connectNullSession()
   }
   catch(std::exception &e)
   {
+    std::cerr << "Exception in ZeroEQConfig when connecting to session " << m_session << std::endl;
+    std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
     disconnect();
     throw;
   }
@@ -272,12 +280,12 @@ void visimpl::ZeroEQConfig::startReceiveLoop()
           // exception in zmq_poll
           catch(const std::exception &e)
           {
-            std::cout << "ZeroEQConfig STOPS LISTENING TREAD because exception: " << e.what() << std::endl;
+            std::cerr << "ZeroEQConfig STOPS LISTENING TREAD because exception: " << e.what() << std::endl;
             m_run = false;
           }
           catch(...)
           {
-            std::cout << "ZeroEQConfig STOPS LISTENING TREAD because unknown exception." << std::endl;
+            std::cerr << "ZeroEQConfig STOPS LISTENING TREAD because unknown exception." << std::endl;
             m_run = false;
           }
         }

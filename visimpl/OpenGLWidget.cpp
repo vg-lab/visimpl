@@ -292,14 +292,15 @@ void main()
 
       if ( failed )
       {
-        _camera = nullptr;
+        std::cerr << "Unable to connect to ZeroEQ." << std::endl;
+        _camera = new Camera(reto::Camera::NO_ZEROEQ);
         _zeqUri.clear( );
       }
     }
+#else
+    _camera = new Camera( );
 #endif
-
-    if ( !_camera )
-      _camera = new Camera( );
+    Q_ASSERT(_camera);
 
     setAutoFillBackground( true );
     setPalette( QPalette( QPalette::Window , Qt::black ));

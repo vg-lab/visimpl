@@ -189,17 +189,30 @@ namespace visimpl
 
 #ifdef VISIMPL_USE_ZEROEQ
 
-    auto &zInstance = ZeroEQConfig::instance();
-    if(!zInstance.isConnected())
+    try
     {
-      zInstance.connect(zeqUri);
+      auto &zInstance = ZeroEQConfig::instance();
+      if(!zInstance.isConnected())
+      {
+        zInstance.connect(zeqUri);
+      }
+
+      zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
+                                        [&](const void* data_, unsigned long long size_)
+                                        { _onSelectionEvent(lexis::data::SelectedIDs::create(data_,  size_));});
+
+      // receive loop will be started by OpenGLWidget after loading data.
     }
-
-    zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
-                                      [&](const void* data_, unsigned long long size_)
-                                      { _onSelectionEvent(lexis::data::SelectedIDs::create(data_,  size_));});
-
-    // receive loop will be started by OpenGLWidget after loading data.
+    catch ( std::exception& e )
+    {
+      std::cerr << "Exception when initializing ZeroEQ. ";
+      std::cerr << e.what( ) << __FILE__ << ":" << __LINE__ << std::endl;
+    }
+    catch ( ... )
+    {
+      std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__
+                << ":" << __LINE__ << std::endl;
+    }
 
 #endif
 

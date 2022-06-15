@@ -124,17 +124,30 @@ void MainWindow::init( const std::string &session )
 #ifdef VISIMPL_USE_ZEROEQ
   const auto session_ = session.empty() ? zeroeq::DEFAULT_SESSION : session;
 
-  auto &zInstance = visimpl::ZeroEQConfig::instance();
-  if(!zInstance.isConnected())
+  try
   {
-    zInstance.connect(session_);
-  }
+    auto &zInstance = visimpl::ZeroEQConfig::instance();
+    if(!zInstance.isConnected())
+    {
+      zInstance.connect(session_);
+    }
 
-  if(zInstance.isConnected())
+    if(zInstance.isConnected())
+    {
+      zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
+                                        [&](const void* data_, unsigned long long size_)
+                                        { _onSelectionEvent(lexis::data::SelectedIDs::create(data_,  size_));});
+    }
+  }
+  catch ( std::exception& e )
   {
-    zInstance.subscriber()->subscribe(lexis::data::SelectedIDs::ZEROBUF_TYPE_IDENTIFIER(),
-                                      [&](const void* data_, unsigned long long size_)
-                                      { _onSelectionEvent(lexis::data::SelectedIDs::create(data_,  size_));});
+    std::cerr << "Exception when initializing ZeroEQ. ";
+    std::cerr << e.what( ) << __FILE__ << ":" << __LINE__ << std::endl;
+  }
+  catch ( ... )
+  {
+    std::cerr << "Unknown exception when initializing ZeroEQ. " << __FILE__
+              << ":" << __LINE__ << std::endl;
   }
 #endif
 
@@ -167,8 +180,9 @@ void MainWindow::init( const std::string &session )
            this, SLOT( showDisplayManagerWidget( void )));
 
 #ifdef VISIMPL_USE_ZEROEQ
-  if(zInstance.isConnected())
-    zInstance.startReceiveLoop();
+  auto &zInst = visimpl::ZeroEQConfig::instance();
+  if(zInst.isConnected())
+    zInst.startReceiveLoop();
 
   _ui->actionTogglePlaybackDock->setChecked( true );
 
@@ -767,7 +781,7 @@ void MainWindow::UpdateSimulationSlider(float position)
   const auto tBegin = _player->startTime();
   const auto tEnd = _player->endTime();
   const auto newPosition = std::min(tEnd, std::max(tBegin, position));
-  const auto isOverflow = (newPosition != position);
+  const auto isOverflow = (std::abs(newPosition - position) > std::numeric_limits<float>::epsilon());
 
   PlayAtTime( newPosition, isOverflow );
 
