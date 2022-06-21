@@ -94,6 +94,7 @@ namespace stackviz
     void openH5FilesThroughDialog( void );
     void openSubsetEventsFileThroughDialog( void );
     void openRESTThroughDialog();
+    void openGroupsThroughDialog();
 
     void aboutDialog( void );
     void togglePlaybackDock( void );
@@ -167,6 +168,7 @@ namespace stackviz
 
     QString _lastOpenedFileNamePath;
     QString _lastOpenedSubsetsFileName;
+    QString _lastOpenedGroupsFileName;
 
     simil::TSimulationType _simulationType;
 

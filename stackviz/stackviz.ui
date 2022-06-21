@@ -24,7 +24,7 @@
      <x>0</x>
      <y>0</y>
      <width>1280</width>
-     <height>22</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -37,6 +37,8 @@
     <addaction name="actionConnectRESTserver"/>
     <addaction name="separator"/>
     <addaction name="actionOpenSubsetEventsFile"/>
+    <addaction name="separator"/>
+    <addaction name="actionOpenGroupsFile"/>
     <addaction name="separator"/>
     <addaction name="actionCloseData"/>
     <addaction name="separator"/>
@@ -338,6 +340,21 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionOpenGroupsFile">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/folder-doc.svg</normaloff>:/icons/folder-doc.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Open Groups file...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open groups as histograms</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
    </property>
   </action>
  </widget>

@@ -50,6 +50,9 @@
 #include <QShortcut>
 #include <QDateTime>
 #include <QtGlobal>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #include <boost/bind.hpp>
 
@@ -162,11 +165,15 @@ void MainWindow::init( const std::string &session )
 
   connect( _ui->actionOpenSubsetEventsFile, SIGNAL( triggered( void )),
            this, SLOT( openSubsetEventsFileThroughDialog( void )));
+  
+  connect( _ui->actionOpenGroupsFile, SIGNAL( triggered( void )),
+           this, SLOT( openGroupsThroughDialog( void )));
 
   connect( _ui->actionCloseData, SIGNAL(triggered(bool)),
            this, SLOT(closeData()));
 
   _ui->actionOpenSubsetEventsFile->setEnabled(false);
+  _ui->actionOpenGroupsFile->setEnabled(false);
 
   initPlaybackDock( );
 
@@ -1049,6 +1056,7 @@ void MainWindow::updateUIonOpen(const std::string &eventsFile)
 
   _ui->actionShowDataManager->setEnabled(true);
   _ui->actionOpenSubsetEventsFile->setEnabled(true);
+  _ui->actionOpenGroupsFile->setEnabled(true);
   _ui->actionCloseData->setEnabled(true);
 
   _dockSimulation->setEnabled(true);
@@ -1459,3 +1467,112 @@ void stackviz::MainWindow::loadRESTData(const simil::LoaderRestData::Configurati
   m_loader->start( );
 }
 #endif
+
+void MainWindow::openGroupsThroughDialog()
+{
+  const auto title = tr("Load Groups");
+
+  const QString groupsFilename = QFileDialog::getOpenFileName(this, title,
+                                                              _lastOpenedGroupsFileName,
+                                                              tr("Json files (*.json)"),
+                                                              nullptr, QFileDialog::ReadOnly | QFileDialog::DontUseNativeDialog);
+
+  if (groupsFilename.isEmpty())
+    return;
+
+  QFile file{groupsFilename};
+  if (!file.open(QIODevice::ReadOnly))
+  {
+    const auto message = tr("Couldn't open file %1").arg(groupsFilename);
+
+    QMessageBox msgbox(this);
+    msgbox.setWindowTitle(title);
+    msgbox.setIcon(QMessageBox::Icon::Critical);
+    msgbox.setText(message);
+    msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+    msgbox.setStandardButtons(QMessageBox::Ok);
+    msgbox.exec();
+    return;
+  }
+
+  const auto contents = file.readAll();
+  QJsonParseError jsonError;
+  const auto jsonDoc = QJsonDocument::fromJson(contents, &jsonError);
+  if (jsonDoc.isNull() || !jsonDoc.isObject())
+  {
+    const auto message = tr("Couldn't read the contents of %1 or parsing error.").arg(groupsFilename);
+
+    QMessageBox msgbox{this};
+    msgbox.setWindowTitle(title);
+    msgbox.setIcon(QMessageBox::Icon::Critical);
+    msgbox.setText(message);
+    msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+    msgbox.setStandardButtons(QMessageBox::Ok);
+    msgbox.setDetailedText(jsonError.errorString());
+    msgbox.exec();
+    return;
+  }
+
+  const auto jsonObj = jsonDoc.object();
+  if (jsonObj.isEmpty())
+  {
+    const auto message = tr("Error parsing the contents of %1.").arg(groupsFilename);
+
+    QMessageBox msgbox{this};
+    msgbox.setWindowTitle(title);
+    msgbox.setIcon(QMessageBox::Icon::Critical);
+    msgbox.setText(message);
+    msgbox.setWindowIcon(QIcon(":/visimpl.png"));
+    msgbox.setStandardButtons(QMessageBox::Ok);
+    msgbox.exec();
+    return;
+  }
+
+  QApplication::setOverrideCursor(Qt::WaitCursor);
+
+  const auto jsonGroups = jsonObj.value("groups").toArray();
+  for (const auto group : jsonGroups)
+  {
+    const auto o = group.toObject();
+
+    const auto name = o.value("name").toString();
+    const auto gidsStrings = o.value("gids").toString().split(",");
+
+    visimpl::GIDUSet gids;
+    auto addGids = [&gids](const QString s)
+    {
+      if (s.contains(":"))
+      {
+        auto limits = s.split(":");
+        for (unsigned int id = limits.first().toUInt();
+             id <= limits.last().toUInt(); ++id)
+          gids.insert(id);
+      }
+      else
+      {
+        gids.insert(s.toUInt());
+      }
+    };
+    std::for_each(gidsStrings.cbegin(), gidsStrings.cend(), addGids);
+
+    visimpl::Selection selection;
+    selection.gids = gids;
+    selection.name = name.toStdString();
+
+#ifdef VISIMPL_USE_ZEROEQ
+    _summary->AddNewHistogram(selection, false);
+#else
+    _summary->AddNewHistogram(selection);
+#endif
+  }
+
+  _summary->UpdateHistograms();
+
+  if (_displayManager)
+  {
+    _displayManager->dirtyHistograms();
+    _displayManager->refresh();
+  }
+
+  QApplication::restoreOverrideCursor();
+}
