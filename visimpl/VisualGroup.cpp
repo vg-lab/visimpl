@@ -29,40 +29,51 @@ namespace visimpl
 
   unsigned int VisualGroup::_counter = 0;
 
-  VisualGroup::VisualGroup( )
-  : _idx( _counter++ )
-  , _name( "" )
-  , _cluster( nullptr )
-  , _model( nullptr )
-  , _source( nullptr )
-  , _active( false )
-  , _cached( false )
-  , _dirty( false )
-  , _custom( false )
-  { }
+  VisualGroup::VisualGroup(
+    const std::shared_ptr< plab::ICamera >& camera ,
+    const std::shared_ptr< reto::ClippingPlane >& leftPlane ,
+    const std::shared_ptr< reto::ClippingPlane >& rightPlane ,
+    const std::shared_ptr< plab::Renderer >& renderer ,
+    bool enableClipping )
+    : _idx( _counter++ )
+    , _name( "" )
+    , _cluster( std::make_shared< plab::Cluster< NeuronParticle >>( ))
+    , _model( std::make_shared< StaticGradientModel >(
+      camera , leftPlane , rightPlane , TSizeFunction( ) , TColorVec( ) ,
+      true , enableClipping , 0.0f ))
+    , _active( true )
+  {
+    _cluster->setModel( _model );
+    _cluster->setRenderer( renderer );
+  }
 
-  VisualGroup::VisualGroup( const std::string& name )
-  : _idx( _counter++ )
-  , _name( name )
-  , _cluster( nullptr )
-  , _model( nullptr )
-  , _source( nullptr )
-  , _active( false )
-  , _cached( false )
-  , _dirty( false )
-  , _custom( false )
-  { }
+  VisualGroup::VisualGroup(
+    const std::string& name ,
+    const std::shared_ptr< plab::ICamera >& camera ,
+    const std::shared_ptr< reto::ClippingPlane >& leftPlane ,
+    const std::shared_ptr< reto::ClippingPlane >& rightPlane ,
+    const std::shared_ptr< plab::Renderer >& renderer ,
+    bool enableClipping )
+    : _idx( _counter++ )
+    , _name( name )
+    , _cluster( std::make_shared< plab::Cluster< NeuronParticle >>( ))
+    , _model( std::make_shared< StaticGradientModel >(
+      camera , leftPlane , rightPlane , TSizeFunction( ) ,
+      TColorVec( ) , true , enableClipping , 0.0f ))
+    , _active( true )
+  {
+    TColorVec vec;
+    vec.emplace_back( 0.0f , glm::vec4( 1.0f , 0.0f , 0.0f , 1.0f ));
+    vec.emplace_back( 1.0f , glm::vec4( 0.4f , 0.0f , 0.0f , 1.0f ));
+    _model->setGradient( vec );
+
+    _cluster->setModel( _model );
+    _cluster->setRenderer( renderer );
+  }
 
   VisualGroup::~VisualGroup( )
   {
-    if( _cluster )
-      delete _cluster;
-
-    if( _source )
-      delete _source;
-
-    if( _model )
-      delete _model;
+    _cluster->setModel( _model );
   }
 
   unsigned int VisualGroup::id( void )
@@ -80,12 +91,7 @@ namespace visimpl
     return _name;
   }
 
-  void VisualGroup::gids( const GIDUSet& gids_ )
-  {
-    _gids = gids_;
-  }
-
-  const GIDUSet& VisualGroup::gids( void ) const
+  const std::vector< uint32_t >& VisualGroup::getGids( ) const
   {
     return _gids;
   }
@@ -95,150 +101,74 @@ namespace visimpl
     return _active;
   }
 
-  void VisualGroup::active( bool state, bool updateSourceState )
+  void VisualGroup::active( bool state )
   {
     _active = state;
-
-    if( updateSourceState )
-      _source->active( state );
   }
 
-  void VisualGroup::cached( bool state )
+  void VisualGroup::setParticles( const std::vector< uint32_t >& gids ,
+                                  const std::vector< NeuronParticle >& particles )
   {
-    _cached = state;
+    _gids = gids;
+    _cluster->setParticles( particles );
   }
 
-  bool VisualGroup::cached( void ) const
+  void
+  VisualGroup::setRenderer( const std::shared_ptr< plab::Renderer >& renderer )
   {
-    return _cached;
+    _cluster->setRenderer( renderer );
   }
 
-  void VisualGroup::dirty( bool state )
-  {
-    _dirty = state;
-  }
-
-  bool VisualGroup::dirty( void ) const
-  {
-    return _dirty;
-  }
-
-  void VisualGroup::custom( bool state )
-  {
-    _custom = state;
-  }
-
-  bool VisualGroup::custom( void ) const
-  {
-    return _custom;
-  }
-
-  void VisualGroup::cluster( prefr::Cluster* cluster_ )
-  {
-    assert( cluster_ );
-
-    _cluster = cluster_;
-  }
-
-  prefr::Cluster* VisualGroup::cluster( void ) const
+  const std::shared_ptr< plab::Cluster< NeuronParticle >>
+  VisualGroup::getCluster( ) const
   {
     return _cluster;
   }
 
-  void VisualGroup::model( prefr::Model* model_ )
-  {
-    assert( model_ );
-
-    _model = model_;
-  }
-
-  prefr::Model* VisualGroup::model( void ) const
+  const std::shared_ptr< StaticGradientModel > VisualGroup::getModel( ) const
   {
     return _model;
   }
 
-  void VisualGroup::source( SourceMultiPosition* source_ )
-  {
-    assert( source_ );
-
-    _source = source_;
-  }
-
-  SourceMultiPosition* VisualGroup::source( void ) const
-  {
-    return _source;
-  }
-
-  QColor VisualGroup::color( void ) const
-  {
-    return _color;
-  }
-
   void VisualGroup::colorMapping( const TTransferFunction& colors )
-   {
-     prefr::vectortvec4 gcolors;
+  {
+    TColorVec gradient;
 
-     auto insertColor = [&gcolors](const TTFColor &c)
-     {
-       glm::vec4 gColor( c.second.red( ) * invRGBInt,
-                         c.second.green( ) * invRGBInt,
-                         c.second.blue( ) * invRGBInt,
-                         c.second.alpha( ) * invRGBInt );
+    auto insertColor = [ &gradient ]( const TTFColor& c )
+    {
+      glm::vec4 gColor( c.second.red( ) * invRGBInt ,
+                        c.second.green( ) * invRGBInt ,
+                        c.second.blue( ) * invRGBInt ,
+                        c.second.alpha( ) * invRGBInt );
 
-       gcolors.Insert( c.first, gColor );
-     };
-     std::for_each(colors.cbegin(), colors.cend(), insertColor);
+      gradient.emplace_back( c.first , gColor );
+    };
+    std::for_each( colors.cbegin( ) , colors.cend( ) , insertColor );
 
-     _color = colors[ 0 ].second;
-     _model->color = gcolors;
-   }
+    _model->setGradient( gradient );
+  }
 
-  TTransferFunction VisualGroup::colorMapping( void ) const
-   {
-     TTransferFunction result;
+  TTransferFunction VisualGroup::colorMapping( ) const
+  {
+    TTransferFunction result;
 
-     auto timeValue = _model->color.times.begin( );
-     const auto values = _model->color.values;
+    for ( const auto& pair: _model->getGradient( ))
+    {
+      auto c = pair.second;
+      QColor color( c.r * 255 , c.g * 255 , c.b * 255 , c.a * 255 );
+      result.push_back( std::make_pair( pair.first , color ));
+    }
 
-     auto mapColor = [&timeValue, &result](const vec4 &c)
-     {
-       QColor color( c.r * 255, c.g * 255, c.b * 255, c.a * 255 );
-       result.push_back( std::make_pair( *timeValue, color ));
+    return result;
+  }
 
-       ++timeValue;
-     };
-     std::for_each(values.cbegin(), values.cend(), mapColor);
+  void VisualGroup::sizeFunction( const TSizeFunction& sizes )
+  {
+    _model->setParticleSize( sizes );
+  }
 
-     return result;
-   }
-
-   void VisualGroup::sizeFunction( const TSizeFunction& sizes )
-   {
-     utils::InterpolationSet< float > newSize;
-
-     auto insertSize = [&newSize](const Event &e)
-     {
-       newSize.Insert( e.first, e.second );
-     };
-     std::for_each(sizes.cbegin(), sizes.cend(), insertSize);
-
-     _model->size = newSize;
-   }
-
-   TSizeFunction VisualGroup::sizeFunction( void ) const
-   {
-     TSizeFunction result;
-
-     auto sizeValue = _model->size.values.begin( );
-     const auto times = _model->size.times;
-
-     auto insertTime = [&sizeValue, &result](const float f)
-     {
-       result.push_back( std::make_pair( f, *sizeValue ));
-       ++sizeValue;
-     };
-     std::for_each(times.cbegin(), times.cend(), insertTime);
-
-     return result;
-   }
+  TSizeFunction VisualGroup::sizeFunction( ) const
+  {
+    return _model->getParticleSize( );
+  }
 }

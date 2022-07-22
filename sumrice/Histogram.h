@@ -23,7 +23,6 @@
 #ifndef __HISTOGRAM_H__
 #define __HISTOGRAM_H__
 
-#include <prefr/prefr.h>
 #include <simil/simil.h>
 #include <sumrice/api.h>
 
@@ -31,6 +30,7 @@
 
 #include <QFrame>
 
+#include "ColorInterpolator.h"
 #include "types.h"
 
 namespace visimpl
@@ -137,8 +137,8 @@ namespace visimpl
     unsigned int focusMaxLocal( void ) const;
     unsigned int focusMaxGlobal( void ) const;
 
-    const utils::InterpolationSet< glm::vec4 >& colorMapper( void );
-    void colorMapper(const utils::InterpolationSet< glm::vec4 >& colors );
+    const ColorInterpolator& colorMapper( void );
+    void colorMapper(const ColorInterpolator& colors );
 
     const QGradientStops& gradientStops( void );
 
@@ -214,7 +214,7 @@ signals:
 
     bool _fillPlots;
 
-    utils::InterpolationSet< glm::vec4 > _colorMapper;
+    ColorInterpolator _colorMapper;
 
     GIDUSet _filteredGIDs;
 

@@ -527,12 +527,12 @@ namespace visimpl
     _mainHistogram->setMinimumWidth( _sizeChartHorizontal );
     _mainHistogram->simPlayer( _player );
 
-    TColorMapper colorMapper;
-    colorMapper.Insert( 0.0f, glm::vec4( 157, 206, 111, 255 ));
-    colorMapper.Insert( 0.25f, glm::vec4( 125, 195, 90, 255 ));
-    colorMapper.Insert( 0.50f, glm::vec4( 109, 178, 113, 255 ));
-    colorMapper.Insert( 0.75f, glm::vec4( 76, 165, 86, 255 ));
-    colorMapper.Insert( 1.0f, glm::vec4( 63, 135, 61, 255 ));
+    ColorInterpolator colorMapper;
+    colorMapper.insert( 0.0f, glm::vec4( 157, 206, 111, 255 ));
+    colorMapper.insert( 0.25f, glm::vec4( 125, 195, 90, 255 ));
+    colorMapper.insert( 0.50f, glm::vec4( 109, 178, 113, 255 ));
+    colorMapper.insert( 0.75f, glm::vec4( 76, 165, 86, 255 ));
+    colorMapper.insert( 1.0f, glm::vec4( 63, 135, 61, 255 ));
 
     _mainHistogram->colorMapper( colorMapper );
 

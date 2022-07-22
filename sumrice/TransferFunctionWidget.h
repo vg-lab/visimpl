@@ -27,9 +27,6 @@
 #include <sumrice/api.h>
 #include <sumrice/types.h>
 
-// Preft
-#include <prefr/prefr.h>
-
 // Qt
 #include <QWidget>
 

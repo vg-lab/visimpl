@@ -9,7 +9,7 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 1.7.4 )
+project( visimpl VERSION 1.8.0 )
 set( visimpl_VERSION_ABI 6 )
 
 SET( VISIMPL_LICENSE "GPL")
@@ -69,7 +69,7 @@ common_find_package( Eigen3 REQUIRED SYSTEM)
 common_find_package( HDF5 REQUIRED COMPONENTS C CXX )
 common_find_package( ReTo REQUIRED )
 common_find_package( SimIL REQUIRED )
-common_find_package( prefr REQUIRED )
+common_find_package( plab REQUIRED )
 common_find_package( scoop REQUIRED )
 common_find_package( acuterecorder REQUIRED )
 
@@ -85,7 +85,7 @@ list( APPEND VISIMPL_DEPENDENT_LIBRARIES
   Eigen3
   ReTo
   SimIL
-  prefr
+  plab
   Qt5Core
   Qt5Widgets
   Qt5OpenGL

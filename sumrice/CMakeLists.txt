@@ -28,6 +28,7 @@ set(SUMRICE_PUBLIC_HEADERS
   ConfigureRESTDialog.h
   ConnectRESTDialog.h
   CloseDataDialog.h
+  ColorInterpolator.h
 )
 
 set(SUMRICE_HEADERS
@@ -52,6 +53,7 @@ set(SUMRICE_SOURCES
   ConfigureRESTDialog.cpp
   ConnectRESTDialog.cpp
   CloseDataDialog.cpp
+  ColorInterpolator.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES
@@ -59,7 +61,6 @@ set(SUMRICE_LINK_LIBRARIES
   Qt5::Widgets
   ReTo
   SimIL
-  prefr
   scoop
 )
 

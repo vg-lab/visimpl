@@ -1,257 +1,155 @@
-/*
- * Copyright (c) 2015-2020 VG-Lab/URJC.
- *
- * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
- *
- * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
- *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License version 3.0 as published
- * by the Free Software Foundation.
- *
- * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- */
+//
+// Created by gaeqs on 21/06/22.
+//
 
-#ifndef __VISIMPL_VISUALGROUPMANAGER__
-#define __VISIMPL_VISUALGROUPMANAGER__
+#ifndef VISIMPL_DOMAINMANAGER_H
+#define VISIMPL_DOMAINMANAGER_H
 
-#include <unordered_map>
+#include <map>
 
-#include <prefr/prefr.h>
-#include <prefr/GL/IGLRenderProgram.h>
-#include <simil/simil.h>
-#include <scoop/scoop.h>
+// ParticleLab
+#include <plab/plab.h>
 
-#include <sumrice/sumrice.h>
+#include "visimpl/particlelab/NeuronParticle.h"
+#include "VisualGroup.h"
 
 #include "types.h"
-#include "VisualGroup.h"
-#include "prefr/ColorOperationModel.h"
-#include "prefr/SourceMultiPosition.h"
 
 namespace visimpl
 {
-  enum tVisualMode
+  enum class VisualMode
   {
-    TMODE_SELECTION = 0,
-    TMODE_GROUPS,
-    TMODE_ATTRIBUTE,
-    TMODE_UNDEFINED
+    Selection = 0 ,
+    Groups ,
+    Attribute ,
+    Undefined
   };
+
 
   class DomainManager
   {
+
+    VisualMode _mode;
+    std::shared_ptr< plab::ICamera > _camera;
+
+    std::vector< uint32_t > _selectionGids;
+    std::shared_ptr< plab::Cluster< NeuronParticle > > _selectionCluster;
+
+    std::map< std::string , std::shared_ptr< VisualGroup > > _groupClusters;
+
+    std::map< std::string , std::shared_ptr< VisualGroup > > _attributeClusters;
+    std::map< tNeuronAttributes , std::vector< std::string>> _attributeNames;
+    std::map< tNeuronAttributes , std::vector< std::vector< uint32_t>> > _attributeTypeGids;
+
+    // Models
+    std::shared_ptr< StaticGradientModel > _selectionModel;
+
+    // Renders
+    reto::ShaderProgram _defaultProgram;
+    reto::ShaderProgram _solidProgram;
+
+    std::shared_ptr< plab::CoverageRenderer > _currentRenderer;
+    std::shared_ptr< plab::CoverageRenderer > _defaultRenderer;
+    std::shared_ptr< plab::CoverageRenderer > _solidRenderer;
+
+    // Others
+    tBoundingBox _boundingBox;
+    float _decay;
+
   public:
 
-    DomainManager( prefr::ParticleSystem* particleSystem, const TGIDSet& gids );
+    DomainManager( );
+
+    void initRenderers(
+      const std::shared_ptr< reto::ClippingPlane >& leftPlane ,
+      const std::shared_ptr< reto::ClippingPlane >& rightPlane ,
+      const std::shared_ptr< plab::ICamera >& camera );
 
 #ifdef SIMIL_USE_BRION
-    void init( const tGidPosMap& positions, const brion::BlueConfig* blueConfig );
-#else
-    void init( const tGidPosMap& positions );
+
+    void initAttributeData( const TGIDSet& gids ,
+                            const brion::BlueConfig* blueConfig );
+
 #endif
 
+    std::shared_ptr< plab::Cluster< NeuronParticle > >
+    getSelectionCluster( ) const;
 
-    void initializeParticleSystem( prefr::IGLRenderProgram* program );
+    const std::shared_ptr< StaticGradientModel >& getSelectionModel( ) const;
 
-    VisualGroup* addVisualGroupFromSelection( const std::string& name,
-                                              bool overrideGIDs = false );
-    VisualGroup* addVisualGroup( const GIDUSet& group_, const std::string& name,
-                                 bool overrideGIDs = false );
+    int getGroupAmount( ) const;
 
-    void setVisualGroupState( unsigned int i, bool state, bool attrib = false );
-    void removeVisualGroup( unsigned int i );
+    const std::map< std::string , std::shared_ptr< VisualGroup>>&
+    getGroups( ) const;
 
-    void showInactive( bool state );
+    std::shared_ptr< VisualGroup > getGroup( const std::string& name ) const;
 
+    const std::map< std::string , std::shared_ptr< VisualGroup>>&
+    getAttributeClusters( ) const;
 
-    void generateAttributesGroups( tNeuronAttributes attrib );
+    VisualMode getMode( ) const;
 
-    void processInput( const simil::SpikesCRange& spikes_,
-                       float begin, float end, bool clear );
+    void setMode( VisualMode mode );
 
-    void update( void );
+    float getDecay( ) const;
 
-    void updateData(const TGIDSet& gids,const tGidPosMap& positions);
+    void setDecay( float decay );
 
-    void mode(const tVisualMode newMode );
-    tVisualMode mode( void ) const;
+    void setTime( float time );
 
-    void clearView( void );
+    void addTime( float time, float endTime );
 
-    bool showGroups( void );
-    void updateGroups( void );
-    void updateAttributes( void );
+    const tBoundingBox& getBoundingBox( ) const;
 
-    void selection( const GIDUSet& newSelection );
-    const GIDUSet& selection( void );
+    void setSelection( const TGIDSet& gids ,
+                       const tGidPosMap& positions );
 
-    void decay( float decayValue );
-    float decay( void ) const;
+    void setSelection( const GIDUSet& gids ,
+                       const tGidPosMap& positions );
 
-    void clearSelection( void );
-    void resetParticles( void );
+    std::shared_ptr< VisualGroup > createGroup( const GIDUSet& gids ,
+                                                const tGidPosMap& positions ,
+                                                const std::string& name );
 
-    const std::vector< VisualGroup* >& groups( void ) const;
-    const std::vector< VisualGroup* >& attributeGroups( void ) const;
+    std::shared_ptr< VisualGroup > createGroupFromSelection(
+      const tGidPosMap& positions , const std::string& name );
 
-    const tGidPosMap& positions( void ) const;
+    void removeGroup( const std::string& name );
 
-    void reloadPositions( void );
+    void selectAttribute(
+      const std::vector< QColor >& colors ,
+      const tGidPosMap& positions ,
+      tNeuronAttributes attribute );
 
+    void applyDefaultShader( );
 
-    const TGIDSet& gids( void ) const;
+    void applySolidShader( );
 
-    tBoundingBox boundingBox( void ) const;
+    void enableAccumulativeMode( bool enabled );
 
-    prefr::ColorOperationModel* modelSelectionBase( void );
+    void enableClipping( bool enabled );
 
-    const std::vector< std::pair< QColor, QColor >>& paletteColors( void ) const;
+    void draw( ) const;
 
-    // Statistics
-    const std::vector< std::string >& namesMorpho( void ) const;
-    const std::vector< std::string >& namesFunction( void ) const;
-
-    const std::vector< long unsigned int >& attributeValues( int attribNumber ) const;
-    Strings attributeNames( int attribNumber, bool labels = false ) const;
-
-    tAppStats attributeStatistics( void ) const;
-
-    tParticleInfo pickingInfoSimple( unsigned int particleId ) const;
-
-    void highlightElements( const std::unordered_set< unsigned int >& highlighted );
-    void clearHighlighting( void );
-
-    /** \brief Helper method to generate que QColor pair from a given color.
-     * \param[inout] c scoop::Color object reference.
-     *
-     */
-    static std::pair<QColor, QColor> generateColorPair(scoop::Color &c);
+    void processInput(
+      const simil::SpikesCRange& spikes , bool killParticles );
 
   protected:
 
-    typedef std::vector< std::tuple< uint32_t, float >> TModifiedNeurons;
+    std::unordered_map< uint32_t , float >
+    parseInput( const simil::SpikesCRange& spikes );
 
-    TModifiedNeurons _parseInput( const simil::SpikesCRange& spikes_,
-                                 float begin, float end );
+    void processSelectionSpikes(
+      const simil::SpikesCRange& spikes , bool killParticles );
 
+    void processGroupSpikes(
+      const simil::SpikesCRange& spikes , bool killParticles );
 
-    VisualGroup* _generateGroup( const GIDUSet& gids, const std::string& name,
-                                 unsigned int idx ) const;
+    void processAttributeSpikes(
+      const simil::SpikesCRange& spikes , bool killParticles );
 
-    void _updateGroupsModels( void );
-    void _generateGroupsIndices( void );
-
-    void _updateSelectionIndices( void );
-    void _generateSelectionIndices( void );
-
-    void _updateAttributesIndices( void );
-    void _generateAttributesIndices( void );
-
-    void _processFrameInputSelection( const simil::SpikesCRange& spikes_,
-                                      float begin, float end );
-    void _processFrameInputGroups( const simil::SpikesCRange& spikes_,
-                                   float begin, float end );
-    void _processFrameInputAttributes( const simil::SpikesCRange& spikes_,
-                                       float begin, float end );
-
-    void _loadPaletteColors( void );
-
-    void _clearSelectionView( void );
-    void _clearGroupsView( void );
-    void _clearAttribView( void );
-
-    void _clearGroups( void );
-    void _clearAttribs( bool clearCustom = true );
-
-    void _clearGroup( VisualGroup* group, bool clearState = true );
-    void _clearParticlesReference( void );
-
-    void _resetBoundingBox( void );
-
-    SourceMultiPosition* _getSource( unsigned int numParticles );
-
-#ifdef SIMIL_USE_BRION
-    tNeuronAttribs _loadNeuronTypes( const brion::BlueConfig& blueConfig );
-#endif
-
-    prefr::ParticleSystem* _particleSystem;
-
-    tGidPosMap _gidPositions;
-
-    TGIDSet _gids;
-
-    prefr::Cluster* _clusterSelected;
-    prefr::Cluster* _clusterUnselected;
-    prefr::Cluster* _clusterHighlighted;
-
-    SourceMultiPosition* _sourceSelected;
-
-    std::vector< VisualGroup* > _groups;
-    std::vector< VisualGroup* > _attributeGroups;
-    tNeuronAttributes _currentAttrib;
-
-    std::unordered_map< uint32_t, VisualGroup* > _neuronGroup;
-
-    std::unordered_map< unsigned int, SourceMultiPosition* > _gidSource;
-
-    tUintUMap _gidToParticle;
-    tUintUMap _particleToGID;
-
-    prefr::ColorOperationModel* _modelBase;
-    prefr::ColorOperationModel* _modelOff;
-    prefr::ColorOperationModel* _modelHighlighted;
-
-    prefr::PointSampler* _sampler;
-    prefr::Updater* _updater;
-
-    tVisualMode _mode;
-
-    GIDUSet _selection;
-
-    float _decayValue;
-
-    bool _showInactive;
-
-    tBoundingBox _boundingBox;
-
-    std::vector< std::pair< QColor, QColor >> _paletteColors;
-
-    // Statistics
-    bool _groupByName;
-    bool _autoGroupByName;
-
-    tNeuronAttribs _gidTypes;
-
-    std::vector< std::string > _namesTypesMorpho;
-    std::vector< std::string > _namesTypesFunction;
-
-    std::vector< std::string > _namesTypesMorphoGrouped;
-    std::vector< std::string > _namesTypesFunctionGrouped;
-
-    std::vector< long unsigned int > _typesMorpho;
-    std::vector< long unsigned int > _typesFunction;
-
-    tUintUMap _typeToIdxMorpho;
-    tUintUMap _typeToIdxFunction;
-
-    tUintUMultimap _idxToTypeMorpho;
-    tUintUMultimap _idxToTypeFunction;
-
-    tUintUMap _statsMorpho;
-    tUintUMap _statsFunction;
-
-    std::unordered_map< std::string, unsigned int > _namesIdxMorpho;
-    std::unordered_map< std::string, unsigned int > _namesIdxFunction;
   };
+
 }
 
-#endif /* __VISIMPL_VISUALGROUPMANAGER__ */
+#endif //VISIMPL_DOMAINMANAGER_H

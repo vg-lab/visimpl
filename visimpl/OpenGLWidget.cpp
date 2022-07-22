@@ -26,6 +26,7 @@
 #include "DomainManager.h"
 
 // Qt
+#include <QWidget>
 #include <QOpenGLContext>
 #include <QMouseEvent>
 #include <QColorDialog>
@@ -33,26 +34,18 @@
 #include <QGraphicsOpacityEffect>
 #include <QLabel>
 #include <QDir>
-#include <QMessageBox>
+#include <QOpenGLDebugLogger>
 
 // C++
-#include <sstream>
 #include <string>
 #include <iostream>
 #include <map>
-
 // GLM
 #include <glm/glm.hpp>
-
-// Prefr
-#include "prefr/PrefrShaders.h"
-#include "prefr/ColorSource.h"
 
 #ifdef SIMIL_USE_BRION
 
 #include <brain/brain.h>
-#include <brion/brion.h>
-#include <QOpenGLDebugLogger>
 
 #endif
 
@@ -61,6 +54,9 @@
 #include <zeroeq/zeroeq.h>
 
 #endif
+
+#include "visimpl/particlelab/ParticleLabShaders.h"
+#include "GlewInitializer.h"
 
 constexpr float ZOOM_FACTOR = 1.3f;
 constexpr float TRANSLATION_FACTOR = 0.001f;
@@ -144,24 +140,16 @@ void main()
     , _idleUpdate( true )
     , _paint( false )
     , _currentClearColor( 20 , 20 , 20 , 255 )
-    , _particleRadiusThreshold( 0.8 )
-    , _currentShader( T_SHADER_UNDEFINED )
-    , _shaderParticlesCurrent( nullptr )
-    , _shaderParticlesDefault( nullptr )
-    , _shaderParticlesSolid( nullptr )
-    , _shaderPicking( nullptr )
+    , _particleSystemInitialized( false )
     , _shaderClippingPlanes( nullptr )
-    , _particleSystem( nullptr )
-    , _pickRenderer( nullptr )
     , _player( nullptr )
-    , _clippingPlaneLeft( nullptr )
-    , _clippingPlaneRight( nullptr )
+    , _clippingPlaneLeft( std::make_shared< reto::ClippingPlane >( ))
+    , _clippingPlaneRight( std::make_shared< reto::ClippingPlane >( ))
     , _planeHeight( 1 )
     , _planeWidth( 1 )
     , _planeDistance( 20 )
     , _rotationPlanes( false )
     , _translationPlanes( false )
-    , _clipping( true )
     , _paintClippingPlanes( true )
     , _planesColor( 1.0 , 1.0 , 1.0 , 1.0 )
     , _deltaTime( 0.0f )
@@ -190,25 +178,16 @@ void main()
     , _alphaBlendingAccumulative( false )
     , _showSelection( false )
     , _flagNewData( false )
-    , _flagResetParticles( false )
     , _flagUpdateSelection( false )
-    , _flagUpdateGroups( false )
     , _flagUpdateAttributes( false )
-    , _flagPickingSingle( false )
-    , _flagPickingHighlighted( false )
-    , _flagChangeShader( false )
-    , _flagUpdateRender( false )
-    , _flagModeChange( false )
-    , _newMode( TMODE_UNDEFINED )
+    , _newMode( VisualMode::Selection )
     , _flagAttribChange( false )
     , _newAttrib( T_TYPE_UNDEFINED )
     , _currentAttrib( T_TYPE_MORPHO )
     , _showActiveEvents( true )
     , _subsetEvents( nullptr )
     , _deltaEvents( 0.125f )
-    , _domainManager( nullptr )
-    , _selectedPickingSingle( 0 )
-    , _oglFunctions{nullptr}
+    , _domainManager( )
     , _screenPlaneShader( nullptr )
     , _msaaFrameBuffer( 0 )
     , _msaaTextureColor( 0 )
@@ -275,7 +254,7 @@ void main()
           instance.connect( _zeqUri );
         }
 
-        _camera = new Camera( _zeqUri , instance.subscriber( ));
+        _camera = std::make_shared< Camera >( _zeqUri , instance.subscriber( ));
       }
       catch ( std::exception& e )
       {
@@ -293,14 +272,14 @@ void main()
       if ( failed )
       {
         std::cerr << "Unable to connect to ZeroEQ." << std::endl;
-        _camera = new Camera(reto::Camera::NO_ZEROEQ);
+        _camera = std::make_shared< Camera >( );
         _zeqUri.clear( );
       }
     }
 #else
-    _camera = new Camera( );
+      _camera = std::make_shared< Camera >(  );
 #endif
-    Q_ASSERT(_camera);
+    Q_ASSERT( _camera );
 
     setAutoFillBackground( true );
     setPalette( QPalette( QPalette::Window , Qt::black ));
@@ -308,28 +287,26 @@ void main()
 
   OpenGLWidget::~OpenGLWidget( void )
   {
-    if ( _camera )
-      delete _camera;
-
-    if ( _shaderParticlesDefault )
-      delete _shaderParticlesDefault;
-
-    if ( _shaderParticlesSolid )
-      delete _shaderParticlesSolid;
-
-    if ( _shaderPicking )
-      delete _shaderPicking;
-
-    if ( _particleSystem )
-      delete _particleSystem;
-
-    if ( _player )
-      delete _player;
+    delete _player;
   }
 
   void OpenGLWidget::initializeGL( void )
   {
     initializeOpenGLFunctions( );
+
+    auto* logger = new QOpenGLDebugLogger( this );
+    logger->initialize( );
+
+    connect(
+      logger , &QOpenGLDebugLogger::messageLogged ,
+      [ ]( const QOpenGLDebugMessage& message )
+      {
+        if ( message.severity( ) <= QOpenGLDebugMessage::MediumSeverity )
+          qDebug( ) << message;
+      }
+    );
+
+    logger->startLogging( );
 
     glEnable( GL_DEPTH_TEST );
     glClearColor( float( _currentClearColor.red( )) / 255.0f ,
@@ -345,21 +322,32 @@ void main()
     _lastFrame = std::chrono::system_clock::now( );
 
     QOpenGLWidget::initializeGL( );
+    visimpl::GlewInitializer::init( );
 
-    const GLubyte* vendor = glGetString(GL_VENDOR); // Returns the vendor
-    const GLubyte* renderer = glGetString(GL_RENDERER); // Returns a hint to the model
-    const GLubyte* version = glGetString(GL_VERSION);
-    const GLubyte* shadingVer = glGetString(GL_SHADING_LANGUAGE_VERSION);
+    const GLubyte* vendor = glGetString( GL_VENDOR ); // Returns the vendor
+    const GLubyte* renderer = glGetString(
+      GL_RENDERER ); // Returns a hint to the model
+    const GLubyte* version = glGetString( GL_VERSION );
+    const GLubyte* shadingVer = glGetString( GL_SHADING_LANGUAGE_VERSION );
 
-    std::cout << "OpenGL Hardware: " << vendor << " (" << renderer << ")" << std::endl;
-    std::cout << "OpenGL Version: " << version << " (shading ver. " << shadingVer << ")" << std::endl;
+    _screenPlaneShader = new reto::ShaderProgram( );
+    _screenPlaneShader->loadVertexShaderFromText( vertexShaderCode );
+    _screenPlaneShader->loadFragmentShaderFromText( screenFragment );
+    _screenPlaneShader->create( );
+    _screenPlaneShader->link( );
+    _screenPlaneShader->autocatching( true );
+    _screenPlaneShader->use( );
+    _screenPlaneShader->sendUniformi( "screenTexture" , 0 );
+
+
+    std::cout << "OpenGL Hardware: " << vendor << " (" << renderer << ")"
+              << std::endl;
+    std::cout << "OpenGL Version: " << version << " (shading ver. "
+              << shadingVer << ")" << std::endl;
   }
 
   void OpenGLWidget::_initRenderToTexture( void )
   {
-    _oglFunctions = context( )->versionFunctions< QOpenGLFunctions_4_0_Core >( );
-    _oglFunctions->initializeOpenGLFunctions( );
-
     _screenPlaneShader = new reto::ShaderProgram( );
     _screenPlaneShader->loadVertexShaderFromText( vertexShaderCode );
     _screenPlaneShader->loadFragmentShaderFromText( screenFragment );
@@ -377,7 +365,7 @@ void main()
     glGenTextures( 1 , &_msaaTextureColor );
     glBindTexture( GL_TEXTURE_2D_MULTISAMPLE , _msaaTextureColor );
 
-    _oglFunctions->glTexImage2DMultisample(
+    glTexImage2DMultisample(
       GL_TEXTURE_2D_MULTISAMPLE , SAMPLES , GL_RGB ,
       width( ) * FRAMEBUFFER_SCALE_FACTOR ,
       height( ) * FRAMEBUFFER_SCALE_FACTOR ,
@@ -392,7 +380,7 @@ void main()
 
     glGenRenderbuffers( 1 , &_msaaRBODepth );
     glBindRenderbuffer( GL_RENDERBUFFER , _msaaRBODepth );
-    _oglFunctions->glRenderbufferStorageMultisample(
+    glRenderbufferStorageMultisample(
       GL_RENDERBUFFER , SAMPLES , GL_DEPTH_COMPONENT32 ,
       width( ) * FRAMEBUFFER_SCALE_FACTOR ,
       height( ) * FRAMEBUFFER_SCALE_FACTOR );
@@ -442,10 +430,8 @@ void main()
 
   void OpenGLWidget::_configureSimulationFrame( void )
   {
-    if ( !_player || !_player->isPlaying( ) || !_particleSystem->run( ))
+    if ( !_player || !_player->isPlaying( ))
       return;
-
-    const float prevTime = _player->currentTime( );
 
     if ( _backtrace )
     {
@@ -455,15 +441,12 @@ void main()
 
     _player->Frame( );
 
-    const float currentTime = _player->currentTime( );
-
-    _domainManager->processInput( _player->spikesNow( ) , prevTime ,
-                                  currentTime , false );
+    _domainManager.processInput( _player->spikesNow( ) , false );
   }
 
   void OpenGLWidget::_configurePreviousStep( void )
   {
-    if ( !_player || !_particleSystem->run( ))
+    if ( !_player )
       return;
 
     _sbsBeginTime = _sbsFirstStep ?
@@ -494,7 +477,7 @@ void main()
 
   void OpenGLWidget::_configureStepByStep( void )
   {
-    if ( !_player || !_player->isPlaying( ) || !_particleSystem->run( ))
+    if ( !_player || !_player->isPlaying( ))
       return;
 
     _sbsBeginTime = _sbsFirstStep ? _player->currentTime( ) : _sbsEndTime;
@@ -550,8 +533,7 @@ void main()
       {
         simil::SpikesCRange frameSpikes = std::make_pair( _sbsCurrentSpike ,
                                                           spikeIt );
-        _domainManager->processInput( frameSpikes , _sbsCurrentTime , nextTime ,
-                                      false );
+        _domainManager.processInput( frameSpikes , false );
       }
 
       _sbsCurrentTime = nextTime;
@@ -561,266 +543,86 @@ void main()
 
   void OpenGLWidget::_backtraceSimulation( void )
   {
-    if(!_player) return;
+    if ( !_player ) return;
 
     const float endTime = _player->currentTime( );
-    const float startTime = std::max( 0.0f , endTime - _domainManager->decay( ));
+    const float startTime = std::max( 0.0f ,
+                                      endTime - _domainManager.getDecay( ));
     if ( startTime < endTime )
     {
       const auto context = _player->spikesBetween( startTime , endTime );
 
+      _domainManager.setTime( endTime );
       if ( context.first != context.second )
-        _domainManager->processInput( context , startTime , endTime , true );
+        _domainManager.processInput( context , true );
     }
   }
 
   void OpenGLWidget::changeShader( int shaderIndex )
   {
-    if ( shaderIndex < 0 || shaderIndex >= static_cast<int>(T_SHADER_UNDEFINED))
-      return;
-
-    _currentShader = static_cast<tShaderParticlesType>(shaderIndex);
-    _flagChangeShader = true;
-  }
-
-  void OpenGLWidget::_setShaderParticles( void )
-  {
-    if ( _currentShader == T_SHADER_UNDEFINED )
-      return;
-
-    switch ( _currentShader )
-    {
-      case T_SHADER_DEFAULT:
-        _shaderParticlesCurrent = _shaderParticlesDefault;
-        break;
-      case T_SHADER_SOLID:
-        _shaderParticlesCurrent = _shaderParticlesSolid;
-        _shaderParticlesCurrent->use( );
-        _shaderParticlesCurrent->sendUniformf( "radiusThreshold" ,
-                                               _particleRadiusThreshold );
-        break;
-      default:
-        break;
-    }
-
-    auto render = _particleSystem->renderer( );
-    auto glRender = dynamic_cast<prefr::GLAbstractRenderer*>(render);
-
-    if ( glRender )
-    {
-      glRender->setRenderProgram( _shaderParticlesCurrent );
-    }
+    if ( shaderIndex == 0 )
+      _domainManager.applyDefaultShader( );
+    else if ( shaderIndex == 1 )
+      _domainManager.applySolidShader( );
   }
 
   void OpenGLWidget::createParticleSystem( )
   {
     makeCurrent( );
-    prefr::Config::init( );
+    std::cout << "Loaded default shaders." << std::endl;
+    _updateData( );
 
-    // For debugging purposes only
-    bool success = false;
-    const auto shadersFile = std::getenv( "VISIMPL_SHADERS_FILE" );
-    if ( shadersFile )
+    if ( !_particleSystemInitialized )
     {
-      QFile sFile{ QString::fromLocal8Bit( shadersFile ) };
-      if ( sFile.open( QIODevice::ReadOnly | QIODevice::Text ))
-      {
-        const auto contents = sFile.readAll( );
-        const auto shaders = contents.split( '@' );
-
-        if ( shaders.size( ) == 7 )
-        {
-          bool shadersSuccess[4]{ true , true , true , true };
-          auto prefrVertexShader = std::string( shaders.at( 0 ).data( ) ,
-                                                shaders.at( 0 ).size( ));
-
-          _shaderParticlesDefault = new prefr::RenderProgram( );
-          shadersSuccess[ 0 ] &= _shaderParticlesDefault->loadVertexShaderFromText(
-            std::string( shaders.at( 0 ).data( ) , shaders.at( 0 ).size( )));
-          shadersSuccess[ 0 ] &= _shaderParticlesDefault->loadFragmentShaderFromText(
-            std::string( shaders.at( 1 ).data( ) , shaders.at( 1 ).size( )));
-          shadersSuccess[ 0 ] &= _shaderParticlesDefault->compileAndLink( );
-          _shaderParticlesDefault->autocatching( );
-
-          if ( !shadersSuccess[ 0 ] )
-          {
-            std::cout << "shaders failed at _shaderParticlesDefault."
-                      << __FILE__ << ":" << __LINE__ << std::endl;
-          }
-
-          _shaderParticlesSolid = new prefr::RenderProgram( );
-          shadersSuccess[ 1 ] &= _shaderParticlesSolid->loadVertexShaderFromText(
-            std::string( shaders.at( 0 ).data( ) , shaders.at( 0 ).size( )));
-          shadersSuccess[ 1 ] &= _shaderParticlesSolid->loadFragmentShaderFromText(
-            std::string( shaders.at( 2 ).data( ) , shaders.at( 2 ).size( )));
-          shadersSuccess[ 1 ] &= _shaderParticlesSolid->compileAndLink( );
-          _shaderParticlesSolid->autocatching( );
-
-          if ( !shadersSuccess[ 1 ] )
-          {
-            std::cout << "shaders failed at _shaderParticlesSolid." << __FILE__
-                      << ":" << __LINE__ << std::endl;
-          }
-
-          _shaderPicking = new prefr::RenderProgram( );
-          shadersSuccess[ 2 ] &= _shaderPicking->loadVertexShaderFromText(
-            std::string( shaders.at( 3 ).data( ) , shaders.at( 3 ).size( )));
-          shadersSuccess[ 2 ] &= _shaderPicking->loadFragmentShaderFromText(
-            std::string( shaders.at( 4 ).data( ) , shaders.at( 4 ).size( )));
-          shadersSuccess[ 2 ] &= _shaderPicking->compileAndLink( );
-
-          if ( !shadersSuccess[ 2 ] )
-          {
-            std::cout << "shaders failed at _shaderPicking." << __FILE__ << ":"
-                      << __LINE__ << std::endl;
-          }
-
-          _shaderClippingPlanes = new prefr::RenderProgram( );
-          shadersSuccess[ 3 ] &= _shaderClippingPlanes->loadVertexShaderFromText(
-            std::string( shaders.at( 5 ).data( ) , shaders.at( 5 ).size( )));
-          shadersSuccess[ 3 ] &= _shaderClippingPlanes->loadFragmentShaderFromText(
-            std::string( shaders.at( 6 ).data( ) , shaders.at( 6 ).size( )));
-          shadersSuccess[ 3 ] &= _shaderClippingPlanes->compileAndLink( );
-          _shaderClippingPlanes->autocatching( );
-
-          if ( !shadersSuccess[ 3 ] )
-          {
-            std::cout << "shaders failed at _shaderClippingPlanes." << __FILE__
-                      << ":" << __LINE__ << std::endl;
-          }
-
-          if ( shadersSuccess[ 0 ] && shadersSuccess[ 1 ] &&
-               shadersSuccess[ 2 ] && shadersSuccess[ 3 ] )
-          {
-            success = true;
-            std::cout << "Loaded shaders from: "
-                      << sFile.fileName( ).toStdString( ) << std::endl;
-          }
-        }
-      }
-      else
-      {
-        std::cerr << "Unable to read " << sFile.fileName( ).toStdString( )
-                  << " reverting to default shaders.";
-      }
-    }
-
-    if ( !success )
-    {
-      // Default shaders.
-
-      // Initialize shader
-      _shaderParticlesDefault = new prefr::RenderProgram( );
-      _shaderParticlesDefault->loadVertexShaderFromText(
-        prefr::prefrVertexShader );
-      _shaderParticlesDefault->loadFragmentShaderFromText(
-        prefr::prefrFragmentShaderDefault );
-      _shaderParticlesDefault->compileAndLink( );
-      _shaderParticlesDefault->autocatching( );
-
-      _shaderParticlesSolid = new prefr::RenderProgram( );
-      _shaderParticlesSolid->loadVertexShaderFromText(
-        prefr::prefrVertexShader );
-      _shaderParticlesSolid->loadFragmentShaderFromText(
-        prefr::prefrFragmentShaderSolid );
-      _shaderParticlesSolid->compileAndLink( );
-      _shaderParticlesSolid->autocatching( );
-
-      _shaderPicking = new prefr::RenderProgram( );
-      _shaderPicking->loadVertexShaderFromText(
-        prefr::prefrVertexShaderPicking );
-      _shaderPicking->loadFragmentShaderFromText(
-        prefr::prefrFragmentShaderPicking );
-      _shaderPicking->compileAndLink( );
-
-      _shaderClippingPlanes = new prefr::RenderProgram( );
-      _shaderClippingPlanes->loadVertexShaderFromText( prefr::planeVertCode );
-      _shaderClippingPlanes->loadFragmentShaderFromText( prefr::planeFragCode );
+      _shaderClippingPlanes = new reto::ShaderProgram( );
+      _shaderClippingPlanes->loadVertexShaderFromText(
+        visimpl::SHADER_PLANE_VERTEX );
+      _shaderClippingPlanes->loadFragmentShaderFromText(
+        visimpl::SHADER_PLANE_FRAGMENT );
       _shaderClippingPlanes->compileAndLink( );
       _shaderClippingPlanes->autocatching( );
 
-      std::cout << "Loaded default shaders." << std::endl;
+      _domainManager.initRenderers(
+        _clippingPlaneLeft , _clippingPlaneRight , _camera );
     }
 
-    _currentShader = (_currentShader == T_SHADER_UNDEFINED) ? T_SHADER_DEFAULT : _currentShader;
-    _flagChangeShader = true;
-
-    unsigned int currentParticles = _player ? static_cast<unsigned int>( _player->gids( ).size( )) : 0u;
-    const unsigned int maxParticles =
-      std::max( 100000u , currentParticles);
-
-    _updateData( );
-    _particleSystem = new prefr::ParticleSystem( maxParticles , _camera );
-    _flagResetParticles = true;
-
-    if(!_player)
+    if ( _player )
     {
-      if(_domainManager) delete _domainManager;
-      _domainManager = nullptr;
-    }
-    else
-    {
-      _domainManager = new DomainManager( _particleSystem , _player->gids( ));
+      _domainManager.setSelection( _player->gids( ) , _gidPositions );
+
 #ifdef SIMIL_USE_BRION
-      _domainManager->init( _gidPositions , _player->data( )->blueConfig( ));
-#else
-      _domainManager->init( _gidPositions );
+
+      _domainManager.initAttributeData( _player->gids( ) ,
+                                        _player
+                                        ? _player->data( )->blueConfig( )
+                                        : nullptr );
+      _domainManager.selectAttribute( _colorPalette.colors( ) , _gidPositions ,
+                                      tNeuronAttributes::T_TYPE_MORPHO );
 #endif
-      _domainManager->initializeParticleSystem( _shaderParticlesDefault );
-      _domainManager->updateData( _player->gids( ) , _gidPositions );
+
     }
 
-    _pickRenderer =
-      dynamic_cast< prefr::GLPickRenderer* >( _particleSystem->renderer( ));
-
-    if ( _pickRenderer != nullptr )
-    {
-      _pickRenderer->glPickProgram( _shaderPicking );
-      _pickRenderer->setDefaultFBO( defaultFramebufferObject( ));
-    }
-
-    if(_domainManager)
-      _domainManager->mode( TMODE_SELECTION );
+    _domainManager.setMode( VisualMode::Selection );
 
     updateCameraBoundingBox( true );
 
     _initClippingPlanes( );
+
+    _particleSystemInitialized = true;
   }
 
   void OpenGLWidget::_paintParticles( void )
   {
-    if ( !_particleSystem )
-      return;
-
-    _shaderParticlesCurrent->use( );
-
     glm::vec3 cameraPosition( _camera->position( )[ 0 ] ,
                               _camera->position( )[ 1 ] ,
                               _camera->position( )[ 2 ] );
 
-    if ( _player->isPlaying( ) || _lastCameraPosition != cameraPosition ||
-         _flagUpdateRender )
+    if ( _lastCameraPosition != cameraPosition )
     {
       _lastCameraPosition = cameraPosition;
-      _particleSystem->updateRender( );
-      _flagUpdateRender = false;
     }
 
-    if ( _clipping )
-    {
-      _clippingPlaneLeft->activate( _shaderParticlesCurrent , 0 );
-      _clippingPlaneRight->activate( _shaderParticlesCurrent , 1 );
-    }
-
-    _particleSystem->render( );
-
-    if ( _clipping )
-    {
-      _clippingPlaneLeft->deactivate( 0 );
-      _clippingPlaneRight->deactivate( 1 );
-    }
-
-    _shaderParticlesCurrent->unuse( );
+    _domainManager.draw( );
   }
 
   void OpenGLWidget::_paintPlanes( void )
@@ -837,35 +639,14 @@ void main()
     if ( _flagNewData )
       _updateNewData( );
 
-    if ( _flagChangeShader )
-      _setShaderParticles( );
-
-    if ( _flagModeChange )
-      _modeChange( );
-
     if ( _flagUpdateSelection )
       _updateSelection( );
-
-    if ( _flagUpdateGroups )
-      _updateGroupsVisibility( );
-
-    if ( _flagUpdateGroups && _domainManager && _domainManager->showGroups( ))
-      _updateGroups( );
 
     if ( _flagAttribChange )
       _attributeChange( );
 
     if ( _flagUpdateAttributes )
       _updateAttributes( );
-
-    if ( _flagResetParticles )
-    {
-      if ( _domainManager ) _domainManager->resetParticles( );
-      _flagResetParticles = false;
-    }
-
-    if ( _particleSystem )
-      _particleSystem->update( 0.0f );
   }
 
   void OpenGLWidget::paintGL( void )
@@ -900,105 +681,96 @@ void main()
     {
       _camera->anim( );
 
-      if ( _particleSystem )
+      if ( _player && _player->isPlaying( ))
       {
-        if ( _player && _player->isPlaying( ))
+        switch ( _playbackMode )
         {
+          // Continuous mode (Default)
+          case TPlaybackMode::CONTINUOUS:
+            if ( _elapsedTimeSimAcc >= _simPeriodMicroseconds )
+            {
+              _configureSimulationFrame( );
+              _updateEventLabelsVisibility( );
+
+              _elapsedTimeSimAcc = 0.0f;
+            }
+            break;
+            // Step by step mode
+          case TPlaybackMode::STEP_BY_STEP:
+            if ( _sbsPrevStep )
+            {
+              _configurePreviousStep( );
+              _sbsPrevStep = false;
+            }
+            else if ( _sbsNextStep )
+            {
+              _configureStepByStep( );
+              _sbsNextStep = false;
+            }
+            break;
+          default:
+            break;
+        }
+
+        if ( _elapsedTimeRenderAcc >= _renderPeriodMicroseconds )
+        {
+          double renderDelta = 0;
+
           switch ( _playbackMode )
           {
-            // Continuous mode (Default)
             case TPlaybackMode::CONTINUOUS:
-              if ( _elapsedTimeSimAcc >= _simPeriodMicroseconds )
-              {
-                _configureSimulationFrame( );
-                _updateEventLabelsVisibility( );
-
-                _elapsedTimeSimAcc = 0.0f;
-              }
+              renderDelta =
+                _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;
               break;
-              // Step by step mode
             case TPlaybackMode::STEP_BY_STEP:
-              if ( _sbsPrevStep )
-              {
-                _configurePreviousStep( );
-                _sbsPrevStep = false;
-              }
-              else if ( _sbsNextStep )
-              {
-                _configureStepByStep( );
-                _sbsNextStep = false;
-              }
+              _configureStepByStepFrame( _elapsedTimeRenderAcc * 0.000001 );
+              renderDelta = _sbsCurrentRenderDelta;
               break;
             default:
-              break;
+              renderDelta = 0;
           }
 
-          if ( _elapsedTimeRenderAcc >= _renderPeriodMicroseconds )
-          {
-            double renderDelta = 0;
+          if ( std::isnan( renderDelta )) renderDelta = 0;
 
-            switch ( _playbackMode )
-            {
-              case TPlaybackMode::CONTINUOUS:
-                renderDelta =
-                  _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;
-                break;
-              case TPlaybackMode::STEP_BY_STEP:
-                _configureStepByStepFrame( _elapsedTimeRenderAcc * 0.000001 );
-                renderDelta = _sbsCurrentRenderDelta;
-                break;
-              default:
-                renderDelta = 0;
-            }
+          _updateParticles( renderDelta );
+          _elapsedTimeRenderAcc = 0.0f;
+        } // elapsed > render period
 
-            if ( std::isnan( renderDelta )) renderDelta = 0;
-
-            _updateParticles( renderDelta );
-            _elapsedTimeRenderAcc = 0.0f;
-          } // elapsed > render period
-
-        } // if player && player->isPlaying
+      } // if player && player->isPlaying
 
 
-        glBindFramebuffer( GL_FRAMEBUFFER , _msaaFrameBuffer );
-        glViewport( 0 , 0 , width( ) * FRAMEBUFFER_SCALE_FACTOR ,
-                    height( ) * FRAMEBUFFER_SCALE_FACTOR );
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-        glEnable( GL_DEPTH_TEST );
+      glBindFramebuffer( GL_FRAMEBUFFER , _msaaFrameBuffer );
+      glViewport( 0 , 0 , width( ) * FRAMEBUFFER_SCALE_FACTOR ,
+                  height( ) * FRAMEBUFFER_SCALE_FACTOR );
+      glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+      glEnable( GL_DEPTH_TEST );
 
-        _paintPlanes( );
-        _paintParticles( );
+      _paintPlanes( );
+      _paintParticles( );
 
-        glViewport( 0 , 0 , width( ) , height( ));
+      glViewport( 0 , 0 , width( ) , height( ));
 
-        // Perform MSAA
-        glBindFramebuffer( GL_READ_FRAMEBUFFER , _msaaFrameBuffer );
-        glBindFramebuffer( GL_DRAW_FRAMEBUFFER , _midFrameBuffer );
-        int w = width( ) * FRAMEBUFFER_SCALE_FACTOR;
-        int h = height( ) * FRAMEBUFFER_SCALE_FACTOR;
-        _oglFunctions->glBlitFramebuffer(
-          0 , 0 ,
-          w , h ,
-          0 , 0 ,
-          w , h ,
-          GL_COLOR_BUFFER_BIT , GL_NEAREST );
+      // Perform MSAA
+      glBindFramebuffer( GL_READ_FRAMEBUFFER , _msaaFrameBuffer );
+      glBindFramebuffer( GL_DRAW_FRAMEBUFFER , _midFrameBuffer );
+      int w = width( ) * FRAMEBUFFER_SCALE_FACTOR;
+      int h = height( ) * FRAMEBUFFER_SCALE_FACTOR;
+      glBlitFramebuffer(
+        0 , 0 ,
+        w , h ,
+        0 , 0 ,
+        w , h ,
+        GL_COLOR_BUFFER_BIT , GL_NEAREST );
 
-        // Perform super-sampling
-        glBindFramebuffer( GL_READ_FRAMEBUFFER , _midFrameBuffer );
-        glBindFramebuffer( GL_DRAW_FRAMEBUFFER , defaultFramebufferObject( ));
-        _oglFunctions->glBlitFramebuffer(
-          0 , 0 ,
-          w , h ,
-          0 , 0 ,
-          width( ) , height( ) ,
-          GL_COLOR_BUFFER_BIT , GL_LINEAR );
-
-        if ( _flagPickingSingle )
-        {
-          _pickSingle( );
-        }
-      } // if particleSystem
-
+      // Perform super-sampling
+      glBindFramebuffer( GL_READ_FRAMEBUFFER , _midFrameBuffer );
+      glBindFramebuffer( GL_DRAW_FRAMEBUFFER , defaultFramebufferObject( ));
+      glBlitFramebuffer(
+        0 , 0 ,
+        w , h ,
+        0 , 0 ,
+        width( ) , height( ) ,
+        GL_COLOR_BUFFER_BIT , GL_LINEAR );
     }
 
     if ( _player && _elapsedTimeSliderAcc > _sliderUpdatePeriodMicroseconds )
@@ -1010,7 +782,6 @@ void main()
 #endif
 
       emit updateSlider( _player->GetRelativeTime( ));
-
 
       if ( _showCurrentTime )
       {
@@ -1046,8 +817,9 @@ void main()
       _frameCount = 0;
     }
 
-    if ( _idleUpdate && _player )
-      update( );
+    update( );
+    //if ( _idleUpdate && _player )
+    //update( );
   }
 
   void
@@ -1067,11 +839,6 @@ void main()
     _flagUpdateSelection = true;
   }
 
-  void OpenGLWidget::setUpdateGroups( void )
-  {
-    _flagUpdateGroups = true;
-  }
-
   void OpenGLWidget::setUpdateAttributes( void )
   {
     _flagAttribChange = true;
@@ -1079,9 +846,8 @@ void main()
 
   void OpenGLWidget::selectAttrib( int newAttrib )
   {
-    if ( _domainManager &&
-         ( newAttrib < 0 || newAttrib >= static_cast<int>(T_TYPE_UNDEFINED) ||
-           _domainManager->mode( ) != TMODE_ATTRIBUTE ))
+    if (( newAttrib < 0 || newAttrib >= static_cast<int>(T_TYPE_UNDEFINED) ||
+          _domainManager.getMode( ) != VisualMode::Attribute ))
       return;
 
     _newAttrib = static_cast<tNeuronAttributes>(newAttrib);
@@ -1090,20 +856,16 @@ void main()
 
   void OpenGLWidget::_modeChange( void )
   {
-    if ( _domainManager )
-      _domainManager->mode( _newMode );
+    _domainManager.setMode( _newMode );
 
-    _flagModeChange = false;
-    _flagUpdateRender = true;
-
-    if ( _domainManager && ( _domainManager->mode( ) == TMODE_ATTRIBUTE ))
+    if ( _domainManager.getMode( ) == VisualMode::Attribute )
       emit attributeStatsComputed( );
   }
 
   void OpenGLWidget::_attributeChange( void )
   {
-    if ( _domainManager )
-      _domainManager->generateAttributesGroups( _newAttrib );
+    _domainManager.selectAttribute(
+      _colorPalette.colors( ) , _gidPositions , _newAttrib );
 
     _currentAttrib = _newAttrib;
 
@@ -1114,73 +876,17 @@ void main()
 
   void OpenGLWidget::_updateSelection( void )
   {
-    if(!_particleSystem || !_player) return;
+    if ( !_player ) return;
 
-    _particleSystem->run(false);
-
-    updateCameraBoundingBox();
-
-    _particleSystem->run(true);
-    _particleSystem->update(0.0f);
+    updateCameraBoundingBox( );
 
     _flagUpdateSelection = false;
-    _flagUpdateRender = true;
-  }
-
-  void OpenGLWidget::setGroupVisibility( unsigned int i , bool state )
-  {
-    _pendingGroupStateChanges.push( std::make_pair( i , state ));
-    _flagUpdateGroups = true;
-  }
-
-  void OpenGLWidget::_updateGroupsVisibility( void )
-  {
-    while ( !_pendingGroupStateChanges.empty( ))
-    {
-      auto state = _pendingGroupStateChanges.front( );
-      if ( _domainManager )
-        _domainManager->setVisualGroupState( state.first , state.second );
-
-      _pendingGroupStateChanges.pop( );
-
-      _flagUpdateRender = true;
-    }
-  }
-
-  void OpenGLWidget::_updateGroups( void )
-  {
-    if ( _particleSystem /*&& _pendingSelection*/ )
-    {
-      _particleSystem->run( false );
-
-      _domainManager->updateGroups( );
-
-      updateCameraBoundingBox( );
-
-      _particleSystem->run( true );
-      _particleSystem->update( 0.0f );
-
-      _flagUpdateGroups = false;
-      _flagUpdateRender = true;
-    }
   }
 
   void OpenGLWidget::_updateAttributes( void )
   {
-    if ( _particleSystem )
-    {
-      _particleSystem->run( false );
-
-      _domainManager->updateAttributes( );
-
-      updateCameraBoundingBox( );
-
-      _particleSystem->run( true );
-      _particleSystem->update( 0.0f );
-
-      _flagUpdateAttributes = false;
-      _flagUpdateRender = true;
-    }
+    updateCameraBoundingBox( );
+    _flagUpdateAttributes = false;
   }
 
   void OpenGLWidget::updateData( )
@@ -1190,10 +896,10 @@ void main()
 
   bool OpenGLWidget::_updateData( bool force )
   {
-    if(!_player)
+    if ( !_player )
     {
       _gidPositions.clear( );
-      _boundingBoxHome = tBoundingBox{ vec3{0,0,0}, vec3{0,0,0} };
+      _boundingBoxHome = tBoundingBox{ vec3{ 0 , 0 , 0 } , vec3{ 0 , 0 , 0 }};
       return false;
     }
 
@@ -1205,8 +911,8 @@ void main()
     _gidPositions.clear( );
     _gidPositions.reserve( positions.size( ));
 
-    vec3 bbmin;
-    vec3 bbmax;
+    vec3 bbmin = vec3( );
+    vec3 bbmax = vec3( );
     auto gidit = _player->gids( ).cbegin( );
     auto insertElement = [ & ]( const vmml::Vector3f& v )
     {
@@ -1215,27 +921,27 @@ void main()
                            v.z( ) * _scaleFactor.z );
 
       _gidPositions.insert( std::make_pair( *gidit , position ));
-      if(gidit == _player->gids().cbegin())
+      if ( gidit == _player->gids( ).cbegin( ))
       {
         bbmin = bbmax = position;
       }
       else
       {
-        auto x = std::min(bbmin.x, position.x);
-        auto y = std::min(bbmin.y, position.y);
-        auto z = std::min(bbmin.z, position.z);
-        bbmin = vec3{x,y,z};
+        auto x = std::min( bbmin.x , position.x );
+        auto y = std::min( bbmin.y , position.y );
+        auto z = std::min( bbmin.z , position.z );
+        bbmin = vec3{ x , y , z };
 
-        x = std::max(bbmax.x, position.x);
-        y = std::max(bbmax.y, position.y);
-        z = std::max(bbmax.z, position.z);
-        bbmax = vec3{x,y,z};
+        x = std::max( bbmax.x , position.x );
+        y = std::max( bbmax.y , position.y );
+        z = std::max( bbmax.z , position.z );
+        bbmax = vec3{ x , y , z };
       }
       ++gidit;
     };
     std::for_each( positions.cbegin( ) , positions.cend( ) , insertElement );
 
-    _boundingBoxHome = tBoundingBox{ bbmin, bbmax };
+    _boundingBoxHome = tBoundingBox{ bbmin , bbmax };
 
     return true;
   }
@@ -1243,27 +949,22 @@ void main()
   void OpenGLWidget::_updateNewData( void )
   {
     _flagNewData = false;
-
     if ( !_updateData( )) return;
-
-    _domainManager->updateData( _player->gids( ) , _gidPositions );
-    _focusOn( _domainManager->boundingBox( ));
-    _flagUpdateRender = true;
+    _domainManager.setSelection( _player->gids( ) , _gidPositions );
   }
 
   void OpenGLWidget::setMode( int mode )
   {
-    if ( mode < 0 || ( mode >= static_cast<int>(TMODE_UNDEFINED) ))
+    if ( mode < 0 || ( mode >= static_cast<int>(VisualMode::Undefined)))
       return;
 
-    _newMode = static_cast<tVisualMode>(mode);
-    _flagModeChange = true;
+    _newMode = static_cast<VisualMode>(mode);
+    _modeChange( );
   }
 
-  void OpenGLWidget::showInactive( bool state )
+  void OpenGLWidget::showInactive( bool /*state*/ )
   {
-    if ( _domainManager )
-      _domainManager->showInactive( state );
+    // TODO _domainManager.showInactive( state );
   }
 
   void OpenGLWidget::clearSelection( void )
@@ -1274,20 +975,20 @@ void main()
 
   void OpenGLWidget::home( void )
   {
-    if(_homePosition.isEmpty())
+    if ( _homePosition.isEmpty( ))
     {
       _focusOn( _boundingBoxHome );
-      _homePosition = cameraPosition().toString();
+      _homePosition = cameraPosition( ).toString( );
     }
 
-    setCameraPosition(_homePosition);
+    setCameraPosition( _homePosition );
   }
 
   void OpenGLWidget::updateCameraBoundingBox( bool setBoundingBox )
   {
-    if ( _gidPositions.empty( ) || !_domainManager) return;
+    if ( _gidPositions.empty( )) return;
 
-    const auto boundingBox = _domainManager->boundingBox( );
+    const auto boundingBox = _domainManager.getBoundingBox( );
 
     const glm::vec3 MAX{ std::numeric_limits< float >::max( ) ,
                          std::numeric_limits< float >::max( ) ,
@@ -1315,44 +1016,6 @@ void main()
     _camera->radius( radius );
   }
 
-  void OpenGLWidget::_pickSingle( void )
-  {
-    _shaderPicking->use( );
-    unsigned int shader = _shaderPicking->program( );
-    unsigned int particleRadius = glGetUniformLocation( shader ,
-                                                        "radiusThreshold" );
-
-    glUniform1f( particleRadius , _particleRadiusThreshold );
-
-    auto result =
-      _pickRenderer->pick( *_particleSystem ,
-                           _pickingPosition.x( ) ,
-                           _pickingPosition.y( ));
-
-    _flagPickingSingle = false;
-
-    if ( result == 0 ||
-         ( result - 1 == _selectedPickingSingle && _flagPickingHighlighted ))
-    {
-      _domainManager->clearHighlighting( );
-      _flagUpdateRender = true;
-      _flagPickingHighlighted = false;
-      return;
-    }
-
-    _flagPickingHighlighted = true;
-
-    _selectedPickingSingle = result - 1;
-
-    std::unordered_set< unsigned int > selected = { _selectedPickingSingle };
-
-    _domainManager->highlightElements( selected );
-
-    _flagUpdateRender = true;
-
-    emit pickedSingle( _selectedPickingSingle );
-  }
-
   void OpenGLWidget::showEventsActivityLabels( bool show )
   {
     auto updateWidget = [ show ]( visimpl::OpenGLWidget::EventLabel& container )
@@ -1378,11 +1041,9 @@ void main()
     if ( update && _player )
     {
       _updateData( true );
-      _domainManager->updateData( _player->gids( ) , _gidPositions );
-      _focusOn( _domainManager->boundingBox( ));
+      _domainManager.setSelection( _player->gids( ) , _gidPositions );
+      _focusOn( _domainManager.getBoundingBox( ));
     }
-
-    _flagUpdateRender = true;
   }
 
   vec3 OpenGLWidget::circuitScaleFactor( void ) const
@@ -1392,16 +1053,16 @@ void main()
 
   void OpenGLWidget::_updateParticles( float renderDelta )
   {
-    if ( _player && (_player->isPlaying( ) || _firstFrame ))
+    if ( _player && ( _player->isPlaying( ) || _firstFrame ))
     {
-      _particleSystem->update( renderDelta );
+      _domainManager.addTime( renderDelta, _player->endTime() );
       _firstFrame = false;
     }
   }
 
   void OpenGLWidget::_updateEventLabelsVisibility( void )
   {
-    if(!_player) return;
+    if ( !_player ) return;
 
     std::vector< bool > visibility = _activeEventsAt( _player->currentTime( ));
 
@@ -1422,7 +1083,7 @@ void main()
   {
     std::vector< bool > result( _eventLabels.size( ) , false );
 
-    if(_player)
+    if ( _player )
     {
       const float totalTime = _player->endTime( ) - _player->startTime( );
       const double perc = time / totalTime;
@@ -1445,23 +1106,23 @@ void main()
     _camera->windowSize( w , h );
     glViewport( 0 , 0 , w , h );
 
-    if ( _pickRenderer )
-    {
-      _pickRenderer->setWindowSize( w , h );
-    }
+    //if ( _pickRenderer )
+    //{
+    //  _pickRenderer->setWindowSize( w , h );
+    //}
 
-    if ( _oglFunctions != nullptr && _msaaTextureColor != 0 )
+    if ( _msaaTextureColor != 0 )
     {
       int rw = width( ) * FRAMEBUFFER_SCALE_FACTOR;
       int rh = height( ) * FRAMEBUFFER_SCALE_FACTOR;
       // Resize MSAA buffers
       glBindTexture( GL_TEXTURE_2D_MULTISAMPLE , _msaaTextureColor );
-      _oglFunctions->glTexImage2DMultisample(
+      glTexImage2DMultisample(
         GL_TEXTURE_2D_MULTISAMPLE , SAMPLES , GL_RGB ,
         rw , rh , GL_TRUE );
 
       glBindRenderbuffer( GL_RENDERBUFFER , _msaaRBODepth );
-      _oglFunctions->glRenderbufferStorageMultisample(
+      glRenderbufferStorageMultisample(
         GL_RENDERBUFFER , SAMPLES , GL_DEPTH_COMPONENT32 ,
         rw , rh );
 
@@ -1484,9 +1145,6 @@ void main()
 
   void OpenGLWidget::_initClippingPlanes( void )
   {
-    _clippingPlaneLeft = new reto::ClippingPlane( );
-    _clippingPlaneRight = new reto::ClippingPlane( );
-
     _planePosLeft.resize( 4 , Eigen::Vector3f::Zero( ));
     _planePosRight.resize( 4 , Eigen::Vector3f::Zero( ));
 
@@ -1500,9 +1158,7 @@ void main()
 
   void OpenGLWidget::_genPlanesFromBoundingBox( void )
   {
-    if(!_domainManager) return;
-
-    auto currentBoundingBox = _domainManager->boundingBox( );
+    auto currentBoundingBox = _domainManager.getBoundingBox( );
 
     _planesCenter =
       glmToEigen( currentBoundingBox.first + currentBoundingBox.second ) * 0.5f;
@@ -1601,11 +1257,8 @@ void main()
   void OpenGLWidget::clippingPlanes( bool active )
   {
     _clipping = active;
-
-    if ( _clipping )
-    {
-      _updatePlanes( );
-    }
+    _domainManager.enableClipping( active );
+    if ( _clipping ) _updatePlanes( );
   }
 
   void OpenGLWidget::paintClippingPlanes( int paint_ )
@@ -1717,7 +1370,7 @@ void main()
     evec3 normal = -_planeNormalLeft;
     normal.normalize( );
 
-    auto positions = _domainManager->positions( );
+    auto positions = _gidPositions;
 
     result.reserve( positions.size( ));
 
@@ -1783,8 +1436,6 @@ void main()
       if ( _pickingPosition == event_->pos( ))
       {
         _pickingPosition.setY( height( ) - _pickingPosition.y( ));
-
-        _flagPickingSingle = true;
       }
 
       _translation = false;
@@ -1862,13 +1513,14 @@ void main()
     update( );
   }
 
-  void OpenGLWidget::setPlayer(simil::SpikesPlayer *p, const simil::TDataType type)
+  void OpenGLWidget::setPlayer( simil::SpikesPlayer* p ,
+                                const simil::TDataType type )
   {
     // Resets camera position
-    setCameraPosition(CameraPosition(INITIAL_CAMERA_POSITION));
-    _homePosition.clear();
+    setCameraPosition( CameraPosition( INITIAL_CAMERA_POSITION ));
+    _homePosition.clear( );
 
-    if(_player)
+    if ( _player )
     {
       // TODO: clear data?
     }
@@ -1926,7 +1578,7 @@ void main()
 
         _player->connectZeq( instance.subscriber( ) , instance.publisher( ));
         instance.startReceiveLoop( );
-        _zeqUri = std::string(); // clear to avoid re-connect.
+        _zeqUri = std::string( ); // clear to avoid re-connect.
       }
       catch ( std::exception& e )
       {
@@ -1941,8 +1593,8 @@ void main()
     }
 #endif
 
-    this->_paint = (_player != nullptr);
-    home(); // stores initial 'home' position.
+    this->_paint = ( _player != nullptr );
+    home( ); // stores initial 'home' position.
     update( );
   }
 
@@ -1960,9 +1612,10 @@ void main()
 
   void OpenGLWidget::changeClearColor( void )
   {
-    const auto color = QColorDialog::getColor( _currentClearColor , parentWidget( ) ,
-                       "Choose new background color" ,
-                       QColorDialog::DontUseNativeDialog );
+    const auto color = QColorDialog::getColor( _currentClearColor ,
+                                               parentWidget( ) ,
+                                               "Choose new background color" ,
+                                               QColorDialog::DontUseNativeDialog );
 
     if ( color.isValid( ))
     {
@@ -1974,12 +1627,12 @@ void main()
                     float( _currentClearColor.blue( )) / 255.0f ,
                     float( _currentClearColor.alpha( )) / 255.0f );
 
-      const QColor inverseColor{ 255 - _currentClearColor.red(),
-                                 255 - _currentClearColor.green(),
-                                 255 - _currentClearColor.blue(),
-                                 255};
+      const QColor inverseColor{ 255 - _currentClearColor.red( ) ,
+                                 255 - _currentClearColor.green( ) ,
+                                 255 - _currentClearColor.blue( ) ,
+                                 255 };
 
-      clippingPlanesColor(inverseColor);
+      clippingPlanesColor( inverseColor );
 
       update( );
     }
@@ -2052,7 +1705,7 @@ void main()
 
   float OpenGLWidget::currentTime( void )
   {
-    if(!_player) return 0.;
+    if ( !_player ) return 0.;
 
     switch ( _playbackMode )
     {
@@ -2065,14 +1718,14 @@ void main()
 
   DomainManager* OpenGLWidget::domainManager( void )
   {
-    return _domainManager;
+    return &_domainManager;
   }
 
   void OpenGLWidget::subsetEventsManager( simil::SubsetEventManager* manager )
   {
     _subsetEvents = manager;
 
-    if(manager) _createEventLabels( );
+    if ( manager ) _createEventLabels( );
 
     update( );
   }
@@ -2189,7 +1842,7 @@ void main()
     if ( _player )
     {
       _player->Stop( );
-      _flagResetParticles = true;
+      _domainManager.setTime( 0.0f );
       _firstFrame = true;
     }
   }
@@ -2206,14 +1859,11 @@ void main()
   {
     if ( _player )
     {
-      _particleSystem->run( false );
-      _flagResetParticles = true;
-
       _backtrace = true;
-
       std::cout << "Play at " << timePos << std::endl;
       _player->PlayAtTime( timePos );
-      _particleSystem->run( true );
+      _domainManager.setTime( timePos );
+
     }
   }
 
@@ -2226,7 +1876,6 @@ void main()
       if ( playing )
         _player->Play( );
 
-      _flagResetParticles = true;
       _firstFrame = true;
     }
   }
@@ -2258,18 +1907,14 @@ void main()
   void OpenGLWidget::SetAlphaBlendingAccumulative( bool accumulative )
   {
     _alphaBlendingAccumulative = accumulative;
-    if ( _particleSystem != nullptr )
-    {
-      _particleSystem->renderer( )->enableAccumulativeMode(
-        _alphaBlendingAccumulative );
-    }
+    _domainManager.enableAccumulativeMode( accumulative );
   }
 
   void
   OpenGLWidget::changeSimulationColorMapping( const TTransferFunction& colors )
   {
 
-    prefr::vectortvec4 gcolors;
+    visimpl::TColorVec gcolors;
 
     for ( const auto& c: colors )
     {
@@ -2277,80 +1922,43 @@ void main()
                         c.second.green( ) * invRGBInt ,
                         c.second.blue( ) * invRGBInt ,
                         c.second.alpha( ) * invRGBInt );
-
-      gcolors.Insert( c.first , gColor );
+      gcolors.emplace_back( c.first , gColor );
     }
 
-    if ( _domainManager )
-    {
-      _domainManager->modelSelectionBase( )->color = gcolors;
-
-      _flagUpdateRender = true;
-    }
+    _domainManager.getSelectionModel( )->setGradient( gcolors );
   }
 
   TTransferFunction OpenGLWidget::getSimulationColorMapping( void )
   {
     TTransferFunction result;
 
-    const auto model = _domainManager->modelSelectionBase( );
-    const auto colors = model->color.values;
+    const auto model = _domainManager.getSelectionModel( );
+    const auto colors = model->getGradient( );
 
-    auto timeValue = model->color.times.begin( );
-
-    auto insertColor = [ &timeValue , &result ]( const vec4 col )
+    for ( const auto& item: colors )
     {
+      auto col = item.second;
       const QColor color( col.r * 255 , col.g * 255 , col.b * 255 ,
                           col.a * 255 );
-      result.push_back( std::make_pair( *timeValue , color ));
-
-      ++timeValue;
-    };
-    std::for_each( colors.cbegin( ) , colors.cend( ) , insertColor );
+      result.push_back( std::make_pair( item.first , color ));
+    }
 
     return result;
   }
 
   void OpenGLWidget::changeSimulationSizeFunction( const TSizeFunction& sizes )
   {
-    utils::InterpolationSet< float > newSize;
-
-    auto insertSize = [ &newSize ]( const Event& e )
-    { newSize.Insert( e.first , e.second ); };
-    std::for_each( sizes.cbegin( ) , sizes.cend( ) , insertSize );
-
-    if ( _domainManager )
-    {
-      _domainManager->modelSelectionBase( )->size = newSize;
-
-      _flagUpdateRender = true;
-    }
+    _domainManager.getSelectionModel( )->setParticleSize( sizes );
   }
 
   TSizeFunction OpenGLWidget::getSimulationSizeFunction( void )
   {
-    TSizeFunction result;
-
-    if ( _domainManager )
-    {
-      const auto model = _domainManager->modelSelectionBase( );
-      const auto& sizes = model->size.times;
-
-      auto sizeValue = model->size.values.begin( );
-      auto insertSize = [ &result , &sizeValue ]( const float& f )
-      {
-        result.emplace_back( f , *sizeValue );
-        ++sizeValue;
-      };
-      std::for_each( sizes.cbegin( ) , sizes.cend( ) , insertSize );
-    }
-
-    return result;
+    return _domainManager.getSelectionModel( )->getParticleSize( );
   }
 
   void OpenGLWidget::simulationDeltaTime( float value )
   {
-    if(_player) _player->deltaTime( value );
+    if ( _player ) _player->deltaTime( value );
 
     _simDeltaTime = value;
 
@@ -2364,7 +1972,7 @@ void main()
 
   void OpenGLWidget::simulationStepsPerSecond( float value )
   {
-    if ( std::abs (value) < std::numeric_limits<float>::epsilon() ) return;
+    if ( std::abs( value ) < std::numeric_limits< float >::epsilon( )) return;
 
     _timeStepsPerSecond = value;
 
@@ -2391,43 +1999,44 @@ void main()
 
   void OpenGLWidget::changeSimulationDecayValue( float value )
   {
-    if ( _domainManager )
-      _domainManager->decay( value );
+    _domainManager.setDecay( value );
   }
 
   float OpenGLWidget::getSimulationDecayValue( void )
   {
-    return _domainManager->decay( );
+    return _domainManager.getDecay( );
   }
 
-  CameraPosition OpenGLWidget::cameraPosition() const
+  CameraPosition OpenGLWidget::cameraPosition( ) const
   {
     CameraPosition pos;
-    pos.position = _camera->position();
-    pos.radius   = _camera->radius();
-    pos.rotation = _camera->rotation();
+    pos.position = _camera->position( );
+    pos.radius = _camera->radius( );
+    pos.rotation = _camera->rotation( );
 
     return pos;
   }
 
-  void OpenGLWidget::setCameraPosition(const CameraPosition &pos)
+  void OpenGLWidget::setCameraPosition( const CameraPosition& pos )
   {
-    if(_camera)
+    if ( _camera )
     {
-      _camera->position(pos.position);
-      _camera->radius(pos.radius);
-      _camera->rotation(pos.rotation);
-      update();
+      _camera->position( pos.position );
+      _camera->radius( pos.radius );
+      _camera->rotation( pos.rotation );
+      update( );
     }
   }
 
-  void OpenGLWidget::resetParticles()
+  void OpenGLWidget::resetParticles( )
   {
-    _flagResetParticles = true;
-    _flagUpdateRender = true;
     _firstFrame = true;
+    update( );
+  }
 
-    update();
+  const tGidPosMap& OpenGLWidget::getGidPositions( ) const
+  {
+    return _gidPositions;
   }
 
 } // namespace visimpl

@@ -5,8 +5,6 @@
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-add_definitions(-DNEUROLOTS_SKIP_GLEW_INCLUDE )
-
 set(PROJECT_VERSION_ABI ${${PROJECT_NAME}_VERSION_ABI})
  
 set(Name Stackviz)
@@ -45,7 +43,6 @@ set(STACKVIZ_LINK_LIBRARIES
   Qt5::Core
   Qt5::Widgets
   Qt5::OpenGL
-  prefr  
   sumrice
   scoop
   acuterecorder
