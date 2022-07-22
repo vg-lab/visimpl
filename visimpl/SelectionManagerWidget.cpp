@@ -236,11 +236,21 @@ namespace visimpl
     if(all_.size() == _gidsAll.size()) return;
 
     _gidsAll.clear( );
+    _gidsSelected.clear();
+    _gidsAvailable.clear();
+    _gidIndex.clear();
+
     _gidsAll.insert( all_.begin( ), all_.end( ));
 
-    _fillLists( );
+    _modelAvailable->clear();
+    _modelSelected->clear();
 
+    _fillLists( );
     clearSelection();
+
+    _listViewAvailable->scrollToTop();
+    _listViewSelected->scrollToTop();
+
     setSelected( selected_ );
   }
 

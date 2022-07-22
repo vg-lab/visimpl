@@ -1,1338 +1,594 @@
-/*
- * Copyright (c) 2015-2020 VG-Lab/URJC.
- *
- * Authors: Sergio E. Galindo <sergio.galindo@urjc.es>
- *
- * This file is part of ViSimpl <https://github.com/vg-lab/visimpl>
- *
- * This library is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License version 3.0 as published
- * by the Free Software Foundation.
- *
- * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- */
+//
+// Created by gaeqs on 21/06/22.
+//
 
-// ViSimpl
 #include "DomainManager.h"
-#include "VisualGroup.h"
+#include "visimpl/particlelab/ParticleLabShaders.h"
 
-// Prefr
-#include "prefr/UpdaterStaticPosition.h"
-#include "prefr/SourceMultiPosition.h"
+#include <utility>
 
-// C++
-#include <exception>
 
 namespace visimpl
 {
-  void expandBoundingBox( glm::vec3& minBounds,
-                          glm::vec3& maxBounds,
-                          const glm::vec3& position)
+
+  DomainManager::DomainManager( )
+    : _mode( VisualMode::Selection )
+    , _camera( nullptr )
+    , _selectionGids( )
+    , _selectionCluster( nullptr )
+    , _groupClusters( )
+    , _attributeClusters( )
+    , _attributeNames( )
+    , _attributeTypeGids( )
+    , _selectionModel( nullptr )
+    , _currentRenderer( nullptr )
+    , _defaultRenderer( nullptr )
+    , _solidRenderer( nullptr )
+    , _decay( 0.0f )
   {
-    for(const auto i: {0,1,2})
+  }
+
+  void DomainManager::initRenderers(
+    const std::shared_ptr< reto::ClippingPlane >& leftPlane ,
+    const std::shared_ptr< reto::ClippingPlane >& rightPlane ,
+    const std::shared_ptr< plab::ICamera >& camera )
+  {
+    _camera = camera;
+
+    _selectionCluster =
+      std::make_shared< plab::Cluster< NeuronParticle >>( );
+
+    TColorVec colors;
+    colors.emplace_back( 0.0f , glm::vec4( 0.0f , 1.0f , 0.0f , 0.2f ));
+    colors.emplace_back( 0.35f , glm::vec4( 1.0f , 0.0f , 0.0f , 0.5f ));
+    colors.emplace_back( 0.7f , glm::vec4( 1.0f , 1.0f , 0.0f , 0.5f ));
+    colors.emplace_back( 1.0f , glm::vec4( 0.0f , 0.0f , 1.0f , 0.5f ));
+
+    TSizeFunction sizes;
+    sizes.emplace_back( 0.0f , 8.0f );
+    sizes.emplace_back( 1.0f , 6.0f );
+
+    _selectionModel = std::make_shared< StaticGradientModel >(
+      camera , leftPlane , rightPlane , sizes , colors ,
+      true , false , 0.0f );
+
+    _defaultProgram.loadFromText(
+      visimpl::PARTICLE_VERTEX_SHADER ,
+      visimpl::PARTICLE_DEFAULT_FRAGMENT_SHADER );
+    _defaultProgram.compileAndLink( );
+
+    _solidProgram.loadFromText(
+      visimpl::PARTICLE_VERTEX_SHADER ,
+      visimpl::PARTICLE_SOLID_FRAGMENT_SHADER );
+    _solidProgram.compileAndLink( );
+
+    _defaultRenderer = std::make_shared< plab::CoverageRenderer >(
+      _defaultProgram.program( ));
+    _solidRenderer = std::make_shared< plab::CoverageRenderer >(
+      _solidProgram.program( ));
+
+    _currentRenderer = _defaultRenderer;
+
+    _selectionCluster->setModel( _selectionModel );
+    _selectionCluster->setRenderer( _currentRenderer );
+  }
+
+#ifdef SIMIL_USE_BRION
+
+  void DomainManager::initAttributeData(
+    const TGIDSet& gids ,
+    const brion::BlueConfig* blueConfig )
+  {
+    if ( blueConfig == nullptr ) return;
+    brion::Circuit circuit( blueConfig->getCircuitSource( ));
+    uint32_t attributes = brion::NEURON_COLUMN_GID |
+                          brion::NEURON_MTYPE |
+                          brion::NEURON_ETYPE;
+    const auto& attributeData = circuit.get( gids , attributes );
+
+    auto rawMorphoNames = circuit.getTypes(
+      brion::NEURONCLASS_MORPHOLOGY_CLASS );
+    auto rawFuncNames = circuit.getTypes(
+      brion::NEURONCLASS_FUNCTION_CLASS );
+
+    _attributeNames[ T_TYPE_MORPHO ] = rawMorphoNames;
+    _attributeNames[ T_TYPE_FUNCTION ] = rawFuncNames;
+    auto& morphoNames = _attributeNames[ T_TYPE_MORPHO ];
+    auto& funcNames = _attributeNames[ T_TYPE_FUNCTION ];
+    std::sort( morphoNames.begin( ) , morphoNames.end( ));
+    std::sort( funcNames.begin( ) , funcNames.end( ));
+
+    morphoNames.erase( std::unique( morphoNames.begin( ) , morphoNames.end( )) ,
+                       morphoNames.end( ));
+    funcNames.erase( std::unique( funcNames.begin( ) , funcNames.end( )) ,
+                     funcNames.end( ));
+
+    _attributeTypeGids[ T_TYPE_MORPHO ] =
+      std::vector< std::vector< uint32_t > >( morphoNames.size( ));
+    _attributeTypeGids[ T_TYPE_FUNCTION ] =
+      std::vector< std::vector< uint32_t > >( funcNames.size( ));
+    auto& morphoSets = _attributeTypeGids[ T_TYPE_MORPHO ];
+    auto& funcSets = _attributeTypeGids[ T_TYPE_FUNCTION ];
+
+
+    uint32_t i = 0;
+    for ( const auto& gid: gids )
     {
-      minBounds[ i ] = std::min( minBounds[ i ], position[ i ] );
-      maxBounds[ i ] = std::max( maxBounds[ i ], position[ i ] );
+      auto morphoType = boost::lexical_cast< unsigned int >(
+        attributeData[ i ][ 1 ] );
+      auto functionType = boost::lexical_cast< unsigned int >(
+        attributeData[ i ][ 2 ] );
+
+      auto& morphoName = rawMorphoNames[ morphoType ];
+      auto& funcName = rawFuncNames[ functionType ];
+
+      int morphoIndex = std::distance(
+        morphoNames.begin( ) ,
+        std::find( morphoNames.begin( ) , morphoNames.end( ) , morphoName ));
+
+      int funcIndex = std::distance(
+        funcNames.begin( ) ,
+        std::find( funcNames.begin( ) , funcNames.end( ) , funcName ));
+
+
+      morphoSets[ morphoIndex ].push_back( gid );
+      funcSets[ funcIndex ].push_back( gid );
+
+      i++;
     }
   }
 
-  constexpr float invRGBInt = 1.0f / 255;
-
-  static std::unordered_map< std::string, std::string > _attributeNameLabels =
-  {
-    {"PYR", "Pyramidal"}, {"INT", "Interneuron"},
-    {"EXC", "Excitatory"}, {"INH", "Inhibitory"}
-  };
-
-
-  DomainManager::DomainManager( prefr::ParticleSystem* particleSystem,
-                                      const TGIDSet& gids)
-  : _particleSystem( particleSystem )
-  , _gids( gids )
-  , _clusterSelected( nullptr )
-  , _clusterUnselected( nullptr )
-  , _clusterHighlighted( nullptr )
-  , _sourceSelected( nullptr )
-  , _currentAttrib( T_TYPE_UNDEFINED )
-  , _modelBase( nullptr )
-  , _modelOff( nullptr )
-  , _modelHighlighted( nullptr )
-  , _sampler( nullptr )
-  , _updater( nullptr )
-  , _mode( TMODE_SELECTION )
-  , _decayValue( 0.0f )
-  , _showInactive( true )
-  , _groupByName( false )
-  , _autoGroupByName( true )
-  {
-  }
-
-  void DomainManager::init( const tGidPosMap& positions
-#ifdef SIMIL_USE_BRION
-                            , const brion::BlueConfig* blueConfig
-#endif
-  )
-  {
-    _gidPositions = positions;
-
-#ifdef SIMIL_USE_BRION
-    if( blueConfig )
-      _gidTypes = _loadNeuronTypes( *blueConfig );
 #endif
 
-    _sourceSelected = new SourceMultiPosition( );
-
-    _sourceSelected->setPositions( _gidPositions );
-
-    _clusterSelected = new prefr::Cluster( );
-    _clusterUnselected = new prefr::Cluster( );
-    _clusterHighlighted = new prefr::Cluster( );
-
-    _particleSystem->addCluster( _clusterSelected );
-    _particleSystem->addCluster( _clusterUnselected );
-    _particleSystem->addCluster( _clusterHighlighted );
-
-    _loadPaletteColors( );
-  }
-
-  void DomainManager::initializeParticleSystem( prefr::IGLRenderProgram* program )
+  std::shared_ptr< plab::Cluster< NeuronParticle >>
+  DomainManager::getSelectionCluster( ) const
   {
-    std::cout << "Initializing particle system..." << std::endl;
-
-    _updater = new UpdaterStaticPosition( );
-
-    prefr::Sorter* sorter = new prefr::Sorter( );
-    prefr::OIGLRenderer* renderer = new prefr::OIGLRenderer( program );
-
-    _particleSystem->addUpdater( _updater );
-    _particleSystem->sorter( sorter );
-    _particleSystem->renderer( renderer );
-
-    _modelOff = new prefr::ColorOperationModel( _decayValue, _decayValue );
-    _modelOff->color.Insert( 0.0f, ( glm::vec4(0.1f, 0.1f, 0.1f, 0.2f)));
-
-    _modelOff->velocity.Insert( 0.0f, 0.0f );
-
-    _modelOff->size.Insert( 1.0f, 10.0f );
-
-    _particleSystem->addModel( _modelOff );
-
-    _modelHighlighted = new prefr::ColorOperationModel( _decayValue, _decayValue );
-    _modelHighlighted->color.Insert( 0.0f, ( glm::vec4( 0.9f, 0.9f, 0.9f, 0.5f )));
-    _modelHighlighted->color.Insert( 1.0f, ( glm::vec4( 0.75f, 0.75f, 0.75f, 0.2f )));
-    _modelHighlighted->velocity.Insert( 0.0f, 0.0f );
-    _modelHighlighted->size.Insert( 0.0f, 20.0f );
-    _modelHighlighted->size.Insert( 1.0f, 10.0f );
-    _particleSystem->addModel( _modelHighlighted );
-
-
-    _modelBase = new prefr::ColorOperationModel( _decayValue, _decayValue );
-    _modelBase->color.Insert( 0.0f, ( glm::vec4(0.f, 1.f, 0.f, 0.2)));
-    _modelBase->color.Insert( 0.35f, ( glm::vec4(1, 0, 0, 0.5 )));
-    _modelBase->color.Insert( 0.7f, ( glm::vec4(1.f, 1.f, 0, 0.5 )));
-    _modelBase->color.Insert( 1.0f, ( glm::vec4(0, 0, 1.f, 0.5 )));
-
-    _modelBase->velocity.Insert( 0.0f, 0.0f );
-
-    _modelBase->size.Insert( 0.0f, 20.0f );
-    _modelBase->size.Insert( 1.0f, 10.0f );
-
-    _particleSystem->addModel( _modelBase );
-
-    _sampler = new prefr::PointSampler( );
-
-    _particleSystem->renderDeadParticles( true );
-    _particleSystem->parallel( true );
-
-    _particleSystem->start();
+    return _selectionCluster;
   }
 
-  const tGidPosMap& DomainManager::positions( void ) const
+  const std::shared_ptr< StaticGradientModel >&
+  DomainManager::getSelectionModel( ) const
   {
-    return _gidPositions;
+    return _selectionModel;
   }
 
-  void DomainManager::reloadPositions( void )
+  int DomainManager::getGroupAmount( ) const
   {
-    if(_gidToParticle.empty()) return;
-
-    _resetBoundingBox( );
-
-    auto expandBB = [this](const std::pair<unsigned int, unsigned int> &gidPartId)
-    {
-      const auto pos = _gidPositions.find( gidPartId.first );
-
-      auto particle = _particleSystem->particles( ).at( gidPartId.second );
-      particle.set_position( pos->second );
-
-      expandBoundingBox( _boundingBox.first,
-                         _boundingBox.second,
-                         pos->second );
-    };
-    std::for_each(_gidToParticle.cbegin(), _gidToParticle.cend(), expandBB);
+    return _groupClusters.size( );
   }
 
-  const TGIDSet& DomainManager::gids( void ) const
+  const std::map< std::string , std::shared_ptr< VisualGroup>>&
+  DomainManager::getGroups( ) const
   {
-    return _gids;
+    return _groupClusters;
   }
 
-  void DomainManager::mode(const tVisualMode newMode )
+  std::shared_ptr< VisualGroup >
+  DomainManager::getGroup( const std::string& name ) const
   {
-    clearView( );
-
-    _mode = newMode;
-
-    switch( _mode )
-    {
-      case TMODE_SELECTION:
-        _generateSelectionIndices( );
-        break;
-      case TMODE_GROUPS:
-        _generateGroupsIndices( );
-        break;
-      case TMODE_ATTRIBUTE:
-        generateAttributesGroups( _currentAttrib == T_TYPE_UNDEFINED ?
-                                  T_TYPE_MORPHO : _currentAttrib );
-
-        _generateAttributesIndices( );
-        break;
-      default:
-        {
-          const auto message = std::string("Invalid tVisualMode value ") +
-                               std::to_string(static_cast<int>(newMode)) + " " +
-                               std::string(__FILE__) + ":" +
-                               std::to_string(__LINE__);
-          throw std::out_of_range(message.c_str());
-        }
-        break;
-    }
+    return _groupClusters.at( name );
   }
 
-  tVisualMode DomainManager::mode( void ) const
+  const std::map< std::string , std::shared_ptr< VisualGroup>>&
+  DomainManager::getAttributeClusters( ) const
+  {
+    return _attributeClusters;
+  }
+
+  VisualMode DomainManager::getMode( ) const
   {
     return _mode;
   }
 
-  void DomainManager::clearView( void )
+  void DomainManager::setMode( VisualMode mode )
   {
-    switch( _mode )
+    _mode = mode;
+  }
+
+  float DomainManager::getDecay( ) const
+  {
+    return _decay;
+  }
+
+  void DomainManager::setDecay( float decay )
+  {
+    _decay = decay;
+  }
+
+  void DomainManager::setTime( float time )
+  {
+    if ( _selectionModel != nullptr )
     {
-      case TMODE_SELECTION:
-        _clearSelectionView( );
-        break;
-      case TMODE_GROUPS:
-        _clearGroupsView( );
-        break;
-      case TMODE_ATTRIBUTE:
-        _clearAttribView( );
-        break;
-      default:
-        {
-          const auto message = std::string("Invalid tVisualMode value ") +
-                               std::to_string(static_cast<int>(_mode)) + " " +
-                               std::string(__FILE__) + ":" +
-                               std::to_string(__LINE__);
-          throw std::out_of_range(message.c_str());
-        }
-        break;
+      _selectionModel->setTime( time );
     }
+    for ( const auto& item: _groupClusters )
+      item.second->getModel( )->setTime( time );
   }
 
-  void DomainManager::_clearParticlesReference( void )
+  void DomainManager::addTime( float time , float endTime )
   {
-    _gidToParticle.clear( );
-    _particleToGID.clear( );
-
-    _gidSource.clear( );
-  }
-
-  void DomainManager::_clearSelectionView( void )
-  {
-    if(_sourceSelected )
-      _particleSystem->detachSource( _sourceSelected );
-
-    _clearParticlesReference( );
-  }
-
-  void DomainManager::_clearGroupsView( void )
-  {
-    for( auto group : _groups )
+    if ( _selectionModel != nullptr )
     {
-      _clearGroup( group, false );
+      _selectionModel->addTime( time , endTime );
     }
-
-    _clearParticlesReference( );
+    for ( const auto& item: _groupClusters )
+      item.second->getModel( )->addTime( time , endTime );
   }
 
-  void DomainManager::_clearAttribView( void )
+  const tBoundingBox& DomainManager::getBoundingBox( ) const
   {
-    for( auto group : _attributeGroups )
+    return _boundingBox;
+  }
+
+  void DomainManager::setSelection( const TGIDSet& gids ,
+                                    const tGidPosMap& positions )
+  {
+    _selectionGids.clear( );
+    std::copy(
+      gids.cbegin( ) , gids.cend( ) ,
+      std::back_inserter( _selectionGids )
+    );
+
+    float minLimit = std::numeric_limits< float >::min( );
+    float maxLimit = std::numeric_limits< float >::max( );
+    glm::vec3 min( maxLimit , maxLimit , maxLimit );
+    glm::vec3 max( minLimit , minLimit , minLimit );
+
+    std::vector< NeuronParticle > particles;
+    for ( const auto& gid: _selectionGids )
     {
-      _clearGroup( group, false );
-    }
+      NeuronParticle p;
+      p.position = positions.at( gid );
+      particles.push_back( p );
 
-    _clearParticlesReference( );
-  }
-
-  void DomainManager::_clearGroups( void )
-  {
-    for( auto group : _groups )
-      delete group;
-
-    _groups.clear( );
-  }
-
-  void DomainManager::_clearAttribs( bool clearCustom )
-  {
-    if( clearCustom )
-    {
-      for( auto group : _attributeGroups )
-        delete group;
-
-      _attributeGroups.clear( );
-    }
-    else
-    {
-      std::vector< VisualGroup* > aux;
-      aux.reserve( _attributeGroups.size( ));
-      for( auto group : _attributeGroups )
-        if( group->custom( ))
-          aux.push_back( group );
-        else
-          delete group;
-      aux.shrink_to_fit( );
-      _attributeGroups = aux;
-    }
-  }
-
-  void DomainManager::_loadPaletteColors( void )
-  {
-    scoop::ColorPalette palette =
-        scoop::ColorPalette::colorBrewerQualitative(
-            ( scoop::ColorPalette::ColorBrewerQualitative::Set1 ), 9 );
-
-    auto colors = palette.colors( );
-
-    _paletteColors.clear( );
-
-    for( auto color: colors )
-    {
-      _paletteColors.emplace_back( generateColorPair(color) );
-    }
-  }
-
-  void DomainManager::update( void )
-  {
-    switch( _mode )
-    {
-      case TMODE_SELECTION:
-        _generateSelectionIndices( );
-        break;
-      case TMODE_GROUPS:
-        _generateGroupsIndices( );
-        break;
-      case TMODE_ATTRIBUTE:
-        _generateAttributesIndices( );
-        break;
-      default:
-        {
-          const auto message = std::string("Invalid tVisualMode value ") +
-                               std::to_string(static_cast<int>(_mode)) + " " +
-                               std::string(__FILE__) + ":" +
-                               std::to_string(__LINE__);
-          throw std::out_of_range(message.c_str());
-        }
-        break;
-    }
-  }
-
-  void DomainManager::updateData(const TGIDSet& gids,
-                                 const tGidPosMap& positions)
-  {
-    _gids = gids;
-    _gidPositions = positions;
-
-    _sourceSelected->setPositions( _gidPositions );
-    clearView();
-    update();
-    reloadPositions();
-  }
-
-  void DomainManager::_resetBoundingBox( void )
-  {
-    _boundingBox.first = glm::vec3( std::numeric_limits< float >::max( ),
-                                    std::numeric_limits< float >::max( ),
-                                    std::numeric_limits< float >::max( ));
-
-    _boundingBox.second = glm::vec3( std::numeric_limits< float >::min( ),
-                                     std::numeric_limits< float >::min( ),
-                                     std::numeric_limits< float >::min( ));
-  }
-
-  bool DomainManager::showGroups( void )
-  {
-    return _mode == TMODE_GROUPS;
-  }
-
-  void DomainManager::updateGroups( void )
-  {
-    _generateGroupsIndices( );
-  }
-
-  void DomainManager::updateAttributes( void )
-  {
-    _generateAttributesIndices( );
-  }
-
-  void DomainManager::showInactive( bool state )
-  {
-    _showInactive = state;
-  }
-
-  void DomainManager::setVisualGroupState( unsigned int i, bool state, bool attrib )
-  {
-    VisualGroup* group = nullptr;
-
-    if( !attrib )
-    {
-      if( i < _groups.size( ))
-        group = _groups[ i ];
-    }
-    else
-    {
-      if( i < _attributeGroups.size( ))
-        group = _attributeGroups[ i ];
+      min = glm::min( min , p.position );
+      max = glm::max( max , p.position );
     }
 
-    if(!group) return;
+    _boundingBox = std::make_pair( min , max );
 
-    group->active( state );
-    group->cluster( )->setModel( state ? group->model( ) : _modelOff );
-
-    if( !_showInactive )
-      group->source( )->active( state );
+    _selectionCluster->setParticles( particles );
   }
 
-  void DomainManager::_updateGroupsModels( void )
+  void DomainManager::setSelection( const GIDUSet& gids ,
+                                    const tGidPosMap& positions )
   {
-    for( auto group : _groups )
+    _selectionGids.clear( );
+    std::copy(
+      gids.cbegin( ) , gids.cend( ) ,
+      std::back_inserter( _selectionGids )
+    );
+
+    float minLimit = std::numeric_limits< float >::min( );
+    float maxLimit = std::numeric_limits< float >::max( );
+    glm::vec3 min( maxLimit , maxLimit , maxLimit );
+    glm::vec3 max( minLimit , minLimit , minLimit );
+
+    std::vector< NeuronParticle > particles;
+    for ( const auto& gid: _selectionGids )
     {
-      group->model( group->active( ) ? group->model( ) : _modelOff );
-    }
-  }
+      NeuronParticle p;
+      p.position = positions.at( gid );
+      particles.push_back( p );
 
-  void DomainManager::_updateSelectionIndices( void )
-  {
-    prefr::ParticleIndices selection;
-    prefr::ParticleIndices other;
-    for( auto gid : _gids )
-    {
-      auto particleId = _gidToParticle.find( gid )->second;
-
-      if( _selection.empty( ) || _selection.find( gid ) != _selection.end( ))
-        selection.push_back( particleId );
-      else
-        other.push_back( particleId );
-    }
-    _clusterSelected->particles( ).indices( selection );
-    _clusterUnselected->particles( ).indices( other );
-
-    _clusterSelected->setModel( _modelBase );
-    _clusterUnselected->setModel( _modelOff );
-  }
-
-  void DomainManager::_generateSelectionIndices( void )
-  {
-    unsigned int numParticles = _gids.size( );
-
-    prefr::ParticleIndices indices;
-    prefr::ParticleIndices indicesSelected;
-    prefr::ParticleIndices indicesUnselected;
-
-    indices.reserve( numParticles );
-    indicesSelected.reserve( numParticles );
-    indicesUnselected.reserve( numParticles );
-
-    auto availableParticles =  _particleSystem->retrieveUnused( numParticles );
-    const auto count = availableParticles.size();
-    _gidToParticle.reserve(count);
-    _particleToGID.reserve(count);
-    _gidSource.reserve(count);
-
-    _resetBoundingBox( );
-
-    auto gidit = _gids.begin( );
-    for( auto particle : availableParticles )
-    {
-      const unsigned int id = particle.id( );
-
-      // Create reference
-      _gidToParticle.insert( std::make_pair( *gidit, id ));
-      _particleToGID.insert( std::make_pair( id, *gidit ));
-
-      _gidSource.insert( std::make_pair( *gidit, _sourceSelected ));
-
-      // Check if part of selection
-      if( _selection.empty( ) || _selection.find( *gidit ) != _selection.end( ))
-      {
-        indicesSelected.emplace_back( id );
-
-        const auto pos = _gidPositions.find( *gidit )->second;
-        expandBoundingBox( _boundingBox.first, _boundingBox.second, pos );
-      }
-      else
-      {
-        indicesUnselected.emplace_back( id );
-      }
-
-      indices.emplace_back( id );
-
-      ++gidit;
+      min = glm::min( min , p.position );
+      max = glm::max( max , p.position );
     }
 
-    indicesSelected.shrink_to_fit( );
-    indicesUnselected.shrink_to_fit( );
+    _boundingBox = std::make_pair( min , max );
 
-    _clusterSelected->particles( ).indices( indicesSelected );
-    _clusterUnselected->particles( ).indices( indicesUnselected );
-
-    _sourceSelected->setIdxTranslation( _particleToGID );
-
-    _particleSystem->addSource( _sourceSelected, indices );
-
-    _clusterSelected->setUpdater( _updater );
-    _clusterUnselected->setUpdater( _updater );
-
-    _clusterUnselected->setModel( _modelOff );
-    _clusterSelected->setModel( _modelBase );
+    _selectionCluster->setParticles( particles );
   }
 
-  VisualGroup* DomainManager::_generateGroup( const GIDUSet& gids,
-                                              const std::string& name,
-                                              unsigned int idx ) const
+  std::shared_ptr< VisualGroup > DomainManager::createGroup(
+    const GIDUSet& gids , const tGidPosMap& positions ,
+    const std::string& name )
   {
-    VisualGroup* group = new VisualGroup( name );
+    auto group = std::make_shared< VisualGroup >(
+      name , _camera ,
+      _selectionModel->getLeftPlane( ) ,
+      _selectionModel->getRightPlane( ) ,
+      _currentRenderer ,
+      _selectionModel->isClippingEnabled( ));
 
-    // Create model from base
-    prefr::ColorOperationModel* model =
-        new prefr::ColorOperationModel( *_modelBase );
-    group->model( model );
+    group->getModel( )->setAccumulativeMode(
+      _selectionModel->isAccumulativeMode( ));
 
-    TTransferFunction colorVariation;
-    auto colors = _paletteColors[ idx % _paletteColors.size( )];
-    colorVariation.push_back( std::make_pair( 0.0f, colors.first ));
-    colorVariation.push_back( std::make_pair( 1.0f, colors.second ));
-    group->colorMapping( colorVariation );
+    std::vector< uint32_t > ids;
+    std::vector< NeuronParticle > particles;
 
-    prefr::Cluster* cluster = new prefr::Cluster( );
+    std::copy(
+      gids.cbegin( ) , gids.cend( ) ,
+      std::back_inserter( ids )
+    );
 
-    SourceMultiPosition* source = new SourceMultiPosition( );
-    source->setPositions( _gidPositions );
-    source->setIdxTranslation( _particleToGID );
+    for ( const auto& gid: ids )
+    {
+      NeuronParticle p;
+      p.position = positions.at( gid );
+      particles.push_back( p );
+    }
 
-    group->cluster( cluster );
-    group->source( source );
-
-    group->gids( gids );
-
-    group->active( true );
-    group->cached( false );
-    group->dirty( true );
+    group->setParticles( ids , particles );
+    _groupClusters[ name ] = group;
 
     return group;
   }
 
-  VisualGroup* DomainManager::addVisualGroupFromSelection( const std::string& name,
-                                                           bool overrideGIDs )
+  std::shared_ptr< VisualGroup >
+  DomainManager::createGroupFromSelection(
+    const tGidPosMap& positions , const std::string& name )
   {
-    return addVisualGroup( _selection, name, overrideGIDs );
-  }
+    auto group = std::make_shared< VisualGroup >(
+      name , _camera ,
+      _selectionModel->getLeftPlane( ) ,
+      _selectionModel->getRightPlane( ) ,
+      _currentRenderer ,
+      _selectionModel->isClippingEnabled( ));
 
-  VisualGroup* DomainManager::addVisualGroup( const GIDUSet& gids,
-                                              const std::string& name,
-                                              bool overrideGIDS )
-  {
-    VisualGroup* group = _generateGroup( gids, name, _groups.size( ));
-    group->custom( true );
+    group->getModel( )->setAccumulativeMode(
+      _selectionModel->isAccumulativeMode( ));
 
-    if(overrideGIDS)
+    std::vector< NeuronParticle > particles;
+    for ( const auto& gid: _selectionGids )
     {
-      for( auto gid : gids )
-      {
-        auto reference = _neuronGroup.find( gid );
-
-        if( reference != _neuronGroup.end( ))
-        {
-          auto& oldGroup = reference->second;
-
-          auto oldGroupGIDs = oldGroup->gids( );
-          oldGroupGIDs.erase( gid );
-          reference->second->gids( oldGroupGIDs );
-
-          oldGroup->cached( false );
-        }
-      }
+      NeuronParticle p;
+      p.position = positions.at( gid );
+      particles.push_back( p );
     }
-    _groups.push_back( group );
+
+    group->setParticles( _selectionGids , particles );
+    _groupClusters[ name ] = group;
 
     return group;
   }
 
-  void DomainManager::removeVisualGroup( unsigned int i )
+  void DomainManager::removeGroup( const std::string& name )
   {
-    auto group = _groups[ i ];
-
-    _clearGroup( group, true );
-
-    delete group;
-
-    _groups.erase( _groups.begin( ) + i );
-  }
-
-  void DomainManager::_clearGroup( VisualGroup* group, bool clearState )
-  {
-    _particleSystem->detachSource( group->source( ));
-
-    if( clearState )
+    if(1 != _groupClusters.erase( name ))
     {
-      for( auto gid : group->gids( ))
-      {
-        auto ref = _gidToParticle.find( gid );
-
-        if( ref != _gidToParticle.end( ))
-        {
-        _particleToGID.erase( ref->second );
-        _gidToParticle.erase( ref );
-        }
-        _neuronGroup.erase( gid );
-      }
+      std::cerr << "DomainManager: Error removing group '" << name
+                << "' - " << __FILE__ << ":" << __LINE__ << std::endl;
     }
-
-    group->cached( false );
-    group->dirty( true );
   }
 
-  void DomainManager::_generateGroupsIndices( void )
+  void DomainManager::selectAttribute(
+    const std::vector< QColor >& colors ,
+    const tGidPosMap& positions ,
+    tNeuronAttributes attribute )
   {
-    for( auto group : _groups )
+    _attributeClusters.clear( );
+
+    auto& names = _attributeNames[ attribute ];
+    auto& typeGids = _attributeTypeGids[ attribute ];
+
+    uint32_t i = 0;
+    for ( const auto& name: names )
     {
-      if( !group->dirty( ) || !group->active())
-        continue;
+      auto& gids = typeGids[ i ];
 
-      if( group->cached( ))
-        _clearGroup( group, true );
+      auto group = std::make_shared< VisualGroup >(
+        name , _camera ,
+        _selectionModel->getLeftPlane( ) ,
+        _selectionModel->getRightPlane( ) ,
+        _currentRenderer ,
+        _selectionModel->isClippingEnabled( ));
+      group->getModel( )->setAccumulativeMode(
+        _selectionModel->isAccumulativeMode( ));
 
-      const auto& gids = group->gids( );
+      const auto currentIndex = i % colors.size( );
+      const auto color = colors[ currentIndex ].toRgb( );
+      const auto variations = generateColorPair( color );
 
-      auto availableParticles =  _particleSystem->retrieveUnused( gids.size( ));
+      TTransferFunction colorVariation;
+      colorVariation.push_back( std::make_pair( 0.0f , variations.first ));
+      colorVariation.push_back( std::make_pair( 1.0f , variations.second ));
+      group->colorMapping( colorVariation );
 
-      auto cluster = group->cluster( );
-
-      _particleSystem->addCluster( cluster, availableParticles.indices( ));
-      _particleSystem->addSource( group->source( ), availableParticles.indices( ));
-
-      cluster->setUpdater( _updater );
-      cluster->setModel( group->model( ));
-
-      auto partId = availableParticles.begin( );
-      for( auto gid : gids )
+      std::vector< NeuronParticle > particles;
+      for ( const auto& gid: gids )
       {
-        _neuronGroup.insert( std::make_pair( gid, group ));
-
-        _gidToParticle.insert( std::make_pair( gid, partId.id( )));
-        _particleToGID.insert( std::make_pair( partId.id( ), gid ));
-
-        ++partId;
+        NeuronParticle p;
+        p.position = positions.at( gid );
+        particles.push_back( p );
       }
 
-      group->cached( true );
-      group->dirty( false );
+      group->setParticles( gids , particles );
+
+      _attributeClusters[ name ] = group;
+
+      i++;
     }
+
   }
 
-  void DomainManager::generateAttributesGroups( tNeuronAttributes attrib )
+  void DomainManager::enableAccumulativeMode( bool enabled )
   {
-    if( attrib == _currentAttrib || attrib == T_TYPE_UNDEFINED || _mode != TMODE_ATTRIBUTE  )
-      return;
-
-    _clearAttribView( );
-
-    _clearAttribs( );
-
-    _clearParticlesReference( );
-
-    // Clustering
-    // TODO auto-detect attribute type
-    std::unordered_set< unsigned int > differentValues;
-    std::unordered_multimap< unsigned int, unsigned int > valueGids;
-
-    auto functor = ( [&]( const NeuronAttributes& att )
-        { return ( attrib == T_TYPE_MORPHO ) ? ( std::get< T_TYPE_MORPHO >( att )) :
-                                                 std::get< T_TYPE_FUNCTION >( att ); });
-
-    const auto& typeIndices =
-        ( attrib == T_TYPE_MORPHO ) ? _typeToIdxMorpho : _typeToIdxFunction;
-
-    const auto& nameIndices =
-        ( attrib == T_TYPE_MORPHO ) ? _namesIdxMorpho : _namesIdxFunction;
-
-    for( auto attribs : _gidTypes )
+    if ( _selectionModel != nullptr )
     {
-      unsigned int gid = attribs.first;
-      unsigned int value = typeIndices.find( functor( attribs.second ))->second;
-
-      differentValues.insert( value );
-      valueGids.insert( std::make_pair( value, gid ));
+      _selectionModel->setAccumulativeMode( enabled );
     }
-
-    _attributeGroups.resize( nameIndices.size( ));
-
-    // Generate attrib groups
-    for( auto typeIndex : nameIndices )
-    {
-      GIDUSet gids;
-
-      auto elements = valueGids.equal_range( typeIndex.second );
-      for( auto it = elements.first; it != elements.second; ++it )
-        gids.insert( it->second );
-
-      auto group = _generateGroup( gids, typeIndex.first, typeIndex.second );
-      group->custom( false );
-
-      _attributeGroups[ typeIndex.second ] = group;
-    }
-
-    _generateAttributesIndices( );
-
-    _currentAttrib = attrib;
+    for ( const auto& item: _groupClusters )
+      item.second->getModel( )->setAccumulativeMode( enabled );
   }
 
-  void DomainManager::_generateAttributesIndices( void )
+  void DomainManager::enableClipping( bool enabled )
   {
-    for( auto group : _attributeGroups )
+    if ( _selectionModel != nullptr )
     {
-
-      if( !group->dirty( ))
-        continue;
-
-      if( group->cached( ))
-        _clearGroup( group, true );
-
-      const auto& gids = group->gids( );
-
-      auto availableParticles =  _particleSystem->retrieveUnused( gids.size( ));
-
-      auto cluster = group->cluster( );
-
-      _particleSystem->addCluster( cluster, availableParticles.indices( ));
-      _particleSystem->addSource( group->source( ), availableParticles.indices( ));
-
-      cluster->setUpdater( _updater );
-      cluster->setModel( group->model( ));
-
-      auto partId = availableParticles.begin( );
-      for( auto gid : gids )
-      {
-        _neuronGroup.insert( std::make_pair( gid, group ));
-
-        _gidToParticle.insert( std::make_pair( gid, partId.id( )));
-        _particleToGID.insert( std::make_pair( partId.id( ), gid ));
-
-        ++partId;
-      }
-
-      group->cached( true );
-      group->dirty( false );
+      _selectionModel->enableClipping( enabled );
     }
+    for ( const auto& item: _groupClusters )
+      item.second->getModel( )->enableClipping( enabled );
   }
 
-  void DomainManager::processInput( const simil::SpikesCRange& spikes_,
-                                       float begin, float end, bool clear )
+  void DomainManager::draw( ) const
   {
-    if( clear )
-      resetParticles( );
 
-    switch( _mode )
+    switch ( _mode )
     {
-      case TMODE_SELECTION:
-        _processFrameInputSelection( spikes_, begin, end );
+      case VisualMode::Selection:
+        _selectionCluster->render( );
         break;
-      case TMODE_GROUPS:
-        _processFrameInputGroups( spikes_, begin, end );
-        break;
-      case TMODE_ATTRIBUTE:
-        _processFrameInputAttributes( spikes_, begin, end );
-        break;
-      default:
+      case VisualMode::Groups:
+        for ( const auto& item: _groupClusters )
         {
-          const auto message = std::string("Invalid tVisualMode value ") +
-                               std::to_string(static_cast<int>(_mode)) + " " +
-                               std::string(__FILE__) + ":" +
-                               std::to_string(__LINE__);
-          throw std::out_of_range(message.c_str());
-        }
-        break;
-    }
-  }
-
-  DomainManager::TModifiedNeurons
-  DomainManager::_parseInput( const simil::SpikesCRange& spikes_,
-                                float /*begin*/, float end )
-  {
-    TModifiedNeurons result;
-    std::unordered_map< uint32_t, float > inserted;
-
-    for( simil::SpikesCIter spike = spikes_.first; spike != spikes_.second; ++spike )
-    {
-      float lifeValue = _decayValue - ( end - spike->first);
-
-      auto it = inserted.find( spike->second );
-      if( it == inserted.end( ))
-      {
-        inserted[ spike->second ] = lifeValue;
-      }
-    }
-
-    result.reserve( inserted.size( ));
-    for( auto spike : inserted )
-    {
-      result.emplace_back( spike.first, spike.second );
-    }
-
-    return result;
-  }
-
-  void DomainManager::_processFrameInputSelection( const simil::SpikesCRange& spikes_,
-                                                     float begin, float end )
-  {
-    if( !_particleSystem || !_particleSystem->run( ) || _mode != TMODE_SELECTION )
-      return;
-
-    auto state = _parseInput( spikes_, begin, end );
-
-    for( const auto& neuron : state )
-    {
-      auto gid = std::get< 0 >( neuron );
-
-      if( _selection.empty( ) || _selection.find( gid ) != _selection.end( ))
-      {
-        const auto source = _gidSource.find( gid );
-
-        if( source == _gidSource.end( ))
-        {
-          std::cout << "GID " << gid << " source not found." << std::endl;
-          return;
-        }
-
-        const unsigned int partIdx = _gidToParticle.find( gid )->second;
-        auto particle = _particleSystem->particles( ).at( partIdx );
-        particle.set_life( std::get< 1 >( neuron ));
-      }
-    }
-  }
-
-  void DomainManager::_processFrameInputGroups( const simil::SpikesCRange& spikes_,
-                                                  float begin, float end )
-  {
-
-    if( !_particleSystem || !_particleSystem->run( ) || _mode != TMODE_GROUPS )
-      return;
-
-    auto state = _parseInput( spikes_, begin, end );
-
-    for( const auto& neuron : state )
-    {
-      auto gid = std::get< 0 >( neuron );
-
-      auto visualGroup = _neuronGroup.find( gid );
-
-      if( visualGroup != _neuronGroup.end( ) && visualGroup->second->active( ))
-      {
-        auto partIt = _gidToParticle.find( gid );
-        if( partIt != _gidToParticle.end( ))
-        {
-          unsigned int particleIndex = partIt->second;
-
-          auto particle = _particleSystem->particles( ).at( particleIndex );
-          particle.set_life( std::get< 1 >( neuron ) );
-        }
-      }
-    }
-  }
-
-  void DomainManager::_processFrameInputAttributes( const simil::SpikesCRange& spikes_,
-                                                  float begin, float end )
-  {
-
-    if( !_particleSystem || !_particleSystem->run( ) || _mode != TMODE_ATTRIBUTE )
-      return;
-
-    auto state = _parseInput( spikes_, begin, end );
-
-    for( const auto& neuron : state )
-    {
-      auto gid = std::get< 0 >( neuron );
-
-      auto visualGroup = _neuronGroup.find( gid );
-
-      if( visualGroup != _neuronGroup.end( ) && visualGroup->second->active( ))
-      {
-        auto partIt = _gidToParticle.find( gid );
-        if( partIt != _gidToParticle.end( ))
-        {
-          unsigned int particleIndex = partIt->second;
-          auto particle = _particleSystem->particles( ).at( particleIndex );
-          particle.set_life( std::get< 1 >( neuron ) );
-        }
-      }
-    }
-  }
-
-  void DomainManager::selection( const GIDUSet& newSelection )
-  {
-    _selection = newSelection;
-
-    if( _mode == TMODE_SELECTION )
-    {
-      _updateSelectionIndices( );
-    }
-  }
-
-  const GIDUSet& DomainManager::selection( void )
-  {
-    return _selection;
-  }
-
-  tBoundingBox DomainManager::boundingBox( void ) const
-  {
-    tBoundingBox result = _boundingBox;
-
-    if( _boundingBox.first == _boundingBox.second )
-    {
-      result.second = _boundingBox.second + vec3( 0.1f, 0.1f, 0.1f );
-    }
-
-    return result;
-  }
-
-  prefr::ColorOperationModel* DomainManager::modelSelectionBase( void )
-  {
-    return _modelBase;
-  }
-
-  void DomainManager::decay( float decayValue )
-  {
-    _decayValue = decayValue;
-
-    _modelBase->setLife( decayValue, decayValue );
-    _modelHighlighted->setLife( decayValue, decayValue );
-  }
-
-  float DomainManager::decay( void ) const
-  {
-    return _decayValue;
-  }
-
-  void DomainManager::clearSelection( void )
-  {
-    _selection.clear( );
-
-    if( _mode == TMODE_SELECTION )
-    {
-      _updateSelectionIndices( );
-    }
-  }
-
-  void DomainManager::resetParticles( void )
-  {
-    _particleSystem->run( false );
-
-    auto particles = _particleSystem->retrieveActive( );
-    for( int i = 0; i < static_cast<int>( particles.size( )); ++i )
-    {
-      particles.at( i ).set_life( 0 );
-    }
-
-    _particleSystem->run( true );
-
-    _particleSystem->update( 0.0f );
-  }
-
-  const std::vector< VisualGroup* >& DomainManager::groups( void ) const
-  {
-    return _groups;
-  }
-
-  const std::vector< VisualGroup* >& DomainManager::attributeGroups( void ) const
-  {
-    return _attributeGroups;
-  }
-
-  const std::vector< std::pair< QColor, QColor >>&
-    DomainManager::paletteColors( void ) const
-  {
-    return _paletteColors;
-  }
-
-  const std::vector< std::string >& DomainManager::namesMorpho( void ) const
-  {
-    return _namesTypesMorpho;
-  }
-  const std::vector< std::string >& DomainManager::namesFunction( void ) const
-  {
-    return _namesTypesFunction;
-  }
-
-  std::pair<QColor, QColor> DomainManager::generateColorPair(
-      scoop::Color &color)
-  {
-    constexpr float brightFactor = 0.4f;
-    constexpr float darkFactor = 1.0f - brightFactor;
-
-    const glm::vec4 baseColor( color.red( ) * invRGBInt,
-                               color.green( ) * invRGBInt,
-                               color.blue( ) * invRGBInt, 0.6f );
-
-    color = QColor( baseColor.r * 255,
-                    baseColor.g * 255,
-                    baseColor.b * 255,
-                    baseColor.a * 255 );
-
-    const glm::vec4 darkColor =
-        ( baseColor * brightFactor ) + ( glm::vec4( 0.1f, 0.1f, 0.1f, 0.4f ) * darkFactor );
-
-    const QColor darkqColor = QColor( darkColor.r * 255,
-                                      darkColor.g * 255,
-                                      darkColor.b * 255,
-                                      darkColor.a * 255 );
-
-    return std::make_pair( color, darkqColor );
-  }
-
-#ifdef SIMIL_USE_BRION
-
-  tNeuronAttribs DomainManager::_loadNeuronTypes( const brion::BlueConfig& blueConfig )
-  {
-    tNeuronAttribs result;
-
-    const auto& gids = _gids;
-
-    try
-    {
-      brion::Circuit circuit( blueConfig.getCircuitSource( ));
-
-      uint32_t attributes = brion::NEURON_COLUMN_GID |
-                            brion::NEURON_MTYPE |
-                            brion::NEURON_ETYPE;
-
-
-      const brion::NeuronMatrix& attribsData = circuit.get( gids, attributes );
-
-      _namesTypesMorpho = circuit.getTypes( brion::NEURONCLASS_MORPHOLOGY_CLASS );
-      _namesTypesFunction = circuit.getTypes( brion::NEURONCLASS_FUNCTION_CLASS );
-
-      _typesMorpho.reserve( gids.size( ));
-      _typesFunction.reserve( gids.size( ));
-
-      for( unsigned int i = 0; i < gids.size( ); ++i )
-      {
-        const unsigned int morphoType =
-            boost::lexical_cast< unsigned int >( attribsData[ i ][ 1 ]);
-
-        const unsigned int functionType =
-            boost::lexical_cast< unsigned int >( attribsData[ i ][ 2 ]);
-
-        _typesMorpho.push_back( morphoType );
-        _typesFunction.push_back( functionType );
-      }
-
-    }
-    catch( ... )
-    {
-      brain::Circuit circuit( blueConfig );
-      _namesTypesMorpho = circuit.getMorphologyTypeNames( );
-      _namesTypesFunction = circuit.getElectrophysiologyTypeNames( );
-
-      auto transform = [](const std::vector<size_t> &vec)
-      {
-          std::vector<unsigned long> vec32;
-          vec32.reserve(vec.size());
-
-          std::for_each(vec.cbegin(), vec.cend(), [&vec32](const size_t num) { vec32.emplace_back(static_cast<unsigned long>(num)); });
-
-          return vec32;
-      };
-
-      _typesMorpho = transform(circuit.getMorphologyTypes( gids ));
-      _typesFunction = transform(circuit.getElectrophysiologyTypes( gids ));
-
-    }
-
-    unsigned int counter = 0;
-
-    for( auto gid : gids )
-    {
-      NeuronAttributes attribs;
-
-      for( unsigned int i = 0; i < ( unsigned int ) T_TYPE_UNDEFINED; ++i )
-      {
-        unsigned int typeValue =
-            (( i == 0 ) ? _typesMorpho : _typesFunction )[ counter ];
-
-        auto& stats = (( i == 0 ) ? _statsMorpho : _statsFunction );
-
-        auto& indexBack =
-            ( i == 0 ) ? _idxToTypeMorpho : _idxToTypeFunction;
-
-        auto attribFunctor =
-            ( i == 0 ) ?  &std::get< T_TYPE_MORPHO >( attribs ) :
-                           &std::get< T_TYPE_FUNCTION >( attribs );
-
-        auto statsIt = stats.find( typeValue );
-        if( statsIt == stats.end( ))
-          statsIt = stats.insert( std::make_pair( typeValue, 0 )).first;
-
-        ++statsIt->second;
-
-        indexBack.insert( std::make_pair( i, typeValue ));
-
-        *attribFunctor = typeValue;
-      }
-
-      ++counter;
-
-      result.insert( std::make_pair( gid, attribs ));
-    }
-
-
-    if( _autoGroupByName )
-    {
-      for( unsigned int i = 0; i < ( unsigned int ) T_TYPE_UNDEFINED; ++i )
-      {
-        const auto& names = ( i == 0 ) ? _namesTypesMorpho : _namesTypesFunction;
-        auto& groupedNameStorage =
-            ( i == 0 ) ? _namesTypesMorphoGrouped : _namesTypesFunctionGrouped;
-
-        auto& groupedIndices =
-            ( i == 0 ) ? _typeToIdxMorpho : _typeToIdxFunction;
-
-        auto& nameIndexer = ( i == 0 ) ? _namesIdxMorpho : _namesIdxFunction;
-
-        const auto& stats = (( i == 0 ) ? _statsMorpho : _statsFunction );
-
-        counter = 0;
-        for( auto name : names )
-        {
-
-          if( stats.find( counter ) != stats.end( ))
+          if ( item.second->active( ))
           {
-
-            auto nameIndex = nameIndexer.find( name );
-            if( nameIndex == nameIndexer.end( ))
-            {
-              unsigned int index = nameIndexer.size( );
-              nameIndex = nameIndexer.insert( std::make_pair( name, index )).first;
-            }
-
-            groupedIndices.insert( std::make_pair( counter, nameIndex->second ));
+            item.second->getCluster( )->render( );
           }
-
-          ++counter;
-
         }
-        std::cout << std::endl;
-
-        groupedNameStorage.resize( nameIndexer.size( ));
-
-        for( auto name : nameIndexer )
+        break;
+      case VisualMode::Attribute:
+        for ( const auto& item: _attributeClusters )
         {
-          groupedNameStorage[ name.second ] = name.first;
+          if ( item.second->active( ))
+          {
+            item.second->getCluster( )->render( );
+          }
         }
+        break;
+      default:
+        break;
+    }
 
-        if( groupedNameStorage.size( ) != names.size( ))
-          _groupByName = true;
+  }
+
+  void DomainManager::applyDefaultShader( )
+  {
+    _currentRenderer = _defaultRenderer;
+    _selectionCluster->setRenderer( _currentRenderer );
+    for ( const auto& item: _groupClusters )
+      item.second->setRenderer( _currentRenderer );
+    for ( const auto& item: _attributeClusters )
+      item.second->setRenderer( _currentRenderer );
+  }
+
+  void DomainManager::applySolidShader( )
+  {
+    _currentRenderer = _solidRenderer;
+    _selectionCluster->setRenderer( _currentRenderer );
+    for ( const auto& item: _groupClusters )
+      item.second->setRenderer( _currentRenderer );
+    for ( const auto& item: _attributeClusters )
+      item.second->setRenderer( _currentRenderer );
+  }
+
+  void DomainManager::processInput(
+    const simil::SpikesCRange& spikes , bool killParticles )
+  {
+    switch ( _mode )
+    {
+      case VisualMode::Selection:
+        processSelectionSpikes( spikes , killParticles );
+        break;
+      case VisualMode::Groups:
+        processGroupSpikes( spikes , killParticles );
+        break;
+      case VisualMode::Attribute:
+        processAttributeSpikes( spikes , killParticles );
+        break;
+      default:
+        break;
+    }
+  }
+
+  std::unordered_map< uint32_t , float >
+  DomainManager::parseInput( const simil::SpikesCRange& spikes )
+  {
+    std::unordered_map< uint32_t , float > result;
+
+    for ( simil::SpikesCIter spike = spikes.first;
+          spike != spikes.second; ++spike )
+    {
+      if ( result.count( spike->second ) == 0 )
+      {
+        result[ spike->second ] = spike->first;
+      }
+    }
+    return result;
+  }
+
+  void DomainManager::processSelectionSpikes(
+    const simil::SpikesCRange& spikes , bool killParticles )
+  {
+    auto input = parseInput( spikes );
+
+    auto map = _selectionCluster->mapData( );
+    const uint32_t size = _selectionCluster->size( );
+    for ( uint32_t i = 0; i < size; i++ )
+    {
+      auto particle = map + i;
+      if ( killParticles )
+      {
+        particle->timestamp = -std::numeric_limits< float >::infinity( );
+      }
+
+      auto gid = _selectionGids.at( i );
+      auto value = input.find( gid );
+      if ( value != input.cend( ))
+      {
+        particle->timestamp = value->second;
       }
     }
 
-//    std::cout << "Loaded attributes." << std::endl;
-//    std::cout << "- Morphological: " << std::endl;
-//    for( auto type : _statsMorpho )
-//      std::cout << _namesTypesMorpho[ type.first ]
-//                << " -> " << type.first
-//                << " # " << type.second
-//                << std::endl;
-//
-//    std::cout << " Grouped in: " << std::endl;
-//    for( auto type : _namesIdxMorpho )
-//      std::cout << type.second << ": " << type.first << std::endl;
-//
-//    std::cout << "- Functional: " << std::endl;
-//    for( auto type : _statsFunction )
-//      std::cout << _namesTypesFunction[ type.first ]
-//                << " -> " << type.first
-//                << " # " << type.second
-//                << std::endl;
-//
-//    std::cout << " Grouped in: " << std::endl;
-//    for( auto type : _namesIdxFunction )
-//      std::cout << type.second << ": " << type.first << std::endl;
-
-    return result;
+    _selectionCluster->unmapData( );
   }
-#endif // SIMIL_USE_BRION
 
-  const std::vector< long unsigned int >& DomainManager::attributeValues( int attribNumber ) const
-   {
-     if(( tNeuronAttributes )attribNumber == T_TYPE_MORPHO )
-       return _typesMorpho;
-     else
-       return _typesFunction;
-   }
+  void DomainManager::processGroupSpikes( const simil::SpikesCRange& spikes ,
+                                          bool killParticles )
+  {
+    auto input = parseInput( spikes );
+    for ( const auto& item: _groupClusters )
+    {
+      auto cluster = item.second->getCluster( );
+      auto map = cluster->mapData( );
+      uint32_t size = cluster->size( );
+      for ( uint32_t i = 0; i < size; i++ )
+      {
+        auto particle = map + i;
+        if ( killParticles )
+        {
+          particle->timestamp = -std::numeric_limits< float >::infinity( );
+        }
+        auto gid = item.second->getGids().at( i );
+        auto value = input.find( gid );
+        if ( value != input.cend( ))
+        {
+          particle->timestamp = value->second;
+        }
+      }
 
-   Strings DomainManager::attributeNames( int attribNumber, bool  ) const
-   {
-     Strings result;
+      cluster->unmapData( );
+    }
+  }
 
-     if( _groupByName )
-     {
-       result = ( attribNumber == 0 ) ? _namesTypesMorphoGrouped :
-                                       _namesTypesFunctionGrouped;
-     }
-     else
-     {
-       const auto& namesIdx = ( attribNumber == 0 ) ? _namesIdxMorpho : _namesIdxFunction;
+  void
+  DomainManager::processAttributeSpikes( const simil::SpikesCRange& spikes ,
+                                         bool killParticles )
+  {
+    auto input = parseInput( spikes );
+    for ( const auto& item: _attributeClusters )
+    {
+      auto cluster = item.second->getCluster( );
+      auto map = cluster->mapData( );
+      const uint32_t size = cluster->size( );
+      for ( uint32_t i = 0; i < size; i++ )
+      {
+        auto particle = map + i;
+        if ( killParticles )
+        {
+          particle->timestamp = -std::numeric_limits< float >::infinity( );
+        }
+        auto gid = item.second->getGids().at( i );
+        auto value = input.find( gid );
+        if ( value != input.cend( ))
+        {
+          particle->timestamp = value->second;
+        }
+      }
 
-       result.resize( namesIdx.size( ));
-
-       for( auto name : namesIdx )
-       {
-         result[ name.second ] = name.first;
-       }
-
-     }
-     result.shrink_to_fit( );
-
-     return result;
-   }
-
-   tAppStats DomainManager::attributeStatistics( void ) const
-   {
-     tAppStats result;
-
-     const auto& stats =
-         ( _currentAttrib == T_TYPE_MORPHO ) ? _statsMorpho : _statsFunction;
-
-     const auto& typeIdx =
-         ( _currentAttrib == T_TYPE_MORPHO ) ? &_typeToIdxMorpho : &_typeToIdxFunction;
-
-     const auto& nameIndices =
-         ( _currentAttrib == T_TYPE_MORPHO ) ? _namesIdxMorpho : _namesIdxFunction;
-
-     unsigned int numberOfValues = nameIndices.size( );
-
-     result.resize( numberOfValues );
-
-     std::vector< unsigned int > statsTotal( numberOfValues, 0 );
-
-     for( auto valueStats : stats )
-     {
-       unsigned int index = typeIdx->find( valueStats.first )->second;
-
-       statsTotal[ index ] += valueStats.second;
-     }
-
-     for( auto attrib : nameIndices )
-     {
-       auto& name = attrib.first;
-
-       auto idxIt = nameIndices.find( name );
-       unsigned int idx = idxIt->second;
-
-       unsigned int value = statsTotal[ idx ];
-
-       std::string label = "";
-       auto labelIt = _attributeNameLabels.find( name );
-       if( labelIt != _attributeNameLabels.end( ))
-         label = labelIt->second;
-
-       tStatsGroup attribs = std::make_tuple( 0, name, label, value );
-
-       result[ idx ] = attribs;
-     }
-
-     return result;
-   }
-
-   tParticleInfo DomainManager::pickingInfoSimple( unsigned int particleId ) const
-   {
-     tParticleInfo result;
-
-     unsigned int gid = 0;
-     bool valid = false;
-     vec3 position( 0, 0, 0 );
-     QPoint screenPos( 0, 0 );
-
-     auto gidIt = _particleToGID.find( particleId );
-     if( gidIt != _particleToGID.end( ))
-     {
-       gid = gidIt->second;
-
-       auto particle = _particleSystem->particles( ).at( particleId );
-
-       position = particle.position( );
-
-       valid = true;
-     }
-
-     std::get< T_PART_GID >( result ) = gid;
-     std::get< T_PART_INTERNAL_GID >( result ) = particleId;
-     std::get< T_PART_POSITION >( result ) = position;
-     std::get< T_PART_SCREEN_POS >( result ) = screenPos;
-     std::get< T_PART_VALID >( result ) = valid;
-
-     return result;
-   }
-
-   void DomainManager::highlightElements( const std::unordered_set< unsigned int >& highlighted )
-   {
-     clearHighlighting( );
-
-     prefr::ParticleIndices indices;
-     indices.reserve( highlighted.size( ));
-
-     for( auto gid : highlighted )
-       indices.push_back( gid );
-
-     _clusterHighlighted->particles( ).indices( indices );
-
-     _clusterHighlighted->setModel( _modelHighlighted );
-
-   }
-
-   void DomainManager::clearHighlighting( void )
-   {
-     if( _mode == TMODE_SELECTION )
-     {
-       _clusterSelected->setModel( _modelBase );
-       _clusterUnselected->setModel( _modelOff );
-     }
-     else
-     {
-       auto groupArray = ( _mode == TMODE_GROUPS ) ? _groups : _attributeGroups;
-
-       for( auto group : groupArray )
-       {
-         group->cluster( )->setModel( group->model( ));
-       }
-     }
-   }
+      cluster->unmapData( );
+    }
+  }
 }

@@ -26,59 +26,66 @@
 // Sumrice
 #include <sumrice/sumrice.h>
 
-// Prefr
-#include <prefr/prefr.h>
+// Plab
+#include <plab/core/Cluster.h>
+#include <plab/reto/CameraModel.h>
 
 // Visimpl
-#include "prefr/SourceMultiPosition.h"
+#include "visimpl/particlelab/NeuronParticle.h"
+#include "visimpl/particlelab/StaticGradientModel.h"
 
 namespace visimpl
 {
   class VisualGroup
   {
-    friend class DomainManager;
+    friend class OldDomainManager;
 
   public:
-    VisualGroup( );
-    VisualGroup( const std::string& name );
+    VisualGroup(
+      const std::shared_ptr< plab::ICamera >& camera ,
+      const std::shared_ptr< reto::ClippingPlane >& leftPlane ,
+      const std::shared_ptr< reto::ClippingPlane >& rightPlane ,
+      const std::shared_ptr< plab::Renderer >& renderer ,
+      bool enableClipping );
+
+    VisualGroup(
+      const std::string& name ,
+      const std::shared_ptr< plab::ICamera >& camera ,
+      const std::shared_ptr< reto::ClippingPlane >& leftPlane ,
+      const std::shared_ptr< reto::ClippingPlane >& rightPlane ,
+      const std::shared_ptr< plab::Renderer >& renderer ,
+      bool enableClipping );
+
     ~VisualGroup( );
 
-    unsigned int id( void );
+    unsigned int id( );
 
     void name( const std::string& name_ );
-    const std::string& name( void ) const;
 
-    void gids( const GIDUSet& gids_ );
-    const GIDUSet& gids( void ) const;
+    const std::string& name( ) const;
 
-    QColor color( void ) const;
+    const std::vector< uint32_t >& getGids( ) const;
 
     void colorMapping( const TTransferFunction& colors );
-    TTransferFunction colorMapping( void ) const;
+
+    TTransferFunction colorMapping( ) const;
 
     void sizeFunction( const TSizeFunction& sizes );
-    TSizeFunction sizeFunction( void ) const;
 
-    void cluster( prefr::Cluster* cluster_ );
-    prefr::Cluster* cluster( void ) const;
+    TSizeFunction sizeFunction( ) const;
 
-    void model( prefr::Model* model_ );
-    prefr::Model* model( void ) const;
+    const std::shared_ptr< plab::Cluster< NeuronParticle >> getCluster( ) const;
 
-    void source( SourceMultiPosition* source_ );
-    SourceMultiPosition* source( void ) const;
+    const std::shared_ptr< StaticGradientModel > getModel( ) const;
 
-    void active( bool state, bool updateSourceState = false );
-    bool active( void ) const;
+    void active( bool state );
 
-    void cached( bool state );
-    bool cached( void ) const;
+    bool active( ) const;
 
-    void dirty( bool state );
-    bool dirty( void ) const;
+    void setParticles( const std::vector< uint32_t >& gids ,
+                       const std::vector< NeuronParticle >& particles );
 
-    void custom( bool state );
-    bool custom( void ) const;
+    void setRenderer( const std::shared_ptr< plab::Renderer >& renderer );
 
   protected:
     unsigned int _idx;
@@ -86,19 +93,12 @@ namespace visimpl
 
     std::string _name;
 
-    GIDUSet _gids;
+    std::shared_ptr< plab::Cluster< NeuronParticle >> _cluster;
+    std::shared_ptr< StaticGradientModel > _model;
 
-    prefr::Cluster* _cluster;
-    prefr::Model* _model;
-    SourceMultiPosition* _source;
-
-    QColor _color;
+    std::vector< uint32_t > _gids;
 
     bool _active;
-    bool _cached;
-    bool _dirty;
-
-    bool _custom;
   };
 }
 

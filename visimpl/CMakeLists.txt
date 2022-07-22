@@ -5,9 +5,9 @@
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-add_definitions(-DVISIMPL_SKIP_GLEW_INCLUDE )
-
 set(PROJECT_VERSION_ABI ${${PROJECT_NAME}_VERSION_ABI})
+
+add_definitions(-DVISIMPL_SKIP_GLEW_INCLUDE -DPLAB_SKIP_GLEW_INCLUDE)
 
 set(Name Visimpl)
 set(NAME VISIMPL)
@@ -30,10 +30,11 @@ set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 set(VISIMPL_SOURCES
   ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
 
+  visimpl.cpp
+
   visimpl.ui
   resources.qrc
 
-  visimpl.cpp
   MainWindow.cpp
   OpenGLWidget.cpp
 
@@ -43,10 +44,10 @@ set(VISIMPL_SOURCES
   SelectionManagerWidget.cpp
   SubsetImporter.cpp
 
-  prefr/ColorSource.cpp
-  prefr/ColorOperationModel.cpp
-  prefr/SourceMultiPosition.cpp
-  prefr/UpdaterStaticPosition.cpp
+  GlewInitializer.cpp
+
+  particlelab/NeuronParticle.cpp
+  particlelab/StaticGradientModel.cpp
 
   render/Plane.cpp
 )
@@ -62,11 +63,12 @@ set(VISIMPL_HEADERS
   SelectionManagerWidget.h
   SubsetImporter.h
 
-  prefr/PrefrShaders.h
-  prefr/ColorSource.h
-  prefr/ColorOperationModel.h
-  prefr/SourceMultiPosition.h
-  prefr/UpdaterStaticPosition.h
+  GlewInitializer.h
+
+  particlelab/ParticleLabShaders.h
+  particlelab/NeuronParticle.h
+  particlelab/StaticGradientModel.h
+
   render/Plane.h
 )
 
@@ -78,7 +80,7 @@ set(VISIMPL_LINK_LIBRARIES
   Qt5::OpenGL
   ReTo
   SimIL
-  prefr
+  plab
   sumrice
   scoop
   acuterecorder

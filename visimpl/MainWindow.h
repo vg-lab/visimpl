@@ -41,17 +41,27 @@
 #include <memory>
 
 class Recorder;
+
 class QDockWidget;
+
 class QPushButton;
+
 class QSlider;
+
 class QTimer;
+
 class QRadioButton;
+
 class QGroupBox;
+
 class QPushButton;
+
 class QToolBox;
+
 class QCloseEvent;
 
 class LoadingDialog;
+
 class LoaderThread;
 
 namespace Ui
@@ -65,48 +75,56 @@ namespace visimpl
 
   enum TSelectionSource
   {
-    SRC_EXTERNAL = 0,
-    SRC_PLANES,
-    SRC_WIDGET,
+    SRC_EXTERNAL = 0 ,
+    SRC_PLANES ,
+    SRC_WIDGET ,
     SRC_UNDEFINED
   };
 
   class MainWindow
-  : public QMainWindow
+    : public QMainWindow
   {
-    Q_OBJECT
+  Q_OBJECT
 
   public:
-    explicit MainWindow( QWidget* parent = nullptr,
+    explicit MainWindow( QWidget* parent = nullptr ,
                          bool updateOnIdle = true );
+
     virtual ~MainWindow( void );
 
-    void init( const std::string& zeqUri = std::string() );
-    void showStatusBarMessage ( const QString& message );
+    void init( const std::string& zeqUri = std::string( ));
 
-    void loadData(const simil::TDataType type,
-                  const std::string arg_1,
-                  const std::string arg_2,
-                  const simil::TSimulationType simType = simil::TSimulationType::TSimSpikes,
-                  const std::string &subsetEventFile = std::string());
+    void showStatusBarMessage( const QString& message );
+
+    void loadData( const simil::TDataType type ,
+                   const std::string arg_1 ,
+                   const std::string arg_2 ,
+                   const simil::TSimulationType simType = simil::TSimulationType::TSimSpikes ,
+                   const std::string& subsetEventFile = std::string( ));
 
 #ifdef SIMIL_WITH_REST_API
+
     /** \brief Connects and loads data using the given REST connection.
      * \param[in] config REST connection configuration.
      *
      */
-    void loadRESTData(const simil::LoaderRestData::Configuration &config);
+    void loadRESTData( const simil::LoaderRestData::Configuration& config );
+
 #endif
 
   public slots:
 
     void openBlueConfigThroughDialog( void );
+
     void openCSVFilesThroughDialog( void );
+
     void openHDF5ThroughDialog( void );
-    void openRESTThroughDialog();
+
+    void openRESTThroughDialog( );
+
     void openSubsetEventsFileThroughDialog( void );
 
-    void openSubsetEventFile( const std::string& fileName,
+    void openSubsetEventFile( const std::string& fileName ,
                               bool append = false );
 
     void openRecorder( void );
@@ -116,38 +134,53 @@ namespace visimpl
     void dialogAbout( void );
 
     void dialogSelectionManagement( void );
+
     void dialogSubsetImporter( void );
 
     void togglePlaybackDock( void );
+
     void toggleSimConfigDock( void );
+
     void toggleStackVizDock( void );
 
     void UpdateSimulationSlider( float percentage );
+
     void UpdateSimulationColorMapping( void );
+
     void PreviewSimulationColorMapping( void );
+
     void changeEditorColorMapping( void );
+
     void changeEditorSizeFunction( void );
+
     void UpdateSimulationSizeFunction( void );
+
     void PreviewSimulationSizeFunction( void );
 
     void changeEditorSimDeltaTime( void );
+
     void updateSimDeltaTime( void );
 
     void changeEditorSimTimestepsPS( void );
+
     void updateSimTimestepsPS( void );
 
     void setCircuitSizeScaleFactor( vec3 );
+
     vec3 getCircuitSizeScaleFactor( void ) const;
 
     void showInactive( bool show );
 
     void changeCircuitScaleValue( void );
+
     void updateCircuitScaleValue( void );
 
     void changeEditorDecayValue( void );
+
     void updateSimulationDecayValue( void );
 
     void changeEditorStepByStepDuration( void );
+
     void updateSimStepByStepDuration( void );
 
     void AlphaBlendingToggled( void );
@@ -156,36 +189,52 @@ namespace visimpl
 
     void updateSelectedStatsPickingSingle( unsigned int selected );
 
-    void clippingPlanesActive ( int state );
+    void clippingPlanesActive( int state );
 
     void PlayPause( bool notify = true );
+
     void Play( bool notify = true );
+
     void Pause( bool notify = true );
+
     void Stop( bool notify = true );
+
     void Repeat( bool notify = true );
+
     void PlayAtPosition( bool notify = true );
-    void PlayAtPosition( int, bool notify = true );
-    void PlayAtPercentage( float, bool notify = true );
-    void PlayAtTime( float, bool notify = true);
+
+    void PlayAtPosition( int , bool notify = true );
+
+    void PlayAtPercentage( float , bool notify = true );
+
+    void PlayAtTime( float , bool notify = true );
+
     void requestPlayAt( float );
+
     void PreviousStep( bool notify = true );
+
     void NextStep( bool notify = true );
 
   protected slots:
+
     void configureComponents( void );
+
     void importVisualGroups( void );
 
-    void addGroupControls( VisualGroup *group, unsigned int index,
+    void addGroupControls( std::shared_ptr< VisualGroup > group ,
+                           unsigned int index ,
                            unsigned int size );
+
     void clearGroups( void );
 
     void addGroupFromSelection( void );
+
     void checkGroupsVisibility( void );
-    void checkAttributeGroupsVisibility( void );
 
     void spinBoxValueChanged( void );
 
     void completedStep( void );
+
     void playAtButtonClicked( void );
 
     void clippingPlanesReset( void );
@@ -195,142 +244,153 @@ namespace visimpl
     /** \brief Updates group selection color.
      *
      */
-    void onGroupColorChanged();
+    void onGroupColorChanged( );
 
     /** \brief Updates group selection color.
      *
      */
-    void onGroupPreview();
+    void onGroupPreview( );
 
     /** \brief Shows the dialog to change the group name.
      *
      */
-    void onGroupNameClicked();
+    void onGroupNameClicked( );
 
     /** \brief Removes the group.
      *
      */
-    void onGroupDeleteClicked();
+    void onGroupDeleteClicked( );
 
     /** \brief Removes the visual group with the given index.
-     * param[in] idx Index of visual group in domain manager.
+     * \param[in] name Name of the group to remove.
      *
      */
-    void removeVisualGroup(const unsigned int idx);
+    void removeVisualGroup(const QString &name );
 
     void selectionManagerChanged( void );
-    void setSelection( const GIDUSet& selection_, TSelectionSource source_ = SRC_UNDEFINED );
+
+    void setSelection( const GIDUSet& selection_ ,
+                       TSelectionSource source_ = SRC_UNDEFINED );
+
     void clearSelection( void );
+
     void selectionFromPlanes( void );
 
     /** \brief Executed when OpenGlWidget reports finished loading data.
      *
      */
-    void onDataLoaded();
+    void onDataLoaded( );
 
     /** \brief Loads groups and its properties from a file on disk.
      *
      */
-    void loadGroups();
+    void loadGroups( );
 
     /** \brief Saves current groups and its properties to a file on disk.
      *
      */
-    void saveGroups();
+    void saveGroups( );
 
     /** \brief Enables/disables the toolbar buttons related to stackviz widget.
      * \param[in] status True to enable and false to disable.
      *
      */
-    void changeStackVizToolbarStatus(bool status);
+    void changeStackVizToolbarStatus( bool status );
 
     /** \brief Updates the UI after a recording has finished.
      *
      */
-    void finishRecording();
+    void finishRecording( );
 
     /** \brief Loads camera positions from a file.
      *
      */
-    void loadCameraPositions();
+    void loadCameraPositions( );
 
     /** \brief Saves camera positions to a file on disk.
      *
      */
-    void saveCameraPositions();
+    void saveCameraPositions( );
 
     /** \brief Stores current camera position in the positions list.
      *
      */
-    void addCameraPosition();
+    void addCameraPosition( );
 
     /** \brief Lets the user select a position to remove from the positions list.
      *
      */
-    void removeCameraPosition();
+    void removeCameraPosition( );
 
     /** \brief Changes the camera position to the one specified by the user.
      *
      */
-    void applyCameraPosition();
+    void applyCameraPosition( );
 
     /** \brief Shows a dialog with REST API options and applies them.
      *
      */
-    void configureREST();
+    void configureREST( );
 
     /** \brief Updates the color of the clipping planes color button.
      *
      */
-    void changePlanesColor( const QColor & );
+    void changePlanesColor( const QColor& );
 
   protected:
     void _initSimControlDock( void );
+
     void _initPlaybackDock( void );
+
     void _initStackVizDock( void );
+
     void _initSummaryWidget( void );
 
     void _configurePlayer( void );
+
     void _resetClippingParams( void );
 
     void _updateSelectionGUI( void );
 
-    bool _showDialog( QColor& current, const QString& message = "" );
+    bool _showDialog( QColor& current , const QString& message = "" );
 
     /** \brief Helper to update a group representations colors.
-     * \param[in] idx Index of group in group list.
+     * \param[in] name the name of the group.
      * \param[in] t Transfer function.
      * \param[in] s Size function.
      *
      */
-    void updateGroupColors(size_t idx, const TTransferFunction &t, const TSizeFunction &s);
+    void updateGroupColors( std::string name , const TTransferFunction& t ,
+                            const TSizeFunction& s );
 
-    virtual void closeEvent(QCloseEvent *e) override;
+    virtual void closeEvent( QCloseEvent* e ) override;
 
     /** \brief Closes the data loading dialog.
      *
      */
-    void closeLoadingDialog();
+    void closeLoadingDialog( );
 
-  #ifdef VISIMPL_USE_ZEROEQ
-  #ifdef VISIMPL_USE_GMRVLEX
+#ifdef VISIMPL_USE_ZEROEQ
+#ifdef VISIMPL_USE_GMRVLEX
 
   protected slots:
+
     void ApplyPlaybackOperation( unsigned int playbackOp );
+
     void _zeqEventRepeat( bool repeat );
 
-  #endif
+#endif
 
   protected:
     void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
 
-  #endif // VISIMPL_USE_ZEROEQ
+#endif // VISIMPL_USE_ZEROEQ
 
     /** \brief Wrapper aroung player operations to catch exceptions.
      * \param[in] op ZeroEQ Operation identifier.
      *
      */
-    void sendZeroEQPlaybackOperation(const unsigned int op);
+    void sendZeroEQPlaybackOperation( const unsigned int op );
 
 
     Ui::MainWindow* _ui;
@@ -359,20 +419,23 @@ namespace visimpl
     QDockWidget* _simConfigurationDock;
 
     QDockWidget* _stackVizDock;
-    StackViz *_stackViz;
+    StackViz* _stackViz;
 
     QTabWidget* _modeSelectionWidget;
     QToolBox* _toolBoxOptions;
 
-    DataInspector * _objectInspectorGB;
+    DataInspector* _objectInspectorGB;
 
     QGroupBox* _groupBoxTransferFunction;
     TransferFunctionWidget* _tfWidget;
     SelectionManagerWidget* _selectionManager;
     SubsetImporter* _subsetImporter;
 
-    enum TGroupRow { gr_container = 0, gr_checkbox };
-    typedef std::tuple< QWidget*, QCheckBox* > tGroupRow;
+    enum TGroupRow
+    {
+      gr_container = 0 , gr_checkbox
+    };
+    typedef std::tuple< QWidget* , QCheckBox* > tGroupRow;
 
     bool _autoNameGroups;
     QVBoxLayout* _groupLayout;
@@ -420,7 +483,7 @@ namespace visimpl
 
     Recorder* _recorder; /** Recorder */
 
-    std::shared_ptr<LoaderThread> m_loader; /** data loader thread. */
-    LoadingDialog *m_loaderDialog;          /** data loader dialog. */
+    std::shared_ptr< LoaderThread > m_loader; /** data loader thread. */
+    LoadingDialog* m_loaderDialog;          /** data loader dialog. */
   };
 } // namespace visimpl

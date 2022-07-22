@@ -32,10 +32,12 @@
 #include <QColor>
 #include <QPainterPath>
 
-#include <prefr/prefr.h>
 #include <vmmlib/vmmlib.h>
 
 #include <simil/simil.h>
+
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 namespace visimpl
 {
@@ -56,7 +58,6 @@ namespace visimpl
   typedef std::vector< vmml::Vector3f > TPosVect;
 
   typedef std::unordered_set< uint32_t > GIDUSet;
-  typedef utils::InterpolationSet< glm::vec4 > TColorMapper;
 
   typedef std::pair< float, QColor > TTFColor;
   typedef std::vector< TTFColor > TTransferFunction;
@@ -66,6 +67,8 @@ namespace visimpl
 
   typedef glm::vec3 vec3;
   typedef glm::vec4 vec4;
+
+  typedef std::vector< std::pair< float, glm::vec4 >> TColorVec;
 
   typedef enum
   {

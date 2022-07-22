@@ -30,7 +30,9 @@
 #include <QMouseEvent>
 
 #ifdef VISIMPL_USE_OPENMP
+
 #include <omp.h>
+
 #endif
 
 #include <exception>
@@ -38,110 +40,110 @@
 namespace visimpl
 {
   HistogramWidget::HistogramWidget( )
-  : QFrame( nullptr )
-  , _bins( 50 )
-  , _zoomFactor( 1.5f )
-  , _spikes( nullptr )
-  , _startTime( 0.0f )
-  , _endTime( 0.0f )
-  , _player( nullptr )
-  , _scaleFuncLocal( nullptr )
-  , _scaleFuncGlobal( nullptr )
-  , _colorScaleLocal( T_COLOR_LINEAR )
-  , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
-  , _colorLocal( "#e31a1c" )
-  , _colorGlobal( "#1f78b4" )
-  , _prevColorScaleLocal( T_COLOR_UNDEFINED )
-  , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
-  , _normRule( T_NORM_MAX )
-  , _repMode( T_REP_DENSE )
-  , _fillPlots( true )
-  , _lastMousePosition( nullptr )
-  , _regionPercentage( nullptr )
-  , _paintRegion( false )
-  , _regionWidth( 0.1f )
-  , _gridLinesNumber( 0 )
-  , _paintTimeline( false )
-  , _pixelsPerCharacter( 10 )
-  , _pixelMargin( 5 )
-  , _events( nullptr )
-  , _autoBuildHistogram( true )
-  , _autoCalculateColors( true )
+    : QFrame( nullptr )
+    , _bins( 50 )
+    , _zoomFactor( 1.5f )
+    , _spikes( nullptr )
+    , _startTime( 0.0f )
+    , _endTime( 0.0f )
+    , _player( nullptr )
+    , _scaleFuncLocal( nullptr )
+    , _scaleFuncGlobal( nullptr )
+    , _colorScaleLocal( T_COLOR_LINEAR )
+    , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
+    , _colorLocal( "#e31a1c" )
+    , _colorGlobal( "#1f78b4" )
+    , _prevColorScaleLocal( T_COLOR_UNDEFINED )
+    , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
+    , _normRule( T_NORM_MAX )
+    , _repMode( T_REP_DENSE )
+    , _fillPlots( true )
+    , _lastMousePosition( nullptr )
+    , _regionPercentage( nullptr )
+    , _paintRegion( false )
+    , _regionWidth( 0.1f )
+    , _gridLinesNumber( 0 )
+    , _paintTimeline( false )
+    , _pixelsPerCharacter( 10 )
+    , _pixelMargin( 5 )
+    , _events( nullptr )
+    , _autoBuildHistogram( true )
+    , _autoCalculateColors( true )
   {
-    setMinimumHeight(150);
+    setMinimumHeight( 150 );
   }
 
-  HistogramWidget::HistogramWidget( const simil::Spikes& spikes,
-                                 float startTime,
-                                 float endTime )
-  : QFrame( nullptr )
-  , _bins( 50 )
-  , _zoomFactor( 1.5f )
-  , _spikes( &spikes )
-  , _startTime( startTime )
-  , _endTime( endTime )
-  , _player( nullptr )
-  , _scaleFuncLocal( nullptr )
-  , _scaleFuncGlobal( nullptr )
-  , _colorScaleLocal( T_COLOR_LINEAR )
-  , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
-  , _colorLocal( "#e31a1c" )
-  , _colorGlobal( "#1f78b4" )
-  , _prevColorScaleLocal( T_COLOR_UNDEFINED )
-  , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
-  , _normRule( T_NORM_MAX )
-  , _repMode( T_REP_DENSE )
-  , _fillPlots( true )
-  , _lastMousePosition( nullptr )
-  , _regionPercentage( nullptr )
-  , _paintRegion( false )
-  , _regionWidth( 0.1f )
-  , _gridLinesNumber( 0 )
-  , _paintTimeline( false )
-  , _pixelsPerCharacter( 8 )
-  , _pixelMargin( 5 )
-  , _events( nullptr )
-  , _autoBuildHistogram( true )
-  , _autoCalculateColors( true )
+  HistogramWidget::HistogramWidget( const simil::Spikes& spikes ,
+                                    float startTime ,
+                                    float endTime )
+    : QFrame( nullptr )
+    , _bins( 50 )
+    , _zoomFactor( 1.5f )
+    , _spikes( &spikes )
+    , _startTime( startTime )
+    , _endTime( endTime )
+    , _player( nullptr )
+    , _scaleFuncLocal( nullptr )
+    , _scaleFuncGlobal( nullptr )
+    , _colorScaleLocal( T_COLOR_LINEAR )
+    , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
+    , _colorLocal( "#e31a1c" )
+    , _colorGlobal( "#1f78b4" )
+    , _prevColorScaleLocal( T_COLOR_UNDEFINED )
+    , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
+    , _normRule( T_NORM_MAX )
+    , _repMode( T_REP_DENSE )
+    , _fillPlots( true )
+    , _lastMousePosition( nullptr )
+    , _regionPercentage( nullptr )
+    , _paintRegion( false )
+    , _regionWidth( 0.1f )
+    , _gridLinesNumber( 0 )
+    , _paintTimeline( false )
+    , _pixelsPerCharacter( 8 )
+    , _pixelMargin( 5 )
+    , _events( nullptr )
+    , _autoBuildHistogram( true )
+    , _autoCalculateColors( true )
   {
   }
 
   HistogramWidget::HistogramWidget( const simil::SpikeData& spikeReport )
-  : QFrame( nullptr )
-  , _bins( 50 )
-  , _zoomFactor( 1.5f )
-  , _spikes( &spikeReport.spikes( ))
-  , _startTime( spikeReport.startTime( ))
-  , _endTime( spikeReport.endTime( ))
-  , _player( nullptr )
-  , _scaleFuncLocal( nullptr )
-  , _scaleFuncGlobal( nullptr )
-  , _colorScaleLocal( T_COLOR_LINEAR )
-  , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
-  , _colorLocal( "#e31a1c" )
-  , _colorGlobal( "#1f78b4" )
-  , _prevColorScaleLocal( T_COLOR_UNDEFINED )
-  , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
-  , _normRule( T_NORM_MAX )
-  , _repMode( T_REP_DENSE )
-  , _fillPlots( true )
-  , _lastMousePosition( nullptr )
-  , _regionPercentage( nullptr )
-  , _paintRegion( false )
-  , _regionWidth( 0.1f )
-  , _gridLinesNumber( 0 )
-  , _paintTimeline( false )
-  , _pixelsPerCharacter( 8 )
-  , _pixelMargin( 5 )
-  , _events( nullptr )
-  , _autoBuildHistogram( true )
-  , _autoCalculateColors( true )
+    : QFrame( nullptr )
+    , _bins( 50 )
+    , _zoomFactor( 1.5f )
+    , _spikes( &spikeReport.spikes( ))
+    , _startTime( spikeReport.startTime( ))
+    , _endTime( spikeReport.endTime( ))
+    , _player( nullptr )
+    , _scaleFuncLocal( nullptr )
+    , _scaleFuncGlobal( nullptr )
+    , _colorScaleLocal( T_COLOR_LINEAR )
+    , _colorScaleGlobal( T_COLOR_LOGARITHMIC )
+    , _colorLocal( "#e31a1c" )
+    , _colorGlobal( "#1f78b4" )
+    , _prevColorScaleLocal( T_COLOR_UNDEFINED )
+    , _prevColorScaleGlobal( T_COLOR_UNDEFINED )
+    , _normRule( T_NORM_MAX )
+    , _repMode( T_REP_DENSE )
+    , _fillPlots( true )
+    , _lastMousePosition( nullptr )
+    , _regionPercentage( nullptr )
+    , _paintRegion( false )
+    , _regionWidth( 0.1f )
+    , _gridLinesNumber( 0 )
+    , _paintTimeline( false )
+    , _pixelsPerCharacter( 8 )
+    , _pixelMargin( 5 )
+    , _events( nullptr )
+    , _autoBuildHistogram( true )
+    , _autoCalculateColors( true )
   {
   }
 
-  void HistogramWidget::Spikes( const simil::Spikes& spikes,
-                                    float startTime,
-                                    float endTime )
+  void HistogramWidget::Spikes( const simil::Spikes& spikes ,
+                                float startTime ,
+                                float endTime )
   {
     _spikes = &spikes;
     _startTime = startTime;
@@ -155,7 +157,7 @@ namespace visimpl
     _endTime = spikeReport.endTime( );
   }
 
-  void HistogramWidget::init( unsigned int binsNumber, float zoomFactor_ )
+  void HistogramWidget::init( unsigned int binsNumber , float zoomFactor_ )
   {
     _zoomFactor = zoomFactor_;
     bins( binsNumber );
@@ -169,8 +171,8 @@ namespace visimpl
 
   bool HistogramWidget::empty( void ) const
   {
-    return ( _mainHistogram._maxValueHistogramLocal == 0  ||
-              _mainHistogram._maxValueHistogramGlobal == 0 );
+    return ( _mainHistogram._maxValueHistogramLocal == 0 ||
+             _mainHistogram._maxValueHistogramGlobal == 0 );
   }
 
   void HistogramWidget::Update( THistogram histogramNumber )
@@ -185,13 +187,13 @@ namespace visimpl
   {
     Histogram* histogram = &_mainHistogram;
 
-    if( histogramNumber == T_HIST_FOCUS )
+    if ( histogramNumber == T_HIST_FOCUS )
       histogram = &_focusHistogram;
 
-    const unsigned int histogramSize = histogram->size();
-    std::vector< unsigned int > globalHistogram( histogramSize, 0 );
+    const unsigned int histogramSize = histogram->size( );
+    std::vector< unsigned int > globalHistogram( histogramSize , 0 );
 
-    float totalTime = _endTime - _startTime ;
+    float totalTime = _endTime - _startTime;
 
     bool filter = _filteredGIDs.size( ) > 0;
 
@@ -226,23 +228,26 @@ namespace visimpl
     omp_set_dynamic( 0 );
     omp_set_num_threads( numThreads );
     const auto& references = _spikes->refData( );
-    for( int i = 0; i < static_cast<int>(references.size( )); i++)
+    for ( int i = 0; i < static_cast<int>(references.size( )); i++ )
     {
       simil::TSpikes::const_iterator spikeIt = references[ i ];
 
-      const float endTime = ( i < ( static_cast<int>(references.size()) - 1 )) ?
-                      references[ i + 1]->first :
-                      _endTime;
+      const float endTime = ( i < ( static_cast<int>(references.size( )) - 1 ))
+                            ?
+                            references[ i + 1 ]->first :
+                            _endTime;
 
-      while( spikeIt->first < endTime && spikeIt != _spikes->end( ))
+      while ( spikeIt->first < endTime && spikeIt != _spikes->end( ))
       {
         const float percentage =
-            std::max( 0.0f,
-                      std::min( 1.0f, ( spikeIt->first - _startTime )* invTotalTime ));
+          std::max( 0.0f ,
+                    std::min( 1.0f ,
+                              ( spikeIt->first - _startTime ) * invTotalTime ));
 
-        const unsigned int bin = percentage * (histogramSize - 1);
+        const unsigned int bin = percentage * ( histogramSize - 1 );
 
-        if( !filter || _filteredGIDs.find( spikeIt->second ) != _filteredGIDs.end( ))
+        if ( !filter ||
+             _filteredGIDs.find( spikeIt->second ) != _filteredGIDs.end( ))
         {
           ( *histogram )[ bin ]++;
         }
@@ -254,9 +259,9 @@ namespace visimpl
 #endif // VISIMPL_USE_OPENMP
 
     unsigned int count = 0;
-    for( auto bin: *histogram )
+    for ( auto bin: *histogram )
     {
-      if( bin > histogram->_maxValueHistogramLocal )
+      if ( bin > histogram->_maxValueHistogramLocal )
       {
         histogram->_maxValueHistogramLocal = bin;
       }
@@ -265,11 +270,11 @@ namespace visimpl
 
     histogram->_maxValueHistogramGlobal = histogram->_maxValueHistogramLocal;
 
-    if( filter )
+    if ( filter )
     {
-      for( auto bin : globalHistogram )
+      for ( auto bin: globalHistogram )
       {
-        if( bin > histogram->_maxValueHistogramGlobal )
+        if ( bin > histogram->_maxValueHistogramGlobal )
         {
           histogram->_maxValueHistogramGlobal = bin;
         }
@@ -280,25 +285,25 @@ namespace visimpl
   constexpr float base = 1.0001f;
 
   // All these functions consider a maxValue = 1.0f / <calculated_maxValue >
-  float linearFunc( float value, float invMaxValue )
+  float linearFunc( float value , float invMaxValue )
   {
     return value * invMaxValue;
   }
 
-  float exponentialFunc( float value, float maxValue )
+  float exponentialFunc( float value , float maxValue )
   {
-    return ( powf( base, value - maxValue ));
+    return ( powf( base , value - maxValue ));
   }
 
-  float logarithmicFunc( float value, float invMaxValue )
+  float logarithmicFunc( float value , float invMaxValue )
   {
-    return ( log10f( value) * invMaxValue );
+    return ( log10f( value ) * invMaxValue );
   }
 
-  float maxValueFunc( float maxValue,  TColorScale colorScale )
+  float maxValueFunc( float maxValue , TColorScale colorScale )
   {
     float result = 0.0f;
-    switch( colorScale )
+    switch ( colorScale )
     {
       case T_COLOR_LINEAR:
         result = 1.0f / maxValue;
@@ -307,7 +312,7 @@ namespace visimpl
         result = 1.0f / log10f( maxValue );
         break;
       default:
-        VISIMPL_THROW( "Selected color scale function is not available.")
+      VISIMPL_THROW( "Selected color scale function is not available." )
         break;
     }
 
@@ -318,10 +323,10 @@ namespace visimpl
   {
     Histogram* histogram = &_mainHistogram;
 
-    if( histogramNumber == T_HIST_FOCUS )
+    if ( histogramNumber == T_HIST_FOCUS )
       histogram = &_focusHistogram;
 
-    if( _repMode == T_REP_DENSE )
+    if ( _repMode == T_REP_DENSE )
     {
       QGradientStops stops;
 
@@ -331,27 +336,29 @@ namespace visimpl
       float percentage;
 
       maxValue = _normRule == T_NORM_GLOBAL ?
-                  histogram->_maxValueHistogramGlobal :
-                  histogram->_maxValueHistogramLocal;
+                 histogram->_maxValueHistogramGlobal :
+                 histogram->_maxValueHistogramLocal;
 
-      maxValue = maxValueFunc( maxValue, _normRule == T_NORM_GLOBAL ?
+      maxValue = maxValueFunc( maxValue , _normRule == T_NORM_GLOBAL ?
                                           _colorScaleGlobal :
                                           _colorScaleLocal );
 
-      for( auto bin: *histogram )
+      for ( auto bin: *histogram )
       {
-        percentage = _scaleFuncLocal( float( bin ), maxValue );
-        percentage = std::max< float >( std::min< float > (1.0f, percentage ), 0.0f);
+        percentage = _scaleFuncLocal( float( bin ) , maxValue );
+        percentage = std::max< float >( std::min< float >( 1.0f , percentage ) ,
+                                        0.0f );
 
-        glm::vec4 color = _colorMapper.GetValue( percentage );
-        stops << qMakePair( relativeTime, QColor( color.r, color.g, color.b, color.a ));
+        glm::vec4 color = _colorMapper.getValue( percentage );
+        stops << qMakePair( relativeTime ,
+                            QColor( color.r , color.g , color.b , color.a ));
 
         relativeTime += delta;
       }
 
       histogram->_gradientStops = stops;
     }
-    else if( _repMode == T_REP_CURVE )
+    else if ( _repMode == T_REP_CURVE )
     {
       float invMaxValueLocal;
       float invMaxValueGlobal;
@@ -362,33 +369,33 @@ namespace visimpl
       auxLocal.reserve( histogram->size( ));
       auxGlobal.reserve( histogram->size( ));
 
-      invMaxValueLocal = maxValueFunc( histogram->_maxValueHistogramLocal,
+      invMaxValueLocal = maxValueFunc( histogram->_maxValueHistogramLocal ,
                                        _colorScaleLocal );
 
-      invMaxValueGlobal = maxValueFunc( histogram->_maxValueHistogramGlobal,
+      invMaxValueGlobal = maxValueFunc( histogram->_maxValueHistogramGlobal ,
                                         _colorScaleGlobal );
 
       float currentX;
       float globalY;
       float localY;
       unsigned int counter = 0;
-      const float invBins = 1.0f / float( histogram->size( ) - 1);
+      const float invBins = 1.0f / float( histogram->size( ) - 1 );
 
-      for( auto bin: *histogram )
+      for ( auto bin: *histogram )
       {
         currentX = counter * invBins;
 
         globalY = 0.0f;
         localY = 0.0f;
 
-        if( bin > 0)
+        if ( bin > 0 )
         {
-          globalY = _scaleFuncGlobal( float( bin ), invMaxValueGlobal );
-          localY = _scaleFuncLocal( float( bin ), invMaxValueLocal );
+          globalY = _scaleFuncGlobal( float( bin ) , invMaxValueGlobal );
+          localY = _scaleFuncLocal( float( bin ) , invMaxValueLocal );
         }
 
-        auxGlobal.push_back( QPointF( currentX, 1.0f - globalY ));
-        auxLocal.push_back( QPointF( currentX, 1.0f - localY ));
+        auxGlobal.push_back( QPointF( currentX , 1.0f - globalY ));
+        auxLocal.push_back( QPointF( currentX , 1.0f - localY ));
 
         counter++;
       }
@@ -417,32 +424,32 @@ namespace visimpl
 
   void HistogramWidget::bins( unsigned int binsNumber )
   {
-    if( _bins == binsNumber ) return;
+    if ( _bins == binsNumber ) return;
 
     _bins = binsNumber;
 
     _mainHistogram.clear( );
-    _mainHistogram.resize( _bins, 0 );
+    _mainHistogram.resize( _bins , 0 );
     _mainHistogram._maxValueHistogramLocal = 0;
     _mainHistogram._maxValueHistogramGlobal = 0;
 
-    if( _autoBuildHistogram )
+    if ( _autoBuildHistogram )
       BuildHistogram( T_HIST_MAIN );
 
-    if( _autoCalculateColors )
+    if ( _autoCalculateColors )
       CalculateColors( T_HIST_MAIN );
 
     const unsigned int focusBins = _bins * _zoomFactor;
 
     _focusHistogram.clear( );
-    _focusHistogram.resize( focusBins, 0 );
+    _focusHistogram.resize( focusBins , 0 );
     _focusHistogram._maxValueHistogramLocal = 0;
     _focusHistogram._maxValueHistogramGlobal = 0;
 
-    if( _autoBuildHistogram )
+    if ( _autoBuildHistogram )
       BuildHistogram( T_HIST_FOCUS );
 
-    if( _autoCalculateColors )
+    if ( _autoCalculateColors )
       CalculateColors( T_HIST_FOCUS );
   }
 
@@ -453,14 +460,16 @@ namespace visimpl
 
   void HistogramWidget::zoomFactor( float factor )
   {
-    if(std::abs(_zoomFactor - factor) < std::numeric_limits<float>::epsilon()) return;
+    if ( std::abs( _zoomFactor - factor ) <
+         std::numeric_limits< float >::epsilon( ))
+      return;
 
     _zoomFactor = factor;
 
     const unsigned int focusBins = _bins * _zoomFactor;
 
     _focusHistogram.clear( );
-    _focusHistogram.resize( focusBins, 0 );
+    _focusHistogram.resize( focusBins , 0 );
     _focusHistogram._maxValueHistogramLocal = 0;
     _focusHistogram._maxValueHistogramGlobal = 0;
 
@@ -484,12 +493,12 @@ namespace visimpl
 
   void HistogramWidget::colorScaleLocal( TColorScale scale )
   {
-    if(_colorScaleLocal == scale && _scaleFuncLocal) return;
+    if ( _colorScaleLocal == scale && _scaleFuncLocal ) return;
 
     _prevColorScaleLocal = _colorScaleLocal;
     _colorScaleLocal = scale;
 
-    switch( _colorScaleLocal )
+    switch ( _colorScaleLocal )
     {
       case T_COLOR_LINEAR:
         _scaleFuncLocal = linearFunc;
@@ -498,25 +507,25 @@ namespace visimpl
         _scaleFuncLocal = logarithmicFunc;
         break;
       default:
-        {
-          const auto message = std::string("Invalid TColorScale value ") +
-                               std::to_string(static_cast<int>(scale)) + " " +
-                               std::string(__FILE__) + ":" +
-                               std::to_string(__LINE__);
-          throw std::out_of_range(message.c_str());
-        }
+      {
+        const auto message = std::string( "Invalid TColorScale value " ) +
+                             std::to_string( static_cast<int>(scale)) + " " +
+                             std::string( __FILE__ ) + ":" +
+                             std::to_string( __LINE__ );
+        throw std::out_of_range( message.c_str( ));
+      }
         break;
     }
   }
 
   void HistogramWidget::colorScaleGlobal( TColorScale scale )
   {
-    if(_colorScaleGlobal == scale && _scaleFuncGlobal) return;
+    if ( _colorScaleGlobal == scale && _scaleFuncGlobal ) return;
 
     _prevColorScaleGlobal = _colorScaleGlobal;
     _colorScaleGlobal = scale;
 
-    switch( _colorScaleGlobal )
+    switch ( _colorScaleGlobal )
     {
       case T_COLOR_LINEAR:
         _scaleFuncGlobal = linearFunc;
@@ -525,13 +534,13 @@ namespace visimpl
         _scaleFuncGlobal = logarithmicFunc;
         break;
       default:
-        {
-          const auto message = std::string("Invalid TColorScale value ") +
-                               std::to_string(static_cast<int>(scale)) + " " +
-                               std::string(__FILE__) + ":" +
-                               std::to_string(__LINE__);
-          throw std::out_of_range(message.c_str());
-        }
+      {
+        const auto message = std::string( "Invalid TColorScale value " ) +
+                             std::to_string( static_cast<int>(scale)) + " " +
+                             std::string( __FILE__ ) + ":" +
+                             std::to_string( __LINE__ );
+        throw std::out_of_range( message.c_str( ));
+      }
         break;
     }
   }
@@ -542,7 +551,7 @@ namespace visimpl
   }
 
   void HistogramWidget::normalizeRule(
-      TNormalize_Rule normRule )
+    TNormalize_Rule normRule )
   {
     _normRule = normRule;
   }
@@ -554,21 +563,21 @@ namespace visimpl
 
   void HistogramWidget::gridLinesNumber( unsigned int linesNumber )
   {
-    if(_gridLinesNumber == linesNumber) return;
+    if ( _gridLinesNumber == linesNumber ) return;
 
     _gridLinesNumber = linesNumber;
 
     _mainHistogram._gridLines.clear( );
 
     std::vector< float > gridLines;
-    if( linesNumber > 0 )
+    if ( linesNumber > 0 )
     {
       float current = 0;
       const float delta = 1.0f / float( linesNumber + 1 );
 
       gridLines.push_back( 0.0f );
 
-      for( unsigned int i = 1; i <= linesNumber; ++i )
+      for ( unsigned int i = 1; i <= linesNumber; ++i )
       {
         current += delta;
         gridLines.push_back( current );
@@ -585,7 +594,7 @@ namespace visimpl
   }
 
   void HistogramWidget::representationMode(
-      TRepresentation_Mode repMode )
+    TRepresentation_Mode repMode )
   {
     _repMode = repMode;
   }
@@ -626,14 +635,12 @@ namespace visimpl
     return _focusHistogram._maxValueHistogramGlobal;
   }
 
-  const utils::InterpolationSet< glm::vec4 >&
-  HistogramWidget::colorMapper( void )
+  const ColorInterpolator& HistogramWidget::colorMapper( void )
   {
     return _colorMapper;
   }
 
-  void HistogramWidget::colorMapper(
-      const utils::InterpolationSet< glm::vec4 >& colors )
+  void HistogramWidget::colorMapper( const ColorInterpolator& colors )
   {
     _colorMapper = colors;
   }
@@ -666,9 +673,10 @@ namespace visimpl
   unsigned int HistogramWidget::valueAt( float percentage )
   {
     unsigned int position =
-        std::max( 0.0f, std::min( 1.0f, percentage)) * _mainHistogram.size( );
+      std::max( 0.0f , std::min( 1.0f , percentage )) * _mainHistogram.size( );
 
-    position = std::min(position, static_cast<unsigned int>(_mainHistogram.size() - 1));
+    position = std::min( position ,
+                         static_cast<unsigned int>(_mainHistogram.size( ) - 1));
 
     return _mainHistogram[ position ];
   }
@@ -677,7 +685,8 @@ namespace visimpl
   {
     unsigned int position = percentage * _focusHistogram.size( );
 
-    position = std::min(position, static_cast<unsigned int>(_mainHistogram.size() - 1));
+    position = std::min( position ,
+                         static_cast<unsigned int>(_mainHistogram.size( ) - 1));
 
     return _focusHistogram[ position ];
   }
@@ -726,14 +735,14 @@ namespace visimpl
 
     float percentage = position.x( ) / float( width( ));
 
-    if( event_->modifiers( ) == Qt::ControlModifier ||
-        event_->modifiers( ) == Qt::ShiftModifier )
+    if ( event_->modifiers( ) == Qt::ControlModifier ||
+         event_->modifiers( ) == Qt::ShiftModifier )
     {
-      emit mouseModifierPressed( percentage, event_->modifiers( ));
+      emit mouseModifierPressed( percentage , event_->modifiers( ));
     }
     else
     {
-      emit mousePressed( mapToGlobal( position ), percentage );
+      emit mousePressed( mapToGlobal( position ) , percentage );
     }
   }
 
@@ -742,7 +751,7 @@ namespace visimpl
     QPoint position = event_->pos( );
 
     float percentage = position.x( ) / float( width( ));
-    emit mouseReleased( mapToGlobal( position ), percentage );
+    emit mouseReleased( mapToGlobal( position ) , percentage );
   }
 
   void HistogramWidget::mouseMoveEvent( QMouseEvent* event_ )
@@ -796,21 +805,21 @@ namespace visimpl
     _mainHistogram._cachedLocalRep = QPainterPath( );
     _mainHistogram._cachedGlobalRep = QPainterPath( );
 
-    _mainHistogram._cachedLocalRep.moveTo( 0, height( ) );
-    for( auto point : _mainHistogram._curveStopsLocal )
+    _mainHistogram._cachedLocalRep.moveTo( 0 , height( ));
+    for ( auto point: _mainHistogram._curveStopsLocal )
     {
-      _mainHistogram._cachedLocalRep.lineTo( QPoint( point.x( ) * width( ),
+      _mainHistogram._cachedLocalRep.lineTo( QPoint( point.x( ) * width( ) ,
                                                      point.y( ) * height( )));
     }
-    _mainHistogram._cachedLocalRep.lineTo( width( ), height( ) );
+    _mainHistogram._cachedLocalRep.lineTo( width( ) , height( ));
 
-    _mainHistogram._cachedGlobalRep.moveTo( 0, height( ) );
-    for( auto point : _mainHistogram._curveStopsGlobal )
+    _mainHistogram._cachedGlobalRep.moveTo( 0 , height( ));
+    for ( auto point: _mainHistogram._curveStopsGlobal )
     {
-      _mainHistogram._cachedGlobalRep.lineTo( QPoint( point.x( ) * width( ),
+      _mainHistogram._cachedGlobalRep.lineTo( QPoint( point.x( ) * width( ) ,
                                                       point.y( ) * height( )));
     }
-    _mainHistogram._cachedGlobalRep.lineTo( width( ), height( ) );
+    _mainHistogram._cachedGlobalRep.lineTo( width( ) , height( ));
 
   }
 
@@ -826,42 +835,43 @@ namespace visimpl
 
     QColor penColor;
 
-    if( _repMode == T_REP_DENSE )
+    if ( _repMode == T_REP_DENSE )
     {
-      QLinearGradient gradient( 0, 0, width( ), 0 );
+      QLinearGradient gradient( 0 , 0 , width( ) , 0 );
 
-      QRect area = rect();
+      QRect area = rect( );
 
       gradient.setStops( _mainHistogram._gradientStops );
       QBrush brush( gradient );
 
-      painter.fillRect( area, brush );
+      painter.fillRect( area , brush );
 
-      QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
+      QLine line( QPoint( 0 , currentHeight ) ,
+                  QPoint( width( ) , currentHeight ));
       painter.drawLine( line );
 
-      penColor = QColor( 255, 255, 255 );
+      penColor = QColor( 255 , 255 , 255 );
     }
-    else if( _repMode == T_REP_CURVE )
+    else if ( _repMode == T_REP_CURVE )
     {
       painter.setRenderHint( QPainter::Antialiasing );
 
-      painter.fillRect( rect( ), QBrush( QColor( 255, 255, 255, 255 ),
-                                         Qt::SolidPattern ));
+      painter.fillRect( rect( ) , QBrush( QColor( 255 , 255 , 255 , 255 ) ,
+                                          Qt::SolidPattern ));
 
       QColor globalColor( _colorGlobal );
       QColor localColor( _colorLocal );
 
-      if( _fillPlots )
+      if ( _fillPlots )
       {
         globalColor.setAlpha( 50 );
         localColor.setAlpha( 50 );
 
-        painter.setBrush( QBrush( globalColor, Qt::SolidPattern));
+        painter.setBrush( QBrush( globalColor , Qt::SolidPattern ));
         painter.setPen( Qt::NoPen );
         painter.drawPath( _mainHistogram._cachedGlobalRep );
 
-        painter.setBrush( QBrush( localColor, Qt::SolidPattern));
+        painter.setBrush( QBrush( localColor , Qt::SolidPattern ));
         painter.setPen( Qt::NoPen );
         painter.drawPath( _mainHistogram._cachedLocalRep );
       }
@@ -871,159 +881,165 @@ namespace visimpl
         localColor.setAlpha( 100 );
 
         painter.setBrush( Qt::NoBrush );
-        painter.setPen( QPen( Qt::black, Qt::SolidLine ));
+        painter.setPen( QPen( Qt::black , Qt::SolidLine ));
 
-        QLine line( QPoint( 0, currentHeight), QPoint( width( ), currentHeight ));
+        QLine line( QPoint( 0 , currentHeight ) ,
+                    QPoint( width( ) , currentHeight ));
         painter.drawLine( line );
 
-        painter.setPen( QPen( globalColor, Qt::SolidLine ));
+        painter.setPen( QPen( globalColor , Qt::SolidLine ));
         painter.drawPath( _mainHistogram._cachedGlobalRep );
 
         painter.setBrush( Qt::NoBrush );
-        painter.setPen( QPen( localColor, Qt::SolidLine ));
+        painter.setPen( QPen( localColor , Qt::SolidLine ));
         painter.drawPath( _mainHistogram._cachedLocalRep );
       }
 
-      penColor = QColor( 0, 0, 0 );
+      penColor = QColor( 0 , 0 , 0 );
     }
 
-    if( _mainHistogram._gridLines.size( ) > 0 )
+    if ( _mainHistogram._gridLines.size( ) > 0 )
     {
-      for( auto line : _mainHistogram._gridLines )
+      for ( auto line: _mainHistogram._gridLines )
       {
         const int positionX = line * width( );
 
         QPen pen( penColor );
 
-        if( _paintTimeline )
+        if ( _paintTimeline )
         {
           const float timeValue = ( _endTime - _startTime ) * line + _startTime;
           QString value;
-          if(std::abs(ceilf(timeValue) - timeValue) < std::numeric_limits<float>::epsilon())
+          if ( std::abs( ceilf( timeValue ) - timeValue ) <
+               std::numeric_limits< float >::epsilon( ))
           {
-            value = QString::number(static_cast<int>(timeValue));
+            value = QString::number( static_cast<int>(timeValue));
           }
           else
           {
-            value = QString::number(timeValue, 'f', 2);
+            value = QString::number( timeValue , 'f' , 2 );
           }
 
           const int valueLength = value.length( ) * _pixelsPerCharacter;
 
-          if( width( ) - positionX < valueLength )
+          if ( width( ) - positionX < valueLength )
             _pixelMargin = -valueLength;
-          const QPoint position ( positionX + _pixelMargin, currentHeight * 0.25 );
-          pen.setColor( QColor( 150, 150, 150 ));
+          const QPoint position( positionX + _pixelMargin ,
+                                 currentHeight * 0.25 );
+          pen.setColor( QColor( 150 , 150 , 150 ));
           painter.setPen( pen );
 
           QFont backFont = painter.font( );
-          painter.drawText( position, value );
+          painter.drawText( position , value );
         }
 
-        QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
-        pen.setColor( QColor( 177, 50, 177 ));
+        QLine marker( QPoint( positionX , 0 ) , QPoint( positionX , height( )));
+        pen.setColor( QColor( 177 , 50 , 177 ));
         painter.setPen( pen );
         painter.drawLine( marker );
       }
     }
 
-    if( _lastMousePosition )
+    if ( _lastMousePosition )
     {
       QPoint localPosition = mapFromGlobal( *_lastMousePosition );
 
-      localPosition.setX( std::min( width( ), std::max( 0, localPosition.x( ))));
-      localPosition.setY( std::min( height( ), std::max( 0, localPosition.y( ))));
+      localPosition.setX(
+        std::min( width( ) , std::max( 0 , localPosition.x( ))));
+      localPosition.setY(
+        std::min( height( ) , std::max( 0 , localPosition.y( ))));
 
       const float percentage = float( localPosition.x( )) / float( width( ));
       const int positionX = localPosition.x( );
       int margin = 5;
 
-      const auto value = valueAt(percentage);
-      QString valueText = QString::number( value, 'f', 3 );
+      const auto value = valueAt( percentage );
+      QString valueText = QString::number( value , 'f' , 3 );
       const int valueLength = valueText.length( ) * 10;
-      if( width( ) - positionX < valueLength )
+      if ( width( ) - positionX < valueLength )
         margin = -valueLength;
 
-      if( _regionPercentage && _paintRegion )
+      if ( _regionPercentage && _paintRegion )
       {
         const int regionPosX = width( ) * ( *_regionPercentage );
         const int regionW = _regionWidth * width( );
-        int start = std::max( 0, regionPosX - regionW );
+        int start = std::max( 0 , regionPosX - regionW );
 
-        if( ( regionPosX + regionW ) > width( ) )
+        if (( regionPosX + regionW ) > width( ))
           start = width( ) - regionW * 2;
 
-        const QRect region( std::max( 0, start ), 0, regionW * 2, height( ));
-        const QBrush brush( QColor( 30, 30, 30, 30 ));
+        const QRect region( std::max( 0 , start ) , 0 , regionW * 2 ,
+                            height( ));
+        const QBrush brush( QColor( 30 , 30 , 30 , 30 ));
 
         painter.setBrush( brush );
-        painter.setPen( QColor( 0, 0, 0, 200 ));
+        painter.setPen( QColor( 0 , 0 , 0 , 200 ));
         painter.drawRect( region );
       }
 
       QPen pen( penColor );
       painter.setPen( pen );
 
-      QPoint position ( positionX + margin, height( ) * 0.75f );
+      QPoint position( positionX + margin , height( ) * 0.75f );
 
-      painter.drawText( position, valueText );
+      painter.drawText( position , valueText );
 
-      if( _paintTimeline )
+      if ( _paintTimeline )
       {
         position.setY( height( ) * 0.25f );
 
         QString timeText( "t=" );
-        timeText.append( QString::number( timeAt( percentage ), 'f', 3));
-        painter.drawText( position, timeText );
+        timeText.append( QString::number( timeAt( percentage ) , 'f' , 3 ));
+        painter.drawText( position , timeText );
       }
 
-      QLine marker( QPoint( positionX, 0 ), QPoint( positionX, height( )));
-      pen.setColor( QColor( 177, 50, 50 ));
+      QLine marker( QPoint( positionX , 0 ) , QPoint( positionX , height( )));
+      pen.setColor( QColor( 177 , 50 , 50 ));
       painter.setPen( pen );
       painter.drawLine( marker );
     }
 
-    if( _events && _repMode == T_REP_CURVE )
+    if ( _events && _repMode == T_REP_CURVE )
     {
-      for( const auto& timeFrame : *_events )
+      for ( const auto& timeFrame: *_events )
       {
-        if( !timeFrame.visible )
+        if ( !timeFrame.visible )
           continue;
 
         QColor color = timeFrame.color;
 
         color.setAlpha( 50 );
-        painter.setBrush( QBrush( color, Qt::SolidPattern));
+        painter.setBrush( QBrush( color , Qt::SolidPattern ));
         painter.setPen( Qt::NoPen );
-        for( const auto& p : timeFrame._cachedCommonRep )
+        for ( const auto& p: timeFrame._cachedCommonRep )
           painter.drawPath( p );
       }
     }
 
-    if( _player )
+    if ( _player )
     {
       const int lineX = _player->GetRelativeTime( ) * width( );
 
-      QLine simMarkerLine( QPoint( lineX, 0), QPoint( lineX, height( )));
+      QLine simMarkerLine( QPoint( lineX , 0 ) , QPoint( lineX , height( )));
 
-      QPen pen( QColor( 0, 0, 0, 255 ));
+      QPen pen( QColor( 0 , 0 , 0 , 255 ));
       painter.setPen( pen );
       painter.drawLine( simMarkerLine );
 
-      if( _paintTimeline )
+      if ( _paintTimeline )
       {
-        const auto value = QString::number(_player->currentTime( ), 'f', 3);
+        const auto value = QString::number( _player->currentTime( ) , 'f' , 3 );
 
         const int valueLength = value.length( ) * _pixelsPerCharacter;
-        if( width( ) - lineX < valueLength )
+        if ( width( ) - lineX < valueLength )
           _pixelMargin = -valueLength;
-        QPoint position ( lineX + _pixelMargin, height( ) * 0.5f );
-        pen.setColor( QColor( 150, 150, 150 ));
+        QPoint position( lineX + _pixelMargin , height( ) * 0.5f );
+        pen.setColor( QColor( 150 , 150 , 150 ));
         painter.setPen( pen );
 
         QFont backFont = painter.font( );
 
-        painter.drawText( position, value );
+        painter.drawText( position , value );
       }
     }
   }

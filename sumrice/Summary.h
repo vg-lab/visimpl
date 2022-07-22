@@ -23,7 +23,6 @@
 #ifndef __SIMULATIONSUMMARYWIDGET_H__
 #define __SIMULATIONSUMMARYWIDGET_H__
 
-#include <prefr/prefr.h>
 #include <simil/simil.h>
 #include <scoop/scoop.h>
 #include <sumrice/api.h>

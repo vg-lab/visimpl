@@ -23,14 +23,18 @@
 #ifndef __VISIMPL__OPENGLWIDGET__
 #define __VISIMPL__OPENGLWIDGET__
 
+#define PLAB_SKIP_GLEW_INCLUDE 1
+#define NEUROLOTS_SKIP_GLEW_INCLUDE 1
+
 #if defined(VISIMPL_USE_ZEROEQ) && defined(WIN32)
-  #include <winsock2.h>
+#include <winsock2.h>
 #endif
 
-// Qt
 #include <QOpenGLFunctions>
+#include <QOpenGLFunctions_3_3_Core>
+
+// Qt
 #include <QOpenGLWidget>
-#include <QOpenGLFunctions_4_0_Core>
 #include <QString>
 
 // C++
@@ -40,34 +44,23 @@
 #include <locale>
 #include <iostream>
 
-#define VISIMPL_SKIP_GLEW_INCLUDE 1
-
-#define PREFR_SKIP_GLEW_INCLUDE 1
-
-#define SIM_SLIDER_UPDATE_PERIOD 0.25f
-
-#include <prefr/prefr.h>
 #include <reto/reto.h>
-
-#include "types.h"
-
-#include "prefr/ColorSource.h"
-#include "prefr/ColorOperationModel.h"
-
-#include "render/Plane.h"
-
-#include "DomainManager.h"
-
 #include <sumrice/sumrice.h>
 #include <scoop/scoop.h>
+#include <plab/plab.h>
 
 #include <sstream>
 
+#include "types.h"
+#include "render/Plane.h"
+#include "DomainManager.h"
+
 class QLabel;
 
-struct streamDotSeparator: std::numpunct<char>
+struct streamDotSeparator : std::numpunct< char >
 {
-    char do_decimal_point() const { return '.'; }
+  char do_decimal_point( ) const
+  { return '.'; }
 };
 
 namespace visimpl
@@ -78,135 +71,154 @@ namespace visimpl
    */
   class CameraPosition
   {
-    public:
-      Eigen::Vector3f position; /** position point.  */
-      Eigen::Matrix3f rotation; /** rotation matrix. */
-      float radius;             /** aperture.        */
+  public:
+    Eigen::Vector3f position; /** position point.  */
+    Eigen::Matrix3f rotation; /** rotation matrix. */
+    float radius;             /** aperture.        */
 
-      /** \brief CameraPosition class constructor.
-       *
-       */
-      CameraPosition()
-      : position{Eigen::Vector3f()}
-      , rotation{Eigen::Matrix3f::Zero()}
-      , radius{0}
-      {};
+    /** \brief CameraPosition class constructor.
+     *
+     */
+    CameraPosition( )
+      : position{ Eigen::Vector3f( ) }
+      , rotation{ Eigen::Matrix3f::Zero( ) }
+      , radius{ 0 }
+    { };
 
-      /** \brief CameraPosition class constructor.
-       * \param[in] data Camera position serialized data.
-       *
-       */
-      CameraPosition(const QString &data)
+    /** \brief CameraPosition class constructor.
+     * \param[in] data Camera position serialized data.
+     *
+     */
+    CameraPosition( const QString& data )
+    {
+      const auto separator = std::use_facet< std::numpunct< char>>(
+        std::cout.getloc( )).decimal_point( );
+      const bool needSubst = ( separator == ',' );
+
+      auto parts = data.split( ";" );
+      Q_ASSERT( parts.size( ) == 3 );
+      const auto posData = parts.first( );
+      const auto rotData = parts.last( );
+      auto radiusData = parts.at( 1 );
+
+      auto posParts = posData.split( "," );
+      Q_ASSERT( posParts.size( ) == 3 );
+      auto rotParts = rotData.split( "," );
+      Q_ASSERT( rotParts.size( ) == 9 );
+
+      if ( needSubst )
       {
-        const auto separator = std::use_facet<std::numpunct<char>>(std::cout.getloc()).decimal_point();
-        const bool needSubst = (separator == ',');
-
-        auto parts = data.split(";");
-        Q_ASSERT(parts.size() == 3);
-        const auto posData = parts.first();
-        const auto rotData = parts.last();
-        auto radiusData = parts.at(1);
-
-        auto posParts = posData.split(",");
-        Q_ASSERT(posParts.size() == 3);
-        auto rotParts = rotData.split(",");
-        Q_ASSERT(rotParts.size() == 9);
-
-        if(needSubst)
-        {
-          for(auto &part: posParts) part.replace('.', ',');
-          for(auto &part: rotParts) part.replace('.', ',');
-          radiusData.replace('.', ',');
-        }
-
-        position = Eigen::Vector3f(posParts[0].toFloat(), posParts[1].toFloat(), posParts[2].toFloat());
-        radius = radiusData.toFloat();
-        rotation.block<1,3>(0,0) = Eigen::Vector3f{rotParts[0].toFloat(), rotParts[1].toFloat(), rotParts[2].toFloat()};
-        rotation.block<1,3>(1,0) = Eigen::Vector3f{rotParts[3].toFloat(), rotParts[4].toFloat(), rotParts[5].toFloat()};
-        rotation.block<1,3>(2,0) = Eigen::Vector3f{rotParts[6].toFloat(), rotParts[7].toFloat(), rotParts[8].toFloat()};
+        for ( auto& part: posParts ) part.replace( '.' , ',' );
+        for ( auto& part: rotParts ) part.replace( '.' , ',' );
+        radiusData.replace( '.' , ',' );
       }
 
-      /** \brief Returns the serialized camera position.
-       *
-       */
-      QString toString() const
-      {
-        std::stringstream stream;
-        stream.imbue(std::locale(stream.getloc(), new streamDotSeparator()));
-        stream << position << ";" << radius << ";"
-               << rotation(0,0) << "," << rotation(0,1) << "," << rotation(0,2) << ","
-               << rotation(1,0) << "," << rotation(1,1) << "," << rotation(1,2) << ","
-               << rotation(2,0) << "," << rotation(2,1) << "," << rotation(2,2);
+      position = Eigen::Vector3f( posParts[ 0 ].toFloat( ) ,
+                                  posParts[ 1 ].toFloat( ) ,
+                                  posParts[ 2 ].toFloat( ));
+      radius = radiusData.toFloat( );
+      rotation.block< 1 , 3 >( 0 , 0 ) = Eigen::Vector3f{
+        rotParts[ 0 ].toFloat( ) , rotParts[ 1 ].toFloat( ) ,
+        rotParts[ 2 ].toFloat( ) };
+      rotation.block< 1 , 3 >( 1 , 0 ) = Eigen::Vector3f{
+        rotParts[ 3 ].toFloat( ) , rotParts[ 4 ].toFloat( ) ,
+        rotParts[ 5 ].toFloat( ) };
+      rotation.block< 1 , 3 >( 2 , 0 ) = Eigen::Vector3f{
+        rotParts[ 6 ].toFloat( ) , rotParts[ 7 ].toFloat( ) ,
+        rotParts[ 8 ].toFloat( ) };
+    }
 
-        auto serialization = QString::fromStdString(stream.str());
-        serialization.replace('\n',',').remove(' ');
+    /** \brief Returns the serialized camera position.
+     *
+     */
+    QString toString( ) const
+    {
+      std::stringstream stream;
+      stream.imbue( std::locale( stream.getloc( ) , new streamDotSeparator( )));
+      stream << position << ";" << radius << ";"
+             << rotation( 0 , 0 ) << "," << rotation( 0 , 1 ) << ","
+             << rotation( 0 , 2 ) << ","
+             << rotation( 1 , 0 ) << "," << rotation( 1 , 1 ) << ","
+             << rotation( 1 , 2 ) << ","
+             << rotation( 2 , 0 ) << "," << rotation( 2 , 1 ) << ","
+             << rotation( 2 , 2 );
 
-        return serialization;
-      }
+      auto serialization = QString::fromStdString( stream.str( ));
+      serialization.replace( '\n' , ',' ).remove( ' ' );
+
+      return serialization;
+    }
   };
 
   typedef enum
   {
-    CONTINUOUS = 0,
-    STEP_BY_STEP,
+    CONTINUOUS = 0 ,
+    STEP_BY_STEP ,
     AB_REPEAT
   } TPlaybackMode;
 
   class OpenGLWidget
-  : public QOpenGLWidget
-  , public QOpenGLFunctions
+    : public QOpenGLWidget , public QOpenGLFunctions_3_3_Core
   {
-    Q_OBJECT;
+  Q_OBJECT;
 
   public:
     typedef enum
     {
-      tBlueConfig,
-      SWC,
+      tBlueConfig ,
+      SWC ,
       NsolScene
     } TDataFileType;
 
     typedef enum
     {
-      PROTOTYPE_OFF = 0,
+      PROTOTYPE_OFF = 0 ,
       PROTOTYPE_ON
     } TPrototypeEnum;
 
     struct EventLabel
     {
-      QWidget *upperWidget;
-      QLabel  *colorLabel;
-      QLabel  *label;
+      QWidget* upperWidget;
+      QLabel* colorLabel;
+      QLabel* label;
 
-      EventLabel():upperWidget{nullptr}, colorLabel{nullptr}, label{nullptr}{};
+      EventLabel( )
+        : upperWidget{ nullptr }
+        , colorLabel{ nullptr }
+        , label{ nullptr }
+      { };
     };
 
-    OpenGLWidget( QWidget* parent = nullptr,
-                  Qt::WindowFlags windowFlags = Qt::WindowFlags(),
+    OpenGLWidget( QWidget* parent = nullptr ,
+                  Qt::WindowFlags windowFlags = Qt::WindowFlags( ) ,
                   const std::string& zeqUri = "" );
-    virtual ~OpenGLWidget();
 
-    void createParticleSystem(  );
+    virtual ~OpenGLWidget( );
+
+    void createParticleSystem( );
 
     /** \brief Sets a new spikes player and initializes.
      * \param[in] p SpikesPlayer pointer.
      *
      */
-    void setPlayer(simil::SpikesPlayer *p, const simil::TDataType type);
+    void setPlayer( simil::SpikesPlayer* p , const simil::TDataType type );
+
+    const tGidPosMap& getGidPositions( ) const;
 
     void idleUpdate( bool idleUpdate_ = true );
 
     TPlaybackMode playbackMode( void );
+
     void playbackMode( TPlaybackMode mode );
 
     bool completedStep( void );
 
     simil::SimulationPlayer* player( );
+
     float currentTime( void );
 
-    void setGroupVisibility( unsigned int i, bool state );
+    void circuitScaleFactor( vec3 scale_ , bool update = true );
 
-    void circuitScaleFactor( vec3 scale_, bool update = true );
     vec3 circuitScaleFactor( void ) const;
 
     DomainManager* domainManager( void );
@@ -222,18 +234,18 @@ namespace visimpl
     /** \brief Returns the current camera position.
      *
      */
-    CameraPosition cameraPosition() const;
+    CameraPosition cameraPosition( ) const;
 
     /** \brief Moves the camera to the given position.
      * \param[in] pos CameraPosition reference.
      *
      */
-    void setCameraPosition(const CameraPosition &pos);
+    void setCameraPosition( const CameraPosition& pos );
 
     /** \brief Resets the view.
      *
      */
-    void resetParticles();
+    void resetParticles( );
 
   signals:
 
@@ -245,76 +257,108 @@ namespace visimpl
 
     void pickedSingle( unsigned int );
 
-    void planesColorChanged ( const QColor &);
+    void planesColorChanged( const QColor& );
 
   public slots:
 
     void updateData( void );
 
     void home( void );
+
     void updateCameraBoundingBox( bool setBoundingBox = false );
 
     void setMode( int mode );
+
     void showInactive( bool state );
 
     void changeShader( int i );
 
-    void setSelectedGIDs( const std::unordered_set< uint32_t >& gids  );
+    void setSelectedGIDs( const std::unordered_set< uint32_t >& gids );
+
     void clearSelection( void );
 
     void setUpdateSelection( void );
-    void setUpdateGroups( void );
+
     void setUpdateAttributes( void );
 
     void selectAttrib( int newAttrib );
 
     void showEventsActivityLabels( bool show );
+
     void showCurrentTimeLabel( bool show );
 
     void clippingPlanes( bool active );
+
     void paintClippingPlanes( int paint_ );
+
     void toggleClippingPlanes( void );
+
     void clippingPlanesReset( void );
+
     void clippingPlanesHeight( float height_ );
+
     float clippingPlanesHeight( void );
+
     void clippingPlanesWidth( float width_ );
+
     float clippingPlanesWidth( void );
+
     void clippingPlanesDistance( float distance_ );
+
     float clippingPlanesDistance( void );
+
     void clippingPlanesColor( const QColor& color_ );
+
     QColor clippingPlanesColor( void );
 
     void changeClearColor( void );
+
     void toggleUpdateOnIdle( void );
+
     void toggleShowFPS( void );
+
     void toggleWireframe( void );
 
     void Play( void );
+
     void Pause( void );
+
     void PlayPause( void );
+
     void Stop( void );
+
     void Repeat( bool repeat );
+
     void PlayAt( float timePos );
+
     void Restart( void );
+
     void PreviousStep( void );
+
     void NextStep( void );
 
     void changeSimulationColorMapping( const TTransferFunction& colors );
+
     TTransferFunction getSimulationColorMapping( void );
 
     void changeSimulationSizeFunction( const TSizeFunction& sizes );
+
     TSizeFunction getSimulationSizeFunction( void );
 
     void simulationDeltaTime( float value );
+
     float simulationDeltaTime( void );
 
     void simulationStepsPerSecond( float value );
+
     float simulationStepsPerSecond( void );
 
     void simulationStepByStepDuration( float value );
+
     float simulationStepByStepDuration( void );
 
     void changeSimulationDecayValue( float value );
+
     float getSimulationDecayValue( void );
 
     GIDVec getPlanesContainedElements( void ) const;
@@ -323,7 +367,9 @@ namespace visimpl
     void _resolveFlagsOperations( void );
 
     void _updateParticles( float renderDelta );
+
     void _paintParticles( void );
+
     void _paintPlanes( void );
 
     void _focusOn( const tBoundingBox& boundingBox );
@@ -331,62 +377,69 @@ namespace visimpl
     void _initClippingPlanes( void );
 
     void _genPlanesFromBoundingBox( void );
+
     void _genPlanesFromParameters( void );
+
     void _updatePlanes( void );
-    void _rotatePlanes( float yaw, float pitch );
 
-    void _setShaderParticles( void );
-
-    void _pickSingle( void );
+    void _rotatePlanes( float yaw , float pitch );
 
     void _backtraceSimulation( void );
 
     void _initRenderToTexture( void );
 
     void _configureSimulationFrame( void );
+
     void _configureStepByStepFrame( double elapsedRenderTimeMilliseconds );
 
     void _configurePreviousStep( void );
+
     void _configureStepByStep( void );
 
     void _modeChange( void );
+
     void _attributeChange( void );
 
     void _updateSelection( void );
-    void _updateGroups( void );
-    void _updateGroupsVisibility( void );
+
     void _updateAttributes( void );
+
     void _updateNewData( void );
 
     bool _updateData( bool force = false );
 
     void _createEventLabels( void );
+
     void _updateEventLabelsVisibility( void );
 
     std::vector< bool > _activeEventsAt( float time );
 
     virtual void initializeGL( void );
+
     virtual void paintGL( void );
-    virtual void resizeGL( int w, int h );
+
+    virtual void resizeGL( int w , int h );
 
     virtual void mousePressEvent( QMouseEvent* event );
+
     virtual void mouseReleaseEvent( QMouseEvent* event );
+
     virtual void wheelEvent( QWheelEvent* event );
+
     virtual void mouseMoveEvent( QMouseEvent* event );
+
     virtual void keyPressEvent( QKeyEvent* event );
 
     /** \brief Connects the player to ZeroEQ signaling.
      *
      */
-    void connectPlayerZeroEQ();
+    void connectPlayerZeroEQ( );
 
     std::unordered_set< uint32_t > _selectedGIDs;
 
-    std::queue< std::pair< unsigned int, bool >> _pendingGroupStateChanges;
-
 #ifdef VISIMPL_USE_ZEROEQ
 
-  std::string _zeqUri;
+    std::string _zeqUri;
 
 #endif
 
@@ -397,7 +450,7 @@ namespace visimpl
 
     bool _wireframe;
 
-    Camera* _camera;
+    std::shared_ptr< Camera > _camera;
     glm::vec3 _lastCameraPosition;
 
     vec3 _scaleFactor;
@@ -411,7 +464,7 @@ namespace visimpl
 
     unsigned int _frameCount;
 
-    int _mouseX, _mouseY;
+    int _mouseX , _mouseY;
     bool _rotation;
     bool _translation;
 
@@ -424,20 +477,12 @@ namespace visimpl
     std::chrono::time_point< std::chrono::system_clock > _then;
     std::chrono::time_point< std::chrono::system_clock > _lastFrame;
 
-    tShaderParticlesType _currentShader;
-    prefr::RenderProgram* _shaderParticlesCurrent;
-    prefr::RenderProgram* _shaderParticlesDefault;
-    prefr::RenderProgram* _shaderParticlesSolid;
-    prefr::RenderProgram* _shaderPicking;
-    prefr::RenderProgram* _shaderClippingPlanes;
-
-    prefr::ParticleSystem* _particleSystem;
-    prefr::GLPickRenderer* _pickRenderer;
-
+    bool _particleSystemInitialized;
+    reto::ShaderProgram* _shaderClippingPlanes;
     simil::SpikesPlayer* _player;
 
-    reto::ClippingPlane* _clippingPlaneLeft;
-    reto::ClippingPlane* _clippingPlaneRight;
+    std::shared_ptr<reto::ClippingPlane> _clippingPlaneLeft;
+    std::shared_ptr<reto::ClippingPlane> _clippingPlaneRight;
     evec3 _planesCenter;
     evec3 _planeNormalLeft;
     evec3 _planeNormalRight;
@@ -496,17 +541,10 @@ namespace visimpl
     bool _showSelection;
 
     bool _flagNewData;
-    bool _flagResetParticles;
     bool _flagUpdateSelection;
-    bool _flagUpdateGroups;
     bool _flagUpdateAttributes;
-    bool _flagPickingSingle;
-    bool _flagPickingHighlighted;
-    bool _flagChangeShader;
-    bool _flagUpdateRender;
 
-    bool _flagModeChange;
-    tVisualMode _newMode;
+    VisualMode _newMode;
 
     bool _flagAttribChange;
     tNeuronAttributes _newAttrib;
@@ -519,18 +557,15 @@ namespace visimpl
     std::vector< std::vector< bool >> _eventsActivation;
     float _deltaEvents;
 
-    DomainManager* _domainManager;
+    DomainManager _domainManager;
     tBoundingBox _boundingBoxHome;
-    QString      _homePosition;
+    QString _homePosition;
 
     scoop::ColorPalette _colorPalette;
 
     QPoint _pickingPosition;
-    unsigned int _selectedPickingSingle;
 
     tGidPosMap _gidPositions; // particle positions * scale.
-
-    QOpenGLFunctions_4_0_Core* _oglFunctions;
 
     // Render to texture
     reto::ShaderProgram* _screenPlaneShader;
