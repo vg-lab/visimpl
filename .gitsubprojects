@@ -6,5 +6,5 @@
 git_subproject( ReTo https://github.com/gmrvvis/ReTo.git 211c49af )
 git_subproject( SimIL https://github.com/gmrvvis/SimIL.git a8a56438 )
 git_subproject( scoop https://github.com/gmrvvis/scoop.git b3326cd )
-git_subproject( plab git@gitlab.vg-lab.es:g.rial/particlelab.git 04651ec0 )
+git_subproject( plab https://github.com/vg-lab/particlelab.git 675f9088 )
 git_subproject( acuterecorder https://github.com/vg-lab/AcuteRecorder.git 0b84c2b1 )
