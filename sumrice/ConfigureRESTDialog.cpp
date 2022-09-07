@@ -35,7 +35,7 @@ RESTConfigurationWidget::RESTConfigurationWidget(QWidget *p, Qt::WindowFlags f)
 : QWidget(p,f)
 {
   m_waitTime = new QSpinBox();
-  m_waitTime->setMinimum(1000);
+  m_waitTime->setMinimum(1);
   m_waitTime->setMaximum(10000);
   m_waitTime->setValue(5000);
   m_waitTime->setSuffix(" ms");
