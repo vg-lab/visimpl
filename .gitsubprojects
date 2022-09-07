@@ -4,7 +4,7 @@
 #git_subproject( gmrvlex https://github.com/vg-lab/gmrvlex.git c20b194 )
 #git_subproject( Brion https://github.com/BlueBrain/Brion.git 073f356 )
 git_subproject( ReTo https://github.com/gmrvvis/ReTo.git e21091c )
-git_subproject( SimIL https://github.com/gmrvvis/SimIL.git a8a56438 )
+git_subproject( SimIL https://github.com/gmrvvis/SimIL.git bbc4bd7f )
 git_subproject( scoop https://github.com/gmrvvis/scoop.git b3326cd )
 git_subproject( plab https://github.com/vg-lab/particlelab.git 675f9088 )
 git_subproject( acuterecorder https://github.com/vg-lab/AcuteRecorder.git 0b84c2b1 )
