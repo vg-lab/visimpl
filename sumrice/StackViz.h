@@ -23,6 +23,7 @@
 #ifndef STACKVIZ_H_
 #define STACKVIZ_H_
 
+// Qt
 #include <QMainWindow>
 #include <QDockWidget>
 #include <QPushButton>
@@ -33,6 +34,7 @@
 #include <QScrollArea>
 #include <QCheckBox>
 
+#include <sumrice/api.h>
 #include <sumrice/sumrice.h>
 #include <simil/simil.h>
 
@@ -41,7 +43,7 @@ namespace visimpl
 
   class DisplayManagerWidget;
 
-  class StackViz
+  class SUMRICE_API StackViz
   : public QWidget
   {
     Q_OBJECT

@@ -24,6 +24,7 @@
 #define SUMRICE_CONNECTRESTDIALOG_H_
 
 // Sumrice
+#include <sumrice/api.h>
 #include <sumrice/ConfigureRESTDialog.h>
 
 // Qt
@@ -36,7 +37,7 @@ class QLineEdit;
  * \brief Implements a dialog for a REST connection configuration.
  *
  */
-class ConnectRESTDialog
+class SUMRICE_API ConnectRESTDialog
 : public QDialog
 {
     Q_OBJECT

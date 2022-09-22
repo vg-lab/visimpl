@@ -87,9 +87,9 @@ template< class T >
 void ignore( const T& )
 { }
 
-constexpr const char* POSITION_KEY = "positionData";
-constexpr const char* PLANES_COLOR_KEY = "clippingPlanesColor";
-constexpr const char* GROUP_NAME = "groupName";
+constexpr const char* POSITION_KEY_ = "positionData";
+constexpr const char* PLANES_COLOR_KEY_ = "clippingPlanesColor";
+constexpr const char* GROUP_NAME_ = "groupName";
 
 namespace visimpl
 {
@@ -755,7 +755,7 @@ namespace visimpl
       #endif
 
       #ifdef VISIMPL_USE_ZEROEQ
-      "</li><li>ZeroEQ " + ZEROEQ_REV_STRING +
+      "</li><li>ZeroEQ " + zeroeq::Version::getRevString().c_str() +
       #else
       "</li><li>ZeroEQ " + tr( "support not built." ) +
       #endif
@@ -1113,7 +1113,7 @@ namespace visimpl
                                         clippingColor.name( ));
     _frameClippingColor->setMinimumSize( 20 , 20 );
     _frameClippingColor->setMaximumSize( 20 , 20 );
-    _frameClippingColor->setProperty( PLANES_COLOR_KEY , clippingColor.name( ));
+    _frameClippingColor->setProperty( PLANES_COLOR_KEY_ , clippingColor.name( ));
 
     _buttonSelectionFromClippingPlanes = new QPushButton( "To selection" );
     _buttonSelectionFromClippingPlanes->setToolTip(
@@ -1966,7 +1966,7 @@ namespace visimpl
     QWidget* container = new QWidget( );
     auto itemLayout = new QHBoxLayout( container );
     container->setLayout( itemLayout );
-    container->setProperty( GROUP_NAME ,
+    container->setProperty( GROUP_NAME_ ,
                             QString::fromStdString( group->name( )));
 
     const auto colors = _openGLWidget->colorPalette( ).colors( );
@@ -1983,7 +1983,7 @@ namespace visimpl
     tfWidget->setColorPoints( group->colorMapping( ));
     tfWidget->setSizeFunction( group->sizeFunction( ));
     tfWidget->setDialogIcon( QIcon( ":/visimpl.png" ));
-    tfWidget->setProperty( GROUP_NAME ,
+    tfWidget->setProperty( GROUP_NAME_ ,
                            QString::fromStdString( group->name( )));
 
     itemLayout->addWidget( tfWidget );
@@ -2010,14 +2010,14 @@ namespace visimpl
     auto nameButton = new QPushButton( group->name( ).c_str( ));
     nameButton->setFlat( true );
     nameButton->setObjectName( "nameButton" );
-    nameButton->setProperty( GROUP_NAME ,
+    nameButton->setProperty( GROUP_NAME_ ,
                              QString::fromStdString( group->name( )));
 
     connect( nameButton , SIGNAL( clicked( )) , this ,
              SLOT( onGroupNameClicked( )) );
 
     auto deleteButton = new QPushButton( QIcon( ":/icons/close.svg" ) , "" );
-    deleteButton->setProperty( GROUP_NAME ,
+    deleteButton->setProperty( GROUP_NAME_ ,
                                QString::fromStdString( group->name( )));
 
     connect( deleteButton , SIGNAL( clicked( )) , this ,
@@ -2074,7 +2074,7 @@ namespace visimpl
     while ( !_groupsVisButtons.empty( ))
     {
       auto container = std::get< 0 >( _groupsVisButtons.at( 0 ));
-      auto groupName = container->property( GROUP_NAME ).toString( );
+      auto groupName = container->property( GROUP_NAME_ ).toString( );
 
       removeVisualGroup( groupName );
     }
@@ -2164,7 +2164,7 @@ namespace visimpl
     {
       auto container = std::get< gr_container >( button );
       auto checkBox = std::get< gr_checkbox >( button );
-      auto name = container->property( GROUP_NAME )
+      auto name = container->property( GROUP_NAME_ )
         .toString( ).toStdString( );
       auto group = _openGLWidget->domainManager( )->getGroup( name );
 
@@ -2398,7 +2398,7 @@ namespace visimpl
     auto tfw = qobject_cast< TransferFunctionWidget* >( sender( ));
     if ( tfw )
     {
-      auto groupName = tfw->property( GROUP_NAME ).toString( );
+      auto groupName = tfw->property( GROUP_NAME_ ).toString( );
       updateGroupColors( groupName.toStdString( ) , tfw->getColors( ) ,
                          tfw->getSizeFunction( ));
     }
@@ -2410,7 +2410,7 @@ namespace visimpl
     if ( tfw )
     {
       bool ok = false;
-      auto groupName = tfw->property( GROUP_NAME ).toString( );
+      auto groupName = tfw->property( GROUP_NAME_ ).toString( );
 
       if ( !ok ) return;
       updateGroupColors( groupName.toStdString( ) , tfw->getPreviewColors( ) ,
@@ -2619,7 +2619,7 @@ namespace visimpl
     if ( button )
     {
       bool ok = false;
-      auto groupName = button->property( GROUP_NAME ).toString( );
+      auto groupName = button->property( GROUP_NAME_ ).toString( );
 
       if ( !ok ) return;
       auto group = _domainManager->getGroup( groupName.toStdString( ));
@@ -2985,7 +2985,7 @@ namespace visimpl
     auto button = qobject_cast< QPushButton* >( sender( ));
     if ( button )
     {
-      const auto groupName = button->property( GROUP_NAME ).toString( );
+      const auto groupName = button->property( GROUP_NAME_ ).toString( );
       removeVisualGroup( groupName );
     }
   }
@@ -2995,7 +2995,7 @@ namespace visimpl
     auto findGroup = [ this , name ]( tGroupRow& r )
     {
       QWidget* container = std::get< gr_container >( r );
-      auto groupName = container->property( GROUP_NAME ).toString( );
+      auto groupName = container->property( GROUP_NAME_ ).toString( );
       return groupName.compare( name , Qt::CaseInsensitive ) == 0;
     };
     auto it = std::find_if( _groupsVisButtons.begin( ) ,
@@ -3187,7 +3187,7 @@ namespace visimpl
       const auto rotation = o.value( "rotation" ).toString( );
 
       auto action = new QAction( name );
-      action->setProperty( POSITION_KEY ,
+      action->setProperty( POSITION_KEY_ ,
                            position + ";" + radius + ";" + rotation );
 
       connect( action , SIGNAL( triggered( bool )) , this ,
@@ -3268,7 +3268,7 @@ namespace visimpl
     auto insertPosition = [ &positionsObjs ]( const QAction* a )
     {
       if ( !a ) return;
-      const auto posData = a->property( POSITION_KEY ).toString( );
+      const auto posData = a->property( POSITION_KEY_ ).toString( );
       const auto parts = posData.split( ";" );
       Q_ASSERT( parts.size( ) == 3 );
       const auto position = parts.first( );
@@ -3349,7 +3349,7 @@ namespace visimpl
     auto action = new QAction( name );
 
     const auto position = _openGLWidget->cameraPosition( );
-    action->setProperty( POSITION_KEY , position.toString( ));
+    action->setProperty( POSITION_KEY_ , position.toString( ));
 
     connect( action , SIGNAL( triggered( bool )) , this ,
              SLOT( applyCameraPosition( )) );
@@ -3395,7 +3395,7 @@ namespace visimpl
     auto action = qobject_cast< QAction* >( sender( ));
     if ( action )
     {
-      auto positionString = action->property( POSITION_KEY ).toString( );
+      auto positionString = action->property( POSITION_KEY_ ).toString( );
       CameraPosition position( positionString );
       _openGLWidget->setCameraPosition( position );
     }
@@ -3506,11 +3506,11 @@ namespace visimpl
   void MainWindow::changePlanesColor( const QColor& color_ )
   {
     const auto currentColor = QColor(
-      _frameClippingColor->property( PLANES_COLOR_KEY ).toString( ));
+      _frameClippingColor->property( PLANES_COLOR_KEY_ ).toString( ));
     if ( currentColor == color_ ) return;
 
     _frameClippingColor->setStyleSheet( "background-color: " + color_.name( ));
-    _frameClippingColor->setProperty( PLANES_COLOR_KEY , color_.name( ));
+    _frameClippingColor->setProperty( PLANES_COLOR_KEY_ , color_.name( ));
   }
 
   void MainWindow::sendZeroEQPlaybackOperation( const unsigned int op )

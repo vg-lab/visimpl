@@ -23,8 +23,11 @@
 #ifndef SUMRICE_CONFIGURERESTDIALOG_H_
 #define SUMRICE_CONFIGURERESTDIALOG_H_
 
+// Qt
 #include <QDialog>
 #include <QWidget>
+
+#include <sumrice/api.h>
 
 class QSpinBox;
 
@@ -32,7 +35,7 @@ class QSpinBox;
  * \brief Implements a widget with the REST configuration options.
  *
  */
-class RESTConfigurationWidget
+class SUMRICE_API RESTConfigurationWidget
 : public QWidget
 {
     Q_OBJECT
@@ -83,7 +86,7 @@ class RESTConfigurationWidget
  * \brief Implements a dialog to configure REST connection options.
  *
  */
-class ConfigureRESTDialog
+class SUMRICE_API ConfigureRESTDialog
 : public QDialog
 {
     Q_OBJECT

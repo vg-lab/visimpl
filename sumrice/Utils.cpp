@@ -179,7 +179,7 @@ void visimpl::ZeroEQConfig::connect( const std::string& h , const uint16_t p ,
   {
     m_publisher = std::make_shared< zeroeq::Publisher >( uri_publisher ,
                                                          m_session );
-    m_subscriber = std::make_shared< zeroeq::Subscriber >( uri_subscriber );
+    m_subscriber = std::make_shared< zeroeq::Subscriber >( zeroeq::URIs{uri_subscriber} );
   }
   catch ( const std::exception& e )
   {

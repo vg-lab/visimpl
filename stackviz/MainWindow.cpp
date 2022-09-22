@@ -1001,7 +1001,7 @@ void MainWindow::aboutDialog( void )
 #endif
 
 #ifdef VISIMPL_USE_ZEROEQ
-    "</li><li>ZeroEQ " + ZEROEQ_REV_STRING +
+    "</li><li>ZeroEQ " + zeroeq::Version::getRevString().c_str() +
 #else
     "</li><li>ZeroEQ " + tr ("support not built.") +
 #endif
