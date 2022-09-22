@@ -30,10 +30,13 @@
 // Simil
 #include <simil/simil.h>
 
+#include <sumrice/api.h>
+
 class QWidget;
 class QLabel;
 
-class DataInspector : public QGroupBox
+class SUMRICE_API DataInspector 
+: public QGroupBox
 {
   Q_OBJECT
 public:

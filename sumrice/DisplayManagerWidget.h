@@ -24,6 +24,7 @@
 #define DISPLAYMANAGERWIDGET_H_
 
 #include <sumrice/sumrice.h>
+#include <sumrice/api.h>
 
 class QGridLayout;
 class QWidget;
@@ -65,7 +66,7 @@ namespace visimpl
                       > TDisplayHistogramTuple;
 
 
-  class DisplayManagerWidget : public QWidget
+  class SUMRICE_API DisplayManagerWidget : public QWidget
   {
     Q_OBJECT;
 

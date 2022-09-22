@@ -26,6 +26,8 @@
 // Qt
 #include <QDialog>
 
+#include <sumrice/api.h>
+
 class QRadioButton;
 class QShowEvent;
 
@@ -34,7 +36,7 @@ class QShowEvent;
  *        choose closing options for REST datasets.
  *
  */
-class CloseDataDialog
+class SUMRICE_API CloseDataDialog
 : public QDialog
 {
     Q_OBJECT

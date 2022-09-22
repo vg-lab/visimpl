@@ -12,6 +12,8 @@
 #include <memory>
 #include <thread>
 
+#include <sumrice/api.h>
+
 #ifdef VISIMPL_USE_ZEROEQ
 
 #include <zeroeq/zeroeq.h>
@@ -23,9 +25,9 @@
 
 namespace visimpl
 {
-  bool isValidIPAddress( const std::string& address );
+  bool SUMRICE_API isValidIPAddress( const std::string& address );
 
-  std::pair< QColor , QColor > generateColorPair( const scoop::Color& color );
+  std::pair< QColor , QColor > SUMRICE_API generateColorPair( const scoop::Color& color );
 
   template< class ForwardIt , class T , class Compare >
   ForwardIt lower_bound( ForwardIt first , ForwardIt last ,
@@ -53,7 +55,7 @@ namespace visimpl
 
 #ifdef VISIMPL_USE_ZEROEQ
 
-  class ZeroEQConfig
+  class SUMRICE_API ZeroEQConfig
   {
   public:
     /** \brief Singleton instance method.
