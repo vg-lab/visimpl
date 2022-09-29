@@ -24,6 +24,8 @@ namespace visimpl
     , _currentRenderer( nullptr )
     , _defaultRenderer( nullptr )
     , _solidRenderer( nullptr )
+    , _solidMode( false )
+    , _accumulativeMode( false )
     , _decay( 0.0f )
   {
   }
@@ -62,15 +64,48 @@ namespace visimpl
       visimpl::PARTICLE_SOLID_FRAGMENT_SHADER );
     _solidProgram.compileAndLink( );
 
-    _defaultRenderer = std::make_shared< plab::CoverageRenderer >(
+    _defaultAccProgram.loadFromText(
+      visimpl::PARTICLE_VERTEX_SHADER ,
+      visimpl::PARTICLE_ACC_DEFAULT_FRAGMENT_SHADER );
+    _defaultAccProgram.compileAndLink( );
+
+    _solidAccProgram.loadFromText(
+      visimpl::PARTICLE_VERTEX_SHADER ,
+      visimpl::PARTICLE_ACC_SOLID_FRAGMENT_SHADER );
+    _solidAccProgram.compileAndLink( );
+
+    _defaultRenderer = std::make_shared< plab::SimpleRenderer >(
       _defaultProgram.program( ));
-    _solidRenderer = std::make_shared< plab::CoverageRenderer >(
+    _solidRenderer = std::make_shared< plab::SimpleRenderer >(
       _solidProgram.program( ));
 
-    _currentRenderer = _defaultRenderer;
+    _defaultAccRenderer = std::make_shared< plab::SimpleRenderer >(
+      _defaultAccProgram.program( ));
+    _solidAccRenderer = std::make_shared< plab::SimpleRenderer >(
+      _solidAccProgram.program( ));
 
     _selectionCluster->setModel( _selectionModel );
-    _selectionCluster->setRenderer( _currentRenderer );
+
+    refreshRenderer( );
+  }
+
+  void DomainManager::refreshRenderer( )
+  {
+    if ( _accumulativeMode )
+    {
+      _currentRenderer = _solidMode ? _solidAccRenderer : _defaultAccRenderer;
+    }
+    else
+    {
+      _currentRenderer = _solidMode ? _solidRenderer : _defaultRenderer;
+    }
+
+    if ( _selectionCluster != nullptr )
+      _selectionCluster->setRenderer( _currentRenderer );
+    for ( const auto& item: _groupClusters )
+      item.second->setRenderer( _currentRenderer );
+    for ( const auto& item: _attributeClusters )
+      item.second->setRenderer( _currentRenderer );
   }
 
 #ifdef SIMIL_USE_BRION
@@ -291,8 +326,7 @@ namespace visimpl
       _currentRenderer ,
       _selectionModel->isClippingEnabled( ));
 
-    group->getModel( )->setAccumulativeMode(
-      _selectionModel->isAccumulativeMode( ));
+    group->getModel( )->setAccumulativeMode( _accumulativeMode );
 
     std::vector< uint32_t > ids;
     std::vector< NeuronParticle > particles;
@@ -326,8 +360,7 @@ namespace visimpl
       _currentRenderer ,
       _selectionModel->isClippingEnabled( ));
 
-    group->getModel( )->setAccumulativeMode(
-      _selectionModel->isAccumulativeMode( ));
+    group->getModel( )->setAccumulativeMode( _accumulativeMode );
 
     std::vector< NeuronParticle > particles;
     for ( const auto& gid: _selectionGids )
@@ -345,7 +378,7 @@ namespace visimpl
 
   void DomainManager::removeGroup( const std::string& name )
   {
-    if(1 != _groupClusters.erase( name ))
+    if ( 1 != _groupClusters.erase( name ))
     {
       std::cerr << "DomainManager: Error removing group '" << name
                 << "' - " << __FILE__ << ":" << __LINE__ << std::endl;
@@ -373,8 +406,7 @@ namespace visimpl
         _selectionModel->getRightPlane( ) ,
         _currentRenderer ,
         _selectionModel->isClippingEnabled( ));
-      group->getModel( )->setAccumulativeMode(
-        _selectionModel->isAccumulativeMode( ));
+      group->getModel( )->setAccumulativeMode( _accumulativeMode );
 
       const auto currentIndex = i % colors.size( );
       const auto color = colors[ currentIndex ].toRgb( );
@@ -402,14 +434,21 @@ namespace visimpl
 
   }
 
+  bool DomainManager::isAccumulativeModeEnabled( )
+  {
+    return _accumulativeMode;
+  }
+
   void DomainManager::enableAccumulativeMode( bool enabled )
   {
+    _accumulativeMode = enabled;
     if ( _selectionModel != nullptr )
     {
       _selectionModel->setAccumulativeMode( enabled );
     }
     for ( const auto& item: _groupClusters )
       item.second->getModel( )->setAccumulativeMode( enabled );
+    refreshRenderer( );
   }
 
   void DomainManager::enableClipping( bool enabled )
@@ -456,22 +495,14 @@ namespace visimpl
 
   void DomainManager::applyDefaultShader( )
   {
-    _currentRenderer = _defaultRenderer;
-    _selectionCluster->setRenderer( _currentRenderer );
-    for ( const auto& item: _groupClusters )
-      item.second->setRenderer( _currentRenderer );
-    for ( const auto& item: _attributeClusters )
-      item.second->setRenderer( _currentRenderer );
+    _solidMode = false;
+    refreshRenderer( );
   }
 
   void DomainManager::applySolidShader( )
   {
-    _currentRenderer = _solidRenderer;
-    _selectionCluster->setRenderer( _currentRenderer );
-    for ( const auto& item: _groupClusters )
-      item.second->setRenderer( _currentRenderer );
-    for ( const auto& item: _attributeClusters )
-      item.second->setRenderer( _currentRenderer );
+    _solidMode = true;
+    refreshRenderer( );
   }
 
   void DomainManager::processInput(
@@ -551,7 +582,7 @@ namespace visimpl
         {
           particle->timestamp = -std::numeric_limits< float >::infinity( );
         }
-        auto gid = item.second->getGids().at( i );
+        auto gid = item.second->getGids( ).at( i );
         auto value = input.find( gid );
         if ( value != input.cend( ))
         {
@@ -580,7 +611,7 @@ namespace visimpl
         {
           particle->timestamp = -std::numeric_limits< float >::infinity( );
         }
-        auto gid = item.second->getGids().at( i );
+        auto gid = item.second->getGids( ).at( i );
         auto value = input.find( gid );
         if ( value != input.cend( ))
         {

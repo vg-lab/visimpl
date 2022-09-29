@@ -61,8 +61,6 @@
 constexpr float ZOOM_FACTOR = 1.3f;
 constexpr float TRANSLATION_FACTOR = 0.001f;
 constexpr float ROTATION_FACTOR = 0.01f;
-constexpr int FRAMEBUFFER_SCALE_FACTOR = 2;
-constexpr int SAMPLES = 4;
 constexpr float DEFAULT_DELTA_TIME = 0.5f;
 const QString INITIAL_CAMERA_POSITION = "0,0,0;1;1,0,0,0,1,0,0,0,1";
 
@@ -81,44 +79,18 @@ namespace visimpl
 
   constexpr float invRGBInt = 1.0f / 255;
 
-  const static std::string vertexShaderCode = R"(#version 330 core
-layout (location = 0) in vec2 aPos;
-layout (location = 1) in vec2 aTexCoords;
-
-out vec2 TexCoords;
-
-void main()
-{
-    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);
-    TexCoords = aTexCoords;
-}
-)";
-
-  const static std::string screenFragment = R"(#version 330 core
-out vec4 FragColor;
-
-in vec2 TexCoords;
-
-uniform sampler2D screenTexture;
-
-void main()
-{
-    FragColor = vec4(texture(screenTexture, TexCoords).rgb, 1);
-}
-)";
-
-
   OpenGLWidget::OpenGLWidget( QWidget* parent_ ,
                               Qt::WindowFlags windowsFlags_ ,
                               const std::string&
 #ifdef VISIMPL_USE_ZEROEQ
-                              zeqUri
+    zeqUri
 #endif
                             )
     : QOpenGLWidget( parent_ , windowsFlags_ )
 #ifdef VISIMPL_USE_ZEROEQ
     , _zeqUri( zeqUri )
 #endif
+    , _gl( )
     , _fpsLabel( nullptr )
     , _labelCurrentTime( nullptr )
     , _showFps( false )
@@ -189,12 +161,10 @@ void main()
     , _deltaEvents( 0.125f )
     , _domainManager( )
     , _screenPlaneShader( nullptr )
-    , _msaaFrameBuffer( 0 )
-    , _msaaTextureColor( 0 )
-    , _msaaRBODepth( 0 )
-    , _midFrameBuffer( 0 )
-    , _midTextureColor( 0 )
-    , _midRBODepth( 0 )
+    , _quadVAO( 0 )
+    , _weightFrameBuffer( 0 )
+    , _accumulationTexture( 0 )
+    , _revealTexture( 0 )
   {
     _lastCameraPosition = glm::vec3( 0 , 0 , 0 );
 
@@ -277,7 +247,7 @@ void main()
       }
     }
 #else
-      _camera = std::make_shared< Camera >(  );
+    _camera = std::make_shared< Camera >( );
 #endif
     Q_ASSERT( _camera );
 
@@ -292,7 +262,7 @@ void main()
 
   void OpenGLWidget::initializeGL( void )
   {
-    initializeOpenGLFunctions( );
+    _gl.initializeOpenGLFunctions( );
 
     auto* logger = new QOpenGLDebugLogger( this );
     logger->initialize( );
@@ -316,8 +286,6 @@ void main()
     glPolygonMode( GL_FRONT_AND_BACK , GL_FILL );
     glEnable( GL_CULL_FACE );
 
-    glLineWidth( 1.5 );
-
     _then = std::chrono::system_clock::now( );
     _lastFrame = std::chrono::system_clock::now( );
 
@@ -331,13 +299,14 @@ void main()
     const GLubyte* shadingVer = glGetString( GL_SHADING_LANGUAGE_VERSION );
 
     _screenPlaneShader = new reto::ShaderProgram( );
-    _screenPlaneShader->loadVertexShaderFromText( vertexShaderCode );
-    _screenPlaneShader->loadFragmentShaderFromText( screenFragment );
+    _screenPlaneShader->loadVertexShaderFromText( SHADER_SCREEN_VERTEX );
+    _screenPlaneShader->loadFragmentShaderFromText( SHADER_SCREEN_FRAGMENT );
     _screenPlaneShader->create( );
     _screenPlaneShader->link( );
     _screenPlaneShader->autocatching( true );
     _screenPlaneShader->use( );
-    _screenPlaneShader->sendUniformi( "screenTexture" , 0 );
+    _screenPlaneShader->sendUniformi( "accumulation" , 0 );
+    _screenPlaneShader->sendUniformi( "reveal" , 1 );
 
 
     std::cout << "OpenGL Hardware: " << vendor << " (" << renderer << ")"
@@ -348,84 +317,66 @@ void main()
 
   void OpenGLWidget::_initRenderToTexture( void )
   {
-    _screenPlaneShader = new reto::ShaderProgram( );
-    _screenPlaneShader->loadVertexShaderFromText( vertexShaderCode );
-    _screenPlaneShader->loadFragmentShaderFromText( screenFragment );
-    _screenPlaneShader->create( );
-    _screenPlaneShader->link( );
-    _screenPlaneShader->autocatching( true );
-    _screenPlaneShader->use( );
-    _screenPlaneShader->sendUniformi( "screenTexture" , 0 );
 
-    // Generate the MSAA framebuffer
+    // Generate the OIR framebuffer
 
-    glGenFramebuffers( 1 , &_msaaFrameBuffer );
-    glBindFramebuffer( GL_FRAMEBUFFER , _msaaFrameBuffer );
+    _gl.glGenFramebuffers( 1 , &_weightFrameBuffer );
+    _gl.glBindFramebuffer( GL_FRAMEBUFFER , _weightFrameBuffer );
 
-    glGenTextures( 1 , &_msaaTextureColor );
-    glBindTexture( GL_TEXTURE_2D_MULTISAMPLE , _msaaTextureColor );
+    glGenTextures( 1 , &_accumulationTexture );
+    glBindTexture( GL_TEXTURE_2D , _accumulationTexture );
+    glTexImage2D( GL_TEXTURE_2D , 0 , GL_RGBA32F , width( ) , height( ) , 0 ,
+                  GL_RGBA , GL_FLOAT , nullptr );
+    glTexParameteri( GL_TEXTURE_2D , GL_TEXTURE_MIN_FILTER , GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_2D , GL_TEXTURE_MAG_FILTER , GL_LINEAR );
 
-    glTexImage2DMultisample(
-      GL_TEXTURE_2D_MULTISAMPLE , SAMPLES , GL_RGB ,
-      width( ) * FRAMEBUFFER_SCALE_FACTOR ,
-      height( ) * FRAMEBUFFER_SCALE_FACTOR ,
-      GL_TRUE
-    );
+    glGenTextures( 1 , &_revealTexture );
+    glBindTexture( GL_TEXTURE_2D , _revealTexture );
+    glTexImage2D( GL_TEXTURE_2D , 0 , GL_R8 , width( ) , height( ) , 0 ,
+                  GL_RED , GL_FLOAT , nullptr );
+    glTexParameteri( GL_TEXTURE_2D , GL_TEXTURE_MIN_FILTER , GL_LINEAR );
+    glTexParameteri( GL_TEXTURE_2D , GL_TEXTURE_MAG_FILTER , GL_LINEAR );
 
-    glBindTexture( GL_TEXTURE_2D_MULTISAMPLE , 0 );
+    _gl.glFramebufferTexture2D( GL_FRAMEBUFFER , GL_COLOR_ATTACHMENT0 ,
+                                GL_TEXTURE_2D , _accumulationTexture , 0 );
+    _gl.glFramebufferTexture2D( GL_FRAMEBUFFER , GL_COLOR_ATTACHMENT1 ,
+                                GL_TEXTURE_2D , _revealTexture , 0 );
 
-    glFramebufferTexture2D( GL_FRAMEBUFFER , GL_COLOR_ATTACHMENT0 ,
-                            GL_TEXTURE_2D_MULTISAMPLE , _msaaTextureColor , 0 );
+    const GLenum transparentDrawBuffers[] = { GL_COLOR_ATTACHMENT0 ,
+                                              GL_COLOR_ATTACHMENT1 };
+    _gl.glDrawBuffers( 2 , transparentDrawBuffers );
 
-
-    glGenRenderbuffers( 1 , &_msaaRBODepth );
-    glBindRenderbuffer( GL_RENDERBUFFER , _msaaRBODepth );
-    glRenderbufferStorageMultisample(
-      GL_RENDERBUFFER , SAMPLES , GL_DEPTH_COMPONENT32 ,
-      width( ) * FRAMEBUFFER_SCALE_FACTOR ,
-      height( ) * FRAMEBUFFER_SCALE_FACTOR );
-    glBindRenderbuffer( GL_RENDERBUFFER , 0 );
-
-    glFramebufferRenderbuffer( GL_FRAMEBUFFER , GL_DEPTH_ATTACHMENT ,
-                               GL_RENDERBUFFER , _msaaRBODepth );
-
-    if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
+    if ( _gl.glCheckFramebufferStatus( GL_FRAMEBUFFER ) !=
+         GL_FRAMEBUFFER_COMPLETE )
       std::cerr << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!"
                 << std::endl;
 
-    // Generate the mid framebuffer.
+    _gl.glBindFramebuffer( GL_FRAMEBUFFER , defaultFramebufferObject( ));
 
-    glGenFramebuffers( 1 , &_midFrameBuffer );
-    glBindFramebuffer( GL_FRAMEBUFFER , _midFrameBuffer );
+    float quadVertices[] = {
+      // positions
+      -1.0f , -1.0f , 0.0f ,
+      1.0f , -1.0f , 0.0f ,
+      1.0f , 1.0f , 0.0f ,
 
-    glGenTextures( 1 , &_midTextureColor );
-    glBindTexture( GL_TEXTURE_2D , _midTextureColor );
-    glTexImage2D( GL_TEXTURE_2D , 0 , GL_RGB ,
-                  width( ) * FRAMEBUFFER_SCALE_FACTOR ,
-                  height( ) * FRAMEBUFFER_SCALE_FACTOR ,
-                  0 ,
-                  GL_RGB , GL_UNSIGNED_BYTE , nullptr );
-    glTexParameteri( GL_TEXTURE_2D , GL_TEXTURE_MIN_FILTER , GL_LINEAR );
-    glTexParameteri( GL_TEXTURE_2D , GL_TEXTURE_MAG_FILTER , GL_LINEAR );
-    glBindTexture( GL_TEXTURE_2D , 0 );
-    glFramebufferTexture2D( GL_FRAMEBUFFER , GL_COLOR_ATTACHMENT0 ,
-                            GL_TEXTURE_2D , _midTextureColor , 0 );
+      1.0f , 1.0f , 0.0f ,
+      -1.0f , 1.0f , 0.0f ,
+      -1.0f , -1.0f , 0.0f
+    };
 
-    glGenRenderbuffers( 1 , &_midRBODepth );
-    glBindRenderbuffer( GL_RENDERBUFFER , _midRBODepth );
-    glRenderbufferStorage( GL_RENDERBUFFER , GL_DEPTH_COMPONENT32 ,
-                           width( ) * FRAMEBUFFER_SCALE_FACTOR ,
-                           height( ) * FRAMEBUFFER_SCALE_FACTOR );
-    glBindRenderbuffer( GL_RENDERBUFFER , 0 );
-
-    glFramebufferRenderbuffer( GL_FRAMEBUFFER , GL_DEPTH_ATTACHMENT ,
-                               GL_RENDERBUFFER , _midRBODepth );
-
-    if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
-      std::cerr << "ERROR::FRAMEBUFFER:: Mid Framebuffer is not complete!"
-                << std::endl;
-
-    glBindFramebuffer( GL_FRAMEBUFFER , defaultFramebufferObject( ));
+    // quad VAO
+    unsigned int quadVBO;
+    _gl.glGenVertexArrays( 1 , &_quadVAO );
+    _gl.glGenBuffers( 1 , &quadVBO );
+    _gl.glBindVertexArray( _quadVAO );
+    _gl.glBindBuffer( GL_ARRAY_BUFFER , quadVBO );
+    _gl.glBufferData( GL_ARRAY_BUFFER , sizeof( quadVertices ) , quadVertices ,
+                      GL_STATIC_DRAW );
+    _gl.glEnableVertexAttribArray( 0 );
+    _gl.glVertexAttribPointer( 0 , 3 , GL_FLOAT , GL_FALSE ,
+                               3 * sizeof( float ) ,
+                               ( void* ) 0 );
+    _gl.glBindVertexArray( 0 );
   }
 
   void OpenGLWidget::_configureSimulationFrame( void )
@@ -738,39 +689,60 @@ void main()
 
       } // if player && player->isPlaying
 
-
-      glBindFramebuffer( GL_FRAMEBUFFER , _msaaFrameBuffer );
-      glViewport( 0 , 0 , width( ) * FRAMEBUFFER_SCALE_FACTOR ,
-                  height( ) * FRAMEBUFFER_SCALE_FACTOR );
-      glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-      glEnable( GL_DEPTH_TEST );
-
-      _paintPlanes( );
-      _paintParticles( );
-
       glViewport( 0 , 0 , width( ) , height( ));
 
-      // Perform MSAA
-      glBindFramebuffer( GL_READ_FRAMEBUFFER , _msaaFrameBuffer );
-      glBindFramebuffer( GL_DRAW_FRAMEBUFFER , _midFrameBuffer );
-      int w = width( ) * FRAMEBUFFER_SCALE_FACTOR;
-      int h = height( ) * FRAMEBUFFER_SCALE_FACTOR;
-      glBlitFramebuffer(
-        0 , 0 ,
-        w , h ,
-        0 , 0 ,
-        w , h ,
-        GL_COLOR_BUFFER_BIT , GL_NEAREST );
+      if ( _domainManager.isAccumulativeModeEnabled( ))
+      {
+        _gl.glBindFramebuffer( GL_FRAMEBUFFER , defaultFramebufferObject( ));
+        _gl.glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        _gl.glDisable( GL_DEPTH_TEST );
+        _gl.glDepthMask( GL_FALSE );
+        _gl.glEnable( GL_BLEND );
+        _gl.glBlendFunc( GL_SRC_ALPHA , GL_ONE_MINUS_CONSTANT_ALPHA );
+        _gl.glBlendEquation( GL_FUNC_ADD );
+        _paintPlanes( );
+        _paintParticles( );
+      }
+      else
+      {
+        _gl.glBindFramebuffer( GL_FRAMEBUFFER , _weightFrameBuffer );
+        _gl.glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        _gl.glEnable( GL_DEPTH_TEST );
 
-      // Perform super-sampling
-      glBindFramebuffer( GL_READ_FRAMEBUFFER , _midFrameBuffer );
-      glBindFramebuffer( GL_DRAW_FRAMEBUFFER , defaultFramebufferObject( ));
-      glBlitFramebuffer(
-        0 , 0 ,
-        w , h ,
-        0 , 0 ,
-        width( ) , height( ) ,
-        GL_COLOR_BUFFER_BIT , GL_LINEAR );
+
+        _gl.glDepthMask( GL_FALSE );
+        _gl.glEnable( GL_BLEND );
+        _gl.glBlendFunci( 0 , GL_ONE , GL_ONE );
+        _gl.glBlendFunci( 1 , GL_ZERO , GL_ONE_MINUS_SRC_COLOR );
+        _gl.glBlendEquation( GL_FUNC_ADD );
+
+        glm::vec4 zeroFillerVec( 0.0f );
+        glm::vec4 oneFillerVec( 1.0f );
+        _gl.glClearBufferfv( GL_COLOR , 0 , &zeroFillerVec[ 0 ] );
+        _gl.glClearBufferfv( GL_COLOR , 1 , &oneFillerVec[ 0 ] );
+
+        _paintPlanes( );
+        _paintParticles( );
+
+        // Perform blend
+
+        _gl.glDepthFunc( GL_ALWAYS );
+        _gl.glEnable( GL_BLEND );
+        _gl.glBlendFunc( GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA );
+
+        _gl.glBindFramebuffer( GL_FRAMEBUFFER , defaultFramebufferObject( ));
+        _gl.glClear(
+          GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
+
+        _screenPlaneShader->use( );
+        _gl.glActiveTexture( GL_TEXTURE0 );
+        _gl.glBindTexture( GL_TEXTURE_2D , _accumulationTexture );
+        _gl.glActiveTexture( GL_TEXTURE1 );
+        _gl.glBindTexture( GL_TEXTURE_2D , _revealTexture );
+        _gl.glBindVertexArray( _quadVAO );
+        _gl.glDrawArrays( GL_TRIANGLES , 0 , 6 );
+      }
+
     }
 
     if ( _player && _elapsedTimeSliderAcc > _sliderUpdatePeriodMicroseconds )
@@ -1055,7 +1027,7 @@ void main()
   {
     if ( _player && ( _player->isPlaying( ) || _firstFrame ))
     {
-      _domainManager.addTime( renderDelta, _player->endTime() );
+      _domainManager.addTime( renderDelta , _player->endTime( ));
       _firstFrame = false;
     }
   }
@@ -1111,35 +1083,21 @@ void main()
     //  _pickRenderer->setWindowSize( w , h );
     //}
 
-    if ( _msaaTextureColor != 0 )
+    if ( _accumulationTexture != 0 )
     {
-      int rw = width( ) * FRAMEBUFFER_SCALE_FACTOR;
-      int rh = height( ) * FRAMEBUFFER_SCALE_FACTOR;
       // Resize MSAA buffers
-      glBindTexture( GL_TEXTURE_2D_MULTISAMPLE , _msaaTextureColor );
-      glTexImage2DMultisample(
-        GL_TEXTURE_2D_MULTISAMPLE , SAMPLES , GL_RGB ,
-        rw , rh , GL_TRUE );
+      _gl.glBindTexture( GL_TEXTURE_2D , _accumulationTexture );
+      _gl.glTexImage2D( GL_TEXTURE_2D , 0 , GL_RGBA32F , width( ) , height( ) ,
+                        0 ,
+                        GL_RGBA , GL_FLOAT , nullptr );
 
-      glBindRenderbuffer( GL_RENDERBUFFER , _msaaRBODepth );
-      glRenderbufferStorageMultisample(
-        GL_RENDERBUFFER , SAMPLES , GL_DEPTH_COMPONENT32 ,
-        rw , rh );
+      _gl.glBindTexture( GL_TEXTURE_2D , _revealTexture );
+      _gl.glTexImage2D( GL_TEXTURE_2D , 0 , GL_R8 , width( ) , height( ) , 0 ,
+                        GL_RED , GL_FLOAT , nullptr );
 
-      // And mid-buffers too!
-
-      glBindTexture( GL_TEXTURE_2D , _midTextureColor );
-      glTexImage2D( GL_TEXTURE_2D , 0 , GL_RGB ,
-                    rw , rh , 0 ,
-                    GL_RGB , GL_UNSIGNED_BYTE , nullptr );
-
-      glBindRenderbuffer( GL_RENDERBUFFER , _midRBODepth );
-      glRenderbufferStorage( GL_RENDERBUFFER , GL_DEPTH_COMPONENT32 ,
-                             rw , rh );
-
-      glBindTexture( GL_TEXTURE_2D_MULTISAMPLE , 0 );
-      glBindTexture( GL_TEXTURE_2D , 0 );
-      glBindRenderbuffer( GL_RENDERBUFFER , 0 );
+      _gl.glBindTexture( GL_TEXTURE_2D_MULTISAMPLE , 0 );
+      _gl.glBindTexture( GL_TEXTURE_2D , 0 );
+      //_gl.glBindRenderbuffer( GL_RENDERBUFFER , defaultFramebufferObject( ));
     }
   }
 
