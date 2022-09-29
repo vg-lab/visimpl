@@ -47,10 +47,16 @@ namespace visimpl
     // Renders
     reto::ShaderProgram _defaultProgram;
     reto::ShaderProgram _solidProgram;
+    reto::ShaderProgram _defaultAccProgram;
+    reto::ShaderProgram _solidAccProgram;
 
-    std::shared_ptr< plab::CoverageRenderer > _currentRenderer;
-    std::shared_ptr< plab::CoverageRenderer > _defaultRenderer;
-    std::shared_ptr< plab::CoverageRenderer > _solidRenderer;
+    std::shared_ptr< plab::SimpleRenderer > _currentRenderer;
+    std::shared_ptr< plab::SimpleRenderer > _defaultRenderer;
+    std::shared_ptr< plab::SimpleRenderer > _solidRenderer;
+    std::shared_ptr< plab::SimpleRenderer > _defaultAccRenderer;
+    std::shared_ptr< plab::SimpleRenderer > _solidAccRenderer;
+
+    bool _solidMode , _accumulativeMode;
 
     // Others
     tBoundingBox _boundingBox;
@@ -64,6 +70,8 @@ namespace visimpl
       const std::shared_ptr< reto::ClippingPlane >& leftPlane ,
       const std::shared_ptr< reto::ClippingPlane >& rightPlane ,
       const std::shared_ptr< plab::ICamera >& camera );
+
+    void refreshRenderer( );
 
 #ifdef SIMIL_USE_BRION
 
@@ -97,7 +105,7 @@ namespace visimpl
 
     void setTime( float time );
 
-    void addTime( float time, float endTime );
+    void addTime( float time , float endTime );
 
     const tBoundingBox& getBoundingBox( ) const;
 
@@ -124,6 +132,8 @@ namespace visimpl
     void applyDefaultShader( );
 
     void applySolidShader( );
+
+    bool isAccumulativeModeEnabled( );
 
     void enableAccumulativeMode( bool enabled );
 

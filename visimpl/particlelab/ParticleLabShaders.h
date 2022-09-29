@@ -28,7 +28,7 @@
 namespace visimpl
 {
 
-const static std::string PARTICLE_VERTEX_SHADER = R"(#version 400
+  const static std::string PARTICLE_VERTEX_SHADER = R"(#version 330
 //#extension GL_ARB_separate_shader_objects: enable
 
 uniform mat4 viewProjectionMatrix;
@@ -117,26 +117,56 @@ void main()
 
 )";
 
-const static std::string PARTICLE_DEFAULT_FRAGMENT_SHADER = R"(
-#version 400
-in vec4 color; 
+  const static std::string PARTICLE_DEFAULT_FRAGMENT_SHADER = R"(#version 330
+in vec4 color;
 in vec2 uvCoord;
-out vec4 outputColor;
+
+layout (location = 0) out vec4 accumulation;
+layout (location = 1) out float reveal;
+
 void main()
 {
-  vec2 p = -1.0 + 2.0 * uvCoord;
-  float l = sqrt(dot(p,p));
-  l = 1.0 - clamp(l, 0.0, 1.0);
-  l *= color.a;
-  outputColor = vec4(color.rgb, l);
+    vec2 p = -1.0 + 2.0 * uvCoord;
+    float l = sqrt(dot(p, p));
+    l = 1.0 - clamp(l, 0.0, 1.0);
+    l *= color.a;
+
+    vec4 c = vec4(color.rgb, l);
+
+    float weight = clamp(pow(min(1.0, c.a * 10.0) + 0.01, 3.0) * 1e8
+    * pow(1.0 - gl_FragCoord.z * 0.9, 3.0), 1e-2, 3e3);
+
+    accumulation = vec4 (c.rgb * c.a, c.a) * weight;
+    reveal = c.a;
 }
 
 )";
 
-const static std::string PARTICLE_SOLID_FRAGMENT_SHADER = R"(#version 400
+  const static std::string PARTICLE_ACC_DEFAULT_FRAGMENT_SHADER = R"(#version 330
 in vec4 color;
 in vec2 uvCoord;
-out vec4 outputColor;
+
+out vec4 fragColor;
+
+void main()
+{
+    vec2 p = -1.0 + 2.0 * uvCoord;
+    float l = sqrt(dot(p, p));
+    l = 1.0 - clamp(l, 0.0, 1.0);
+    l *= color.a;
+
+    fragColor = vec4(color.rgb, l);
+}
+
+)";
+
+  const static std::string PARTICLE_SOLID_FRAGMENT_SHADER = R"(#version 330
+in vec4 color;
+in vec2 uvCoord;
+
+layout (location = 0) out vec4 accumulation;
+layout (location = 1) out float reveal;
+
 void main()
 {
   vec2 p = -1.0 + 2.0 * uvCoord;
@@ -146,10 +176,37 @@ void main()
   if( l > 0.8 )
     discard;
 
-  outputColor = vec4(color.rgb, 1.0f);
+  vec4 c = vec4(color.rgb, 1.0f);
+
+  float weight = clamp(pow(min(1.0, c.a * 10.0) + 0.01, 3.0) * 1e8
+  * pow(1.0 - gl_FragCoord.z * 0.9, 3.0), 1e-2, 3e3);
+
+  accumulation = vec4 (c.rgb * c.a, c.a) * weight;
+  reveal = c.a;
 })";
 
-const static std::string PICK_VERTEX_SHADER = R"(#version 400
+  const static std::string PARTICLE_ACC_SOLID_FRAGMENT_SHADER = R"(#version 330
+in vec4 color;
+in vec2 uvCoord;
+
+out vec4 fragColor;
+
+void main()
+{
+    vec2 p = -1.0 + 2.0 * uvCoord;
+    float l = sqrt(dot(p,p));
+    l = clamp(l, 0.0, 1.0);
+
+    if( l > 0.8 )
+      discard;
+
+    fragColor = vec4(color.rgb, 1.0f);
+}
+
+)";
+
+
+  const static std::string PICK_VERTEX_SHADER = R"(#version 330
 #extension GL_ARB_separate_shader_objects: enable
 
 uniform mat4 modelViewProjM;
@@ -189,7 +246,7 @@ void main()
   id = gl_InstanceID;
 })";
 
-const static std::string PICK_FRAGMENT_SHADER = R"(#version 400
+  const static std::string PICK_FRAGMENT_SHADER = R"(#version 330
 
 uniform float radiusThreshold;
 
@@ -222,8 +279,7 @@ void main( )
   outputColor = vec4(cc, 1.0);
 })";
 
-const static std::string SHADER_PLANE_VERTEX = R"(
-#version 400
+  const static std::string SHADER_PLANE_VERTEX = R"(#version 330
 
 in vec3 inPos;
 
@@ -243,8 +299,7 @@ void main( )
 )";
 
 
-const static std::string SHADER_PLANE_FRAGMENT = R"(
-#version 400
+  const static std::string SHADER_PLANE_FRAGMENT = R"(#version 330
 
 in vec4 outColor;
 out vec4 outputColor;
@@ -256,6 +311,71 @@ void main( )
   
 }
 
+)";
+
+
+  const static std::string SHADER_SCREEN_VERTEX = R"(#version 330
+
+// shader inputs
+layout (location = 0) in vec3 position;
+
+void main()
+{
+	gl_Position = vec4(position, 1.0f);
+}
+)";
+
+  const static std::string SHADER_SCREEN_FRAGMENT = R"(#version 330
+
+// shader outputs
+layout (location = 0) out vec4 frag;
+
+// color accumulation buffer
+uniform sampler2D accumulation;
+
+// revealage threshold buffer
+uniform sampler2D reveal;
+
+// epsilon number
+const float EPSILON = 0.00001f;
+
+// caluclate floating point numbers equality accurately
+bool isApproximatelyEqual(float a, float b)
+{
+	return abs(a - b) <= (abs(a) < abs(b) ? abs(b) : abs(a)) * EPSILON;
+}
+
+// get the max value between three values
+float max3(vec3 v)
+{
+	return max(max(v.x, v.y), v.z);
+}
+
+void main()
+{
+	// fragment coordination
+	ivec2 coords = ivec2(gl_FragCoord.xy);
+
+	// fragment revealage
+	float revealage = texelFetch(reveal, coords, 0).r;
+
+	// save the blending and color texture fetch cost if there is not a transparent fragment
+	if (isApproximatelyEqual(revealage, 1.0f))
+		discard;
+
+	// fragment color
+	vec4 accumulation = texelFetch(accumulation, coords, 0);
+
+	// suppress overflow
+	if (isinf(max3(abs(accumulation.rgb))))
+		accumulation.rgb = vec3(accumulation.a);
+
+	// prevent floating point precision bug
+	vec3 average_color = accumulation.rgb / max(accumulation.a, EPSILON);
+
+	// blend pixels
+	frag = vec4(average_color, 1.0f - revealage);
+}
 )";
 
 }

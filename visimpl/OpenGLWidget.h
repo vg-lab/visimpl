@@ -50,6 +50,7 @@
 #include <plab/plab.h>
 
 #include <sstream>
+#include <QOpenGLFunctions_4_0_Core>
 
 #include "types.h"
 #include "render/Plane.h"
@@ -157,8 +158,7 @@ namespace visimpl
     AB_REPEAT
   } TPlaybackMode;
 
-  class OpenGLWidget
-    : public QOpenGLWidget , public QOpenGLFunctions_3_3_Core
+  class OpenGLWidget : public QOpenGLWidget
   {
   Q_OBJECT;
 
@@ -443,6 +443,8 @@ namespace visimpl
 
 #endif
 
+    QOpenGLFunctions_4_0_Core _gl;
+
     QLabel* _fpsLabel;
     QLabel* _labelCurrentTime;
     bool _showFps;
@@ -481,8 +483,8 @@ namespace visimpl
     reto::ShaderProgram* _shaderClippingPlanes;
     simil::SpikesPlayer* _player;
 
-    std::shared_ptr<reto::ClippingPlane> _clippingPlaneLeft;
-    std::shared_ptr<reto::ClippingPlane> _clippingPlaneRight;
+    std::shared_ptr< reto::ClippingPlane > _clippingPlaneLeft;
+    std::shared_ptr< reto::ClippingPlane > _clippingPlaneRight;
     evec3 _planesCenter;
     evec3 _planeNormalLeft;
     evec3 _planeNormalRight;
@@ -570,13 +572,10 @@ namespace visimpl
     // Render to texture
     reto::ShaderProgram* _screenPlaneShader;
 
-    unsigned int _msaaFrameBuffer;
-    unsigned int _msaaTextureColor;
-    unsigned int _msaaRBODepth;
-
-    unsigned int _midFrameBuffer;
-    unsigned int _midTextureColor;
-    unsigned int _midRBODepth;
+    unsigned int _quadVAO;
+    unsigned int _weightFrameBuffer;
+    unsigned int _accumulationTexture;
+    unsigned int _revealTexture;
   };
 } // namespace visimpl
 
