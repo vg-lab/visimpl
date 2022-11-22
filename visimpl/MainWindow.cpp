@@ -495,7 +495,7 @@ namespace visimpl
   {
     auto path = QFileDialog::getOpenFileName(
       this , tr( "Open a H5 network file" ) , _lastOpenedNetworkFileName ,
-      tr( "hdf5 ( *.h5);; All files (*)" ) , nullptr ,
+      tr( "hdf5 (*.h5 *.hdf5);; All files (*)" ) , nullptr ,
       QFileDialog::DontUseNativeDialog );
 
     if ( path.isEmpty( )) return;
@@ -505,7 +505,7 @@ namespace visimpl
     path =
       QFileDialog::getOpenFileName( this , tr( "Open a H5 activity file" ) ,
                                     path ,
-                                    tr( "hdf5 ( *.h5);; All files (*)" ) ,
+                                    tr( "hdf5 (*.h5 *.hdf5);; All files (*)" ) ,
                                     nullptr ,
                                     QFileDialog::DontUseNativeDialog );
 
@@ -537,7 +537,8 @@ namespace visimpl
       {
         _subsetEvents->loadJSON( filePath );
       }
-      else if ( eventsFile.suffix( ).toLower( ).compare( "h5" ) == 0 )
+      else if ( eventsFile.suffix( ).toLower( ).compare( "h5" ) == 0 ||
+                eventsFile.suffix( ).toLower( ).compare( "hdf5" ) == 0)
       {
         _subsetEvents->loadH5( filePath );
         h5 = true;
@@ -573,7 +574,7 @@ namespace visimpl
     QString filePath = QFileDialog::getOpenFileName(
       this , tr( "Open file containing subsets/events data" ) ,
       _lastOpenedSubsetsFileName ,
-      tr( "JSON (*.json);; hdf5 ( *.h5);; All files (*)" ) ,
+      tr( "JSON (*.json);; hdf5 (*.h5 *.hdf5);; All files (*)" ) ,
       nullptr , QFileDialog::DontUseNativeDialog );
 
     if ( !filePath.isEmpty( ))

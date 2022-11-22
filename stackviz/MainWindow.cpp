@@ -243,7 +243,7 @@ void MainWindow::openSubsetEventFile(const std::string &filePath, bool append)
       _subsetEventManager->loadJSON(filePath);
     }
     else
-      if (filePath.find("h5") != std::string::npos)
+      if (filePath.find("h5") != std::string::npos || filePath.find("hdf5") != std::string::npos)
       {
         _subsetEventManager->loadH5(filePath);
         _autoCalculateCorrelations = true;
@@ -348,7 +348,7 @@ void MainWindow::openSubsetEventsFileThroughDialog( void )
     const QString eventsFilename = QFileDialog::getOpenFileName(this,
               tr( "Open file containing subsets/events data" ),
               _lastOpenedSubsetsFileName,
-              tr( "JSON (*.json);; hdf5 (*.h5);; All files (*)" ),
+              tr( "JSON (*.json);; hdf5 (*.h5 *.hdf5);; All files (*)" ),
               nullptr, QFileDialog::DontUseNativeDialog );
 
   if( !eventsFilename.isEmpty( ))
@@ -1023,16 +1023,16 @@ void MainWindow::aboutDialog( void )
 
 void MainWindow::openH5FilesThroughDialog(void)
 {
-  const auto networkFilename = QFileDialog::getOpenFileName(this, tr("Open a H5 network file"),
+  const auto networkFilename = QFileDialog::getOpenFileName(this, tr("Open a HDF5 network file"),
                                                             _lastOpenedFileNamePath,
-                                                            tr("hdf5 ( *.h5);; All files (*)"), nullptr,
+                                                            tr("hdf5 ( *.h5 *.hdf5);; All files (*)"), nullptr,
                                                             QFileDialog::DontUseNativeDialog);
 
   if (networkFilename.isEmpty()) return;
 
-  const auto activityFilename = QFileDialog::getOpenFileName(this, tr("Open a H5 activity file"),
+  const auto activityFilename = QFileDialog::getOpenFileName(this, tr("Open a HDF5 activity file"),
                                                              _lastOpenedFileNamePath,
-                                                             tr("hdf5 ( *.h5);; All files (*)"),
+                                                             tr("hdf5 ( *.h5 *.hdf5);; All files (*)"),
                                                              nullptr, QFileDialog::DontUseNativeDialog);
 
   if (activityFilename.isEmpty()) return;
