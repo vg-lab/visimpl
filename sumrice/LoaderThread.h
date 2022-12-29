@@ -98,6 +98,11 @@ class SUMRICE_API LoaderThread
      */
     simil::TDataType type() const;
 
+    /** \brief Returns the name of the file loaded.
+     *
+     */
+    std::string filename() const;
+
 #ifdef SIMIL_WITH_REST_API
     /** \brief Sets the REST loader protocol configuration.
      * \param[in] o REST protocol configuration.

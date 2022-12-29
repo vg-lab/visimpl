@@ -207,4 +207,10 @@ void LoaderThread::setRESTConfiguration(const simil::LoaderRestData::Configurati
     m_rest->setConfiguration(m_restConfig);
   }
 }
+
 #endif
+
+std::string LoaderThread::filename() const
+{
+  return m_arg1;
+}

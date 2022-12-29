@@ -47,8 +47,8 @@ namespace visimpl
     colors.emplace_back( 1.0f , glm::vec4( 0.0f , 0.0f , 1.0f , 0.5f ));
 
     TSizeFunction sizes;
-    sizes.emplace_back( 0.0f , 8.0f );
-    sizes.emplace_back( 1.0f , 6.0f );
+    sizes.emplace_back( 0.0f , 6.0f );
+    sizes.emplace_back( 1.0f , 18.0f );
 
     _selectionModel = std::make_shared< StaticGradientModel >(
       camera , leftPlane , rightPlane , sizes , colors ,
@@ -326,6 +326,9 @@ namespace visimpl
       _currentRenderer ,
       _selectionModel->isClippingEnabled( ));
 
+    const TSizeFunction defaultSizes{ { 0.0f , 50.0f }, { 1.0f , 15.0f } };
+
+    group->getModel()->setParticleSize(defaultSizes);
     group->getModel( )->setAccumulativeMode( _accumulativeMode );
 
     std::vector< uint32_t > ids;

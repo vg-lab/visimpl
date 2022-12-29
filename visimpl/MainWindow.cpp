@@ -1581,6 +1581,18 @@ namespace visimpl
 
   void MainWindow::setCircuitSizeScaleFactor( vec3 scaleFactor )
   {
+    _circuitScaleX->blockSignals( true );
+    _circuitScaleY->blockSignals( true );
+    _circuitScaleZ->blockSignals( true );
+
+    _circuitScaleX->setValue(scaleFactor.x);
+    _circuitScaleY->setValue(scaleFactor.y);
+    _circuitScaleZ->setValue(scaleFactor.z);
+
+    _circuitScaleX->blockSignals( true );
+    _circuitScaleY->blockSignals( true );
+    _circuitScaleZ->blockSignals( true );
+
     _openGLWidget->circuitScaleFactor( scaleFactor );
   }
 
@@ -1608,12 +1620,7 @@ namespace visimpl
 
   void MainWindow::updateCircuitScaleValue( void )
   {
-    auto scale = _openGLWidget->circuitScaleFactor( );
-
-    scale.x = _circuitScaleX->value( );
-    scale.y = _circuitScaleY->value( );
-    scale.z = _circuitScaleZ->value( );
-
+    vec3 scale{ _circuitScaleX->value( ), _circuitScaleY->value( ), _circuitScaleZ->value( )};
     _openGLWidget->circuitScaleFactor( scale );
   }
 
@@ -1962,7 +1969,8 @@ namespace visimpl
 
   void MainWindow::addGroupControls( std::shared_ptr< VisualGroup > group ,
                                      unsigned int currentIndex ,
-                                     unsigned int size )
+                                     unsigned int size,
+                                     QColor groupColor)
   {
     QWidget* container = new QWidget( );
     auto itemLayout = new QHBoxLayout( container );
@@ -1970,15 +1978,27 @@ namespace visimpl
     container->setProperty( GROUP_NAME_ ,
                             QString::fromStdString( group->name( )));
 
-    const auto colors = _openGLWidget->colorPalette( ).colors( );
-    const auto paletteIdx = currentIndex % colors.size( );
-    const auto color = colors[ paletteIdx ].toRgb( );
-    const auto variations = generateColorPair( color );
+    if(groupColor == QColor{0,0,0})
+    {
+      const auto colors = _openGLWidget->colorPalette( ).colors( );
+      const auto paletteIdx = currentIndex % colors.size( );
+      const auto color = colors[ paletteIdx ].toRgb( );
+      const auto variations = generateColorPair( color );
 
-    TTransferFunction colorVariation;
-    colorVariation.push_back( std::make_pair( 0.0f , variations.first ));
-    colorVariation.push_back( std::make_pair( 1.0f , variations.second ));
-    group->colorMapping( colorVariation );
+      TTransferFunction colorVariation;
+      colorVariation.push_back( std::make_pair( 0.0f , variations.first ));
+      colorVariation.push_back( std::make_pair( 1.0f , variations.second ));
+      group->colorMapping( colorVariation );
+    }
+    else
+    {
+      const auto variations = generateColorPair( groupColor );
+
+      TTransferFunction colorVariation;
+      colorVariation.push_back( std::make_pair( 0.0f , variations.first ));
+      colorVariation.push_back( std::make_pair( 1.0f , variations.second ));
+      group->colorMapping( colorVariation );
+    }
 
     auto tfWidget = new TransferFunctionWidget( container );
     tfWidget->setColorPoints( group->colorMapping( ));
@@ -1991,8 +2011,11 @@ namespace visimpl
 
     const auto presetName = QString( "Group selection %1" ).arg( currentIndex );
     QGradientStops stops;
-    stops << qMakePair( 0.0 , variations.first )
-          << qMakePair( 1.0 , variations.second );
+
+    const auto mapping = group->colorMapping();
+    auto addColorMapping = [&stops](const visimpl::TTFColor &c){ stops << qMakePair(c.first, c.second); };
+    std::for_each(mapping.cbegin(), mapping.cend(), addColorMapping);
+
     tfWidget->addPreset( TransferFunctionWidget::Preset( presetName , stops ));
 
     connect( tfWidget , SIGNAL( colorChanged( )) ,
@@ -2103,8 +2126,11 @@ namespace visimpl
       const auto group = _domainManager->createGroup(
         filteredGIDs , _openGLWidget->getGidPositions( ) , groupName );
 
+      const auto color = _subsetEvents->getSubsetColor( groupName );
+      QColor groupColor = QColor::fromRgbF(color.x(), color.y(), color.z());
+
       addGroupControls( group , _domainManager->getGroupAmount( ) - 1 ,
-                        filteredGIDs.size( ));
+                        filteredGIDs.size( ), groupColor);
 
       visimpl::Selection selection;
       selection.name = groupName;
@@ -2479,9 +2505,12 @@ namespace visimpl
 
   void MainWindow::onDataLoaded( )
   {
+    setWindowTitle("SimPart");
+
     if ( !m_loader ) return;
 
     const auto error = m_loader->errors( );
+    const auto filename = QString::fromStdString(m_loader->filename());
     if ( !error.empty( ))
     {
       closeLoadingDialog( );
@@ -2508,6 +2537,8 @@ namespace visimpl
 
         player = new simil::SpikesPlayer( );
         player->LoadData( spikeData );
+
+        _subsetEvents = spikeData->subsetsEvents();
 
         m_loader = nullptr;
       }
@@ -2558,6 +2589,9 @@ namespace visimpl
       m_loaderDialog->setSpikesValue( player->spikesSize( ));
       m_loaderDialog->repaint( );
     }
+
+    setWindowTitle("SimPart - " + filename);
+
     _openGLWidget->setPlayer( player , dataType );
     _modeSelectionWidget->setCurrentIndex( 0 );
 
@@ -2621,8 +2655,6 @@ namespace visimpl
     {
       bool ok = false;
       auto groupName = button->property( GROUP_NAME_ ).toString( );
-
-      if ( !ok ) return;
       auto group = _domainManager->getGroup( groupName.toStdString( ));
 
       groupName = QInputDialog::getText( this , tr( "Group Name" ) ,
@@ -3332,6 +3364,8 @@ namespace visimpl
       name = QInputDialog::getText( this , title , tr( "Position name:" ) ,
                                     QLineEdit::Normal , tr( "New position" ) ,
                                     &ok );
+
+      if(!ok) return; // user cancelled
 
       if ( ok && !name.isEmpty( ))
       {

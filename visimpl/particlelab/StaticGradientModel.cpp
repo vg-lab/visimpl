@@ -163,7 +163,7 @@ namespace visimpl
       glUniform1fv( cache.getLocation( "gradientTimes" ) , maxSize ,
                     timeStamps );
       glUniform4fv( cache.getLocation( "gradientColors" ) , maxSize ,
-                    ( float* ) colors );
+                    (float*)colors );
     }
 
     glUniform1f( cache.getLocation( "particlePreVisibility" ) ,
