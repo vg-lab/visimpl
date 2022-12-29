@@ -69,7 +69,7 @@ namespace visimpl
   const InitialConfig _initialConfigSimBlueConfig =
     std::make_tuple( 0.5f , 20.0f , 20.0f , 1.0f );
   const InitialConfig _initialConfigSimH5 =
-    std::make_tuple( 0.005f , 20.0f , 0.1f , 500.0f );
+    std::make_tuple( 0.1f , 20.0f , 1.5f , 5.0f );
   const InitialConfig _initialConfigSimCSV =
     //std::make_tuple( 0.005f, 20.0f, 0.1f, 50000.0f );
     std::make_tuple( 0.2f , 2.0f , 1.5f , 5.0f );
@@ -789,9 +789,8 @@ namespace visimpl
       _frameCount = 0;
     }
 
-    update( );
-    //if ( _idleUpdate && _player )
-    //update( );
+    if ( _idleUpdate && _player )
+     update( );
   }
 
   void
@@ -949,7 +948,7 @@ namespace visimpl
   {
     if ( _homePosition.isEmpty( ))
     {
-      _focusOn( _boundingBoxHome );
+      _focusOn( _domainManager.getBoundingBox() );
       _homePosition = cameraPosition( ).toString( );
     }
 
@@ -1009,6 +1008,8 @@ namespace visimpl
     _scaleFactor = scale_;
 
     _scaleFactorExternal = true;
+
+    _homePosition.clear(); // reset home position to force re-computation.
 
     if ( update && _player )
     {

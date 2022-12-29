@@ -36,12 +36,14 @@ namespace visimpl
   , _subsetEventManager( nullptr )
   , _buttonAccept( nullptr )
   , _buttonCancel( nullptr )
+  , _selectGroups{nullptr}
+  , _selectConnections{nullptr}
   {
     init( );
 
     setWindowIcon(QIcon(tr(":/visimpl.png")));
     setWindowTitle(tr("Import Subsets"));
-    setMinimumSize(400, 400);
+    setMinimumSize(600, 400);
   }
 
   void SubsetImporter::init( void )
@@ -75,20 +77,30 @@ namespace visimpl
 
     _buttonAccept = new QPushButton( tr("Accept") );
     _buttonCancel = new QPushButton( tr("Cancel") );
+    _selectGroups = new QPushButton(tr("Select groups"));
+    _selectConnections = new QPushButton(tr("Select connections"));
+    _selectAll = new QPushButton(tr("Select all"));
 
     auto line = new QFrame( );
     line->setFrameShape( QFrame::HLine );
     line->setFrameShadow( QFrame::Sunken );
 
-    layoutBottom->addWidget( line, 0, 0, 1, 5 );
-    layoutBottom->addWidget( _buttonCancel, 1, 1, 1, 1 );
-    layoutBottom->addWidget( _buttonAccept, 1, 3, 1, 1 );
+    layoutBottom->addWidget(_selectGroups, 0,0,1,2);
+    layoutBottom->addWidget(_selectConnections, 0,2,1,2);
+    layoutBottom->addWidget(_selectAll, 0,4,1,2);
+    layoutBottom->addWidget( line, 1, 0, 1, 6 );
+    layoutBottom->addWidget( _buttonCancel, 2, 1, 1, 2 );
+    layoutBottom->addWidget( _buttonAccept, 2, 3, 1, 2 );
 
     layoutUpper->addWidget( gbSubsets );
     layoutUpper->addWidget( foot );
 
     connect( _buttonCancel, SIGNAL( clicked( void )), this, SLOT( reject()));
     connect( _buttonAccept, SIGNAL( clicked( void )), this, SLOT( accept( )));
+    connect( _selectGroups, SIGNAL( clicked( void )), this, SLOT( selectSubsets()));
+    connect( _selectConnections, SIGNAL( clicked( void )), this, SLOT( selectSubsets( )));
+    connect( _selectAll, SIGNAL( clicked( void )), this, SLOT( selectSubsets( )));
+
   }
 
   void SubsetImporter::reload( const simil::SubsetEventManager* subsetEventMngr )
@@ -117,7 +129,7 @@ namespace visimpl
       checkBox->setChecked( true );
 
       container->setLayout( layout );
-      container->setFixedHeight(30);
+      container->setFixedHeight(40);
       layout->addWidget( checkBox, 0, 0, 1, 2 );
       layout->addWidget( label, 0, 2, 1, 1 );
 
@@ -149,4 +161,37 @@ namespace visimpl
 
     return result;
   }
+
+  void SubsetImporter::selectSubsets()
+  {
+    auto button = qobject_cast<QPushButton *>(sender());
+
+    if(button == _selectGroups)
+    {
+      for(auto subset: _subsets)
+      {
+        auto isGroup = subset.first.find("group") != std::string::npos;
+        std::get< sl_checkbox >( subset.second )->setChecked(isGroup);
+      }
+    }
+    else
+    {
+      if(button == _selectConnections)
+      {
+        for(auto subset: _subsets)
+        {
+          auto isConnection = subset.first.find("connection") != std::string::npos;
+          std::get< sl_checkbox >( subset.second )->setChecked(isConnection);
+        }
+      }
+      else
+      {
+        for(auto subset: _subsets)
+        {
+          std::get< sl_checkbox >( subset.second )->setChecked(true);
+        }
+      }
+    }
+  }
+
 }

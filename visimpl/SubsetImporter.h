@@ -53,6 +53,9 @@ namespace visimpl
 
     const std::vector< std::string > selectedSubsets( void ) const;
 
+  protected slots:
+    void selectSubsets();
+
   protected:
     const simil::SubsetEventManager* _subsetEventManager;
 
@@ -61,6 +64,9 @@ namespace visimpl
 
     QPushButton* _buttonAccept;
     QPushButton* _buttonCancel;
+    QPushButton* _selectGroups;
+    QPushButton* _selectConnections;
+    QPushButton* _selectAll;
 
     QListWidget* _listSubsets;
 

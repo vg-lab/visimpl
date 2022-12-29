@@ -223,7 +223,8 @@ namespace visimpl
 
     void addGroupControls( std::shared_ptr< VisualGroup > group ,
                            unsigned int index ,
-                           unsigned int size );
+                           unsigned int size,
+                           QColor groupColor = QColor{0,0,0});
 
     void clearGroups( void );
 
