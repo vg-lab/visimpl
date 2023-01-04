@@ -23,6 +23,7 @@ namespace visimpl
     bool _particleVisibility;
     bool _clippingEnabled;
     float _time;
+    float _decay;
 
   public:
 
@@ -34,7 +35,8 @@ namespace visimpl
       const TColorVec& gradient ,
       bool particleVisibility ,
       bool clippingEnabled ,
-      float time );
+      float time,
+      float decay);
 
     const std::shared_ptr< reto::ClippingPlane >& getLeftPlane( ) const;
 
@@ -67,6 +69,10 @@ namespace visimpl
     void setTime( float time );
 
     void addTime( float time, float endTime );
+
+    float getDecay( ) const;
+
+    void setDecay( float decay );
 
     void uploadDrawUniforms( plab::UniformCache& cache ) const override;
 

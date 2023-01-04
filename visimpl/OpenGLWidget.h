@@ -366,7 +366,7 @@ namespace visimpl
   protected:
     void _resolveFlagsOperations( void );
 
-    void _updateParticles( float renderDelta );
+    void _updateParticles( );
 
     void _paintParticles( void );
 
@@ -530,12 +530,10 @@ namespace visimpl
     float _simPeriod;
     float _simPeriodMicroseconds;
     float _renderPeriod;
-    float _renderPeriodMicroseconds;
 
     float _sliderUpdatePeriod;
     float _sliderUpdatePeriodMicroseconds;
 
-    float _elapsedTimeRenderAcc;
     float _elapsedTimeSliderAcc;
     float _elapsedTimeSimAcc;
 

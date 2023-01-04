@@ -40,7 +40,7 @@ namespace visimpl
     , _cluster( std::make_shared< plab::Cluster< NeuronParticle >>( ))
     , _model( std::make_shared< StaticGradientModel >(
       camera , leftPlane , rightPlane , TSizeFunction( ) , TColorVec( ) ,
-      true , enableClipping , 0.0f ))
+      true , enableClipping , 0.0f, 1.0f ))
     , _active( true )
   {
     _cluster->setModel( _model );
@@ -59,7 +59,7 @@ namespace visimpl
     , _cluster( std::make_shared< plab::Cluster< NeuronParticle >>( ))
     , _model( std::make_shared< StaticGradientModel >(
       camera , leftPlane , rightPlane , TSizeFunction( ) ,
-      TColorVec( ) , true , enableClipping , 0.0f ))
+      TColorVec( ) , true , enableClipping , 0.0f, 1.5f ))
     , _active( true )
   {
     TColorVec vec;

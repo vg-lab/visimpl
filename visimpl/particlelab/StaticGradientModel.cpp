@@ -23,7 +23,8 @@ namespace visimpl
     const TColorVec& gradient ,
     bool particleVisibility ,
     bool clippingEnabled ,
-    float time )
+    float time,
+    float decay)
     : plab::CameraModel( camera )
     , _leftPlane( leftPlane )
     , _rightPlane( rightPlane )
@@ -32,6 +33,7 @@ namespace visimpl
     , _particleVisibility( particleVisibility )
     , _clippingEnabled( clippingEnabled )
     , _time( time )
+    , _decay( decay )
   {
 
   }
@@ -115,6 +117,16 @@ namespace visimpl
     _time = std::fmod( _time + time , endTime );
   }
 
+  float StaticGradientModel::getDecay( ) const
+  {
+    return _decay;
+  }
+
+  void StaticGradientModel::setDecay( float decay )
+  {
+    _decay = decay;
+  }
+
   void
   StaticGradientModel::uploadDrawUniforms( plab::UniformCache& cache ) const
   {
@@ -124,6 +136,7 @@ namespace visimpl
     CameraModel::uploadDrawUniforms( cache );
 
     glUniform1f( cache.getLocation( "time" ) , _time );
+    glUniform1f( cache.getLocation( "decay" ) , _decay );
 
 
     {
