@@ -26,19 +26,19 @@ namespace visimpl
     , _solidRenderer( nullptr )
     , _solidMode( false )
     , _accumulativeMode( false )
-    , _decay( 0.0f )
+    , _decay( 1.5f )
   {
   }
 
   void DomainManager::initRenderers(
-    const std::shared_ptr< reto::ClippingPlane >& leftPlane ,
-    const std::shared_ptr< reto::ClippingPlane >& rightPlane ,
-    const std::shared_ptr< plab::ICamera >& camera )
+    const std::shared_ptr <reto::ClippingPlane>& leftPlane ,
+    const std::shared_ptr <reto::ClippingPlane>& rightPlane ,
+    const std::shared_ptr <plab::ICamera>& camera )
   {
     _camera = camera;
 
     _selectionCluster =
-      std::make_shared< plab::Cluster< NeuronParticle >>( );
+      std::make_shared < plab::Cluster < NeuronParticle >> ( );
 
     TColorVec colors;
     colors.emplace_back( 0.0f , glm::vec4( 0.0f , 1.0f , 0.0f , 0.2f ));
@@ -52,7 +52,7 @@ namespace visimpl
 
     _selectionModel = std::make_shared< StaticGradientModel >(
       camera , leftPlane , rightPlane , sizes , colors ,
-      true , false , 0.0f );
+      true , false , 0.0f , _decay );
 
     _defaultProgram.loadFromText(
       visimpl::PARTICLE_VERTEX_SHADER ,
@@ -175,13 +175,13 @@ namespace visimpl
 
 #endif
 
-  std::shared_ptr< plab::Cluster< NeuronParticle >>
+  std::shared_ptr <plab::Cluster< NeuronParticle >>
   DomainManager::getSelectionCluster( ) const
   {
     return _selectionCluster;
   }
 
-  const std::shared_ptr< StaticGradientModel >&
+  const std::shared_ptr <StaticGradientModel>&
   DomainManager::getSelectionModel( ) const
   {
     return _selectionModel;
@@ -192,19 +192,19 @@ namespace visimpl
     return _groupClusters.size( );
   }
 
-  const std::map< std::string , std::shared_ptr< VisualGroup>>&
+  const std::map <std::string , std::shared_ptr< VisualGroup>>&
   DomainManager::getGroups( ) const
   {
     return _groupClusters;
   }
 
-  std::shared_ptr< VisualGroup >
+  std::shared_ptr <VisualGroup>
   DomainManager::getGroup( const std::string& name ) const
   {
     return _groupClusters.at( name );
   }
 
-  const std::map< std::string , std::shared_ptr< VisualGroup>>&
+  const std::map <std::string , std::shared_ptr< VisualGroup>>&
   DomainManager::getAttributeClusters( ) const
   {
     return _attributeClusters;
@@ -228,6 +228,15 @@ namespace visimpl
   void DomainManager::setDecay( float decay )
   {
     _decay = decay;
+    _selectionModel->setDecay( decay );
+    for ( const auto& item: _groupClusters )
+    {
+      item.second->getModel( )->setDecay( decay );
+    }
+    for ( const auto& item: _attributeClusters )
+    {
+      item.second->getModel( )->setDecay( decay );
+    }
   }
 
   void DomainManager::setTime( float time )
@@ -269,7 +278,7 @@ namespace visimpl
     glm::vec3 min( maxLimit , maxLimit , maxLimit );
     glm::vec3 max( minLimit , minLimit , minLimit );
 
-    std::vector< NeuronParticle > particles;
+    std::vector <NeuronParticle> particles;
     for ( const auto& gid: _selectionGids )
     {
       NeuronParticle p;
@@ -299,7 +308,7 @@ namespace visimpl
     glm::vec3 min( maxLimit , maxLimit , maxLimit );
     glm::vec3 max( minLimit , minLimit , minLimit );
 
-    std::vector< NeuronParticle > particles;
+    std::vector <NeuronParticle> particles;
     for ( const auto& gid: _selectionGids )
     {
       NeuronParticle p;
@@ -315,7 +324,7 @@ namespace visimpl
     _selectionCluster->setParticles( particles );
   }
 
-  std::shared_ptr< VisualGroup > DomainManager::createGroup(
+  std::shared_ptr <VisualGroup> DomainManager::createGroup(
     const GIDUSet& gids , const tGidPosMap& positions ,
     const std::string& name )
   {
@@ -326,13 +335,14 @@ namespace visimpl
       _currentRenderer ,
       _selectionModel->isClippingEnabled( ));
 
-    const TSizeFunction defaultSizes{ { 0.0f , 50.0f }, { 1.0f , 15.0f } };
+    const TSizeFunction defaultSizes{{ 0.0f , 50.0f } ,
+                                     { 1.0f , 15.0f }};
 
-    group->getModel()->setParticleSize(defaultSizes);
+    group->getModel( )->setParticleSize( defaultSizes );
     group->getModel( )->setAccumulativeMode( _accumulativeMode );
 
-    std::vector< uint32_t > ids;
-    std::vector< NeuronParticle > particles;
+    std::vector <uint32_t> ids;
+    std::vector <NeuronParticle> particles;
 
     std::copy(
       gids.cbegin( ) , gids.cend( ) ,
@@ -352,7 +362,7 @@ namespace visimpl
     return group;
   }
 
-  std::shared_ptr< VisualGroup >
+  std::shared_ptr <VisualGroup>
   DomainManager::createGroupFromSelection(
     const tGidPosMap& positions , const std::string& name )
   {
@@ -365,7 +375,7 @@ namespace visimpl
 
     group->getModel( )->setAccumulativeMode( _accumulativeMode );
 
-    std::vector< NeuronParticle > particles;
+    std::vector <NeuronParticle> particles;
     for ( const auto& gid: _selectionGids )
     {
       NeuronParticle p;
@@ -389,7 +399,7 @@ namespace visimpl
   }
 
   void DomainManager::selectAttribute(
-    const std::vector< QColor >& colors ,
+    const std::vector <QColor>& colors ,
     const tGidPosMap& positions ,
     tNeuronAttributes attribute )
   {
@@ -420,7 +430,7 @@ namespace visimpl
       colorVariation.push_back( std::make_pair( 1.0f , variations.second ));
       group->colorMapping( colorVariation );
 
-      std::vector< NeuronParticle > particles;
+      std::vector <NeuronParticle> particles;
       for ( const auto& gid: gids )
       {
         NeuronParticle p;

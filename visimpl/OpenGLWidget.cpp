@@ -142,9 +142,7 @@ namespace visimpl
     , _simPeriod( 0.0f )
     , _simPeriodMicroseconds( 0.0f )
     , _renderPeriod( 0.0f )
-    , _renderPeriodMicroseconds( 0.0f )
     , _sliderUpdatePeriod( 0.25f )
-    , _elapsedTimeRenderAcc( 0.0f )
     , _elapsedTimeSliderAcc( 0.0f )
     , _elapsedTimeSimAcc( 0.0f )
     , _alphaBlendingAccumulative( false )
@@ -170,7 +168,6 @@ namespace visimpl
 
     _maxFPS = 60.0f;
     _renderPeriod = 1.0f / _maxFPS;
-    _renderPeriodMicroseconds = _renderPeriod * 1000000;
 
     _sbsInvTimePerStep = 1.0 / _sbsTimePerStep;
 
@@ -616,7 +613,6 @@ namespace visimpl
     if ( _player && _player->isPlaying( ))
     {
       _elapsedTimeSimAcc += elapsedMicroseconds;
-      _elapsedTimeRenderAcc += elapsedMicroseconds;
       _elapsedTimeSliderAcc += elapsedMicroseconds;
     }
     _frameCount++;
@@ -663,29 +659,7 @@ namespace visimpl
             break;
         }
 
-        if ( _elapsedTimeRenderAcc >= _renderPeriodMicroseconds )
-        {
-          double renderDelta = 0;
-
-          switch ( _playbackMode )
-          {
-            case TPlaybackMode::CONTINUOUS:
-              renderDelta =
-                _elapsedTimeRenderAcc * _simTimePerSecond * 0.000001;
-              break;
-            case TPlaybackMode::STEP_BY_STEP:
-              _configureStepByStepFrame( _elapsedTimeRenderAcc * 0.000001 );
-              renderDelta = _sbsCurrentRenderDelta;
-              break;
-            default:
-              renderDelta = 0;
-          }
-
-          if ( std::isnan( renderDelta )) renderDelta = 0;
-
-          _updateParticles( renderDelta );
-          _elapsedTimeRenderAcc = 0.0f;
-        } // elapsed > render period
+        _updateParticles( );
 
       } // if player && player->isPlaying
 
@@ -1024,11 +998,12 @@ namespace visimpl
     return _scaleFactor;
   }
 
-  void OpenGLWidget::_updateParticles( float renderDelta )
+  void OpenGLWidget::_updateParticles( )
   {
     if ( _player && ( _player->isPlaying( ) || _firstFrame ))
     {
-      _domainManager.addTime( renderDelta , _player->endTime( ));
+      _domainManager.setTime(_player->currentTime());
+      //_domainManager.addTime( renderDelta , _player->endTime( ));
       _firstFrame = false;
     }
   }

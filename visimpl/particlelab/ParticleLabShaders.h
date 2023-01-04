@@ -36,6 +36,7 @@ uniform vec3 cameraUp;
 uniform vec3 cameraRight;
 
 uniform float time;
+uniform float decay;
 
 uniform int gradientSize;
 uniform float gradientTimes[256];
@@ -111,7 +112,7 @@ void main()
 
     gl_Position = viewProjectionMatrix * position;
 
-    color = gradient(time - timestamp);
+    color = gradient((time - timestamp) / decay);
     uvCoord = vertexPosition.rg + vec2(0.5, 0.5);
 }
 
