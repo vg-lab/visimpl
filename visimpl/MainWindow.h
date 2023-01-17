@@ -355,13 +355,13 @@ namespace visimpl
 
     bool _showDialog( QColor& current , const QString& message = "" );
 
-    /** \brief Helper to update a group representations colors.
+    /** \brief Helper to update a group colors and size.
      * \param[in] name the name of the group.
      * \param[in] t Transfer function.
      * \param[in] s Size function.
      *
      */
-    void updateGroupColors( std::string name , const TTransferFunction& t ,
+    void updateGroup( std::string name , const TTransferFunction& t ,
                             const TSizeFunction& s );
 
     virtual void closeEvent( QCloseEvent* e ) override;

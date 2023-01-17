@@ -7,6 +7,10 @@
 
 #include <utility>
 
+const visimpl::TSizeFunction DEFAULT_PARTICLE_SIZE{{ 0.0f , 50.0f },
+                                                   { 1.0f , 15.0f }};
+
+
 
 namespace visimpl
 {
@@ -46,12 +50,8 @@ namespace visimpl
     colors.emplace_back( 0.7f , glm::vec4( 1.0f , 1.0f , 0.0f , 0.5f ));
     colors.emplace_back( 1.0f , glm::vec4( 0.0f , 0.0f , 1.0f , 0.5f ));
 
-    TSizeFunction sizes;
-    sizes.emplace_back( 0.0f , 6.0f );
-    sizes.emplace_back( 1.0f , 18.0f );
-
     _selectionModel = std::make_shared< StaticGradientModel >(
-      camera , leftPlane , rightPlane , sizes , colors ,
+      camera , leftPlane , rightPlane , DEFAULT_PARTICLE_SIZE , colors ,
       true , false , 0.0f , _decay );
 
     _defaultProgram.loadFromText(
@@ -335,11 +335,9 @@ namespace visimpl
       _currentRenderer ,
       _selectionModel->isClippingEnabled( ));
 
-    const TSizeFunction defaultSizes{{ 0.0f , 50.0f } ,
-                                     { 1.0f , 15.0f }};
-
-    group->getModel( )->setParticleSize( defaultSizes );
+    group->getModel( )->setParticleSize( DEFAULT_PARTICLE_SIZE );
     group->getModel( )->setAccumulativeMode( _accumulativeMode );
+    group->sizeFunction(DEFAULT_PARTICLE_SIZE);
 
     std::vector <uint32_t> ids;
     std::vector <NeuronParticle> particles;
@@ -373,7 +371,10 @@ namespace visimpl
       _currentRenderer ,
       _selectionModel->isClippingEnabled( ));
 
+    group->getModel( )->setParticleSize( DEFAULT_PARTICLE_SIZE );
     group->getModel( )->setAccumulativeMode( _accumulativeMode );
+    group->sizeFunction(DEFAULT_PARTICLE_SIZE);
+
 
     std::vector <NeuronParticle> particles;
     for ( const auto& gid: _selectionGids )

@@ -1406,7 +1406,7 @@ namespace visimpl
 
     connect( _tfWidget , SIGNAL( colorChanged( void )) , this ,
              SLOT( UpdateSimulationColorMapping( void )) );
-    connect( _tfWidget , SIGNAL( colorChanged( void )) , this ,
+    connect( _tfWidget , SIGNAL( sizeChanged( void )) , this ,
              SLOT( UpdateSimulationSizeFunction( void )) );
     connect( _tfWidget , SIGNAL( previewColor( void )) , this ,
              SLOT( PreviewSimulationColorMapping( void )) );
@@ -2020,6 +2020,8 @@ namespace visimpl
 
     connect( tfWidget , SIGNAL( colorChanged( )) ,
              this , SLOT( onGroupColorChanged( )) );
+    connect( tfWidget , SIGNAL( sizeChanged( )) ,
+             this , SLOT( onGroupColorChanged( )) );
     connect( tfWidget , SIGNAL( previewColor( )) ,
              this , SLOT( onGroupPreview( )) );
 
@@ -2426,7 +2428,7 @@ namespace visimpl
     if ( tfw )
     {
       auto groupName = tfw->property( GROUP_NAME_ ).toString( );
-      updateGroupColors( groupName.toStdString( ) , tfw->getColors( ) ,
+      updateGroup( groupName.toStdString( ) , tfw->getColors( ) ,
                          tfw->getSizeFunction( ));
     }
   }
@@ -2440,13 +2442,13 @@ namespace visimpl
       auto groupName = tfw->property( GROUP_NAME_ ).toString( );
 
       if ( !ok ) return;
-      updateGroupColors( groupName.toStdString( ) , tfw->getPreviewColors( ) ,
+      updateGroup( groupName.toStdString( ) , tfw->getPreviewColors( ) ,
                          tfw->getSizePreview( ));
     }
   }
 
   void
-  MainWindow::updateGroupColors( std::string name , const TTransferFunction& t ,
+  MainWindow::updateGroup( std::string name , const TTransferFunction& t ,
                                  const TSizeFunction& s )
   {
     const auto& groups = _domainManager->getGroups( );
@@ -2850,7 +2852,7 @@ namespace visimpl
       };
       std::for_each( sizePairs.cbegin( ) , sizePairs.cend( ) , addSizes );
 
-      updateGroupColors( name.toStdString( ) , function , sizes );
+      updateGroup( name.toStdString( ) , function , sizes );
       auto container = std::get< gr_container >( _groupsVisButtons.at( idx ));
       auto tfw = qobject_cast< TransferFunctionWidget* >(
         container->layout( )->itemAt( 0 )->widget( ));
