@@ -10,14 +10,14 @@ set(CMAKE_AUTOMOC ON)
 set(SUMRICE_PUBLIC_HEADERS
   EditorTF/Gradient.h
   EditorTF/ColorPoints.h
-  EditorTF/TransferFunctionEditor.h  
+  EditorTF/TransferFunctionEditor.h
   Summary.h
   Histogram.h
   FocusFrame.h
   CustomSlider.h
   TransferFunctionWidget.h
   log.h
-  EventWidget.h  
+  EventWidget.h
   CorrelationComputer.h
   Utils.h
   LoaderThread.h
@@ -29,6 +29,7 @@ set(SUMRICE_PUBLIC_HEADERS
   ConnectRESTDialog.h
   CloseDataDialog.h
   ColorInterpolator.h
+  ReconnectRESTDialog.h
 )
 
 set(SUMRICE_HEADERS
@@ -54,6 +55,7 @@ set(SUMRICE_SOURCES
   ConnectRESTDialog.cpp
   CloseDataDialog.cpp
   ColorInterpolator.cpp
+  ReconnectRESTDialog.cpp
 )
 
 set(SUMRICE_LINK_LIBRARIES

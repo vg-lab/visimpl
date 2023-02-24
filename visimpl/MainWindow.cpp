@@ -20,6 +20,11 @@
  *
  */
 
+#include "simil/Network.h"
+#include "sumrice/ReconnectRESTDialog.h"
+#include <memory>
+#include <qdialog.h>
+
 #ifdef VISIMPL_USE_GMRVLEX
 
 #include <gmrvlex/version.h>
@@ -163,6 +168,10 @@ namespace visimpl
     , _recorder( nullptr )
     , m_loader{ nullptr }
     , m_loaderDialog{ nullptr }
+#ifdef SIMIL_WITH_REST_API
+    , _restConnectionInformation( )
+    , _alreadyConnected( false )
+#endif
   {
     _ui->setupUi( this );
 
@@ -172,7 +181,7 @@ namespace visimpl
     _ui->toolBar->addAction( recorderAction );
 
     connect( recorderAction , SIGNAL( triggered( bool )) ,
-             this , SLOT( openRecorder( )) );
+             this , SLOT( openRecorder( )));
 
     _ui->actionUpdateOnIdle->setChecked( updateOnIdle );
     _ui->actionShowFPSOnIdleUpdate->setChecked( false );
@@ -231,42 +240,42 @@ namespace visimpl
     _openGLWidget->idleUpdate( _ui->actionUpdateOnIdle->isChecked( ));
 
     connect( _ui->actionUpdateOnIdle , SIGNAL( triggered( void )) ,
-             _openGLWidget , SLOT( toggleUpdateOnIdle( void )) );
+             _openGLWidget , SLOT( toggleUpdateOnIdle( void )));
 
     connect( _ui->actionBackgroundColor , SIGNAL( triggered( void )) ,
-             _openGLWidget , SLOT( changeClearColor( void )) );
+             _openGLWidget , SLOT( changeClearColor( void )));
 
     connect( _openGLWidget , SIGNAL( planesColorChanged(
                                        const QColor & )) ,
              this , SLOT( changePlanesColor(
-                            const QColor & )) );
+                            const QColor & )));
 
     connect( _ui->actionShowFPSOnIdleUpdate , SIGNAL( triggered( void )) ,
-             _openGLWidget , SLOT( toggleShowFPS( void )) );
+             _openGLWidget , SLOT( toggleShowFPS( void )));
 
     connect( _ui->actionShowEventsActivity , SIGNAL( triggered( bool )) ,
-             _openGLWidget , SLOT( showEventsActivityLabels( bool )) );
+             _openGLWidget , SLOT( showEventsActivityLabels( bool )));
 
     connect( _ui->actionShowCurrentTime , SIGNAL( triggered( bool )) ,
-             _openGLWidget , SLOT( showCurrentTimeLabel( bool )) );
+             _openGLWidget , SLOT( showCurrentTimeLabel( bool )));
 
     connect( _ui->actionOpenBlueConfig , SIGNAL( triggered( void )) , this ,
-             SLOT( openBlueConfigThroughDialog( void )) );
+             SLOT( openBlueConfigThroughDialog( void )));
 
     connect( _ui->actionOpenCSVFiles , SIGNAL( triggered( void )) , this ,
-             SLOT( openCSVFilesThroughDialog( void )) );
+             SLOT( openCSVFilesThroughDialog( void )));
 
     connect( _ui->actionOpenH5Files , SIGNAL( triggered( void )) , this ,
-             SLOT( openHDF5ThroughDialog( void )) );
+             SLOT( openHDF5ThroughDialog( void )));
 
     connect( _ui->actionConnectREST , SIGNAL( triggered( void )) , this ,
-             SLOT( openRESTThroughDialog( )) );
+             SLOT( openRESTThroughDialog( )));
 
     connect( _ui->actionConfigureREST , SIGNAL( triggered( )) , this ,
-             SLOT( configureREST( )) );
+             SLOT( configureREST( )));
 
     connect( _ui->actionOpenSubsetEventsFile , SIGNAL( triggered( void )) ,
-             this , SLOT( openSubsetEventsFileThroughDialog( void )) );
+             this , SLOT( openSubsetEventsFileThroughDialog( void )));
 
     _ui->actionOpenSubsetEventsFile->setEnabled( false );
 
@@ -275,44 +284,44 @@ namespace visimpl
 #endif
 
     connect( _ui->actionCloseData , SIGNAL( triggered( void )) , this ,
-             SLOT( closeData( void )) );
+             SLOT( closeData( void )));
 
     connect( _ui->actionQuit , SIGNAL( triggered( void )) , this ,
-             SLOT( close( )) );
+             SLOT( close( )));
 
     connect( _ui->actionAbout , SIGNAL( triggered( void )) , this ,
-             SLOT( dialogAbout( void )) );
+             SLOT( dialogAbout( void )));
 
     connect( _ui->actionHome , SIGNAL( triggered( void )) , _openGLWidget ,
-             SLOT( home( void )) );
+             SLOT( home( void )));
 
     connect( _openGLWidget , SIGNAL( stepCompleted( void )) , this ,
-             SLOT( completedStep( void )) );
+             SLOT( completedStep( void )));
 
     connect( _openGLWidget , SIGNAL( pickedSingle( unsigned int )) , this ,
-             SLOT( updateSelectedStatsPickingSingle( unsigned int )) );
+             SLOT( updateSelectedStatsPickingSingle( unsigned int )));
 
     connect( _ui->actionAdd_camera_position , SIGNAL( triggered( bool )) ,
              this ,
-             SLOT( addCameraPosition( )) );
+             SLOT( addCameraPosition( )));
 
     connect( _ui->actionRemove_camera_position , SIGNAL( triggered( bool )) ,
              this ,
-             SLOT( removeCameraPosition( )) );
+             SLOT( removeCameraPosition( )));
 
     connect( _ui->actionLoad_camera_positions , SIGNAL( triggered( bool )) ,
              this ,
-             SLOT( loadCameraPositions( )) );
+             SLOT( loadCameraPositions( )));
 
     connect( _ui->actionSave_camera_positions , SIGNAL( triggered( bool )) ,
              this ,
-             SLOT( saveCameraPositions( )) );
+             SLOT( saveCameraPositions( )));
 
     QAction* actionTogglePause = new QAction( this );
     actionTogglePause->setShortcut( Qt::Key_Space );
 
     connect( actionTogglePause , SIGNAL( triggered( )) , this ,
-             SLOT( PlayPause( )) );
+             SLOT( PlayPause( )));
     addAction( actionTogglePause );
 
 #ifdef VISIMPL_USE_ZEROEQ
@@ -538,7 +547,7 @@ namespace visimpl
         _subsetEvents->loadJSON( filePath );
       }
       else if ( eventsFile.suffix( ).toLower( ).compare( "h5" ) == 0 ||
-                eventsFile.suffix( ).toLower( ).compare( "hdf5" ) == 0)
+                eventsFile.suffix( ).toLower( ).compare( "hdf5" ) == 0 )
       {
         _subsetEvents->loadH5( filePath );
         h5 = true;
@@ -631,11 +640,11 @@ namespace visimpl
     {
       _recorder = dialog.getRecorder( );
       connect( _recorder , SIGNAL( finished( )) ,
-               _recorder , SLOT( deleteLater( )) );
+               _recorder , SLOT( deleteLater( )));
       connect( _recorder , SIGNAL( finished( )) ,
-               this , SLOT( finishRecording( )) );
+               this , SLOT( finishRecording( )));
       connect( _openGLWidget , SIGNAL( frameSwapped( )) ,
-               _recorder , SLOT( takeFrame( )) );
+               _recorder , SLOT( takeFrame( )));
       if ( action ) action->setChecked( true );
     }
     else
@@ -647,6 +656,7 @@ namespace visimpl
   void MainWindow::closeData( void )
   {
 #ifdef SIMIL_WITH_REST_API
+    _alreadyConnected = false;
     if ( m_loader && m_loader->type( ) == simil::TREST )
     {
       CloseDataDialog dialog( this );
@@ -661,9 +671,6 @@ namespace visimpl
         Stop( );
 
         _objectInspectorGB->setCheckUpdates( false );
-
-        auto rest = m_loader->RESTLoader( );
-        rest->resetSpikes( );
 
         _summary->UpdateHistograms( );
         _stackViz->updateHistograms( );
@@ -831,7 +838,7 @@ namespace visimpl
   void MainWindow::_configurePlayer( void )
   {
     connect( _openGLWidget , SIGNAL( updateSlider( float )) , this ,
-             SLOT( UpdateSimulationSlider( float )) );
+             SLOT( UpdateSimulationSlider( float )));
 
     _objectInspectorGB->setSimPlayer( _openGLWidget->player( ));
 
@@ -898,32 +905,32 @@ namespace visimpl
     this->addDockWidget( Qt::LeftDockWidgetArea , _stackVizDock );
 
     connect( _objectInspectorGB , SIGNAL( simDataChanged( )) ,
-             _stackViz , SLOT( updateHistograms( )) );
+             _stackViz , SLOT( updateHistograms( )));
 
     connect( _stackViz , SIGNAL( changedBins(
                                    const unsigned int)) ,
-             _summary , SLOT( bins( unsigned int )) );
+             _summary , SLOT( bins( unsigned int )));
 
     connect( _ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
-             _stackViz , SLOT( showDisplayManagerWidget( )) );
+             _stackViz , SLOT( showDisplayManagerWidget( )));
 
     connect( _ui->actionStackVizShowPanels , SIGNAL( triggered( bool )) ,
-             _stackViz , SLOT( showStackVizPanels( bool )) );
+             _stackViz , SLOT( showStackVizPanels( bool )));
 
     connect( _ui->actionStackVizShowDataManager , SIGNAL( triggered( bool )) ,
-             _stackViz , SLOT( showDisplayManagerWidget( )) );
+             _stackViz , SLOT( showDisplayManagerWidget( )));
 
     connect( _ui->actionStackVizAutoNamingSelections , SIGNAL( triggered( )) ,
-             _stackViz , SLOT( toggleAutoNameSelections( )) );
+             _stackViz , SLOT( toggleAutoNameSelections( )));
 
     connect( _ui->actionStackVizFillPlots , SIGNAL( triggered( bool )) ,
-             _stackViz , SLOT( fillPlots( bool )) );
+             _stackViz , SLOT( fillPlots( bool )));
 
     connect( _ui->actionStackVizFocusOnPlayhead , SIGNAL( triggered( )) ,
-             _stackViz , SLOT( focusPlayback( )) );
+             _stackViz , SLOT( focusPlayback( )));
 
     connect( _ui->actionStackVizFollowPlayHead , SIGNAL( triggered( bool )) ,
-             _stackViz , SLOT( followPlayhead( bool )) );
+             _stackViz , SLOT( followPlayhead( bool )));
 
     // this avoids making the dock smaller when the stackviz config panels
     // hide.
@@ -991,21 +998,21 @@ namespace visimpl
     dockLayout->addWidget( nextButton , row , 12 , 1 , 1 );
     dockLayout->addWidget( _goToButton , row , 13 , 1 , 1 );
 
-    connect( _playButton , SIGNAL( clicked( )) , this , SLOT( PlayPause( )) );
+    connect( _playButton , SIGNAL( clicked( )) , this , SLOT( PlayPause( )));
 
-    connect( stopButton , SIGNAL( clicked( )) , this , SLOT( Stop( )) );
+    connect( stopButton , SIGNAL( clicked( )) , this , SLOT( Stop( )));
 
-    connect( nextButton , SIGNAL( clicked( )) , this , SLOT( NextStep( )) );
+    connect( nextButton , SIGNAL( clicked( )) , this , SLOT( NextStep( )));
 
-    connect( prevButton , SIGNAL( clicked( )) , this , SLOT( PreviousStep( )) );
+    connect( prevButton , SIGNAL( clicked( )) , this , SLOT( PreviousStep( )));
 
-    connect( _repeatButton , SIGNAL( clicked( )) , this , SLOT( Repeat( )) );
+    connect( _repeatButton , SIGNAL( clicked( )) , this , SLOT( Repeat( )));
 
     connect( _simSlider , SIGNAL( sliderPressed( )) , this ,
-             SLOT( PlayAtPosition( )) );
+             SLOT( PlayAtPosition( )));
 
     connect( _goToButton , SIGNAL( clicked( )) , this ,
-             SLOT( playAtButtonClicked( )) );
+             SLOT( playAtButtonClicked( )));
 
     _summary = new visimpl::Summary( nullptr , visimpl::T_STACK_FIXED );
     _summary->setMinimumHeight( 50 );
@@ -1016,7 +1023,7 @@ namespace visimpl
     this->addDockWidget( Qt::BottomDockWidgetArea , _simulationDock );
 
     connect( _summary , SIGNAL( histogramClicked( float )) , this ,
-             SLOT( PlayAtPercentage( float )) );
+             SLOT( PlayAtPercentage( float )));
 
     _simulationDock->setEnabled( false );
   }
@@ -1045,7 +1052,7 @@ namespace visimpl
     _selectionManager->setWindowIcon( QIcon( ":/visimpl.png" ));
 
     connect( _selectionManager , SIGNAL( selectionChanged( void )) , this ,
-             SLOT( selectionManagerChanged( void )) );
+             SLOT( selectionManagerChanged( void )));
 
     _deltaTimeBox = new QDoubleSpinBox( );
     _deltaTimeBox->setMinimum( 0.00000001 );
@@ -1114,7 +1121,8 @@ namespace visimpl
                                         clippingColor.name( ));
     _frameClippingColor->setMinimumSize( 20 , 20 );
     _frameClippingColor->setMaximumSize( 20 , 20 );
-    _frameClippingColor->setProperty( PLANES_COLOR_KEY_ , clippingColor.name( ));
+    _frameClippingColor->setProperty( PLANES_COLOR_KEY_ ,
+                                      clippingColor.name( ));
 
     _buttonSelectionFromClippingPlanes = new QPushButton( "To selection" );
     _buttonSelectionFromClippingPlanes->setToolTip(
@@ -1375,13 +1383,13 @@ namespace visimpl
     _toolBoxOptions->addItem( _objectInspectorGB , tr( "Inspector" ));
 
     connect( _objectInspectorGB , SIGNAL( simDataChanged( )) ,
-             _openGLWidget , SLOT( updateData( )) );
+             _openGLWidget , SLOT( updateData( )));
 
     connect( _objectInspectorGB , SIGNAL( simDataChanged( )) ,
-             _summary , SLOT( UpdateHistograms( )) );
+             _summary , SLOT( UpdateHistograms( )));
 
     connect( _objectInspectorGB , SIGNAL( simDataChanged( )) ,
-             this , SLOT( configureComponents( )) );
+             this , SLOT( configureComponents( )));
 
     verticalLayout->setAlignment( Qt::AlignTop );
     verticalLayout->addWidget( _modeSelectionWidget );
@@ -1393,98 +1401,98 @@ namespace visimpl
     this->addDockWidget( Qt::RightDockWidgetArea , _simConfigurationDock );
 
     connect( _modeSelectionWidget , SIGNAL( currentChanged( int )) ,
-             _openGLWidget , SLOT( setMode( int )) );
+             _openGLWidget , SLOT( setMode( int )));
 
     connect( _openGLWidget , SIGNAL( attributeStatsComputed( void )) , this ,
-             SLOT( updateAttributeStats( void )) );
+             SLOT( updateAttributeStats( void )));
 
     connect( _comboAttribSelection , SIGNAL( currentIndexChanged( int )) ,
-             _openGLWidget , SLOT( selectAttrib( int )) );
+             _openGLWidget , SLOT( selectAttrib( int )));
 
     connect( comboShader , SIGNAL( currentIndexChanged( int )) , _openGLWidget ,
-             SLOT( changeShader( int )) );
+             SLOT( changeShader( int )));
 
     connect( _tfWidget , SIGNAL( colorChanged( void )) , this ,
-             SLOT( UpdateSimulationColorMapping( void )) );
+             SLOT( UpdateSimulationColorMapping( void )));
     connect( _tfWidget , SIGNAL( sizeChanged( void )) , this ,
-             SLOT( UpdateSimulationSizeFunction( void )) );
+             SLOT( UpdateSimulationSizeFunction( void )));
     connect( _tfWidget , SIGNAL( previewColor( void )) , this ,
-             SLOT( PreviewSimulationColorMapping( void )) );
+             SLOT( PreviewSimulationColorMapping( void )));
     connect( _tfWidget , SIGNAL( previewColor( void )) , this ,
-             SLOT( PreviewSimulationSizeFunction( void )) );
+             SLOT( PreviewSimulationSizeFunction( void )));
 
     connect( buttonSelectionManager , SIGNAL( clicked( void )) , this ,
-             SLOT( dialogSelectionManagement( void )) );
+             SLOT( dialogSelectionManagement( void )));
 
     connect( _circuitScaleX , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateCircuitScaleValue( void )) );
+             SLOT( updateCircuitScaleValue( void )));
 
     connect( _circuitScaleY , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateCircuitScaleValue( void )) );
+             SLOT( updateCircuitScaleValue( void )));
 
     connect( _circuitScaleZ , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateCircuitScaleValue( void )) );
+             SLOT( updateCircuitScaleValue( void )));
 
     connect( _deltaTimeBox , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateSimDeltaTime( void )) );
+             SLOT( updateSimDeltaTime( void )));
 
     connect( _timeStepsPSBox , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateSimTimestepsPS( void )) );
+             SLOT( updateSimTimestepsPS( void )));
 
     connect( _decayBox , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateSimulationDecayValue( void )) );
+             SLOT( updateSimulationDecayValue( void )));
 
     connect( _stepByStepDurationBox , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateSimStepByStepDuration( void )) );
+             SLOT( updateSimStepByStepDuration( void )));
 
     connect( _alphaNormalButton , SIGNAL( toggled( bool )) , this ,
-             SLOT( AlphaBlendingToggled( void )) );
+             SLOT( AlphaBlendingToggled( void )));
 
     // Clipping planes
 
     _checkClipping->setChecked( true );
     connect( _checkClipping , SIGNAL( stateChanged( int )) , this ,
-             SLOT( clippingPlanesActive( int )) );
+             SLOT( clippingPlanesActive( int )));
     _checkClipping->setChecked( false );
 
     _checkShowPlanes->setChecked( true );
     connect( _checkShowPlanes , SIGNAL( stateChanged( int )) , _openGLWidget ,
-             SLOT( paintClippingPlanes( int )) );
+             SLOT( paintClippingPlanes( int )));
 
     connect( _buttonSelectionFromClippingPlanes , SIGNAL( clicked( void )) ,
-             this , SLOT( selectionFromPlanes( void )) );
+             this , SLOT( selectionFromPlanes( void )));
 
     connect( _buttonResetPlanes , SIGNAL( clicked( void )) , this ,
-             SLOT( clippingPlanesReset( void )) );
+             SLOT( clippingPlanesReset( void )));
 
     connect( _spinBoxClippingDist , SIGNAL( editingFinished( void )) , this ,
-             SLOT( spinBoxValueChanged( void )) );
+             SLOT( spinBoxValueChanged( void )));
 
     connect( _spinBoxClippingHeight , SIGNAL( editingFinished( void )) , this ,
-             SLOT( spinBoxValueChanged( void )) );
+             SLOT( spinBoxValueChanged( void )));
 
     connect( _spinBoxClippingWidth , SIGNAL( editingFinished( void )) , this ,
-             SLOT( spinBoxValueChanged( void )) );
+             SLOT( spinBoxValueChanged( void )));
 
     connect( _frameClippingColor , SIGNAL( clicked( )) , this ,
-             SLOT( colorSelectionClicked( )) );
+             SLOT( colorSelectionClicked( )));
 
     connect( _buttonClearSelection , SIGNAL( clicked( void )) , this ,
-             SLOT( clearSelection( void )) );
+             SLOT( clearSelection( void )));
 
     connect( _buttonAddGroup , SIGNAL( clicked( void )) , this ,
-             SLOT( addGroupFromSelection( )) );
+             SLOT( addGroupFromSelection( )));
 
     connect( _buttonImportGroups , SIGNAL( clicked( void )) , this ,
-             SLOT( dialogSubsetImporter( void )) );
+             SLOT( dialogSubsetImporter( void )));
 
     connect( _buttonClearGroups , SIGNAL( clicked( void )) , this ,
-             SLOT( clearGroups( void )) );
+             SLOT( clearGroups( void )));
 
     connect( _buttonLoadGroups , SIGNAL( clicked( void )) , this ,
-             SLOT( loadGroups( )) );
+             SLOT( loadGroups( )));
     connect( _buttonSaveGroups , SIGNAL( clicked( void )) , this ,
-             SLOT( saveGroups( )) );
+             SLOT( saveGroups( )));
 
     _alphaNormalButton->setChecked( true );
     _simConfigurationDock->setEnabled( false );
@@ -1585,9 +1593,9 @@ namespace visimpl
     _circuitScaleY->blockSignals( true );
     _circuitScaleZ->blockSignals( true );
 
-    _circuitScaleX->setValue(scaleFactor.x);
-    _circuitScaleY->setValue(scaleFactor.y);
-    _circuitScaleZ->setValue(scaleFactor.z);
+    _circuitScaleX->setValue( scaleFactor.x );
+    _circuitScaleY->setValue( scaleFactor.y );
+    _circuitScaleZ->setValue( scaleFactor.z );
 
     _circuitScaleX->blockSignals( true );
     _circuitScaleY->blockSignals( true );
@@ -1620,7 +1628,8 @@ namespace visimpl
 
   void MainWindow::updateCircuitScaleValue( void )
   {
-    vec3 scale{ _circuitScaleX->value( ), _circuitScaleY->value( ), _circuitScaleZ->value( )};
+    vec3 scale{ _circuitScaleX->value( ) , _circuitScaleY->value( ) ,
+                _circuitScaleZ->value( ) };
     _openGLWidget->circuitScaleFactor( scale );
   }
 
@@ -1969,8 +1978,8 @@ namespace visimpl
 
   void MainWindow::addGroupControls( std::shared_ptr< VisualGroup > group ,
                                      unsigned int currentIndex ,
-                                     unsigned int size,
-                                     QColor groupColor)
+                                     unsigned int size ,
+                                     QColor groupColor )
   {
     QWidget* container = new QWidget( );
     auto itemLayout = new QHBoxLayout( container );
@@ -1978,7 +1987,7 @@ namespace visimpl
     container->setProperty( GROUP_NAME_ ,
                             QString::fromStdString( group->name( )));
 
-    if(groupColor == QColor{0,0,0})
+    if ( groupColor == QColor{ 0 , 0 , 0 } )
     {
       const auto colors = _openGLWidget->colorPalette( ).colors( );
       const auto paletteIdx = currentIndex % colors.size( );
@@ -2012,24 +2021,25 @@ namespace visimpl
     const auto presetName = QString( "Group selection %1" ).arg( currentIndex );
     QGradientStops stops;
 
-    const auto mapping = group->colorMapping();
-    auto addColorMapping = [&stops](const visimpl::TTFColor &c){ stops << qMakePair(c.first, c.second); };
-    std::for_each(mapping.cbegin(), mapping.cend(), addColorMapping);
+    const auto mapping = group->colorMapping( );
+    auto addColorMapping = [ &stops ]( const visimpl::TTFColor& c )
+    { stops << qMakePair( c.first , c.second ); };
+    std::for_each( mapping.cbegin( ) , mapping.cend( ) , addColorMapping );
 
     tfWidget->addPreset( TransferFunctionWidget::Preset( presetName , stops ));
 
     connect( tfWidget , SIGNAL( colorChanged( )) ,
-             this , SLOT( onGroupColorChanged( )) );
+             this , SLOT( onGroupColorChanged( )));
     connect( tfWidget , SIGNAL( sizeChanged( )) ,
-             this , SLOT( onGroupColorChanged( )) );
+             this , SLOT( onGroupColorChanged( )));
     connect( tfWidget , SIGNAL( previewColor( )) ,
-             this , SLOT( onGroupPreview( )) );
+             this , SLOT( onGroupPreview( )));
 
     QCheckBox* visibilityCheckbox = new QCheckBox( "active" );
     visibilityCheckbox->setChecked( group->active( ));
 
     connect( visibilityCheckbox , SIGNAL( clicked( )) , this ,
-             SLOT( checkGroupsVisibility( )) );
+             SLOT( checkGroupsVisibility( )));
 
     QString numberText = QString( "# " ).append( QString::number( size ));
 
@@ -2040,14 +2050,14 @@ namespace visimpl
                              QString::fromStdString( group->name( )));
 
     connect( nameButton , SIGNAL( clicked( )) , this ,
-             SLOT( onGroupNameClicked( )) );
+             SLOT( onGroupNameClicked( )));
 
     auto deleteButton = new QPushButton( QIcon( ":/icons/close.svg" ) , "" );
     deleteButton->setProperty( GROUP_NAME_ ,
                                QString::fromStdString( group->name( )));
 
     connect( deleteButton , SIGNAL( clicked( )) , this ,
-             SLOT( onGroupDeleteClicked( )) );
+             SLOT( onGroupDeleteClicked( )));
 
     auto firstLayout = new QHBoxLayout( );
     firstLayout->setMargin( 0 );
@@ -2129,10 +2139,11 @@ namespace visimpl
         filteredGIDs , _openGLWidget->getGidPositions( ) , groupName );
 
       const auto color = _subsetEvents->getSubsetColor( groupName );
-      QColor groupColor = QColor::fromRgbF(color.x(), color.y(), color.z());
+      QColor groupColor = QColor::fromRgbF( color.x( ) , color.y( ) ,
+                                            color.z( ));
 
       addGroupControls( group , _domainManager->getGroupAmount( ) - 1 ,
-                        filteredGIDs.size( ), groupColor);
+                        filteredGIDs.size( ) , groupColor );
 
       visimpl::Selection selection;
       selection.name = groupName;
@@ -2429,7 +2440,7 @@ namespace visimpl
     {
       auto groupName = tfw->property( GROUP_NAME_ ).toString( );
       updateGroup( groupName.toStdString( ) , tfw->getColors( ) ,
-                         tfw->getSizeFunction( ));
+                   tfw->getSizeFunction( ));
     }
   }
 
@@ -2443,13 +2454,13 @@ namespace visimpl
 
       if ( !ok ) return;
       updateGroup( groupName.toStdString( ) , tfw->getPreviewColors( ) ,
-                         tfw->getSizePreview( ));
+                   tfw->getSizePreview( ));
     }
   }
 
   void
   MainWindow::updateGroup( std::string name , const TTransferFunction& t ,
-                                 const TSizeFunction& s )
+                           const TSizeFunction& s )
   {
     const auto& groups = _domainManager->getGroups( );
     groups.at( name )->colorMapping( t );
@@ -2481,13 +2492,13 @@ namespace visimpl
     m_loader->setData( type , arg_1 , arg_2 );
 
     connect( m_loader.get( ) , SIGNAL( finished( )) ,
-             this , SLOT( onDataLoaded( )) );
+             this , SLOT( onDataLoaded( )));
     connect( m_loader.get( ) , SIGNAL( progress( int )) ,
-             m_loaderDialog , SLOT( setProgress( int )) );
+             m_loaderDialog , SLOT( setProgress( int )));
     connect( m_loader.get( ) , SIGNAL( network( unsigned int )) ,
-             m_loaderDialog , SLOT( setNetwork( unsigned int )) );
+             m_loaderDialog , SLOT( setNetwork( unsigned int )));
     connect( m_loader.get( ) , SIGNAL( spikes( unsigned int )) ,
-             m_loaderDialog , SLOT( setSpikesValue( unsigned int )) );
+             m_loaderDialog , SLOT( setSpikesValue( unsigned int )));
 
     _lastOpenedNetworkFileName = QString::fromStdString( arg_1 );
     _lastOpenedSubsetsFileName = QString::fromStdString( subsetEventFile );
@@ -2507,12 +2518,12 @@ namespace visimpl
 
   void MainWindow::onDataLoaded( )
   {
-    setWindowTitle("SimPart");
+    setWindowTitle( "SimPart" );
 
     if ( !m_loader ) return;
 
     const auto error = m_loader->errors( );
-    const auto filename = QString::fromStdString(m_loader->filename());
+    const auto filename = QString::fromStdString( m_loader->filename( ));
     if ( !error.empty( ))
     {
       closeLoadingDialog( );
@@ -2540,7 +2551,7 @@ namespace visimpl
         player = new simil::SpikesPlayer( );
         player->LoadData( spikeData );
 
-        _subsetEvents = spikeData->subsetsEvents();
+        _subsetEvents = spikeData->subsetsEvents( );
 
         m_loader = nullptr;
       }
@@ -2555,7 +2566,7 @@ namespace visimpl
 
         _subsetEvents = netData->subsetsEvents( );
 
-        // NOTE: loader doesn't get destroyed because has a loop for getting data.
+        m_loader = nullptr;
       }
         break;
       case simil::TDataUndefined:
@@ -2592,7 +2603,7 @@ namespace visimpl
       m_loaderDialog->repaint( );
     }
 
-    setWindowTitle("SimPart - " + filename);
+    setWindowTitle( "SimPart - " + filename );
 
     _openGLWidget->setPlayer( player , dataType );
     _modeSelectionWidget->setCurrentIndex( 0 );
@@ -2626,10 +2637,10 @@ namespace visimpl
       case simil::TDataType::TREST:
       {
 #ifdef SIMIL_WITH_REST_API
-        const auto waitTime = m_loader->RESTLoader( )->getConfiguration( ).waitTime;
-        _objectInspectorGB->setCheckTimer( waitTime );
-        _objectInspectorGB->setCheckUpdates( true );
-        _ui->actionConfigureREST->setEnabled( true );
+        //const auto waitTime = m_loader->RESTLoader( )->getConfiguration( ).waitTime;
+        //_objectInspectorGB->setCheckTimer( waitTime );
+        //_objectInspectorGB->setCheckUpdates( true );
+        //_ui->actionConfigureREST->setEnabled( true );
 #endif
       }
         break;
@@ -3027,7 +3038,7 @@ namespace visimpl
 
   void MainWindow::removeVisualGroup( const QString& name )
   {
-    auto findGroup = [ this , name ]( tGroupRow& r )
+    auto findGroup = [ name ]( tGroupRow& r )
     {
       QWidget* container = std::get< gr_container >( r );
       auto groupName = container->property( GROUP_NAME_ ).toString( );
@@ -3226,7 +3237,7 @@ namespace visimpl
                            position + ";" + radius + ";" + rotation );
 
       connect( action , SIGNAL( triggered( bool )) , this ,
-               SLOT( applyCameraPosition( )) );
+               SLOT( applyCameraPosition( )));
 
       _ui->actionCamera_Positions->menu( )->addAction( action );
     };
@@ -3367,7 +3378,7 @@ namespace visimpl
                                     QLineEdit::Normal , tr( "New position" ) ,
                                     &ok );
 
-      if(!ok) return; // user cancelled
+      if ( !ok ) return; // user cancelled
 
       if ( ok && !name.isEmpty( ))
       {
@@ -3389,7 +3400,7 @@ namespace visimpl
     action->setProperty( POSITION_KEY_ , position.toString( ));
 
     connect( action , SIGNAL( triggered( bool )) , this ,
-             SLOT( applyCameraPosition( )) );
+             SLOT( applyCameraPosition( )));
     _ui->actionCamera_Positions->menu( )->addAction( action );
     _ui->actionCamera_Positions->setEnabled( true );
     _ui->actionSave_camera_positions->setEnabled( true );
@@ -3441,7 +3452,30 @@ namespace visimpl
   void MainWindow::openRESTThroughDialog( )
   {
 #ifdef SIMIL_WITH_REST_API
+
+    if ( _alreadyConnected && _openGLWidget->player( ) != nullptr )
+    {
+      auto player = _openGLWidget->player( );
+      ReconnectRESTDialog dialog( this );
+      if ( dialog.exec( ) == QDialog::Rejected )
+        return;
+
+      if ( dialog.getSelection( ) !=
+           ReconnectRESTDialog::Selection::NEW_CONNECTION )
+      {
+        _restConnectionInformation.network =
+          dialog.getSelection( ) ==
+          ReconnectRESTDialog::Selection::SPIKES_AND_NETWORK
+          ? std::weak_ptr< simil::Network >( )
+          : player->getNetwork( );
+
+        loadRESTData( _restConnectionInformation );
+        return;
+      }
+    }
+
     ConnectRESTDialog dialog( this );
+
     ConnectRESTDialog::Connection connection;
     dialog.setRESTConnection( connection );
 
@@ -3460,6 +3494,9 @@ namespace visimpl
       config.waitTime = restOpt.waitTime;
       config.failTime = restOpt.failTime;
       config.spikesSize = restOpt.spikesSize;
+
+      _restConnectionInformation = config;
+      _alreadyConnected = true;
 
       loadRESTData( config );
     }

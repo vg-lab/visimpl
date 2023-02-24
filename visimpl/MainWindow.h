@@ -20,6 +20,7 @@
  *
  */
 
+#include "sumrice/ConnectRESTDialog.h"
 #ifdef WIN32
 #include <winsock2.h>
 #endif
@@ -223,8 +224,8 @@ namespace visimpl
 
     void addGroupControls( std::shared_ptr< VisualGroup > group ,
                            unsigned int index ,
-                           unsigned int size,
-                           QColor groupColor = QColor{0,0,0});
+                           unsigned int size ,
+                           QColor groupColor = QColor{ 0 , 0 , 0 } );
 
     void clearGroups( void );
 
@@ -266,7 +267,7 @@ namespace visimpl
      * \param[in] name Name of the group to remove.
      *
      */
-    void removeVisualGroup(const QString &name );
+    void removeVisualGroup( const QString& name );
 
     void selectionManagerChanged( void );
 
@@ -362,7 +363,7 @@ namespace visimpl
      *
      */
     void updateGroup( std::string name , const TTransferFunction& t ,
-                            const TSizeFunction& s );
+                      const TSizeFunction& s );
 
     virtual void closeEvent( QCloseEvent* e ) override;
 
@@ -374,16 +375,16 @@ namespace visimpl
 #ifdef VISIMPL_USE_ZEROEQ
 #ifdef VISIMPL_USE_GMRVLEX
 
-  protected slots:
+    protected slots:
 
-    void ApplyPlaybackOperation( unsigned int playbackOp );
+      void ApplyPlaybackOperation( unsigned int playbackOp );
 
-    void _zeqEventRepeat( bool repeat );
+      void _zeqEventRepeat( bool repeat );
 
 #endif
 
-  protected:
-    void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
+    protected:
+      void _onSelectionEvent( lexis::data::ConstSelectedIDsPtr );
 
 #endif // VISIMPL_USE_ZEROEQ
 
@@ -486,5 +487,13 @@ namespace visimpl
 
     std::shared_ptr< LoaderThread > m_loader; /** data loader thread. */
     LoadingDialog* m_loaderDialog;          /** data loader dialog. */
+
+#ifdef SIMIL_WITH_REST_API
+
+    simil::LoaderRestData::Configuration _restConnectionInformation;
+    bool _alreadyConnected;
+
+#endif
+
   };
 } // namespace visimpl

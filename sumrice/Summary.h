@@ -23,7 +23,9 @@
 #ifndef __SIMULATIONSUMMARYWIDGET_H__
 #define __SIMULATIONSUMMARYWIDGET_H__
 
+#include <memory>
 #include <simil/simil.h>
+#include <memory>
 #include <scoop/scoop.h>
 #include <sumrice/api.h>
 
@@ -83,7 +85,7 @@ namespace visimpl
     Summary( QWidget* parent = nullptr, TStackType stackType = T_STACK_FIXED);
     virtual ~Summary( ){};
 
-    void Init( simil::SimulationData* data_ );
+    void Init( std::shared_ptr<simil::SimulationData> data_ );
 
     void AddNewHistogram( const visimpl::Selection& selection
   #ifdef VISIMPL_USE_ZEROEQ
@@ -305,8 +307,8 @@ namespace visimpl
 
     unsigned int _gridLinesNumber;
 
-    simil::SimulationData* _simData;
-    simil::SpikeData* _spikeReport;
+    std::shared_ptr<simil::SimulationData> _simData;
+    std::shared_ptr<simil::SpikeData> _spikeReport;
 
     simil::SimulationPlayer* _player;
 

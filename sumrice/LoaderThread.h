@@ -39,6 +39,7 @@
 
 // C++
 #include <string>
+#include <memory>
 
 namespace simil
 {
@@ -61,11 +62,6 @@ class SUMRICE_API LoaderThread
      */
     LoaderThread();
 
-    /** \brief LoaderThread virtual destructor.
-     *
-     */
-    virtual ~LoaderThread();
-
     /** \brief Set the information for the data to load. If data
      * is REST use setRESTConfiguration().
      * \param[in] type Data origin type.
@@ -81,12 +77,12 @@ class SUMRICE_API LoaderThread
     /** \brief Returns the loaded network data. Only valid after finished() signal.
      *
      */
-    simil::Network *network() const;
+    std::shared_ptr<simil::Network> network() const;
 
     /** \brief Returns the simulation data. Only valid after finished() signal.
      *
      */
-    simil::SimulationData* simulationData() const;
+    std::shared_ptr<simil::SimulationData> simulationData() const;
 
     /** \brief Returns an error string or emtpy if success.
      *
@@ -113,7 +109,7 @@ class SUMRICE_API LoaderThread
     /** \brief Returns the REST loader.
      *
      */
-    simil::LoaderRestData *RESTLoader();
+    simil::LoaderRestData *RESTLoader() const;
 #endif
 
   protected:
@@ -128,15 +124,17 @@ class SUMRICE_API LoaderThread
     simil::TDataType       m_type;       /** data origin type.                    */
     std::string            m_arg1;       /** argument 1, meaning depends on type. */
     std::string            m_arg2;       /** argument 2, meaning depends on type. */
-    simil::Network*        m_network;    /** loaded network.                      */
-    simil::SimulationData* m_data;       /** loaded data.                         */
+
+    std::shared_ptr<simil::Network>        m_network;    /** loaded network.     */
+    std::shared_ptr<simil::SimulationData> m_data;       /** loaded data.        */
+
 #ifdef SIMIL_WITH_REST_API
     using Loader = simil::LoaderRestData;
 
-    Loader*                m_rest;       /** rest data importer.                  */
-    Loader::Configuration  m_restConfig; /** rest connnection configuration.      */
+    std::unique_ptr<Loader> m_rest;       /** rest data importer.                  */
+    Loader::Configuration   m_restConfig; /** rest connnection configuration.      */
 #endif
-    std::string            m_errors;     /** error messages or empty if success.  */
+    std::string             m_errors;     /** error messages or empty if success.  */
 };
 
 #endif /* SUMRICE_LOADERTHREAD_H_ */

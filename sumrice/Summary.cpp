@@ -157,7 +157,7 @@ namespace visimpl
     this->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
   }
 
-  void Summary::Init( simil::SimulationData* data_ )
+  void Summary::Init( std::shared_ptr<simil::SimulationData> data_ )
   {
     _simData = data_;
 
@@ -167,7 +167,7 @@ namespace visimpl
       {
         case simil::TSimSpikes:
         {
-          auto *spikeData = dynamic_cast< simil::SpikeData * >( _simData );
+          auto spikeData = std::dynamic_pointer_cast< simil::SpikeData >( _simData );
           _spikeReport = spikeData;
 
           break;
