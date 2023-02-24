@@ -61,7 +61,7 @@ class SUMRICE_API ConnectRESTDialog
         QString url;
         unsigned int port;
 
-        Connection(): protocol("NEST"), url("localhost"), port(28080) {};
+        Connection(): protocol("NEST"), url("localhost"), port(52056) {};
     };
 
     /** \brief Sets the connection values.

@@ -222,6 +222,13 @@ namespace stackviz
 
     // Recorder
     Recorder* _recorder;
+
+#ifdef SIMIL_WITH_REST_API
+
+    simil::LoaderRestData::Configuration _restConnectionInformation;
+    bool _alreadyConnected;
+
+#endif
   };
 
 

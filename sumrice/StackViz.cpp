@@ -199,7 +199,7 @@ void StackViz::calculateCorrelations(void)
 {
   if(!_player || !_subsetEventManager) return;
 
-  visimpl::CorrelationComputer cc(dynamic_cast<simil::SpikeData*>(_player->data()));
+  visimpl::CorrelationComputer cc(dynamic_cast<simil::SpikeData*>(_player->data()->get()));
 
   const auto eventNames = _subsetEventManager->eventNames();
 
