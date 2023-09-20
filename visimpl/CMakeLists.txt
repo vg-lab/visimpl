@@ -27,11 +27,7 @@ set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 #set(CMAKE_AUTOMOC ON)
 #set(CMAKE_AUTOUIC ON)
 
-set(VISIMPL_SOURCES
-  ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp
-
-  visimpl.cpp
-
+set(VISIMPL_SOURCES_BASE
   visimpl.ui
   resources.qrc
 
@@ -52,8 +48,12 @@ set(VISIMPL_SOURCES
   render/Plane.cpp
 )
 
-set(VISIMPL_HEADERS
-  ${PROJECT_BINARY_DIR}/include/visimpl/version.h
+set(VISIMPL_SOURCES
+        ${VISIMPL_SOURCES_BASE}
+        visimpl.cpp
+        ${PROJECT_BINARY_DIR}/src/visimpl/version.cpp)
+
+set(VISIMPL_HEADERS_BASE
   OpenGLWidget.h
   MainWindow.h
 
@@ -71,6 +71,10 @@ set(VISIMPL_HEADERS
 
   render/Plane.h
 )
+
+set(VISIMPL_HEADERS
+        ${VISIMPL_HEADERS_BASE}
+        ${PROJECT_BINARY_DIR}/include/visimpl/version.h)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -134,3 +138,10 @@ if (UNIX AND NOT APPLE)
 endif()
 
 common_application( visimpl GUI ${COMMON_APP_ARGS})
+
+if(VISIMPL_BUILD_TESTS)
+    set(VISIMPL_TEST_LIB_SOURCES ${VISIMPL_SOURCES_BASE})
+    set(VISIMPL_TEST_LIB_HEADERS ${VISIMPL_HEADERS_BASE})
+    set(VISIMPL_TEST_LIB_LINK_LIBRARIES ${VISIMPL_LINK_LIBRARIES})
+    common_library(visimpl_test_lib)
+endif()

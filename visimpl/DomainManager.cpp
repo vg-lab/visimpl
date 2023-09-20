@@ -32,6 +32,11 @@ namespace visimpl
     , _accumulativeMode( false )
     , _decay( 1.5f )
   {
+      float minLimit = std::numeric_limits< float >::min( );
+      float maxLimit = std::numeric_limits< float >::max( );
+      glm::vec3 min( maxLimit , maxLimit , maxLimit );
+      glm::vec3 max( minLimit , minLimit , minLimit );
+      _boundingBox = std::make_pair( min , max );
   }
 
   void DomainManager::initRenderers(
