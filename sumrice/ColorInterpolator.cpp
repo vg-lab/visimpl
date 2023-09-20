@@ -12,10 +12,10 @@ glm::vec4 ColorInterpolator::getValue( float percentage )
   auto first = data[ 0 ];
   if ( first.first >= percentage ) return first.second;
 
-  auto last = data[ data.size( ) ];
+  auto& last = data.back();
   if ( percentage >= last.first ) return last.second;
 
-  auto value = visimpl::lower_bound(
+  auto next = visimpl::lower_bound(
     data.cbegin( ) , data.cend( ) , percentage ,
     [ ](
       const std::pair< float , glm::vec4 >& e ,
@@ -24,7 +24,7 @@ glm::vec4 ColorInterpolator::getValue( float percentage )
       return e.first < v;
     } );
 
-  auto next = value + 1;
+  auto value = next - 1;
   float n = ( percentage - value->first ) / ( next->first - value->first );
   return glm::mix( value->second , next->second , n );
 }

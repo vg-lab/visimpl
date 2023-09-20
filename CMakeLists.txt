@@ -9,7 +9,7 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 1.8.8 )
+project( visimpl VERSION 1.8.9 )
 set( visimpl_VERSION_ABI 6 )
 
 SET( VISIMPL_LICENSE "GPL")
@@ -57,6 +57,7 @@ option(VISIMPL_WITH_ZEQ "VISIMPL_WITH_ZEQ" ON)
 option(VISIMPL_WITH_GMRVLEX "VISIMPL_WITH_GMRVLEX" ON)
 
 set(VISIMPL_WITH_OPENMP ON)
+set (VISIMPL_BUILD_TESTS OFF CACHE BOOL "Build ViSimpl Tests")
 
 common_find_package( GLM REQUIRED SYSTEM )
 common_find_package( Qt5Core 5.4 REQUIRED )
@@ -127,6 +128,19 @@ common_find_package_post()
 add_subdirectory( sumrice )
 add_subdirectory( visimpl )
 add_subdirectory( stackviz )
+
+if(VISIMPL_BUILD_TESTS)
+  include (CTest)
+
+  # Generate coverage information
+  set(GCC_COVERAGE_COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+  set(GCC_COVERAGE_LINK_FLAGS    "-lgcov")
+  
+  set( CMAKE_CXX_FLAGS        "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
+  set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}" )
+  
+  add_subdirectory(tests)
+endif()
 
 # importers subdirectory contains code for processing data and convert it 
 # to ViSimpl formats, not needed for release.
