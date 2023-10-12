@@ -105,6 +105,12 @@ protected slots:
   void colorPointsChanged( const QPolygonF &points );
   void presetSelected( int presetIdx );
 
+  /** \brief Helper method to ensure that min size value is less than
+   * max size value when updating the values spinboxes.
+   *
+   */
+  void onSizeValueChanged();
+
 signals:
   void colorChanged( void );
   void previewColor( void );

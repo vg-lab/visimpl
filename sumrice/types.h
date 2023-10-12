@@ -141,7 +141,7 @@ namespace visimpl
     double mutualInformation;
 
     bool operator==( const CorrelationValues& other ) const
-    { return result == other.result; }
+    { return std::abs(result - other.result) < std::numeric_limits<double>::epsilon(); }
 
     bool operator>( const CorrelationValues& other ) const
     { return result > other.result; }

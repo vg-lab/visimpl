@@ -347,16 +347,15 @@ namespace visimpl
     std::vector <uint32_t> ids;
     std::vector <NeuronParticle> particles;
 
-    std::copy(
-      gids.cbegin( ) , gids.cend( ) ,
-      std::back_inserter( ids )
-    );
-
-    for ( const auto& gid: ids )
+    for ( const auto& gid: gids )
     {
-      NeuronParticle p;
-      p.position = positions.at( gid );
-      particles.push_back( p );
+      if(positions.find(gid) != positions.end())
+      {
+        NeuronParticle p;
+        p.position = positions.at( gid );
+        particles.push_back( p );
+        ids.emplace_back(gid);
+      }
     }
 
     group->setParticles( ids , particles );
@@ -380,16 +379,21 @@ namespace visimpl
     group->getModel( )->setAccumulativeMode( _accumulativeMode );
     group->sizeFunction(DEFAULT_PARTICLE_SIZE);
 
-
+    std::vector <uint32_t> ids;
     std::vector <NeuronParticle> particles;
+
     for ( const auto& gid: _selectionGids )
     {
-      NeuronParticle p;
-      p.position = positions.at( gid );
-      particles.push_back( p );
+      if(positions.find(gid) != positions.end())
+      {
+        NeuronParticle p;
+        p.position = positions.at( gid );
+        particles.push_back( p );
+        ids.emplace_back(gid);
+      }
     }
 
-    group->setParticles( _selectionGids , particles );
+    group->setParticles( ids , particles );
     _groupClusters[ name ] = group;
 
     return group;

@@ -2800,7 +2800,6 @@ namespace visimpl
       const auto o = v.toObject( );
 
       const auto name = o.value( "name" ).toString( );
-      //const auto overrideGIDS = o.value( "override" ).toBool( false );
       const auto gidsStrings = o.value( "gids" ).toString( ).split( "," );
 
       GIDUSet gids;

@@ -145,6 +145,9 @@ void TransferFunctionWidget::InitDialog( void )
   _maxSizeBox->setMinimum( 1.0 );
   _maxSizeBox->setMaximum( 300.0 );
 
+  connect(_minSizeBox, SIGNAL(valueChanged(double)), this, SLOT(onSizeValueChanged()));
+  connect(_maxSizeBox, SIGNAL(valueChanged(double)), this, SLOT(onSizeValueChanged()));
+
   _minValueLabel = new QLabel( );
   _maxValueLabel = new QLabel( );
 
@@ -152,7 +155,7 @@ void TransferFunctionWidget::InitDialog( void )
 
   unsigned int row = 0;
   unsigned int totalColumns = 6;
-  QGridLayout* dialogLayout = new QGridLayout( );
+  auto dialogLayout = new QGridLayout( );
 
   // Presets
   dialogLayout->addWidget( new QLabel( "Presets:" ), row, 1, 1, 1 );
@@ -242,101 +245,22 @@ void TransferFunctionWidget::InitDialog( void )
   connect( _previewButton, SIGNAL( clicked( void )),
            this, SLOT( previewClicked( void) ));
 
-  connect(_redPoints, SIGNAL(pointInserted(int, float)),
-          _greenPoints, SLOT(insertPoint(int, float)));
-  connect(_redPoints, SIGNAL(pointInserted(int, float)),
-          _bluePoints, SLOT(insertPoint(int, float)));
-  connect(_redPoints, SIGNAL(pointInserted(int, float)),
-          _alphaPoints, SLOT(insertPoint(int, float)));
+  const QList<ColorPoints *> colorPoints = { _redPoints, _greenPoints, _bluePoints, _alphaPoints };
+  for(auto &cp1: colorPoints)
+  {
+    for(auto &cp2: colorPoints)
+    {
+      if(cp1 == cp2) continue;
+      connect(cp1, SIGNAL(pointInserted(int, float)), cp2, SLOT(insertPoint(int, float)));
+      connect(cp1, SIGNAL(pointRemoved(int)), cp2, SLOT(removePoint(int)));
+      connect(cp1, SIGNAL(pointAbscissaChanged(int, float)), cp2, SLOT(movePointAbscissa(int, float)));
+    }
 
-  connect(_greenPoints, SIGNAL(pointInserted(int, float)),
-          _redPoints, SLOT(insertPoint(int, float)));
-  connect(_greenPoints, SIGNAL(pointInserted(int, float)),
-          _bluePoints, SLOT(insertPoint(int, float)));
-  connect(_greenPoints, SIGNAL(pointInserted(int, float)),
-          _alphaPoints, SLOT(insertPoint(int, float)));
-
-  connect(_bluePoints, SIGNAL(pointInserted(int, float)),
-          _redPoints, SLOT(insertPoint(int, float)));
-  connect(_bluePoints, SIGNAL(pointInserted(int, float)),
-          _greenPoints, SLOT(insertPoint(int, float)));
-  connect(_bluePoints, SIGNAL(pointInserted(int, float)),
-          _alphaPoints, SLOT(insertPoint(int, float)));
-
-  connect(_alphaPoints, SIGNAL(pointInserted(int, float)),
-          _redPoints, SLOT(insertPoint(int, float)));
-  connect(_alphaPoints, SIGNAL(pointInserted(int, float)),
-          _greenPoints, SLOT(insertPoint(int, float)));
-  connect(_alphaPoints, SIGNAL(pointInserted(int, float)),
-          _bluePoints, SLOT(insertPoint(int, float)));
-
-  connect(_redPoints, SIGNAL(pointRemoved(int)),
-          _greenPoints, SLOT(removePoint(int)));
-  connect(_redPoints, SIGNAL(pointRemoved(int)),
-          _bluePoints, SLOT(removePoint(int)));
-  connect(_redPoints, SIGNAL(pointRemoved(int)),
-          _alphaPoints, SLOT(removePoint(int)));
-
-  connect(_greenPoints, SIGNAL(pointRemoved(int)),
-          _redPoints, SLOT(removePoint(int)));
-  connect(_greenPoints, SIGNAL(pointRemoved(int)),
-          _bluePoints, SLOT(removePoint(int)));
-  connect(_greenPoints, SIGNAL(pointRemoved(int)),
-          _alphaPoints, SLOT(removePoint(int)));
-
-  connect(_bluePoints, SIGNAL(pointRemoved(int)),
-          _redPoints, SLOT(removePoint(int)));
-  connect(_bluePoints, SIGNAL(pointRemoved(int)),
-          _greenPoints, SLOT(removePoint(int)));
-  connect(_bluePoints, SIGNAL(pointRemoved(int)),
-          _alphaPoints, SLOT(removePoint(int)));
-
-  connect(_alphaPoints, SIGNAL(pointRemoved(int)),
-          _redPoints, SLOT(removePoint(int)));
-  connect(_alphaPoints, SIGNAL(pointRemoved(int)),
-          _greenPoints, SLOT(removePoint(int)));
-  connect(_alphaPoints, SIGNAL(pointRemoved(int)),
-          _bluePoints, SLOT(removePoint(int)));
-
-  connect(_redPoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _greenPoints, SLOT(movePointAbscissa(int, float)));
-  connect(_redPoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _bluePoints, SLOT(movePointAbscissa(int, float)));
-  connect(_redPoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _alphaPoints, SLOT(movePointAbscissa(int, float)));
-
-  connect(_greenPoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _redPoints, SLOT(movePointAbscissa(int, float)));
-  connect(_greenPoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _bluePoints, SLOT(movePointAbscissa(int, float)));
-  connect(_greenPoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _alphaPoints, SLOT(movePointAbscissa(int, float)));
-
-  connect(_bluePoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _redPoints, SLOT(movePointAbscissa(int, float)));
-  connect(_bluePoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _greenPoints, SLOT(movePointAbscissa(int, float)));
-  connect(_bluePoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _alphaPoints, SLOT(movePointAbscissa(int, float)));
-
-  connect(_alphaPoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _redPoints, SLOT(movePointAbscissa(int, float)));
-  connect(_alphaPoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _greenPoints, SLOT(movePointAbscissa(int, float)));
-  connect(_alphaPoints, SIGNAL(pointAbscissaChanged(int, float)),
-          _bluePoints, SLOT(movePointAbscissa(int, float)));
-
-  connect(_redPoints, SIGNAL(pointsChanged(const QPolygonF &)),
-          this, SLOT(colorPointsChanged(const QPolygonF &)));
-  connect(_greenPoints, SIGNAL(pointsChanged(const QPolygonF &)),
-          this, SLOT(colorPointsChanged(const QPolygonF &)));
-  connect(_bluePoints, SIGNAL(pointsChanged(const QPolygonF &)),
-          this, SLOT(colorPointsChanged(const QPolygonF &)));
-  connect(_alphaPoints, SIGNAL(pointsChanged(const QPolygonF &)),
-          this, SLOT(colorPointsChanged(const QPolygonF &)));
+    connect(cp1, SIGNAL(pointsChanged(const QPolygonF &)), this, SLOT(colorPointsChanged(const QPolygonF &)));
+  }
 }
 
-visimpl::TTransferFunction TransferFunctionWidget::getColors( bool includeAlpha ) const
+visimpl::TTransferFunction TransferFunctionWidget::getColors(bool includeAlpha) const
 {
   visimpl::TTransferFunction result;
 
@@ -351,11 +275,11 @@ visimpl::TTransferFunction TransferFunctionWidget::getColors( bool includeAlpha 
   return result;
 }
 
-visimpl::TTransferFunction TransferFunctionWidget::getPreviewColors( void ) const
+visimpl::TTransferFunction TransferFunctionWidget::getPreviewColors() const
 {
   visimpl::TTransferFunction result;
 
-  QGradientStops stops = _gradientFrame->getGradientStops( );
+  auto stops = _gradientFrame->getGradientStops( );
 
   auto insertStop = [&result](const QGradientStop &stop)
   {
@@ -369,38 +293,33 @@ visimpl::TTransferFunction TransferFunctionWidget::getPreviewColors( void ) cons
 void TransferFunctionWidget::colorPointsChanged( const QPolygonF &points )
 {
   auto pointSet = qobject_cast<ColorPoints *>(sender());
-  if(pointSet)
+  if(!pointSet) return;
+
+  const std::vector<ColorPoints *> colorPoints = {_redPoints, _greenPoints, _bluePoints, _alphaPoints};
+  auto it = std::find(colorPoints.cbegin(), colorPoints.cend(), pointSet);
+  if(it == colorPoints.cend()) return;
+
+  const int indexToUpdate = std::distance(colorPoints.cbegin(), it);
+
+  auto stops = _gradientFrame->getGradientStops();
+  stops.resize(points.size());
+
+  auto ntStops = stops;
+  for (int i = 0; i < points.size(); i++)
   {
-    int indexToUpdate = 0;
-    if (pointSet == _redPoints)
-        indexToUpdate = 0;
-    else if (pointSet == _greenPoints)
-        indexToUpdate = 1;
-    else if (pointSet == _bluePoints)
-        indexToUpdate = 2;
-    else if (pointSet == _alphaPoints)
-        indexToUpdate = 3;
-
-    auto stops = _gradientFrame->getGradientStops();
-    stops.resize(points.size());
-
-    auto ntStops = stops;
-    for (int i = 0; i < points.size(); i++)
-    {
-        stops[i].first = points[i].x();
-        switch (indexToUpdate) {
-        case 0: stops[i].second.setRedF(points[i].y()); break;
-        case 1: stops[i].second.setGreenF(points[i].y()); break;
-        case 2: stops[i].second.setBlueF(points[i].y()); break;
-        case 3: stops[i].second.setAlphaF(points[i].y());break;
-        }
-        ntStops[i].second.setAlphaF(1.0);
+    stops[i].first = points[i].x();
+    switch (indexToUpdate) {
+    case 0: stops[i].second.setRedF(points[i].y()); break;
+    case 1: stops[i].second.setGreenF(points[i].y()); break;
+    case 2: stops[i].second.setBlueF(points[i].y()); break;
+    case 3: stops[i].second.setAlphaF(points[i].y());break;
     }
-
-    _gradientFrame->setGradientStops(stops);
-    _nTGradientFrame->setGradientStops( ntStops );
-    _sizeFrame->setGradientStops( ntStops );
+    ntStops[i].second.setAlphaF(1.0);
   }
+
+  _gradientFrame->setGradientStops(stops);
+  _nTGradientFrame->setGradientStops( ntStops );
+  _sizeFrame->setGradientStops( ntStops );
 }
 
 void TransferFunctionWidget::setColorPoints( const visimpl::TTransferFunction& colors,
@@ -432,7 +351,6 @@ void TransferFunctionWidget::setColorPoints( const visimpl::TTransferFunction& c
     _sizeFrame->setGradientStops( _nTGradientFrame->getGradientStops( ));
   }
 }
-
 
 visimpl::TSizeFunction TransferFunctionWidget::getSizeFunction( void ) const
 {
@@ -470,9 +388,6 @@ visimpl::TSizeFunction TransferFunctionWidget::pointsToSizeFunc( const QPolygonF
 
 void TransferFunctionWidget::setSizeFunction( const visimpl::TSizeFunction& sizeFunc )
 {
-  _sizeFunction = sizeFunc;
-  QPolygonF result;
-
   _minSize = std::numeric_limits< float >::max( );
   _maxSize = std::numeric_limits< float >::min( );
 
@@ -485,18 +400,26 @@ void TransferFunctionWidget::setSizeFunction( const visimpl::TSizeFunction& size
 
   const float invTotal = 1.0f / ( _maxSize - _minSize ) ;
 
+  QPolygonF result;
   auto insertPoint = [&result, invTotal, this](const visimpl::TSize &value)
   {
     result.append( QPointF( value.first, ( value.second - _minSize ) * invTotal ));
   };
   std::for_each(sizeFunc.cbegin(), sizeFunc.cend(), insertPoint);
 
-  _sizePoints->setPoints( result, true );
-
   if(sizeFunc.empty())
   {
     _minValueLabel->setText( QString("Min size: Unknown") );
     _maxValueLabel->setText( QString("Max size: Unknown") );
+
+    // Set a default valid value.
+    _minSize = 10.0;
+    _maxSize = 20.0;
+    result.clear();
+    result.append(QPointF{0,1});
+    result.append(QPointF{1,0});
+    _sizePoints->setPoints(result, true );
+    _sizeFunction = pointsToSizeFunc(result, 10, 20);
   }
   else
   {
@@ -505,15 +428,16 @@ void TransferFunctionWidget::setSizeFunction( const visimpl::TSizeFunction& size
 
     _maxValueLabel->setText( QString("Max size: ") +
                              QString::number( static_cast<double>( _maxSize ) ));
+
+    _sizePoints->setPoints( result, true );
+    _sizeFunction = sizeFunc;
   }
 
   _minSizeBox->setValue( _minSize );
   _maxSizeBox->setValue( _maxSize );
 
-  //TODO draw plot on gradient
   _result->plot( result );
 }
-
 
 void TransferFunctionWidget::gradientClicked( void )
 {
@@ -611,4 +535,29 @@ void TransferFunctionWidget::presetSelected( int presetIdx )
   _result->setGradientStops( _nTGradientFrame->getGradientStops( ));
   _tResult = _gradientFrame->getGradientStops( );
   _sizeFrame->setGradientStops( _nTGradientFrame->getGradientStops( ));
+}
+
+void TransferFunctionWidget::onSizeValueChanged()
+{
+  auto updateBoxValue = [](QDoubleSpinBox* w, double val)
+  {
+    w->blockSignals(true);
+    w->setValue(val);
+    w->blockSignals(false);
+  };
+
+  auto box = qobject_cast<QDoubleSpinBox *>(sender());
+  if(box)
+  {
+    if(box == _maxSizeBox)
+    {
+      const auto minValue = _minSizeBox->value();
+      if(box->value() < minValue) updateBoxValue(box, minValue + 0.1);
+    }
+    else
+    {
+      const auto maxValue = _maxSizeBox->value();
+      if(box->value() > maxValue) updateBoxValue(box, maxValue - 0.1);
+    }
+  }
 }
