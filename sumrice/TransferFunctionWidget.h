@@ -107,9 +107,10 @@ protected slots:
 
   /** \brief Helper method to ensure that min size value is less than
    * max size value when updating the values spinboxes.
+   * \param[in] double value New spinbox value
    *
    */
-  void onSizeValueChanged();
+  void onSizeValueChanged(double value);
 
 signals:
   void colorChanged( void );

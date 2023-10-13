@@ -145,8 +145,8 @@ void TransferFunctionWidget::InitDialog( void )
   _maxSizeBox->setMinimum( 1.0 );
   _maxSizeBox->setMaximum( 300.0 );
 
-  connect(_minSizeBox, SIGNAL(valueChanged(double)), this, SLOT(onSizeValueChanged()));
-  connect(_maxSizeBox, SIGNAL(valueChanged(double)), this, SLOT(onSizeValueChanged()));
+  connect(_minSizeBox, SIGNAL(valueChanged(double)), this, SLOT(onSizeValueChanged(double)));
+  connect(_maxSizeBox, SIGNAL(valueChanged(double)), this, SLOT(onSizeValueChanged(double)));
 
   _minValueLabel = new QLabel( );
   _maxValueLabel = new QLabel( );
@@ -537,7 +537,7 @@ void TransferFunctionWidget::presetSelected( int presetIdx )
   _sizeFrame->setGradientStops( _nTGradientFrame->getGradientStops( ));
 }
 
-void TransferFunctionWidget::onSizeValueChanged()
+void TransferFunctionWidget::onSizeValueChanged(double value)
 {
   auto updateBoxValue = [](QDoubleSpinBox* w, double val)
   {
@@ -551,13 +551,11 @@ void TransferFunctionWidget::onSizeValueChanged()
   {
     if(box == _maxSizeBox)
     {
-      const auto minValue = _minSizeBox->value();
-      if(box->value() < minValue) updateBoxValue(box, minValue + 0.1);
+      updateBoxValue(box, std::max(value, _minSizeBox->value()));
     }
     else
     {
-      const auto maxValue = _maxSizeBox->value();
-      if(box->value() > maxValue) updateBoxValue(box, maxValue - 0.1);
+      updateBoxValue(box, std::min(value, _maxSizeBox->value()));
     }
   }
 }
