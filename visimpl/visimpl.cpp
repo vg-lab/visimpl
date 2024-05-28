@@ -386,7 +386,7 @@ void usageMessage( char* progName )
             << "Usage: "
             << progName << std::endl
             << "\t[ -bc <blue_config_path> [-target <target> ] | "
-            << "-csv <network_path> <activity_path> ] "
+            << "-csv <network_path> <activity_path> | -h5 <network_path> <activity_path>"
             << std::endl
 #ifdef SIMIL_WITH_REST_API
             << "\t[ -rest <url> <port> ]"
