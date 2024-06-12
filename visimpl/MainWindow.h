@@ -339,6 +339,11 @@ namespace visimpl
      */
     void changePlanesColor( const QColor& );
 
+    /** \brief Takes a screenshot of the 3d view and shows a dialog to resize before saving. 
+     * 
+     */
+    void saveScreenshot();
+
   protected:
     void _initSimControlDock( void );
 

@@ -23,7 +23,6 @@
 #include "simil/Network.h"
 #include "sumrice/ReconnectRESTDialog.h"
 #include <memory>
-#include <qdialog.h>
 
 #ifdef VISIMPL_USE_GMRVLEX
 
@@ -61,6 +60,7 @@
 #include <acuterecorder/acuterecorder.h>
 
 #include "MainWindow.h"
+#include "SaveScreenshotDialog.h"
 
 #include <QFileDialog>
 #include <QInputDialog>
@@ -276,6 +276,9 @@ namespace visimpl
 
     connect( _ui->actionOpenSubsetEventsFile , SIGNAL( triggered( void )) ,
              this , SLOT( openSubsetEventsFileThroughDialog( void )));
+
+    connect(_ui->actionTake_screenshot, SIGNAL(triggered()),
+            this, SLOT(saveScreenshot()));
 
     _ui->actionOpenSubsetEventsFile->setEnabled( false );
 
@@ -780,7 +783,8 @@ namespace visimpl
       "&nbsp;&nbsp;&nbsp;&nbsp;"
       "<a href='https://www.urjc.es'><img src=':/icons/logoURJC.png' /></a>"
       "&nbsp;&nbsp;&nbsp;&nbsp;"
-      "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>";
+      "<a href='https://www.upm.es'><img src=':/icons/logoUPM.png' /></a>" +
+      "<br><br><a href='https://visimpl-documentation.readthedocs.io/en/latest/'>Online documentation</a>";
 
     QMessageBox::about( this , tr( "About ViSimpl" ) , msj );
   }
@@ -1028,7 +1032,67 @@ namespace visimpl
     _simulationDock->setEnabled( false );
   }
 
-  void MainWindow::_initSimControlDock( void )
+  void MainWindow::saveScreenshot()
+  {
+    QPixmap pixmap(_openGLWidget->size());
+    _openGLWidget->render(&pixmap);
+
+    SaveScreenshotDialog dialog(pixmap.width(), pixmap.height(), pixmap.toImage(), this);
+    if (dialog.exec() == QDialog::Rejected)
+      return;
+
+    auto outputSize = dialog.getSize();
+
+    const auto dialogTitle = tr("Save screenshot");
+    const auto problemText = tr("Unable to save screenshot.");
+    auto suggestion = tr("ViSimpl-screenshot-%1.png").arg(QDateTime::currentDateTime().toString("yyyy.MM.dd-hh.mm.ss"));
+    QString formats = "PNG image (*.png);;BMP image (*.bmp);;JPG image (*.jpg);;JPEG image (*.jpeg)";
+
+    auto fileName = QFileDialog::getSaveFileName(this, dialogTitle, QDir::home().absoluteFilePath(suggestion), formats, nullptr, QFileDialog::DontUseNativeDialog);
+
+    if (!fileName.isEmpty())
+    {
+      auto nameParts = fileName.split(".");
+      auto extension = nameParts.last().toUpper();
+
+      const QStringList validFileExtensions{"BMP", "JPG", "JPEG", "PNG"};
+
+      if (validFileExtensions.contains(extension))
+      {
+        if (pixmap.size() != outputSize)
+          pixmap = pixmap.scaled(outputSize.width(), outputSize.height(), Qt::AspectRatioMode::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
+
+        auto saved = pixmap.save(fileName, extension.toUtf8(), 100);
+
+        // check for successful file write
+        QFileInfo fileInfo{fileName};
+        if (!saved || !fileInfo.exists() || fileInfo.size() == 0)
+        {
+          auto message = tr("Couln't save screenshot file '%1'. Problem writing format '%2'.").arg(fileInfo.fileName()).arg(extension);
+
+          QMessageBox msgBox(this);
+          msgBox.setWindowIcon(QIcon(":/icons/screenshot.svg"));
+          msgBox.setWindowTitle(dialogTitle);
+          msgBox.setText(problemText);
+          msgBox.setDetailedText(message);
+          msgBox.exec();
+        }
+      }
+      else
+      {
+        auto message = tr("Couln't save screenshot file '%1'. Unrecognized extension '%1'.").arg(fileName.split('/').last()).arg(extension);
+
+        QMessageBox msgBox(this);
+        msgBox.setWindowIcon(QIcon(":/icons/screenshot.png"));
+        msgBox.setWindowTitle(dialogTitle);
+        msgBox.setText(problemText);
+        msgBox.setDetailedText(message);
+        msgBox.exec();
+      }
+    }
+  }
+
+  void MainWindow::_initSimControlDock(void)
   {
     _simConfigurationDock = new QDockWidget( );
     _simConfigurationDock->setMinimumHeight( 100 );

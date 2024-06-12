@@ -31,6 +31,7 @@
     <file>icons/left.svg</file>
     <file>icons/right.svg</file>
     <file>icons/eye.svg</file>
+    <file>icons/screenshot.svg</file>
     <file>visimpl.png</file>
   </qresource>
 </RCC>

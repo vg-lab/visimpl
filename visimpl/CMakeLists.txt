@@ -29,10 +29,12 @@ set(QRCDIR ${PROJECT_SOURCE_DIR}/qrc)
 
 set(VISIMPL_SOURCES_BASE
   visimpl.ui
+  SaveScreenshotDialog.ui
   resources.qrc
 
   MainWindow.cpp
   OpenGLWidget.cpp
+  SaveScreenshotDialog.cpp
 
   VisualGroup.cpp
   DomainManager.cpp
@@ -59,6 +61,7 @@ set(VISIMPL_HEADERS_BASE
 
   VisualGroup.h
   DomainManager.h
+  SaveScreenshotDialog.h
 
   SelectionManagerWidget.h
   SubsetImporter.h

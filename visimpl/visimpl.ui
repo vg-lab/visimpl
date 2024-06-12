@@ -91,6 +91,8 @@
      <string>Tools</string>
     </property>
     <addaction name="actionAdvancedRecorderOptions"/>
+    <addaction name="separator"/>
+    <addaction name="actionTake_screenshot"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuOptions"/>
@@ -126,6 +128,7 @@
    <addaction name="separator"/>
    <addaction name="actionHome"/>
    <addaction name="actionBackgroundColor"/>
+   <addaction name="actionTake_screenshot"/>
    <addaction name="separator"/>
    <addaction name="actionStackVizShowDataManager"/>
    <addaction name="actionStackVizFillPlots"/>
@@ -600,6 +603,18 @@
    </property>
    <property name="toolTip">
     <string>Configures REST connection options.</string>
+   </property>
+  </action>
+  <action name="actionTake_screenshot">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/screenshot.svg</normaloff>:/icons/screenshot.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Take screenshot...</string>
+   </property>
+   <property name="toolTip">
+    <string>Takes a screenshot of the 3D view.</string>
    </property>
   </action>
  </widget>
