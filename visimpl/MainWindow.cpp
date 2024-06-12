@@ -1037,7 +1037,11 @@ namespace visimpl
     QPixmap pixmap(_openGLWidget->size());
     _openGLWidget->render(&pixmap);
 
+    const QIcon icon(":/icons/screenshot.svg");
+
     SaveScreenshotDialog dialog(pixmap.width(), pixmap.height(), pixmap.toImage(), this);
+    dialog.setWindowIcon(icon);
+    
     if (dialog.exec() == QDialog::Rejected)
       return;
 
@@ -1071,7 +1075,7 @@ namespace visimpl
           auto message = tr("Couln't save screenshot file '%1'. Problem writing format '%2'.").arg(fileInfo.fileName()).arg(extension);
 
           QMessageBox msgBox(this);
-          msgBox.setWindowIcon(QIcon(":/icons/screenshot.svg"));
+          msgBox.setWindowIcon(icon);
           msgBox.setWindowTitle(dialogTitle);
           msgBox.setText(problemText);
           msgBox.setDetailedText(message);
@@ -1083,7 +1087,7 @@ namespace visimpl
         auto message = tr("Couln't save screenshot file '%1'. Unrecognized extension '%1'.").arg(fileName.split('/').last()).arg(extension);
 
         QMessageBox msgBox(this);
-        msgBox.setWindowIcon(QIcon(":/icons/screenshot.png"));
+        msgBox.setWindowIcon(icon);
         msgBox.setWindowTitle(dialogTitle);
         msgBox.setText(problemText);
         msgBox.setDetailedText(message);
