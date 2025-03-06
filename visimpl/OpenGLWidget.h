@@ -231,6 +231,11 @@ namespace visimpl
 
     const scoop::ColorPalette& colorPalette( void );
 
+    std::shared_ptr<visimpl::Camera> camera() const
+    {
+      return _camera;
+    }
+
     /** \brief Returns the current camera position.
      *
      */

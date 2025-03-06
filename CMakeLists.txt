@@ -9,7 +9,7 @@
 cmake_minimum_required( VERSION 3.1 FATAL_ERROR )
 
 # visimpl project and version
-project( visimpl VERSION 1.8.12 )
+project( visimpl VERSION 1.8.13 )
 set( visimpl_VERSION_ABI 6 )
 
 SET( VISIMPL_LICENSE "GPL")
@@ -101,6 +101,8 @@ endif( )
 if( VISIMPL_WITH_ZEQ )
   common_find_package( ZeroEQ )
   if ( ZEROEQ_FOUND )
+    add_definitions(-DVISIMPL_USE_ZEROEQ)
+    
     list( APPEND VISIMPL_DEPENDENT_LIBRARIES ZeroEQ )
     common_find_package( Threads ${SIMIL_OPTS_FIND_ARGS} )
     list( APPEND VISIMPL_DEPENDENT_LIBRARIES Threads )

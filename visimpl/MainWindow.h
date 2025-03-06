@@ -344,8 +344,15 @@ namespace visimpl
      */
     void saveScreenshot();
 
+    /** \brief Sets/removes the presentation mode.
+     * 
+     */
+    void presentationMode();
+
   protected:
-    void _initSimControlDock( void );
+    virtual bool eventFilter(QObject *obj, QEvent *event);
+
+    void _initSimControlDock(void);
 
     void _initPlaybackDock( void );
 

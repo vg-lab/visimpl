@@ -78,7 +78,7 @@ int main( int argc, char** argv )
   QCoreApplication::addLibraryPath(
     dir.absolutePath( ) + QString( "/Plugins" ));
 #endif
-
+  QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
   QApplication application( argc, argv );
 
   simil::TSimulationType simType = simil::TSimSpikes;
