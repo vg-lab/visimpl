@@ -78,6 +78,8 @@
 #include <QPushButton>
 #include <QToolBox>
 #include <QtGlobal>
+#include <QWindow>
+#include <QScreen>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -380,6 +382,9 @@ namespace visimpl
 
     _ui->toolBar->setContextMenuPolicy( Qt::PreventContextMenu );
     _ui->menubar->setContextMenuPolicy( Qt::PreventContextMenu );
+
+    new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_F), this, SLOT(showMaximized()));
+    new QShortcut(QKeySequence(Qt::CTRL + +Qt::SHIFT + Qt::Key_F), this, SLOT(presentationMode()));
   }
 
   MainWindow::~MainWindow( void )
@@ -1096,475 +1101,573 @@ namespace visimpl
     }
   }
 
-  void MainWindow::_initSimControlDock(void)
+void MainWindow::presentationMode()
+{
+  if (_openGLWidget->parent() != this)
   {
-    _simConfigurationDock = new QDockWidget( );
-    _simConfigurationDock->setMinimumHeight( 100 );
-    _simConfigurationDock->setMinimumWidth( 400 );
-    _simConfigurationDock->setSizePolicy( QSizePolicy::MinimumExpanding ,
-                                          QSizePolicy::MinimumExpanding );
+    auto parent = qobject_cast<QDialog*>(_openGLWidget->parent());
+    if(parent)
+      parent->removeEventFilter(this);
 
-    _tfWidget = new TransferFunctionWidget( );
-    _tfWidget->setMinimumHeight( 100 );
-    _tfWidget->setDialogIcon( QIcon( ":/visimpl.png" ));
+    setCentralWidget(_openGLWidget);
+    _openGLWidget->setParent(this);
 
-    _subsetImporter = new SubsetImporter( this );
-    _subsetImporter->setWindowModality( Qt::WindowModal );
-    _subsetImporter->setMinimumHeight( 300 );
-    _subsetImporter->setMinimumWidth( 500 );
-
-    _selectionManager = new SelectionManagerWidget( );
-    _selectionManager->setWindowModality( Qt::WindowModal );
-    _selectionManager->setMinimumHeight( 300 );
-    _selectionManager->setMinimumWidth( 500 );
-    _selectionManager->setWindowIcon( QIcon( ":/visimpl.png" ));
-
-    connect( _selectionManager , SIGNAL( selectionChanged( void )) , this ,
-             SLOT( selectionManagerChanged( void )));
-
-    _deltaTimeBox = new QDoubleSpinBox( );
-    _deltaTimeBox->setMinimum( 0.00000001 );
-    _deltaTimeBox->setMaximum( 50 );
-    _deltaTimeBox->setSingleStep( 0.05 );
-    _deltaTimeBox->setDecimals( 5 );
-    _deltaTimeBox->setMaximumWidth( 100 );
-
-    _timeStepsPSBox = new QDoubleSpinBox( );
-    _timeStepsPSBox->setMinimum( 0.00000001 );
-    _timeStepsPSBox->setMaximum( 50 );
-    _timeStepsPSBox->setSingleStep( 1.0 );
-    _timeStepsPSBox->setDecimals( 5 );
-    _timeStepsPSBox->setMaximumWidth( 100 );
-
-    _stepByStepDurationBox = new QDoubleSpinBox( );
-    _stepByStepDurationBox->setMinimum( 0.5 );
-    _stepByStepDurationBox->setMaximum( 50 );
-    _stepByStepDurationBox->setSingleStep( 1.0 );
-    _stepByStepDurationBox->setDecimals( 3 );
-    _stepByStepDurationBox->setMaximumWidth( 100 );
-
-    _decayBox = new QDoubleSpinBox( );
-    _decayBox->setMinimum( 0.01 );
-    _decayBox->setMaximum( 600.0 );
-    _decayBox->setDecimals( 5 );
-    _decayBox->setMaximumWidth( 100 );
-
-    _alphaNormalButton = new QRadioButton( "Normal" );
-    _alphaAccumulativeButton = new QRadioButton( "Accumulative" );
-    _openGLWidget->SetAlphaBlendingAccumulative( false );
-
-    _buttonClearSelection = new QPushButton( "Discard" );
-    _buttonClearSelection->setEnabled( false );
-    _selectionSizeLabel = new QLabel( "0" );
-
-    _buttonAddGroup = new QPushButton( "Add group" );
-    _buttonAddGroup->setEnabled( false );
-    _buttonAddGroup->setToolTip(
-      "Click to create a group from current selection." );
-
-    _labelGID = new QLabel( "" );
-    _labelPosition = new QLabel( "" );
-
-    _checkClipping = new QCheckBox( tr( "Clipping" ));
-    _checkShowPlanes = new QCheckBox( "Show planes" );
-    _buttonResetPlanes = new QPushButton( "Reset" );
-    _spinBoxClippingHeight = new QDoubleSpinBox( );
-    _spinBoxClippingHeight->setDecimals( 2 );
-    _spinBoxClippingHeight->setMinimum( 1 );
-    _spinBoxClippingHeight->setMaximum( 99999 );
-
-    _spinBoxClippingWidth = new QDoubleSpinBox( );
-    _spinBoxClippingWidth->setDecimals( 2 );
-    _spinBoxClippingWidth->setMinimum( 1 );
-    _spinBoxClippingWidth->setMaximum( 99999 );
-
-    _spinBoxClippingDist = new QDoubleSpinBox( );
-    _spinBoxClippingDist->setDecimals( 2 );
-    _spinBoxClippingDist->setMinimum( 1 );
-    _spinBoxClippingDist->setMaximum( 99999 );
-
-    QColor clippingColor( 255 , 255 , 255 , 255 );
-    _frameClippingColor = new QPushButton( );
-    _frameClippingColor->setStyleSheet( "background-color: " +
-                                        clippingColor.name( ));
-    _frameClippingColor->setMinimumSize( 20 , 20 );
-    _frameClippingColor->setMaximumSize( 20 , 20 );
-    _frameClippingColor->setProperty( PLANES_COLOR_KEY_ ,
-                                      clippingColor.name( ));
-
-    _buttonSelectionFromClippingPlanes = new QPushButton( "To selection" );
-    _buttonSelectionFromClippingPlanes->setToolTip(
-      tr( "Create a selection set from elements between planes" ));
-
-    _circuitScaleX = new QDoubleSpinBox( );
-    _circuitScaleX->setDecimals( 2 );
-    _circuitScaleX->setMinimum( 0.01 );
-    _circuitScaleX->setMaximum( 9999999 );
-    _circuitScaleX->setSingleStep( 0.5 );
-    _circuitScaleX->setMaximumWidth( 100 );
-
-    _circuitScaleY = new QDoubleSpinBox( );
-    _circuitScaleY->setDecimals( 2 );
-    _circuitScaleY->setMinimum( 0.01 );
-    _circuitScaleY->setMaximum( 9999999 );
-    _circuitScaleY->setSingleStep( 0.5 );
-    _circuitScaleY->setMaximumWidth( 100 );
-
-    _circuitScaleZ = new QDoubleSpinBox( );
-    _circuitScaleZ->setDecimals( 2 );
-    _circuitScaleZ->setMinimum( 0.01 );
-    _circuitScaleZ->setMaximum( 9999999 );
-    _circuitScaleZ->setSingleStep( 0.5 );
-    _circuitScaleZ->setMaximumWidth( 100 );
-
-    QWidget* topContainer = new QWidget( );
-    QVBoxLayout* verticalLayout = new QVBoxLayout( );
-
-    _groupBoxTransferFunction =
-      new QGroupBox( "Color and Size transfer function" );
-    QVBoxLayout* tfLayout = new QVBoxLayout( );
-    tfLayout->addWidget( _tfWidget );
-    _groupBoxTransferFunction->setLayout( tfLayout );
-
-    QGroupBox* tSpeedGB = new QGroupBox( "Simulation playback Configuration" );
-    QGridLayout* sfLayout = new QGridLayout( );
-    sfLayout->setAlignment( Qt::AlignTop );
-    sfLayout->addWidget( new QLabel( "Simulation timestep:" ) , 0 , 0 , 1 , 1 );
-    sfLayout->addWidget( _deltaTimeBox , 0 , 1 , 1 , 1 );
-    sfLayout->addWidget( new QLabel( "Timesteps per second:" ) , 1 , 0 , 1 ,
-                         1 );
-    sfLayout->addWidget( _timeStepsPSBox , 1 , 1 , 1 , 1 );
-    sfLayout->addWidget( new QLabel( "Step playback duration (s):" ) , 2 , 0 ,
-                         1 ,
-                         1 );
-    sfLayout->addWidget( _stepByStepDurationBox , 2 , 1 , 1 , 1 );
-    tSpeedGB->setLayout( sfLayout );
-
-    QGroupBox* scaleGB = new QGroupBox( "Scale factor (X,Y,Z)" );
-    QHBoxLayout* layoutScale = new QHBoxLayout( );
-    scaleGB->setLayout( layoutScale );
-    layoutScale->addWidget( _circuitScaleX );
-    layoutScale->addWidget( _circuitScaleY );
-    layoutScale->addWidget( _circuitScaleZ );
-
-    QComboBox* comboShader = new QComboBox( );
-    comboShader->addItems( { "Default" , "Solid" } );
-    comboShader->setCurrentIndex( 0 );
-
-    QGroupBox* shaderGB = new QGroupBox( "Shader Configuration" );
-    QHBoxLayout* shaderLayout = new QHBoxLayout( );
-    shaderLayout->addWidget( new QLabel( "Current shader: " ));
-    shaderLayout->addWidget( comboShader );
-    shaderGB->setLayout( shaderLayout );
-
-    QGroupBox* dFunctionGB = new QGroupBox( "Decay function" );
-    QHBoxLayout* dfLayout = new QHBoxLayout( );
-    dfLayout->setAlignment( Qt::AlignTop );
-    dfLayout->addWidget( new QLabel( "Decay (simulation time): " ));
-    dfLayout->addWidget( _decayBox );
-    dFunctionGB->setLayout( dfLayout );
-
-    QGroupBox* rFunctionGB = new QGroupBox( "Alpha blending function" );
-    QHBoxLayout* rfLayout = new QHBoxLayout( );
-    rfLayout->setAlignment( Qt::AlignTop );
-    rfLayout->addWidget( new QLabel( "Alpha Blending: " ));
-    rfLayout->addWidget( _alphaNormalButton );
-    rfLayout->addWidget( _alphaAccumulativeButton );
-    rFunctionGB->setLayout( rfLayout );
-
-    // Visual Configuration Container
-    QWidget* vcContainer = new QWidget( );
-    QVBoxLayout* vcLayout = new QVBoxLayout( );
-    vcLayout->setAlignment( Qt::AlignTop );
-    vcLayout->addWidget( scaleGB );
-    vcLayout->addWidget( shaderGB );
-    vcLayout->addWidget( dFunctionGB );
-    vcLayout->addWidget( rFunctionGB );
-    vcContainer->setLayout( vcLayout );
-
-    QPushButton* buttonSelectionManager = new QPushButton( "..." );
-    buttonSelectionManager->setToolTip(
-      tr( "Show the selection management dialog" ));
-    buttonSelectionManager->setMaximumWidth( 30 );
-
-    QGroupBox* selFunctionGB = new QGroupBox( "Current selection" );
-    QHBoxLayout* selLayout = new QHBoxLayout( );
-    selLayout->setAlignment( Qt::AlignTop );
-    selLayout->addWidget( new QLabel( "Size: " ));
-    selLayout->addWidget( _selectionSizeLabel );
-    selLayout->addWidget( buttonSelectionManager );
-    selLayout->addWidget( _buttonAddGroup );
-    selLayout->addWidget( _buttonClearSelection );
-    selFunctionGB->setLayout( selLayout );
-
-    QFrame* line = new QFrame( );
-    line->setFrameShape( QFrame::HLine );
-    line->setFrameShadow( QFrame::Sunken );
-
-    QGroupBox* gbClippingPlanes = new QGroupBox( "Clipping planes" );
-    QGridLayout* layoutClippingPlanes = new QGridLayout( );
-    gbClippingPlanes->setLayout( layoutClippingPlanes );
-    layoutClippingPlanes->addWidget( _checkClipping , 0 , 0 , 1 , 1 );
-    layoutClippingPlanes->addWidget( _checkShowPlanes , 0 , 1 , 1 , 2 );
-    layoutClippingPlanes->addWidget( _buttonSelectionFromClippingPlanes , 0 ,
-                                     3 ,
-                                     1 , 1 );
-    layoutClippingPlanes->addWidget( line , 1 , 0 , 1 , 4 );
-    layoutClippingPlanes->addWidget( _frameClippingColor , 2 , 0 , 1 , 1 );
-    layoutClippingPlanes->addWidget( _buttonResetPlanes , 2 , 1 , 1 , 1 );
-    layoutClippingPlanes->addWidget( new QLabel( "Height" ) , 2 , 2 , 1 , 1 );
-    layoutClippingPlanes->addWidget( _spinBoxClippingHeight , 2 , 3 , 1 , 1 );
-    layoutClippingPlanes->addWidget( new QLabel( "Distance" ) , 3 , 0 , 1 , 1 );
-    layoutClippingPlanes->addWidget( _spinBoxClippingDist , 3 , 1 , 1 , 1 );
-    layoutClippingPlanes->addWidget( new QLabel( "Width" ) , 3 , 2 , 1 , 1 );
-    layoutClippingPlanes->addWidget( _spinBoxClippingWidth , 3 , 3 , 1 , 1 );
-
-    QWidget* containerSelectionTools = new QWidget( );
-    QVBoxLayout* layoutContainerSelection = new QVBoxLayout( );
-    containerSelectionTools->setLayout( layoutContainerSelection );
-
-    layoutContainerSelection->addWidget( selFunctionGB );
-    layoutContainerSelection->addWidget( gbClippingPlanes );
-
-    _objectInspectorGB = new DataInspector( "Object inspector" );
-    _objectInspectorGB->addWidget( new QLabel( "GID:" ) , 2 , 0 , 1 , 1 );
-    _objectInspectorGB->addWidget( _labelGID , 2 , 1 , 1 , 3 );
-    _objectInspectorGB->addWidget( new QLabel( "Position: " ) , 3 , 0 , 1 , 1 );
-    _objectInspectorGB->addWidget( _labelPosition , 3 , 1 , 1 , 3 );
-
-    QGroupBox* groupBoxGroups = new QGroupBox( "Current visualization groups" );
-    _groupLayout = new QVBoxLayout( );
-    _groupLayout->setAlignment( Qt::AlignTop );
-
-    _buttonImportGroups = new QPushButton( "Import from..." );
-    _buttonClearGroups = new QPushButton( "Clear" );
-    _buttonClearGroups->setEnabled( false );
-    _buttonLoadGroups = new QPushButton( "Load" );
-    _buttonLoadGroups->setToolTip( tr( "Load Groups from disk" ));
-    _buttonSaveGroups = new QPushButton( "Save" );
-    _buttonSaveGroups->setToolTip( tr( "Save Groups to disk" ));
-    _buttonSaveGroups->setEnabled( false );
-
+    if(parent)
     {
-      QWidget* groupContainer = new QWidget( );
-      groupContainer->setLayout( _groupLayout );
-
-      QScrollArea* scrollGroups = new QScrollArea( );
-      scrollGroups->setWidget( groupContainer );
-      scrollGroups->setWidgetResizable( true );
-      scrollGroups->setFrameShape( QFrame::Shape::NoFrame );
-      scrollGroups->setFrameShadow( QFrame::Shadow::Plain );
-      scrollGroups->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-      scrollGroups->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-
-      QGridLayout* groupOuterLayout = new QGridLayout( );
-      groupOuterLayout->setMargin( 0 );
-      groupOuterLayout->addWidget( _buttonImportGroups , 0 , 0 , 1 , 1 );
-      groupOuterLayout->addWidget( _buttonClearGroups , 0 , 1 , 1 , 1 );
-      groupOuterLayout->addWidget( _buttonLoadGroups , 1 , 0 , 1 , 1 );
-      groupOuterLayout->addWidget( _buttonSaveGroups , 1 , 1 , 1 , 1 );
-
-      groupOuterLayout->addWidget( scrollGroups , 2 , 0 , 1 , 2 );
-
-      groupBoxGroups->setLayout( groupOuterLayout );
+      parent->close();
+      parent->deleteLater();
     }
-
-    _groupBoxAttrib = new QGroupBox( "Attribute Mapping" );
-    QGridLayout* layoutGroupAttrib = new QGridLayout( );
-    _groupBoxAttrib->setLayout( layoutGroupAttrib );
-
-    _comboAttribSelection = new QComboBox( );
-
-    QGroupBox* gbAttribSel = new QGroupBox( "Attribute selection" );
-    QHBoxLayout* lyAttribSel = new QHBoxLayout( );
-    lyAttribSel->addWidget( _comboAttribSelection );
-    gbAttribSel->setLayout( lyAttribSel );
-
-    QGroupBox* gbAttribStats = new QGroupBox( "Statistics" );
-    QScrollArea* attribScroll = new QScrollArea( );
-    QWidget* attribContainer = new QWidget( );
-    QVBoxLayout* attribContainerLayout = new QVBoxLayout( );
-    gbAttribStats->setLayout( attribContainerLayout );
-    attribContainerLayout->addWidget( attribScroll );
-
-    attribScroll->setWidget( attribContainer );
-    attribScroll->setWidgetResizable( true );
-    attribScroll->setFrameShape( QFrame::Shape::NoFrame );
-    attribScroll->setFrameShadow( QFrame::Shadow::Plain );
-    attribScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-    attribScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-
-    _layoutAttribStats = new QVBoxLayout( );
-    _layoutAttribStats->setAlignment( Qt::AlignTop );
-    attribContainer->setLayout( _layoutAttribStats );
-
-    QGroupBox* gbAttribGroups = new QGroupBox( "Groups" );
-    _layoutAttribGroups = new QGridLayout( );
-    _layoutAttribGroups->setAlignment( Qt::AlignTop );
-    {
-      QWidget* groupContainer = new QWidget( );
-      groupContainer->setLayout( _layoutAttribGroups );
-
-      QScrollArea* groupScroll = new QScrollArea( );
-      groupScroll->setWidget( groupContainer );
-      groupScroll->setWidgetResizable( true );
-      groupScroll->setFrameShape( QFrame::Shape::NoFrame );
-      groupScroll->setFrameShadow( QFrame::Shadow::Plain );
-      groupScroll->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-      groupScroll->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
-
-      QGridLayout* groupOuterLayout = new QGridLayout( );
-      groupOuterLayout->setMargin( 0 );
-      groupOuterLayout->addWidget( groupScroll );
-
-      gbAttribGroups->setLayout( groupOuterLayout );
-    }
-
-    layoutGroupAttrib->addWidget( gbAttribSel , 0 , 0 , 1 , 2 );
-    layoutGroupAttrib->addWidget( gbAttribGroups , 0 , 2 , 3 , 2 );
-    layoutGroupAttrib->addWidget( gbAttribStats , 1 , 0 , 2 , 2 );
-
-    QWidget* containerTabSelection = new QWidget( );
-    QVBoxLayout* tabSelectionLayout = new QVBoxLayout( );
-    containerTabSelection->setLayout( tabSelectionLayout );
-    tabSelectionLayout->addWidget( _groupBoxTransferFunction );
-
-    QWidget* containerTabGroups = new QWidget( );
-    QVBoxLayout* tabGroupsLayout = new QVBoxLayout( );
-    containerTabGroups->setLayout( tabGroupsLayout );
-    tabGroupsLayout->addWidget( groupBoxGroups );
-
-    QWidget* containerTabAttrib = new QWidget( );
-    QVBoxLayout* tabAttribLayout = new QVBoxLayout( );
-    containerTabAttrib->setLayout( tabAttribLayout );
-    tabAttribLayout->addWidget( _groupBoxAttrib );
-
-    _modeSelectionWidget = new QTabWidget( );
-    _modeSelectionWidget->addTab( containerTabSelection , tr( "Selection" ));
-    _modeSelectionWidget->addTab( containerTabGroups , tr( "Groups" ));
-    _modeSelectionWidget->addTab( containerTabAttrib , tr( "Attribute" ));
-
-    _toolBoxOptions = new QToolBox( );
-    _toolBoxOptions->addItem( tSpeedGB , tr( "Playback Configuration" ));
-    _toolBoxOptions->addItem( vcContainer , tr( "Visual Configuration" ));
-    _toolBoxOptions->addItem( containerSelectionTools , tr( "Selection" ));
-    _toolBoxOptions->addItem( _objectInspectorGB , tr( "Inspector" ));
-
-    connect( _objectInspectorGB , SIGNAL( simDataChanged( )) ,
-             _openGLWidget , SLOT( updateData( )));
-
-    connect( _objectInspectorGB , SIGNAL( simDataChanged( )) ,
-             _summary , SLOT( UpdateHistograms( )));
-
-    connect( _objectInspectorGB , SIGNAL( simDataChanged( )) ,
-             this , SLOT( configureComponents( )));
-
-    verticalLayout->setAlignment( Qt::AlignTop );
-    verticalLayout->addWidget( _modeSelectionWidget );
-    verticalLayout->addWidget( _toolBoxOptions );
-
-    topContainer->setLayout( verticalLayout );
-    _simConfigurationDock->setWidget( topContainer );
-
-    this->addDockWidget( Qt::RightDockWidgetArea , _simConfigurationDock );
-
-    connect( _modeSelectionWidget , SIGNAL( currentChanged( int )) ,
-             _openGLWidget , SLOT( setMode( int )));
-
-    connect( _openGLWidget , SIGNAL( attributeStatsComputed( void )) , this ,
-             SLOT( updateAttributeStats( void )));
-
-    connect( _comboAttribSelection , SIGNAL( currentIndexChanged( int )) ,
-             _openGLWidget , SLOT( selectAttrib( int )));
-
-    connect( comboShader , SIGNAL( currentIndexChanged( int )) , _openGLWidget ,
-             SLOT( changeShader( int )));
-
-    connect( _tfWidget , SIGNAL( colorChanged( void )) , this ,
-             SLOT( UpdateSimulationColorMapping( void )));
-    connect( _tfWidget , SIGNAL( sizeChanged( void )) , this ,
-             SLOT( UpdateSimulationSizeFunction( void )));
-    connect( _tfWidget , SIGNAL( previewColor( void )) , this ,
-             SLOT( PreviewSimulationColorMapping( void )));
-    connect( _tfWidget , SIGNAL( previewColor( void )) , this ,
-             SLOT( PreviewSimulationSizeFunction( void )));
-
-    connect( buttonSelectionManager , SIGNAL( clicked( void )) , this ,
-             SLOT( dialogSelectionManagement( void )));
-
-    connect( _circuitScaleX , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateCircuitScaleValue( void )));
-
-    connect( _circuitScaleY , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateCircuitScaleValue( void )));
-
-    connect( _circuitScaleZ , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateCircuitScaleValue( void )));
-
-    connect( _deltaTimeBox , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateSimDeltaTime( void )));
-
-    connect( _timeStepsPSBox , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateSimTimestepsPS( void )));
-
-    connect( _decayBox , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateSimulationDecayValue( void )));
-
-    connect( _stepByStepDurationBox , SIGNAL( valueChanged( double )) , this ,
-             SLOT( updateSimStepByStepDuration( void )));
-
-    connect( _alphaNormalButton , SIGNAL( toggled( bool )) , this ,
-             SLOT( AlphaBlendingToggled( void )));
-
-    // Clipping planes
-
-    _checkClipping->setChecked( true );
-    connect( _checkClipping , SIGNAL( stateChanged( int )) , this ,
-             SLOT( clippingPlanesActive( int )));
-    _checkClipping->setChecked( false );
-
-    _checkShowPlanes->setChecked( true );
-    connect( _checkShowPlanes , SIGNAL( stateChanged( int )) , _openGLWidget ,
-             SLOT( paintClippingPlanes( int )));
-
-    connect( _buttonSelectionFromClippingPlanes , SIGNAL( clicked( void )) ,
-             this , SLOT( selectionFromPlanes( void )));
-
-    connect( _buttonResetPlanes , SIGNAL( clicked( void )) , this ,
-             SLOT( clippingPlanesReset( void )));
-
-    connect( _spinBoxClippingDist , SIGNAL( editingFinished( void )) , this ,
-             SLOT( spinBoxValueChanged( void )));
-
-    connect( _spinBoxClippingHeight , SIGNAL( editingFinished( void )) , this ,
-             SLOT( spinBoxValueChanged( void )));
-
-    connect( _spinBoxClippingWidth , SIGNAL( editingFinished( void )) , this ,
-             SLOT( spinBoxValueChanged( void )));
-
-    connect( _frameClippingColor , SIGNAL( clicked( )) , this ,
-             SLOT( colorSelectionClicked( )));
-
-    connect( _buttonClearSelection , SIGNAL( clicked( void )) , this ,
-             SLOT( clearSelection( void )));
-
-    connect( _buttonAddGroup , SIGNAL( clicked( void )) , this ,
-             SLOT( addGroupFromSelection( )));
-
-    connect( _buttonImportGroups , SIGNAL( clicked( void )) , this ,
-             SLOT( dialogSubsetImporter( void )));
-
-    connect( _buttonClearGroups , SIGNAL( clicked( void )) , this ,
-             SLOT( clearGroups( void )));
-
-    connect( _buttonLoadGroups , SIGNAL( clicked( void )) , this ,
-             SLOT( loadGroups( )));
-    connect( _buttonSaveGroups , SIGNAL( clicked( void )) , this ,
-             SLOT( saveGroups( )));
-
-    _alphaNormalButton->setChecked( true );
-    _simConfigurationDock->setEnabled( false );
   }
+  else
+  {
+    auto presentationDialog = new QDialog(this, Qt::Window | Qt::FramelessWindowHint);
+    presentationDialog->setModal(false);
+    presentationDialog->installEventFilter(this);
+    auto layout = new QHBoxLayout();
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSizeConstraint(QLayout::SetNoConstraint);
+    presentationDialog->setLayout(layout);
+    layout->addWidget(_openGLWidget);
+    _openGLWidget->setParent(presentationDialog);
+    presentationDialog->showNormal();
+    const auto screen = presentationDialog->windowHandle()->screen();
+    const auto geom = screen->geometry();
+    presentationDialog->move(geom.topLeft());
+    presentationDialog->resize(geom.width(), geom.height());
+  }
+  _openGLWidget->update();
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+  auto presentationDialog = qobject_cast<QDialog *>(obj);
+
+  if (presentationDialog)
+  {
+    _openGLWidget->camera()->rotate(Eigen::Vector3f(M_PI / 360, 0, 0));
+    if (event->type() == QEvent::KeyPress || event->type() == QEvent::ShortcutOverride)
+    {
+      QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+      const auto modifiers = static_cast<int>(Qt::KeyboardModifiers(Qt::ShiftModifier | Qt::ControlModifier));
+      const auto key = keyEvent->key();
+
+      if(key == Qt::Key_Escape) // avoid closing the widget dialog.
+      {
+        event->accept();
+        return true;
+      }
+
+      if ((keyEvent->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)) == modifiers)
+      {
+        if (key == Qt::Key_F)
+        {
+          this->presentationMode();
+          event->accept();
+          return true;
+        }
+
+        if (key == Qt::Key_Left || key == Qt::Key_Right || key == Qt::Key_Up)
+        {
+          const auto screen = presentationDialog->windowHandle()->screen();
+          const auto geom = screen->geometry();
+
+          switch (key)
+          {
+            default:
+            case Qt::Key_Up:
+              presentationDialog->setMaximumSize(QSize{geom.size()});
+              presentationDialog->resize(geom.width(), geom.height());
+              presentationDialog->move(geom.topLeft());
+              break;
+            case Qt::Key_Left:
+              presentationDialog->setMaximumSize(QSize{geom.width()/2, geom.height()});
+              presentationDialog->resize(geom.width()/2, geom.height());
+              presentationDialog->move(geom.topLeft());
+              break;
+            case Qt::Key_Right:
+              presentationDialog->setMaximumSize(QSize{geom.width() / 2, geom.height()});
+              presentationDialog->resize(geom.width() / 2, geom.height());
+              presentationDialog->move(geom.topLeft() + QPoint(geom.width() / 2, 0));
+              break;
+            }
+            event->accept();
+            return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+void MainWindow::_initSimControlDock(void)
+{
+  _simConfigurationDock = new QDockWidget();
+  _simConfigurationDock->setMinimumHeight(100);
+  _simConfigurationDock->setMinimumWidth(400);
+  _simConfigurationDock->setSizePolicy(QSizePolicy::MinimumExpanding,
+                                       QSizePolicy::MinimumExpanding);
+
+  _tfWidget = new TransferFunctionWidget();
+  _tfWidget->setMinimumHeight(100);
+  _tfWidget->setDialogIcon(QIcon(":/visimpl.png"));
+
+  _subsetImporter = new SubsetImporter(this);
+  _subsetImporter->setWindowModality(Qt::WindowModal);
+  _subsetImporter->setMinimumHeight(300);
+  _subsetImporter->setMinimumWidth(500);
+
+  _selectionManager = new SelectionManagerWidget();
+  _selectionManager->setWindowModality(Qt::WindowModal);
+  _selectionManager->setMinimumHeight(300);
+  _selectionManager->setMinimumWidth(500);
+  _selectionManager->setWindowIcon(QIcon(":/visimpl.png"));
+
+  connect(_selectionManager, SIGNAL(selectionChanged(void)), this,
+          SLOT(selectionManagerChanged(void)));
+
+  _deltaTimeBox = new QDoubleSpinBox();
+  _deltaTimeBox->setMinimum(0.00000001);
+  _deltaTimeBox->setMaximum(50);
+  _deltaTimeBox->setSingleStep(0.05);
+  _deltaTimeBox->setDecimals(5);
+  _deltaTimeBox->setMaximumWidth(100);
+
+  _timeStepsPSBox = new QDoubleSpinBox();
+  _timeStepsPSBox->setMinimum(0.00000001);
+  _timeStepsPSBox->setMaximum(50);
+  _timeStepsPSBox->setSingleStep(1.0);
+  _timeStepsPSBox->setDecimals(5);
+  _timeStepsPSBox->setMaximumWidth(100);
+
+  _stepByStepDurationBox = new QDoubleSpinBox();
+  _stepByStepDurationBox->setMinimum(0.5);
+  _stepByStepDurationBox->setMaximum(50);
+  _stepByStepDurationBox->setSingleStep(1.0);
+  _stepByStepDurationBox->setDecimals(3);
+  _stepByStepDurationBox->setMaximumWidth(100);
+
+  _decayBox = new QDoubleSpinBox();
+  _decayBox->setMinimum(0.01);
+  _decayBox->setMaximum(600.0);
+  _decayBox->setDecimals(5);
+  _decayBox->setMaximumWidth(100);
+
+  _alphaNormalButton = new QRadioButton("Normal");
+  _alphaAccumulativeButton = new QRadioButton("Accumulative");
+  _openGLWidget->SetAlphaBlendingAccumulative(false);
+
+  _buttonClearSelection = new QPushButton("Discard");
+  _buttonClearSelection->setEnabled(false);
+  _selectionSizeLabel = new QLabel("0");
+
+  _buttonAddGroup = new QPushButton("Add group");
+  _buttonAddGroup->setEnabled(false);
+  _buttonAddGroup->setToolTip(
+      "Click to create a group from current selection.");
+
+  _labelGID = new QLabel("");
+  _labelPosition = new QLabel("");
+
+  _checkClipping = new QCheckBox(tr("Clipping"));
+  _checkShowPlanes = new QCheckBox("Show planes");
+  _buttonResetPlanes = new QPushButton("Reset");
+  _spinBoxClippingHeight = new QDoubleSpinBox();
+  _spinBoxClippingHeight->setDecimals(2);
+  _spinBoxClippingHeight->setMinimum(1);
+  _spinBoxClippingHeight->setMaximum(99999);
+
+  _spinBoxClippingWidth = new QDoubleSpinBox();
+  _spinBoxClippingWidth->setDecimals(2);
+  _spinBoxClippingWidth->setMinimum(1);
+  _spinBoxClippingWidth->setMaximum(99999);
+
+  _spinBoxClippingDist = new QDoubleSpinBox();
+  _spinBoxClippingDist->setDecimals(2);
+  _spinBoxClippingDist->setMinimum(1);
+  _spinBoxClippingDist->setMaximum(99999);
+
+  QColor clippingColor(255, 255, 255, 255);
+  _frameClippingColor = new QPushButton();
+  _frameClippingColor->setStyleSheet("background-color: " +
+                                     clippingColor.name());
+  _frameClippingColor->setMinimumSize(20, 20);
+  _frameClippingColor->setMaximumSize(20, 20);
+  _frameClippingColor->setProperty(PLANES_COLOR_KEY_,
+                                   clippingColor.name());
+
+  _buttonSelectionFromClippingPlanes = new QPushButton("To selection");
+  _buttonSelectionFromClippingPlanes->setToolTip(
+      tr("Create a selection set from elements between planes"));
+
+  _circuitScaleX = new QDoubleSpinBox();
+  _circuitScaleX->setDecimals(2);
+  _circuitScaleX->setMinimum(0.01);
+  _circuitScaleX->setMaximum(9999999);
+  _circuitScaleX->setSingleStep(0.5);
+  _circuitScaleX->setMaximumWidth(100);
+
+  _circuitScaleY = new QDoubleSpinBox();
+  _circuitScaleY->setDecimals(2);
+  _circuitScaleY->setMinimum(0.01);
+  _circuitScaleY->setMaximum(9999999);
+  _circuitScaleY->setSingleStep(0.5);
+  _circuitScaleY->setMaximumWidth(100);
+
+  _circuitScaleZ = new QDoubleSpinBox();
+  _circuitScaleZ->setDecimals(2);
+  _circuitScaleZ->setMinimum(0.01);
+  _circuitScaleZ->setMaximum(9999999);
+  _circuitScaleZ->setSingleStep(0.5);
+  _circuitScaleZ->setMaximumWidth(100);
+
+  QWidget *topContainer = new QWidget();
+  QVBoxLayout *verticalLayout = new QVBoxLayout();
+
+  _groupBoxTransferFunction =
+      new QGroupBox("Color and Size transfer function");
+  QVBoxLayout *tfLayout = new QVBoxLayout();
+  tfLayout->addWidget(_tfWidget);
+  _groupBoxTransferFunction->setLayout(tfLayout);
+
+  QGroupBox *tSpeedGB = new QGroupBox("Simulation playback Configuration");
+  QGridLayout *sfLayout = new QGridLayout();
+  sfLayout->setAlignment(Qt::AlignTop);
+  sfLayout->addWidget(new QLabel("Simulation timestep:"), 0, 0, 1, 1);
+  sfLayout->addWidget(_deltaTimeBox, 0, 1, 1, 1);
+  sfLayout->addWidget(new QLabel("Timesteps per second:"), 1, 0, 1,
+                      1);
+  sfLayout->addWidget(_timeStepsPSBox, 1, 1, 1, 1);
+  sfLayout->addWidget(new QLabel("Step playback duration (s):"), 2, 0,
+                      1,
+                      1);
+  sfLayout->addWidget(_stepByStepDurationBox, 2, 1, 1, 1);
+  tSpeedGB->setLayout(sfLayout);
+
+  QGroupBox *scaleGB = new QGroupBox("Scale factor (X,Y,Z)");
+  QHBoxLayout *layoutScale = new QHBoxLayout();
+  scaleGB->setLayout(layoutScale);
+  layoutScale->addWidget(_circuitScaleX);
+  layoutScale->addWidget(_circuitScaleY);
+  layoutScale->addWidget(_circuitScaleZ);
+
+  QComboBox *comboShader = new QComboBox();
+  comboShader->addItems({"Default", "Solid"});
+  comboShader->setCurrentIndex(0);
+
+  QGroupBox *shaderGB = new QGroupBox("Shader Configuration");
+  QHBoxLayout *shaderLayout = new QHBoxLayout();
+  shaderLayout->addWidget(new QLabel("Current shader: "));
+  shaderLayout->addWidget(comboShader);
+  shaderGB->setLayout(shaderLayout);
+
+  QGroupBox *dFunctionGB = new QGroupBox("Decay function");
+  QHBoxLayout *dfLayout = new QHBoxLayout();
+  dfLayout->setAlignment(Qt::AlignTop);
+  dfLayout->addWidget(new QLabel("Decay (simulation time): "));
+  dfLayout->addWidget(_decayBox);
+  dFunctionGB->setLayout(dfLayout);
+
+  QGroupBox *rFunctionGB = new QGroupBox("Alpha blending function");
+  QHBoxLayout *rfLayout = new QHBoxLayout();
+  rfLayout->setAlignment(Qt::AlignTop);
+  rfLayout->addWidget(new QLabel("Alpha Blending: "));
+  rfLayout->addWidget(_alphaNormalButton);
+  rfLayout->addWidget(_alphaAccumulativeButton);
+  rFunctionGB->setLayout(rfLayout);
+
+  // Visual Configuration Container
+  QWidget *vcContainer = new QWidget();
+  QVBoxLayout *vcLayout = new QVBoxLayout();
+  vcLayout->setAlignment(Qt::AlignTop);
+  vcLayout->addWidget(scaleGB);
+  vcLayout->addWidget(shaderGB);
+  vcLayout->addWidget(dFunctionGB);
+  vcLayout->addWidget(rFunctionGB);
+  vcContainer->setLayout(vcLayout);
+
+  QPushButton *buttonSelectionManager = new QPushButton("...");
+  buttonSelectionManager->setToolTip(
+      tr("Show the selection management dialog"));
+  buttonSelectionManager->setMaximumWidth(30);
+
+  QGroupBox *selFunctionGB = new QGroupBox("Current selection");
+  QHBoxLayout *selLayout = new QHBoxLayout();
+  selLayout->setAlignment(Qt::AlignTop);
+  selLayout->addWidget(new QLabel("Size: "));
+  selLayout->addWidget(_selectionSizeLabel);
+  selLayout->addWidget(buttonSelectionManager);
+  selLayout->addWidget(_buttonAddGroup);
+  selLayout->addWidget(_buttonClearSelection);
+  selFunctionGB->setLayout(selLayout);
+
+  QFrame *line = new QFrame();
+  line->setFrameShape(QFrame::HLine);
+  line->setFrameShadow(QFrame::Sunken);
+
+  QGroupBox *gbClippingPlanes = new QGroupBox("Clipping planes");
+  QGridLayout *layoutClippingPlanes = new QGridLayout();
+  gbClippingPlanes->setLayout(layoutClippingPlanes);
+  layoutClippingPlanes->addWidget(_checkClipping, 0, 0, 1, 1);
+  layoutClippingPlanes->addWidget(_checkShowPlanes, 0, 1, 1, 2);
+  layoutClippingPlanes->addWidget(_buttonSelectionFromClippingPlanes, 0,
+                                  3,
+                                  1, 1);
+  layoutClippingPlanes->addWidget(line, 1, 0, 1, 4);
+  layoutClippingPlanes->addWidget(_frameClippingColor, 2, 0, 1, 1);
+  layoutClippingPlanes->addWidget(_buttonResetPlanes, 2, 1, 1, 1);
+  layoutClippingPlanes->addWidget(new QLabel("Height"), 2, 2, 1, 1);
+  layoutClippingPlanes->addWidget(_spinBoxClippingHeight, 2, 3, 1, 1);
+  layoutClippingPlanes->addWidget(new QLabel("Distance"), 3, 0, 1, 1);
+  layoutClippingPlanes->addWidget(_spinBoxClippingDist, 3, 1, 1, 1);
+  layoutClippingPlanes->addWidget(new QLabel("Width"), 3, 2, 1, 1);
+  layoutClippingPlanes->addWidget(_spinBoxClippingWidth, 3, 3, 1, 1);
+
+  QWidget *containerSelectionTools = new QWidget();
+  QVBoxLayout *layoutContainerSelection = new QVBoxLayout();
+  containerSelectionTools->setLayout(layoutContainerSelection);
+
+  layoutContainerSelection->addWidget(selFunctionGB);
+  layoutContainerSelection->addWidget(gbClippingPlanes);
+
+  _objectInspectorGB = new DataInspector("Object inspector");
+  _objectInspectorGB->addWidget(new QLabel("GID:"), 2, 0, 1, 1);
+  _objectInspectorGB->addWidget(_labelGID, 2, 1, 1, 3);
+  _objectInspectorGB->addWidget(new QLabel("Position: "), 3, 0, 1, 1);
+  _objectInspectorGB->addWidget(_labelPosition, 3, 1, 1, 3);
+
+  QGroupBox *groupBoxGroups = new QGroupBox("Current visualization groups");
+  _groupLayout = new QVBoxLayout();
+  _groupLayout->setAlignment(Qt::AlignTop);
+
+  _buttonImportGroups = new QPushButton("Import from...");
+  _buttonClearGroups = new QPushButton("Clear");
+  _buttonClearGroups->setEnabled(false);
+  _buttonLoadGroups = new QPushButton("Load");
+  _buttonLoadGroups->setToolTip(tr("Load Groups from disk"));
+  _buttonSaveGroups = new QPushButton("Save");
+  _buttonSaveGroups->setToolTip(tr("Save Groups to disk"));
+  _buttonSaveGroups->setEnabled(false);
+
+  {
+    QWidget *groupContainer = new QWidget();
+    groupContainer->setLayout(_groupLayout);
+
+    QScrollArea *scrollGroups = new QScrollArea();
+    scrollGroups->setWidget(groupContainer);
+    scrollGroups->setWidgetResizable(true);
+    scrollGroups->setFrameShape(QFrame::Shape::NoFrame);
+    scrollGroups->setFrameShadow(QFrame::Shadow::Plain);
+    scrollGroups->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scrollGroups->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+
+    QGridLayout *groupOuterLayout = new QGridLayout();
+    groupOuterLayout->setMargin(0);
+    groupOuterLayout->addWidget(_buttonImportGroups, 0, 0, 1, 1);
+    groupOuterLayout->addWidget(_buttonClearGroups, 0, 1, 1, 1);
+    groupOuterLayout->addWidget(_buttonLoadGroups, 1, 0, 1, 1);
+    groupOuterLayout->addWidget(_buttonSaveGroups, 1, 1, 1, 1);
+
+    groupOuterLayout->addWidget(scrollGroups, 2, 0, 1, 2);
+
+    groupBoxGroups->setLayout(groupOuterLayout);
+  }
+
+  _groupBoxAttrib = new QGroupBox("Attribute Mapping");
+  QGridLayout *layoutGroupAttrib = new QGridLayout();
+  _groupBoxAttrib->setLayout(layoutGroupAttrib);
+
+  _comboAttribSelection = new QComboBox();
+
+  QGroupBox *gbAttribSel = new QGroupBox("Attribute selection");
+  QHBoxLayout *lyAttribSel = new QHBoxLayout();
+  lyAttribSel->addWidget(_comboAttribSelection);
+  gbAttribSel->setLayout(lyAttribSel);
+
+  QGroupBox *gbAttribStats = new QGroupBox("Statistics");
+  QScrollArea *attribScroll = new QScrollArea();
+  QWidget *attribContainer = new QWidget();
+  QVBoxLayout *attribContainerLayout = new QVBoxLayout();
+  gbAttribStats->setLayout(attribContainerLayout);
+  attribContainerLayout->addWidget(attribScroll);
+
+  attribScroll->setWidget(attribContainer);
+  attribScroll->setWidgetResizable(true);
+  attribScroll->setFrameShape(QFrame::Shape::NoFrame);
+  attribScroll->setFrameShadow(QFrame::Shadow::Plain);
+  attribScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+  attribScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+
+  _layoutAttribStats = new QVBoxLayout();
+  _layoutAttribStats->setAlignment(Qt::AlignTop);
+  attribContainer->setLayout(_layoutAttribStats);
+
+  QGroupBox *gbAttribGroups = new QGroupBox("Groups");
+  _layoutAttribGroups = new QGridLayout();
+  _layoutAttribGroups->setAlignment(Qt::AlignTop);
+  {
+    QWidget *groupContainer = new QWidget();
+    groupContainer->setLayout(_layoutAttribGroups);
+
+    QScrollArea *groupScroll = new QScrollArea();
+    groupScroll->setWidget(groupContainer);
+    groupScroll->setWidgetResizable(true);
+    groupScroll->setFrameShape(QFrame::Shape::NoFrame);
+    groupScroll->setFrameShadow(QFrame::Shadow::Plain);
+    groupScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    groupScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+
+    QGridLayout *groupOuterLayout = new QGridLayout();
+    groupOuterLayout->setMargin(0);
+    groupOuterLayout->addWidget(groupScroll);
+
+    gbAttribGroups->setLayout(groupOuterLayout);
+  }
+
+  layoutGroupAttrib->addWidget(gbAttribSel, 0, 0, 1, 2);
+  layoutGroupAttrib->addWidget(gbAttribGroups, 0, 2, 3, 2);
+  layoutGroupAttrib->addWidget(gbAttribStats, 1, 0, 2, 2);
+
+  QWidget *containerTabSelection = new QWidget();
+  QVBoxLayout *tabSelectionLayout = new QVBoxLayout();
+  containerTabSelection->setLayout(tabSelectionLayout);
+  tabSelectionLayout->addWidget(_groupBoxTransferFunction);
+
+  QWidget *containerTabGroups = new QWidget();
+  QVBoxLayout *tabGroupsLayout = new QVBoxLayout();
+  containerTabGroups->setLayout(tabGroupsLayout);
+  tabGroupsLayout->addWidget(groupBoxGroups);
+
+  QWidget *containerTabAttrib = new QWidget();
+  QVBoxLayout *tabAttribLayout = new QVBoxLayout();
+  containerTabAttrib->setLayout(tabAttribLayout);
+  tabAttribLayout->addWidget(_groupBoxAttrib);
+
+  _modeSelectionWidget = new QTabWidget();
+  _modeSelectionWidget->addTab(containerTabSelection, tr("Selection"));
+  _modeSelectionWidget->addTab(containerTabGroups, tr("Groups"));
+  _modeSelectionWidget->addTab(containerTabAttrib, tr("Attribute"));
+
+  _toolBoxOptions = new QToolBox();
+  _toolBoxOptions->addItem(tSpeedGB, tr("Playback Configuration"));
+  _toolBoxOptions->addItem(vcContainer, tr("Visual Configuration"));
+  _toolBoxOptions->addItem(containerSelectionTools, tr("Selection"));
+  _toolBoxOptions->addItem(_objectInspectorGB, tr("Inspector"));
+
+  connect(_objectInspectorGB, SIGNAL(simDataChanged()),
+          _openGLWidget, SLOT(updateData()));
+
+  connect(_objectInspectorGB, SIGNAL(simDataChanged()),
+          _summary, SLOT(UpdateHistograms()));
+
+  connect(_objectInspectorGB, SIGNAL(simDataChanged()),
+          this, SLOT(configureComponents()));
+
+  verticalLayout->setAlignment(Qt::AlignTop);
+  verticalLayout->addWidget(_modeSelectionWidget);
+  verticalLayout->addWidget(_toolBoxOptions);
+
+  topContainer->setLayout(verticalLayout);
+  _simConfigurationDock->setWidget(topContainer);
+
+  this->addDockWidget(Qt::RightDockWidgetArea, _simConfigurationDock);
+
+  connect(_modeSelectionWidget, SIGNAL(currentChanged(int)),
+          _openGLWidget, SLOT(setMode(int)));
+
+  connect(_openGLWidget, SIGNAL(attributeStatsComputed(void)), this,
+          SLOT(updateAttributeStats(void)));
+
+  connect(_comboAttribSelection, SIGNAL(currentIndexChanged(int)),
+          _openGLWidget, SLOT(selectAttrib(int)));
+
+  connect(comboShader, SIGNAL(currentIndexChanged(int)), _openGLWidget,
+          SLOT(changeShader(int)));
+
+  connect(_tfWidget, SIGNAL(colorChanged(void)), this,
+          SLOT(UpdateSimulationColorMapping(void)));
+  connect(_tfWidget, SIGNAL(sizeChanged(void)), this,
+          SLOT(UpdateSimulationSizeFunction(void)));
+  connect(_tfWidget, SIGNAL(previewColor(void)), this,
+          SLOT(PreviewSimulationColorMapping(void)));
+  connect(_tfWidget, SIGNAL(previewColor(void)), this,
+          SLOT(PreviewSimulationSizeFunction(void)));
+
+  connect(buttonSelectionManager, SIGNAL(clicked(void)), this,
+          SLOT(dialogSelectionManagement(void)));
+
+  connect(_circuitScaleX, SIGNAL(valueChanged(double)), this,
+          SLOT(updateCircuitScaleValue(void)));
+
+  connect(_circuitScaleY, SIGNAL(valueChanged(double)), this,
+          SLOT(updateCircuitScaleValue(void)));
+
+  connect(_circuitScaleZ, SIGNAL(valueChanged(double)), this,
+          SLOT(updateCircuitScaleValue(void)));
+
+  connect(_deltaTimeBox, SIGNAL(valueChanged(double)), this,
+          SLOT(updateSimDeltaTime(void)));
+
+  connect(_timeStepsPSBox, SIGNAL(valueChanged(double)), this,
+          SLOT(updateSimTimestepsPS(void)));
+
+  connect(_decayBox, SIGNAL(valueChanged(double)), this,
+          SLOT(updateSimulationDecayValue(void)));
+
+  connect(_stepByStepDurationBox, SIGNAL(valueChanged(double)), this,
+          SLOT(updateSimStepByStepDuration(void)));
+
+  connect(_alphaNormalButton, SIGNAL(toggled(bool)), this,
+          SLOT(AlphaBlendingToggled(void)));
+
+  // Clipping planes
+
+  _checkClipping->setChecked(true);
+  connect(_checkClipping, SIGNAL(stateChanged(int)), this,
+          SLOT(clippingPlanesActive(int)));
+  _checkClipping->setChecked(false);
+
+  _checkShowPlanes->setChecked(true);
+  connect(_checkShowPlanes, SIGNAL(stateChanged(int)), _openGLWidget,
+          SLOT(paintClippingPlanes(int)));
+
+  connect(_buttonSelectionFromClippingPlanes, SIGNAL(clicked(void)),
+          this, SLOT(selectionFromPlanes(void)));
+
+  connect(_buttonResetPlanes, SIGNAL(clicked(void)), this,
+          SLOT(clippingPlanesReset(void)));
+
+  connect(_spinBoxClippingDist, SIGNAL(editingFinished(void)), this,
+          SLOT(spinBoxValueChanged(void)));
+
+  connect(_spinBoxClippingHeight, SIGNAL(editingFinished(void)), this,
+          SLOT(spinBoxValueChanged(void)));
+
+  connect(_spinBoxClippingWidth, SIGNAL(editingFinished(void)), this,
+          SLOT(spinBoxValueChanged(void)));
+
+  connect(_frameClippingColor, SIGNAL(clicked()), this,
+          SLOT(colorSelectionClicked()));
+
+  connect(_buttonClearSelection, SIGNAL(clicked(void)), this,
+          SLOT(clearSelection(void)));
+
+  connect(_buttonAddGroup, SIGNAL(clicked(void)), this,
+          SLOT(addGroupFromSelection()));
+
+  connect(_buttonImportGroups, SIGNAL(clicked(void)), this,
+          SLOT(dialogSubsetImporter(void)));
+
+  connect(_buttonClearGroups, SIGNAL(clicked(void)), this,
+          SLOT(clearGroups(void)));
+
+  connect(_buttonLoadGroups, SIGNAL(clicked(void)), this,
+          SLOT(loadGroups()));
+  connect(_buttonSaveGroups, SIGNAL(clicked(void)), this,
+          SLOT(saveGroups()));
+
+  _alphaNormalButton->setChecked(true);
+  _simConfigurationDock->setEnabled(false);
+}
 
   void MainWindow::_initSummaryWidget( void )
   {

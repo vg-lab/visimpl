@@ -203,8 +203,7 @@ namespace visimpl
     _eventLabelsLayout->addWidget( _fpsLabel , 1 , 0 , 1 , 9 );
 
     _colorPalette =
-      scoop::ColorPalette::colorBrewerQualitative(
-        scoop::ColorPalette::ColorBrewerQualitative::Set1 , 9 );
+      scoop::ColorPalette::colorBrewerQualitative(scoop::ColorPalette::ColorBrewerQualitative::Set1 , 9 );
 
     // This is needed to get key events
     this->setFocusPolicy( Qt::WheelFocus );
@@ -259,22 +258,25 @@ namespace visimpl
 
   void OpenGLWidget::initializeGL( void )
   {
-    _gl.initializeOpenGLFunctions( );
+    static bool initialized = false;
+    if(!initialized)
+    {
+      _gl.initializeOpenGLFunctions();
 
-    auto* logger = new QOpenGLDebugLogger( this );
-    logger->initialize( );
+      auto* logger = new QOpenGLDebugLogger( this );
+      logger->initialize( );
 
-    connect(
-      logger , &QOpenGLDebugLogger::messageLogged ,
-      [ ]( const QOpenGLDebugMessage& message )
-      {
-        if ( message.severity( ) <= QOpenGLDebugMessage::MediumSeverity )
-          qDebug( ) << message;
-      }
-    );
+      connect(
+        logger , &QOpenGLDebugLogger::messageLogged ,
+        [ ]( const QOpenGLDebugMessage& message )
+        {
+          if ( message.severity( ) <= QOpenGLDebugMessage::MediumSeverity )
+            qDebug( ) << message;
+        }
+      );
 
-    logger->startLogging( );
-
+      logger->startLogging( );
+    }
     glEnable( GL_DEPTH_TEST );
     glClearColor( float( _currentClearColor.red( )) / 255.0f ,
                   float( _currentClearColor.green( )) / 255.0f ,
@@ -287,11 +289,11 @@ namespace visimpl
     _lastFrame = std::chrono::system_clock::now( );
 
     QOpenGLWidget::initializeGL( );
-    visimpl::GlewInitializer::init( );
+    if(!initialized)
+      visimpl::GlewInitializer::init( );
 
     const GLubyte* vendor = glGetString( GL_VENDOR ); // Returns the vendor
-    const GLubyte* renderer = glGetString(
-      GL_RENDERER ); // Returns a hint to the model
+    const GLubyte* renderer = glGetString(GL_RENDERER ); // Returns a hint to the model
     const GLubyte* version = glGetString( GL_VERSION );
     const GLubyte* shadingVer = glGetString( GL_SHADING_LANGUAGE_VERSION );
 
@@ -310,11 +312,12 @@ namespace visimpl
               << std::endl;
     std::cout << "OpenGL Version: " << version << " (shading ver. "
               << shadingVer << ")" << std::endl;
+
+    initialized = true;
   }
 
   void OpenGLWidget::_initRenderToTexture( void )
   {
-
     // Generate the OIR framebuffer
 
     _gl.glGenFramebuffers( 1 , &_weightFrameBuffer );
@@ -1538,11 +1541,40 @@ namespace visimpl
     {
       case Qt::Key_C:
         _flagUpdateSelection = true;
+        event_->accept();
+        return;
         break;
       default:
         break;
     }
+
+    // Move the camera with Alt key modifier and left/up arrrows.
+    if (event_->modifiers().testFlag(Qt::AltModifier))
+    {
+      switch (event_->key())
+      {
+        case Qt::Key_Up:
+          {
+            _camera->rotate(Eigen::Vector3f(0, 0, M_PI / 2));
+            event_->accept();
+            return;
+          }
+        break;
+        case Qt::Key_Left:
+          {
+            _camera->rotate(Eigen::Vector3f(M_PI / 2, 0, 0));
+            event_->accept();
+            return;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+
+    QOpenGLWidget::keyPressEvent(event_);
   }
+
 
   void OpenGLWidget::changeClearColor( void )
   {
