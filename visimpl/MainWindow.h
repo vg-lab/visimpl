@@ -130,7 +130,7 @@ namespace visimpl
 
     void openRecorder( void );
 
-    void closeData( void );
+    bool closeData( void );
 
     void dialogAbout( void );
 
@@ -348,6 +348,11 @@ namespace visimpl
      * 
      */
     void presentationMode();
+
+    /** \brief Enables/Disables fullscreen.
+     * 
+     */
+    void toggleFullscreen();
 
   protected:
     virtual bool eventFilter(QObject *obj, QEvent *event);

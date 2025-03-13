@@ -66,6 +66,7 @@
     <addaction name="actionToggleStackVizDock"/>
     <addaction name="separator"/>
     <addaction name="actionShowInactive"/>
+    <addaction name="action_fullscreen"/>
     <addaction name="actionShowCurrentTime"/>
     <addaction name="actionShowEventsActivity"/>
     <addaction name="actionAddZeroEQhistograms"/>
@@ -615,6 +616,20 @@
    </property>
    <property name="toolTip">
     <string>Takes a screenshot of the 3D view.</string>
+   </property>
+  </action>
+  <action name="action_fullscreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show fullscreen</string>
+   </property>
+   <property name="toolTip">
+    <string>Sets the application in fullscreen mode.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
    </property>
   </action>
  </widget>

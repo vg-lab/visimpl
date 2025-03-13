@@ -1057,11 +1057,6 @@ namespace visimpl
     _camera->windowSize( w , h );
     glViewport( 0 , 0 , w , h );
 
-    //if ( _pickRenderer )
-    //{
-    //  _pickRenderer->setWindowSize( w , h );
-    //}
-
     if ( _accumulationTexture != 0 )
     {
       // Resize MSAA buffers
@@ -1076,7 +1071,6 @@ namespace visimpl
 
       _gl.glBindTexture( GL_TEXTURE_2D_MULTISAMPLE , 0 );
       _gl.glBindTexture( GL_TEXTURE_2D , 0 );
-      //_gl.glBindRenderbuffer( GL_RENDERBUFFER , defaultFramebufferObject( ));
     }
   }
 
