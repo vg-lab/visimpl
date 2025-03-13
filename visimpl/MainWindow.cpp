@@ -204,6 +204,7 @@ namespace visimpl
   void MainWindow::init( const std::string& zeqUri )
   {
     _openGLWidget = new OpenGLWidget( this , Qt::WindowFlags( ) , zeqUri );
+    _openGLWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     this->setCentralWidget( _openGLWidget );
 
@@ -383,7 +384,6 @@ namespace visimpl
     _ui->toolBar->setContextMenuPolicy( Qt::PreventContextMenu );
     _ui->menubar->setContextMenuPolicy( Qt::PreventContextMenu );
 
-    new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_F), this, SLOT(showMaximized()));
     new QShortcut(QKeySequence(Qt::CTRL + +Qt::SHIFT + Qt::Key_F), this, SLOT(presentationMode()));
   }
 
@@ -446,11 +446,13 @@ namespace visimpl
   void MainWindow::openBlueConfigThroughDialog( void )
   {
 #ifdef SIMIL_USE_BRION
-
+    if(_openGLWidget && _openGLWidget->player() && !closeData())
+      return;
+    
     QString path = QFileDialog::getOpenFileName(
-      this , tr( "Open BlueConfig" ) , _lastOpenedNetworkFileName ,
-      tr( "BlueConfig ( BlueConfig CircuitConfig);; All files (*)" ) , nullptr ,
-      QFileDialog::DontUseNativeDialog );
+        this, tr("Open BlueConfig"), _lastOpenedNetworkFileName,
+        tr("BlueConfig ( BlueConfig CircuitConfig);; All files (*)"), nullptr,
+        QFileDialog::DontUseNativeDialog);
 
     if ( !path.isEmpty( ))
     {
@@ -482,6 +484,9 @@ namespace visimpl
 
   void MainWindow::openCSVFilesThroughDialog( void )
   {
+    if (_openGLWidget && _openGLWidget->player() && !closeData())
+      return;
+
     QString pathNetwork = QFileDialog::getOpenFileName(
       this , tr( "Open CSV Network description file" ) ,
       _lastOpenedNetworkFileName , tr( "CSV (*.csv);; All files (*)" ) ,
@@ -510,6 +515,9 @@ namespace visimpl
 
   void MainWindow::openHDF5ThroughDialog( void )
   {
+    if (_openGLWidget && _openGLWidget->player() && !closeData())
+      return;
+
     auto path = QFileDialog::getOpenFileName(
       this , tr( "Open a H5 network file" ) , _lastOpenedNetworkFileName ,
       tr( "hdf5 (*.h5 *.hdf5);; All files (*)" ) , nullptr ,
@@ -661,7 +669,7 @@ namespace visimpl
     }
   }
 
-  void MainWindow::closeData( void )
+  bool MainWindow::closeData( void )
   {
 #ifdef SIMIL_WITH_REST_API
     _alreadyConnected = false;
@@ -670,7 +678,7 @@ namespace visimpl
       CloseDataDialog dialog( this );
       const auto result = dialog.exec( );
 
-      if ( result == QDialog::Rejected ) return;
+      if ( result == QDialog::Rejected ) return false;
 
       if ( dialog.keepNetwork( ))
       {
@@ -695,7 +703,7 @@ namespace visimpl
 
         QApplication::restoreOverrideCursor( );
 
-        return;
+        return false;
       }
     }
 #endif
@@ -726,7 +734,8 @@ namespace visimpl
     _tfWidget->setColorPoints( visimpl::TTransferFunction( ));
     _tfWidget->setSizeFunction( visimpl::TSizeFunction( ));
 
-    QApplication::restoreOverrideCursor( );
+    QApplication::restoreOverrideCursor();
+    return true;
   }
 
   void MainWindow::dialogAbout( void )
@@ -898,8 +907,8 @@ namespace visimpl
     _stackVizDock = new QDockWidget( );
     _stackVizDock->setObjectName( "stackvizDock" );
     _stackVizDock->setMinimumHeight( 100 );
-    _stackVizDock->setSizePolicy( QSizePolicy::MinimumExpanding ,
-                                  QSizePolicy::MinimumExpanding );
+    _stackVizDock->setSizePolicy( QSizePolicy::Minimum,
+                                  QSizePolicy::Minimum);
     _stackVizDock->setVisible( false );
 
     _stackViz = new StackViz( this );
@@ -941,6 +950,8 @@ namespace visimpl
     connect( _ui->actionStackVizFollowPlayHead , SIGNAL( triggered( bool )) ,
              _stackViz , SLOT( followPlayhead( bool )));
 
+    connect(_ui->action_fullscreen, SIGNAL(toggled(bool)), this, SLOT(toggleFullscreen()));
+
     // this avoids making the dock smaller when the stackviz config panels
     // hide.
     QObject::connect( _ui->actionStackVizShowPanels , &QAction::triggered ,
@@ -956,8 +967,8 @@ namespace visimpl
   {
     _simulationDock = new QDockWidget( );
     _simulationDock->setMinimumHeight( 100 );
-    _simulationDock->setSizePolicy( QSizePolicy::MinimumExpanding ,
-                                    QSizePolicy::MinimumExpanding );
+    _simulationDock->setSizePolicy( QSizePolicy::Minimum,
+                                    QSizePolicy::Minimum);
 
     unsigned int totalHSpan = 20;
 
@@ -1112,7 +1123,10 @@ void MainWindow::presentationMode()
     setCentralWidget(_openGLWidget);
     _openGLWidget->setParent(this);
 
-    if(parent)
+    // size 1 forces the docks to go to minimum.
+    resizeDocks({_stackVizDock, _simulationDock, _simConfigurationDock}, {1, 1, 1}, Qt::Horizontal);
+
+    if (parent)
     {
       parent->close();
       parent->deleteLater();
@@ -1134,8 +1148,18 @@ void MainWindow::presentationMode()
     const auto geom = screen->geometry();
     presentationDialog->move(geom.topLeft());
     presentationDialog->resize(geom.width(), geom.height());
+    if(_openGLWidget->player() && !_openGLWidget->player()->isPlaying())
+      Play();
   }
   _openGLWidget->update();
+}
+
+void MainWindow::toggleFullscreen()
+{
+  if(!isFullScreen())
+    showFullScreen();
+  else
+    showNormal();
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
@@ -1204,8 +1228,8 @@ void MainWindow::_initSimControlDock(void)
   _simConfigurationDock = new QDockWidget();
   _simConfigurationDock->setMinimumHeight(100);
   _simConfigurationDock->setMinimumWidth(400);
-  _simConfigurationDock->setSizePolicy(QSizePolicy::MinimumExpanding,
-                                       QSizePolicy::MinimumExpanding);
+  _simConfigurationDock->setSizePolicy(QSizePolicy::Minimum,
+                                       QSizePolicy::Minimum);
 
   _tfWidget = new TransferFunctionWidget();
   _tfWidget->setMinimumHeight(100);
@@ -2644,8 +2668,7 @@ void MainWindow::_initSimControlDock(void)
                              const std::string& subsetEventFile )
   {
     closeLoadingDialog( );
-
-    Q_ASSERT( type != simil::TDataType::TREST );
+    Q_ASSERT(type != simil::TDataType::TREST);
 
     QApplication::setOverrideCursor( Qt::WaitCursor );
 
